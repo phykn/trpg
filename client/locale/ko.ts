@@ -49,6 +49,7 @@ export const ko = {
   },
   storyDev: {
     title: '생성 기록',
+    short: '기록',
     open: '생성 기록 열기',
     close: '생성 기록 닫기',
     refresh: '새로고침',
@@ -302,6 +303,7 @@ export const compose = {
   },
   combatWith: (name: string) => `${name}${josaWith(name)} 전투 중`,
   combatExchange: (round: number) => `${round}번째 교환`,
+  changedNotice: (label: string) => `${label} 변경 있음`,
 };
 
 function josaObject(value: string): '을' | '를' {

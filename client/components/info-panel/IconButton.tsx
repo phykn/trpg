@@ -1,4 +1,4 @@
-import { Pressable } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '@/design/tokens';
 
@@ -10,19 +10,30 @@ export const ICON_PATH = {
   volumeOff: 'M11 5L6 9H2v6h4l5 4V5z M22 9l-6 6 M16 9l6 6',
 } as const;
 
-export function IconButton({ d, label, onPress, active = false }: { d: string; label: string; onPress?: () => void; active?: boolean }) {
+export function IconButton({ d, label, onPress, active = false, text }: { d: string; label: string; onPress?: () => void; active?: boolean; text?: string }) {
+  const buttonClassName = text
+    ? `h-8 flex-row items-center justify-center gap-1.5 rounded-sm pl-2 pr-2.5 shrink-0 ${active ? 'bg-accent-muted' : 'active:bg-canvas-inset'}`
+    : `w-8 h-8 rounded-sm items-center justify-center shrink-0 ${active ? 'bg-accent-muted' : 'active:bg-canvas-inset'}`;
+  const tint = active ? colors.accent.fg : colors.fg.muted;
+  const textColor = active ? 'text-accent-fg' : 'text-fg-muted';
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: active }}
-      className={`w-8 h-8 rounded-sm items-center justify-center shrink-0 ${active ? 'bg-accent-muted' : 'active:bg-canvas-inset'}`}
+      className={buttonClassName}
     >
       <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-        stroke={active ? colors.accent.fg : colors.fg.muted} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        stroke={tint} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
         <Path d={d} />
       </Svg>
+      {text ? (
+        <Text numberOfLines={1} className={`font-sans-semibold text-caption ${textColor}`}>
+          {text}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }

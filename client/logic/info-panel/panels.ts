@@ -1,4 +1,5 @@
 import { ko } from '@/locale/ko';
+import type { Discoveries, DiscoveryEntry } from '@/logic/discoveries';
 import { buildHeroSlot } from '@/logic/hero';
 import type { Hero } from '@/logic/hero';
 import type { Quest } from '@/logic/quest';
@@ -10,6 +11,8 @@ type GameSnapshot = {
   hero: Hero;
   subject: Subject | null;
   chapter?: { title: string; summary: string } | null;
+  discoveries?: Discoveries;
+  slotDots?: Partial<Record<'hero' | 'notes' | 'discoveries', boolean>>;
   scenarioCompleted?: boolean;
   quest: Quest | null;
   questOffers?: Quest[];
@@ -22,22 +25,64 @@ export function buildPanelSlots(
   return [
     {
       ...heroSlot,
+      chip: { ...heroSlot.chip, dot: state.slotDots?.hero ?? false },
       panel: heroSlot.panel ? { ...heroSlot.panel, title: '', meta: undefined, barSplit: undefined } : null,
     },
     buildInfoSlot(state),
+    buildDiscoveriesSlot(state.discoveries, { unread: state.slotDots?.discoveries ?? false }),
   ];
 }
 
 function buildInfoSlot(state: GameSnapshot): PanelSlot {
   return {
     id: 'notes',
-    chip: { short: ko.quest.chapter },
+    chip: { short: ko.quest.chapter, dot: state.slotDots?.notes ?? false },
     panel: withoutHeader(buildNotesPanel(state)),
   };
 }
 
 function withoutHeader(panel: Panel): Panel {
   return { ...panel, title: '', meta: undefined };
+}
+
+function buildDiscoveriesSlot(discoveries: Discoveries | undefined, opts: { unread: boolean }): PanelSlot {
+  return {
+    id: 'discoveries',
+    chip: { short: ko.discoveries.clues, dot: opts.unread },
+    panel: withoutHeader(buildDiscoveriesPanel(discoveries ?? { clues: [], memories: [] })),
+  };
+}
+
+function buildDiscoveriesPanel(discoveries: Discoveries): Panel {
+  const sections = dedupeSections([
+    ...discoverySections(discoveries.clues),
+    ...discoverySections(discoveries.memories),
+  ]);
+  if (sections.length === 0) {
+    return { empty: true, title: ko.discoveries.clues };
+  }
+  return {
+    title: ko.discoveries.clues,
+    sections,
+  };
+}
+
+function dedupeSections(sections: NonNullable<Panel['sections']>): NonNullable<Panel['sections']> {
+  const seen = new Set<string>();
+  return sections.filter((section) => {
+    const key = `${section.label}\n${section.text ?? ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function discoverySections(entries: DiscoveryEntry[]): NonNullable<Panel['sections']> {
+  return entries.map((entry) => ({
+    label: entry.title,
+    text: entry.summary,
+    clampLines: 2,
+  }));
 }
 
 function buildNotesPanel(state: GameSnapshot): Panel {

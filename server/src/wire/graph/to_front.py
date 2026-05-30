@@ -1,4 +1,6 @@
 from src.game.runtime.state import GameRuntimeState
+from src.game.domain.quest import is_required_quest
+from src.locale.generated_story import is_generated_current_location_memory
 from .chapters import active_chapter_payload
 from .combat import combat_payload
 from .hero import hero_payload
@@ -46,7 +48,7 @@ def _scenario_completed(runtime: GameRuntimeState) -> bool:
     required_quests = [
         node
         for node in runtime.graph_index.nodes.values()
-        if node.type == "quest" and node.properties.get("required") is not False
+        if node.type == "quest" and is_required_quest(node)
     ]
     return bool(required_quests) and all(
         node.properties.get("status") == "completed" for node in required_quests
@@ -97,6 +99,12 @@ def _discoveries_payload(runtime: GameRuntimeState) -> GraphDiscoveriesPayload:
             continue
         props = node.properties
         if props.get("visibility", "player") != "player":
+            continue
+        if is_generated_current_location_memory(
+            kind=props.get("kind"),
+            title=props.get("title"),
+            summary=props.get("summary"),
+        ):
             continue
         entry = _discovery_entry(node.id, props)
         if entry is None:

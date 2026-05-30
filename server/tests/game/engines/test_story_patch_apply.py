@@ -51,6 +51,30 @@ def test_apply_converts_memory_to_player_knowledge() -> None:
     assert changes[1].edge.from_node_id == "player_01"
 
 
+def test_apply_skips_generated_current_location_memory() -> None:
+    response = StoryWriteResponse.model_validate(
+        {
+            "reason": "location remembered",
+            "patches": [
+                {
+                    "op": "add_memory",
+                    "id": "mem_current_location",
+                    "summary": "현재 위치는 안개 항구입니다.",
+                }
+            ],
+        }
+    )
+
+    changes = story_patches_to_graph_changes(
+        response.patches,
+        graph=_graph(),
+        player_id="player_01",
+        turn_id=3,
+    )
+
+    assert changes == []
+
+
 def test_apply_converts_clue_to_anchor_knowledge() -> None:
     response = StoryWriteResponse.model_validate(
         {
@@ -217,3 +241,4 @@ def test_apply_converts_quest_beat_to_pending_quest_node() -> None:
     assert changes[0].node.properties["status"] == "pending"
     assert changes[0].node.properties["stability"] == "chapter"
     assert changes[0].node.properties["turn_id"] == 8
+    assert changes[0].node.properties["required"] is False

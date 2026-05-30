@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+textarea[data-testid='story-dev-editor'] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+textarea[data-testid='story-dev-editor']::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}

@@ -107,7 +107,7 @@ ko = "당신은 의뢰 「{quest}」를 포기합니다."
 en = "You abandon the {quest} quest."
 
 [runtime."card.quest_decide"]
-ko = "당신은 {quest}에서 「{choice}」를 선택합니다."
+ko = "당신은 {quest}에서 「{choice}」{을/를} 선택합니다."
 en = "You choose {choice} for the {quest} quest."
 
 [runtime."card.rest"]
@@ -543,8 +543,8 @@ ko = "대상: {value}"
 en = "Target: {value}"
 
 [runtime."narration.brief.dialogue_responder"]
-ko = "응답 대상: {value}"
-en = "Responder: {value}"
+ko = "응답 대상: {value} (직접 발화로 답변 필요)"
+en = "Responder: {value} (direct speech answer required)"
 
 [runtime."narration.brief.confirmed"]
 ko = "확정:"
@@ -561,6 +561,18 @@ en = "Place: {value}"
 [runtime."narration.brief.completed"]
 ko = "완료: {value}"
 en = "Completed: {value}"
+
+[runtime."narration.brief.choice_result"]
+ko = "선택 결과: {value}"
+en = "Choice result: {value}"
+
+[runtime."narration.brief.choice"]
+ko = "선택: {value}"
+en = "Choice: {value}"
+
+[runtime."narration.brief.gained_items"]
+ko = "획득: {value}"
+en = "Gained: {value}"
 
 [runtime."narration.brief.next"]
 ko = "다음: {value}"
@@ -677,30 +689,6 @@ en = "Effect: {value}"
 [runtime."narration.brief.status"]
 ko = "상태: {value}"
 en = "Status: {value}"
-
-[runtime."narration.clean.generic_action_full"]
-ko = "「당신의 행동이 처리됩니다.」라는 짧은 확인과 함께,"
-en = "\"Your action is handled,\" with a short confirmation,"
-
-[runtime."narration.clean.generic_action_short"]
-ko = "「당신의 행동이 처리됩니다.」라는 확인과 함께,"
-en = "\"Your action is handled,\" with a confirmation,"
-
-[runtime."narration.clean.generic_action_sentence"]
-ko = "당신의 행동이 처리됩니다."
-en = "Your action is handled."
-
-[runtime."narration.clean.choice_word"]
-ko = "선택"
-en = "choice"
-
-[runtime."narration.clean.player_honorific"]
-ko = "플레이어님"
-en = "Player"
-
-[runtime."narration.clean.player_pronoun"]
-ko = "당신"
-en = "you"
 
 [runtime."generated.loc_fog_harbor.name"]
 ko = "안개 항구"

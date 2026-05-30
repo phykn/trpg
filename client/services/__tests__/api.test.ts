@@ -829,7 +829,7 @@ describe('graph API helpers', () => {
       json: async () => ({
         game_id: 'game-1',
         contract: {
-          id: 'white_isle_llm',
+          id: 'white_isle',
           world: { title: '흰섬으로 가는 안개 바다', locale: 'ko' },
           fixed: [],
           forbid: [],
@@ -847,7 +847,7 @@ describe('graph API helpers', () => {
       'https://api.example.test/session/game-1/story/dev/contract',
       expect.objectContaining({ method: 'GET' }),
     );
-    expect(result.contract.id).toBe('white_isle_llm');
+    expect(result.contract.id).toBe('white_isle');
   });
 
   test('previews a story contract edit through the dev endpoint', async () => {
@@ -858,7 +858,7 @@ describe('graph API helpers', () => {
         ok: true,
         reasons: [],
         contract: {
-          id: 'white_isle_llm',
+          id: 'white_isle',
           world: { title: '흰섬으로 가는 안개 바다', locale: 'ko' },
           fixed: [],
           forbid: [],
@@ -871,7 +871,7 @@ describe('graph API helpers', () => {
     });
 
     const result = await previewStoryContract('game-1', {
-      id: 'white_isle_llm',
+      id: 'white_isle',
       allowed_ops: ['add_clue'],
     });
 
@@ -881,7 +881,7 @@ describe('graph API helpers', () => {
         method: 'POST',
         body: JSON.stringify({
           contract: {
-            id: 'white_isle_llm',
+            id: 'white_isle',
             allowed_ops: ['add_clue'],
           },
         }),
@@ -896,7 +896,7 @@ describe('graph API helpers', () => {
       json: async () => ({
         game_id: 'game-1',
         contract: {
-          id: 'white_isle_llm_override',
+          id: 'white_isle_override',
           world: { title: '흰섬으로 가는 안개 바다', locale: 'ko' },
           fixed: [],
           forbid: [],
@@ -909,7 +909,7 @@ describe('graph API helpers', () => {
     });
 
     const result = await updateStoryContract('game-1', {
-      id: 'white_isle_llm_override',
+      id: 'white_isle_override',
       allowed_ops: ['add_clue'],
     });
 
@@ -919,13 +919,13 @@ describe('graph API helpers', () => {
         method: 'POST',
         body: JSON.stringify({
           contract: {
-            id: 'white_isle_llm_override',
+            id: 'white_isle_override',
             allowed_ops: ['add_clue'],
           },
         }),
       }),
     );
-    expect(result.contract.id).toBe('white_isle_llm_override');
+    expect(result.contract.id).toBe('white_isle_override');
   });
 
   test('rolls back the latest generated story patch through the dev endpoint', async () => {

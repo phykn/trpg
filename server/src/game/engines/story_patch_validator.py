@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.game.domain.graph import Graph
+from src.game.domain.graph.query import location_of
 from src.game.domain.story_contract import StoryContract
 from src.game.domain.story_patch import (
     AddCharacterPatch,
@@ -23,6 +24,7 @@ def validate_story_write_response(
     *,
     graph: Graph,
     contract: StoryContract,
+    player_id: str | None = None,
 ) -> StoryPatchValidationResult:
     reasons: list[str] = []
 
@@ -50,6 +52,12 @@ def validate_story_write_response(
                 reasons.append(f"missing_anchor:{patch.anchor_id}")
             elif anchor.type not in {"character", "item", "location", "quest"}:
                 reasons.append(f"invalid_anchor_type:{patch.anchor_id}")
+            elif player_id is not None and not _anchor_is_current(
+                graph,
+                player_id,
+                patch.anchor_id,
+            ):
+                reasons.append(f"offscreen_anchor:{patch.anchor_id}")
         if isinstance(patch, AddLocationPatch):
             source = graph.nodes.get(patch.connect_from)
             if source is None:
@@ -87,6 +95,22 @@ def _existing_display_names(graph: Graph) -> set[str]:
             if isinstance(value, str) and value:
                 out.add(value)
     return out
+
+
+def _anchor_is_current(graph: Graph, player_id: str, anchor_id: str) -> bool:
+    anchor = graph.nodes.get(anchor_id)
+    if anchor is None:
+        return True
+    if anchor.type == "quest" or anchor_id == player_id:
+        return True
+    player_location = location_of(graph, player_id)
+    if player_location is None:
+        return True
+    if anchor.type == "location":
+        return anchor_id == player_location
+    if anchor.type in {"character", "item"}:
+        return location_of(graph, anchor_id) == player_location
+    return True
 
 
 def _violates_forbid(

@@ -832,6 +832,27 @@ def test_graph_front_state_marks_scenario_completed_when_required_quests_are_don
     assert payload.quest is None
 
 
+def test_graph_front_state_ignores_legacy_generated_quest_for_scenario_completion():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "completed"
+    runtime.graph.nodes["quest_generated"] = GraphNode(
+        id="quest_generated",
+        type="quest",
+        properties={
+            "title": "다음 단서 확인",
+            "description": "방금 확인한 목표를 진행하기 위한 다음 단서를 찾습니다.",
+            "status": "pending",
+            "stability": "chapter",
+            "turn_id": 2,
+        },
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.scenario_completed is True
+    assert payload.quest is None
+
+
 def test_graph_front_state_does_not_add_scenario_completion_log_line():
     runtime = _runtime()
     runtime.graph.nodes["quest_01"].properties["status"] = "completed"
@@ -895,7 +916,33 @@ def test_graph_front_state_exposes_active_chapter():
     assert payload.chapter.status == "active"
 
 
-def test_graph_front_state_exposes_generated_pending_quest_beat_as_offer():
+def test_graph_front_state_exposes_concrete_generated_pending_quest_beat_as_offer():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_generated"] = GraphNode(
+        id="quest_generated",
+        type="quest",
+        properties={
+            "title": "북쪽 길목 확인",
+            "summary": "북쪽 길목을 확인합니다.",
+            "status": "pending",
+            "stability": "chapter",
+            "turn_id": 2,
+        },
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert [offer.id for offer in payload.quest_offers] == [
+        "quest_01",
+        "quest_generated",
+    ]
+    assert payload.quest_offers[1].title == "북쪽 길목 확인"
+    assert payload.quest_offers[1].summary == "북쪽 길목을 확인합니다."
+    assert payload.quest_offers[1].goals == ["북쪽 길목을 확인합니다."]
+    assert payload.quest_offers[1].actions == ["accept"]
+
+
+def test_graph_front_state_hides_legacy_generic_generated_quest_beat():
     runtime = _runtime()
     runtime.graph.nodes["quest_generated"] = GraphNode(
         id="quest_generated",
@@ -911,18 +958,27 @@ def test_graph_front_state_exposes_generated_pending_quest_beat_as_offer():
 
     payload = graph_to_front_state(runtime)
 
-    assert [offer.id for offer in payload.quest_offers] == [
-        "quest_01",
-        "quest_generated",
-    ]
-    assert payload.quest_offers[1].title == "다음 단서 확인"
-    assert payload.quest_offers[1].summary == (
-        "방금 확인한 목표를 진행하기 위한 다음 단서를 찾습니다."
+    assert [offer.id for offer in payload.quest_offers] == ["quest_01"]
+
+
+def test_graph_front_state_hides_generated_current_location_memory():
+    runtime = _runtime()
+    runtime.graph.nodes["mem_current_location"] = GraphNode(
+        id="mem_current_location",
+        type="knowledge",
+        properties={
+            "kind": "memory",
+            "title": "현재 위치는 안개 항구입니다.",
+            "summary": "현재 위치는 안개 항구입니다.",
+            "visibility": "player",
+            "stability": "campaign",
+            "turn_id": 1,
+        },
     )
-    assert payload.quest_offers[1].goals == [
-        "방금 확인한 목표를 진행하기 위한 다음 단서를 찾습니다."
-    ]
-    assert payload.quest_offers[1].actions == ["accept"]
+
+    payload = graph_to_front_state(runtime)
+
+    assert [entry.id for entry in payload.discoveries.memories] == []
 
 
 def test_graph_front_state_hides_abandoned_generated_quest_beat():

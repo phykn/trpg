@@ -4,7 +4,6 @@ from src.db.repo import GraphRepo
 from src.game.domain.action import Action
 from src.game.domain.graph import GraphChange
 from src.game.domain.graph.apply import apply_graph_changes
-from src.game.domain.graph.query import location_of
 from src.game.domain.story_contract import StoryContract
 from src.game.domain.story_patch import StoryWriteIntent, StoryWriteResponse
 from src.game.domain.story_patch_ledger import (
@@ -14,15 +13,7 @@ from src.game.domain.story_patch_ledger import (
 from src.game.engines.story_patch_apply import story_patches_to_graph_changes
 from src.game.engines.story_patch_validator import validate_story_write_response
 from src.game.runtime.state import GameRuntimeState
-from src.locale.generated_story import (
-    candidate_character_name,
-    candidate_character_role,
-    candidate_location_name,
-    candidate_quest_beat,
-    location_description,
-    looks_actionable_for_story_patch,
-    node_id_suffix,
-)
+from src.locale.generated_story import looks_actionable_for_story_patch
 from src.llm.calls.story_write import story_write
 from src.llm.context.story_write_context import build_story_write_input
 from src.llm.diag import engine_diag
@@ -107,43 +98,26 @@ async def apply_generated_story_after_action(
         response,
         graph=result.runtime.graph,
         contract=contract,
+        player_id=result.runtime.progress.player_id,
     )
     if not validation.ok:
-        if patch_required:
-            fallback = _fallback_actionable_response(
-                result.runtime,
-                text=" ".join(filter(None, [accepted_narration, player_input])),
-                contract=contract,
-                reason="story_write fallback after rejected actionable patch",
-            )
-            if fallback is not None:
-                fallback = _fit_response_to_contract_budget(fallback, contract)
-                fallback_validation = validate_story_write_response(
-                    fallback,
-                    graph=result.runtime.graph,
-                    contract=contract,
+        engine_diag(
+            "story_write:reject",
+            reasons=",".join(validation.reasons),
+        )
+        await repo.append_story_patch_entries(
+            result.runtime.progress.game_id,
+            [
+                _ledger_entry(
+                    result,
+                    response=response,
+                    intent=intent,
+                    status="rejected",
+                    rejected_reasons=validation.reasons,
                 )
-                if fallback_validation.ok:
-                    response = fallback
-                    validation = fallback_validation
-        if not validation.ok:
-            engine_diag(
-                "story_write:reject",
-                reasons=",".join(validation.reasons),
-            )
-            await repo.append_story_patch_entries(
-                result.runtime.progress.game_id,
-                [
-                    _ledger_entry(
-                        result,
-                        response=response,
-                        intent=intent,
-                        status="rejected",
-                        rejected_reasons=validation.reasons,
-                    )
-                ],
-            )
-            return result
+            ],
+        )
+        return result
 
     changes = story_patches_to_graph_changes(
         response.patches,
@@ -178,6 +152,7 @@ async def apply_generated_story_after_action(
             response,
             graph=result.runtime.graph,
             contract=contract,
+            player_id=result.runtime.progress.player_id,
         )
         if not validation.ok:
             engine_diag(
@@ -208,43 +183,24 @@ async def apply_generated_story_after_action(
             and not _has_actionable_world_change(changes)
             and not _is_writer_error_skip(response)
         ):
-            fallback = _fallback_actionable_response(
-                result.runtime,
-                text=" ".join(filter(None, [accepted_narration, player_input])),
-                contract=contract,
-                reason="story_write fallback after empty actionable patch",
+            rejected_reasons = ["required_actionable_patch_missing"]
+            engine_diag(
+                "story_write:reject",
+                reasons=",".join(rejected_reasons),
             )
-            if fallback is not None:
-                response = _fit_response_to_contract_budget(fallback, contract)
-                validation = validate_story_write_response(
-                    response,
-                    graph=result.runtime.graph,
-                    contract=contract,
-                )
-                if not validation.ok:
-                    engine_diag(
-                        "story_write:reject",
-                        reasons=",".join(validation.reasons),
+            await repo.append_story_patch_entries(
+                result.runtime.progress.game_id,
+                [
+                    _ledger_entry(
+                        result,
+                        response=response,
+                        intent=intent,
+                        status="rejected",
+                        rejected_reasons=rejected_reasons,
                     )
-                    await repo.append_story_patch_entries(
-                        result.runtime.progress.game_id,
-                        [
-                            _ledger_entry(
-                                result,
-                                response=response,
-                                intent=intent,
-                                status="rejected",
-                                rejected_reasons=validation.reasons,
-                            )
-                        ],
-                    )
-                    return result
-                changes = story_patches_to_graph_changes(
-                    response.patches,
-                    graph=result.runtime.graph,
-                    player_id=result.runtime.progress.player_id,
-                    turn_id=result.runtime.progress.turn_count,
-                )
+                ],
+            )
+            return result
     changed_node_ids = _changed_node_ids(changes)
     changed_edge_ids = _changed_edge_ids(changes)
     if not changes:
@@ -323,15 +279,6 @@ async def _call_writer_or_fallback(
             locale=result.runtime.progress.locale,
         )
     except Exception as exc:
-        fallback = _fallback_actionable_response(
-            result.runtime,
-            text=" ".join(filter(None, [accepted_narration, player_input])),
-            contract=contract,
-            reason=f"story_write fallback after {type(exc).__name__}",
-        )
-        if fallback is not None and (patch_required or intent.kind == "both"):
-            engine_diag("story_write:fallback", err=type(exc).__name__)
-            return fallback
         engine_diag("story_write:skip_after_error", err=type(exc).__name__)
         return StoryWriteResponse.model_validate(
             {
@@ -388,100 +335,6 @@ def _has_recent_generated_world_node(runtime: GameRuntimeState) -> bool:
         if isinstance(turn_id, int) and turn_id >= threshold:
             return True
     return False
-
-
-def _fallback_actionable_response(
-    runtime: GameRuntimeState,
-    *,
-    text: str,
-    contract: StoryContract,
-    reason: str,
-) -> StoryWriteResponse | None:
-    if not text:
-        return None
-    location_id = location_of(runtime.graph, runtime.progress.player_id)
-    if location_id is None:
-        return None
-    character_name = candidate_character_name(text)
-    if "add_character" in contract.allowed_ops and character_name is not None:
-        if _has_display_name(runtime, character_name):
-            return None
-        return StoryWriteResponse.model_validate(
-            {
-                "reason": reason,
-                "patches": [
-                    {
-                        "op": "add_character",
-                        "id": _unique_node_id(
-                            runtime,
-                            _node_id("char", character_name),
-                        ),
-                        "name": character_name,
-                        "role": candidate_character_role(character_name),
-                        "location_id": location_id,
-                    }
-                ],
-            }
-        )
-    location_name = candidate_location_name(text)
-    if "add_location" in contract.allowed_ops and location_name is not None:
-        if _has_display_name(runtime, location_name):
-            return None
-        return StoryWriteResponse.model_validate(
-            {
-                "reason": reason,
-                "patches": [
-                    {
-                        "op": "add_location",
-                        "id": _unique_node_id(runtime, _node_id("loc", location_name)),
-                        "name": location_name,
-                        "description": location_description(location_name),
-                        "connect_from": location_id,
-                    }
-                ],
-            }
-        )
-    quest_beat = candidate_quest_beat(text)
-    if "add_quest_beat" in contract.allowed_ops and quest_beat is not None:
-        if _has_display_name(runtime, quest_beat["title"]):
-            return None
-        return StoryWriteResponse.model_validate(
-            {
-                "reason": reason,
-                "patches": [
-                    {
-                        "op": "add_quest_beat",
-                        "id": _unique_node_id(
-                            runtime,
-                            _node_id("quest", quest_beat["title"]),
-                        ),
-                        "title": quest_beat["title"],
-                        "summary": quest_beat["summary"],
-                    }
-                ],
-            }
-        )
-    return None
-
-
-def _node_id(prefix: str, name: str) -> str:
-    return f"{prefix}_{node_id_suffix(name)}"
-
-
-def _has_display_name(runtime: GameRuntimeState, name: str) -> bool:
-    return any(
-        node.properties.get("name") == name or node.properties.get("title") == name
-        for node in runtime.graph.nodes.values()
-    )
-
-
-def _unique_node_id(runtime: GameRuntimeState, base_id: str) -> str:
-    if base_id not in runtime.graph.nodes:
-        return base_id
-    index = 2
-    while f"{base_id}_{index}" in runtime.graph.nodes:
-        index += 1
-    return f"{base_id}_{index}"
 
 
 def _requires_actionable_patch(

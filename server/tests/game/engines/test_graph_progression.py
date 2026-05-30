@@ -136,6 +136,33 @@ def test_progression_marks_scenario_completed_when_no_required_quest_remains():
     assert changed.nodes["chapter_02"].properties["status"] == "completed"
 
 
+def test_progression_ignores_legacy_generated_quest_for_scenario_completion():
+    graph = _graph()
+    graph.nodes["chapter_01"].properties["status"] = "completed"
+    graph.nodes["chapter_02"].properties["status"] = "completed"
+    graph.nodes["q2"].properties["status"] = "completed"
+    graph.nodes["q3"].properties["status"] = "completed"
+    graph.nodes["quest_generated"] = GraphNode(
+        id="quest_generated",
+        type="quest",
+        properties={
+            "title": "다음 단서 확인",
+            "description": "방금 확인한 목표를 진행하기 위한 다음 단서를 찾습니다.",
+            "status": "pending",
+            "stability": "chapter",
+            "turn_id": 2,
+        },
+    )
+
+    result = plan_progression_after_quest_completion(
+        graph,
+        completed_quest_ids=["q3"],
+        active_quest_id="q3",
+    )
+
+    assert result.scenario_completed is True
+
+
 def test_progression_keeps_existing_active_quest_when_completed_quest_was_not_active():
     graph = _graph()
     graph.nodes["q2"].properties["status"] = "active"

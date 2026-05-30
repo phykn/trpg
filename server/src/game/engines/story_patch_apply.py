@@ -9,6 +9,7 @@ from src.game.domain.story_patch import (
     AddMemoryPatch,
     StoryPatch,
 )
+from src.locale.generated_story import is_generated_current_location_memory
 
 
 def story_patches_to_graph_changes(
@@ -48,6 +49,12 @@ def _memory_changes(
     player_id: str,
     turn_id: int,
 ) -> list[GraphChange]:
+    if is_generated_current_location_memory(
+        kind="memory",
+        title=patch.summary,
+        summary=patch.summary,
+    ):
+        return []
     node = GraphNode(
         id=patch.id,
         type="knowledge",
@@ -213,6 +220,7 @@ def _quest_beat_change(
             "title": patch.title,
             "description": patch.summary,
             "status": "pending",
+            "required": False,
             "stability": patch.stability,
             "turn_id": turn_id,
         },

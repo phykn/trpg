@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
 // @ts-expect-error react-test-renderer is available in Jest but has no local types.
 import renderer, { act } from 'react-test-renderer';
 
@@ -37,6 +40,69 @@ const mockedPreviewStoryPatch = previewStoryPatch as jest.Mock;
 const mockedReplayStoryPrompt = replayStoryPrompt as jest.Mock;
 const mockedRollbackStoryPatch = rollbackStoryPatch as jest.Mock;
 const mockedUpdateStoryContract = updateStoryContract as jest.Mock;
+
+describe('StoryDevPanel tab layout', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '..', 'StoryDevPanel.tsx'), 'utf8');
+  const editorSource = fs.readFileSync(path.resolve(__dirname, '..', 'StoryDevEditors.tsx'), 'utf8');
+  const globalCss = fs.readFileSync(path.resolve(__dirname, '..', '..', '..', 'global.css'), 'utf8');
+
+  test('uses wrapping readable tabs instead of squeezing every tab into one row', () => {
+    expect(source).toContain('flex-row flex-wrap gap-2');
+    expect(source).toContain('function StoryDevTab');
+    expect(source).toContain('style={{ minWidth: 70 }}');
+    expect(source).not.toContain('<View className="flex-row gap-2">\n            <Chip\n              variant="tab"');
+  });
+
+  test('uses a fixed half-screen panel with a flexible scroll body', () => {
+    expect(source).toContain("style={{ height: '50%' }}");
+    expect(source).toContain('<Surface variant="floating" className="flex-1 overflow-hidden">');
+    expect(source).toContain('<View className="flex-1 gap-3 p-3">');
+    expect(source).toContain('<ScrollView');
+    expect(source).toContain('className="flex-1"');
+    expect(source).toContain('showsVerticalScrollIndicator={false}');
+    expect(editorSource).toContain('style={{ minHeight: 220, flex: 1 }}');
+    expect(source).not.toContain('style={{ maxHeight: 280 }}');
+  });
+
+  test('hides web scrollbars on story editor textareas without replacing the editors', () => {
+    expect(editorSource.match(/testID="story-dev-editor"/g) ?? []).toHaveLength(3);
+    expect(globalCss).toContain("textarea[data-testid='story-dev-editor']");
+    expect(globalCss).toContain('scrollbar-width: none;');
+    expect(globalCss).toContain('-ms-overflow-style: none;');
+    expect(globalCss).toContain("textarea[data-testid='story-dev-editor']::-webkit-scrollbar");
+    expect(globalCss).toContain('width: 0;');
+    expect(globalCss).toContain('height: 0;');
+  });
+
+  test('keeps action editor buttons near the panel bottom while editors grow', () => {
+    const previewEditor = editorSource.slice(
+      editorSource.indexOf('function Preview'),
+      editorSource.indexOf('function ContractEditor'),
+    );
+    const contractEditor = editorSource.slice(
+      editorSource.indexOf('function ContractEditor'),
+      editorSource.indexOf('function PromptReplay'),
+    );
+    const promptEditor = editorSource.slice(
+      editorSource.indexOf('function PromptReplay'),
+      editorSource.indexOf('function PromptBlock'),
+    );
+
+    expect(source).toContain('contentContainerStyle={isActionEditorTab(tab) ? { flexGrow: 1 } : undefined}');
+    expect(source).toContain('function isActionEditorTab(tab: Tab)');
+    expect(editorSource).toContain('function ActionEditorFrame');
+    expect(previewEditor).toContain('<ActionEditorFrame');
+    expect(contractEditor).toContain('<ActionEditorFrame');
+    expect(promptEditor).toContain('<ActionEditorFrame');
+    expect(editorSource.match(/style={{ minHeight: 220, flex: 1 }}/g) ?? []).toHaveLength(3);
+  });
+
+  test('keeps editor-specific UI out of the panel container', () => {
+    expect(source).toContain("import { ContractEditor, Preview, PromptReplay } from './StoryDevEditors';");
+    expect(source).not.toContain('function ActionEditorFrame');
+    expect(source).not.toContain('TextInput');
+  });
+});
 
 function timelinePayload() {
   return {
@@ -95,7 +161,7 @@ function contractPayload() {
   return {
     game_id: 'game-1',
     contract: {
-      id: 'white_isle_llm',
+      id: 'white_isle',
       world: { title: '흰섬으로 가는 안개 바다', locale: 'ko' },
       fixed: ['엘리는 시작부터 동행합니다.'],
       forbid: ['결말을 조기 공개하지 않습니다.'],
@@ -177,7 +243,7 @@ test('previews a contract edit from the contract tab', async () => {
   });
   await act(async () => {
     root!.root.findByProps({ accessibilityLabel: ko.storyDev.contractInput }).props.onChangeText(
-      '{"id":"white_isle_llm","allowed_ops":["add_clue"]}',
+      '{"id":"white_isle","allowed_ops":["add_clue"]}',
     );
   });
   await act(async () => {
@@ -185,7 +251,7 @@ test('previews a contract edit from the contract tab', async () => {
   });
 
   expect(mockedPreviewStoryContract).toHaveBeenCalledWith('game-1', {
-    id: 'white_isle_llm',
+    id: 'white_isle',
     allowed_ops: ['add_clue'],
   });
   expect(JSON.stringify(root!.toJSON())).toContain(ko.storyDev.contractOk);
@@ -196,7 +262,7 @@ test('applies a contract edit from the contract tab and reloads', async () => {
     game_id: 'game-1',
     contract: {
       ...contractPayload().contract,
-      id: 'white_isle_llm_override',
+      id: 'white_isle_override',
     },
   });
   let root: renderer.ReactTestRenderer | null = null;
@@ -209,7 +275,7 @@ test('applies a contract edit from the contract tab and reloads', async () => {
   });
   await act(async () => {
     root!.root.findByProps({ accessibilityLabel: ko.storyDev.contractInput }).props.onChangeText(
-      '{"id":"white_isle_llm_override","allowed_ops":["add_clue"]}',
+      '{"id":"white_isle_override","allowed_ops":["add_clue"]}',
     );
   });
   await act(async () => {
@@ -217,7 +283,7 @@ test('applies a contract edit from the contract tab and reloads', async () => {
   });
 
   expect(mockedUpdateStoryContract).toHaveBeenCalledWith('game-1', {
-    id: 'white_isle_llm_override',
+    id: 'white_isle_override',
     allowed_ops: ['add_clue'],
   });
   expect(mockedGetStoryContract).toHaveBeenCalledTimes(2);

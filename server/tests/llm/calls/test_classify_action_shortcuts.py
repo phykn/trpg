@@ -231,6 +231,81 @@ async def test_korean_active_departure_move_word_shortcuts_to_location_move_with
     assert action.to == "loc_red_square"
 
 
+async def test_korean_departure_question_to_single_npc_shortcuts_to_talk():
+    context = _context()
+    context["identity"]["active_quest"] = {
+        "id": "q_fog_ready",
+        "name": "출항 준비",
+        "location_targets": ["loc_fog_pier"],
+    }
+    context["identity"]["visible_targets"] = [
+        {"id": "npc_olden", "name": "올든", "type": "npc"}
+    ]
+    context["identity"]["exits"] = [
+        {"id": "loc_fog_pier", "name": "안개 항구 선착장"},
+    ]
+    context["references"] = {"last_npc": {"id": "npc_olden", "name": "올든"}}
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="출항 규칙이 뭐예요?",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "speak"
+    assert action.to == "npc_olden"
+    assert action.how == "friendly"
+
+
+async def test_korean_question_to_single_visible_npc_shortcuts_to_talk_without_llm():
+    context = _context()
+    context["identity"]["visible_targets"] = [
+        {"id": "npc_olden", "name": "올든", "type": "npc"}
+    ]
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="여기 어디예요?",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "speak"
+    assert action.to == "npc_olden"
+    assert action.how == "friendly"
+
+
+async def test_korean_named_visible_npc_dialogue_shortcuts_to_that_target_without_llm():
+    context = _context()
+    context["identity"]["visible_targets"] = [
+        {"id": "npc_eli", "name": "엘리", "type": "npc"},
+        {"id": "npc_ezra", "name": "에즈라", "type": "npc"},
+    ]
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="에즈라를 바라보며 「군중들을 흩어 보내는 게 좋겠습니다.」라고 말합니다",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "speak"
+    assert action.to == "npc_ezra"
+    assert action.how == "friendly"
+
+
 async def test_generated_open_move_shortcuts_without_llm():
     output = await classify(
         _NoCallLLM(),
@@ -339,7 +414,7 @@ async def test_korean_inspect_word_does_not_route_active_quest_move_shortcut():
     assert [call["agent"] for call in llm.calls] == ["classify"]
 
 
-async def test_korean_departure_rule_question_uses_llm_instead_of_move_shortcut():
+async def test_korean_departure_named_rule_question_shortcuts_to_named_npc():
     context = _context()
     context["identity"]["visible_targets"] = [
         {"id": "npc_olden", "name": "올든", "type": "npc"}
@@ -353,12 +428,8 @@ async def test_korean_departure_rule_question_uses_llm_instead_of_move_shortcut(
         {"id": "loc_fog_pier", "name": "안개 항구 선착장"},
     ]
 
-    llm = _StaticLLM(
-        '{"intents":[{"intent":"talk","target":"npc_olden","manner":"friendly"}]}'
-    )
-
     output = await classify(
-        llm,
+        _NoCallLLM(),
         ClassifyInput(
             player_input="올든에게 출항 규칙과 혼자 탄 배가 왜 사라지는지 확인합니다",
             context=context,
@@ -370,7 +441,7 @@ async def test_korean_departure_rule_question_uses_llm_instead_of_move_shortcut(
     action = output.actions[0]
     assert action.verb == "speak"
     assert action.to == "npc_olden"
-    assert [call["agent"] for call in llm.calls] == ["classify"]
+    assert action.how == "friendly"
 
 
 async def test_korean_missing_dialogue_target_refuses_without_llm():

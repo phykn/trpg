@@ -11,6 +11,7 @@ from src.locale.terms import (
     ACTION_CREATE_DISTANCE_TERMS,
     ACTION_PICKUP_TERMS,
     DIALOGUE_GENERIC_TARGETS,
+    DIALOGUE_QUESTION_TERMS,
     DIALOGUE_TARGET_PARTICLES,
     DIALOGUE_TERMS,
     INSPECT_TERMS,
@@ -51,6 +52,17 @@ def classify_action_shortcut(
     decision = _quest_decide_action(player_input, surroundings)
     if decision is not None:
         return _action_output([decision])
+
+    named_dialogue = _named_visible_dialogue_action(player_input, surroundings)
+    if named_dialogue is not None:
+        return _action_output([named_dialogue])
+
+    single_npc_question = _single_visible_npc_question_action(
+        player_input,
+        surroundings,
+    )
+    if single_npc_question is not None:
+        return _action_output([single_npc_question])
 
     quest_move = _active_quest_location_move_action(player_input, surroundings)
     if quest_move is not None:
@@ -255,6 +267,41 @@ def _quest_giver_id(quest_id: str, quests: list[dict[str, Any]]) -> str | None:
         if quest.get("id") == quest_id and isinstance(quest.get("giver"), str):
             return quest["giver"]
     return None
+
+
+def _single_visible_npc_question_action(
+    player_input: str,
+    surroundings: dict[str, Any],
+) -> Action | None:
+    if not _looks_like_information_question(player_input):
+        return None
+    targets = [
+        entry
+        for entry in _dicts(surroundings.get("entities"))
+        if entry.get("type") in {"npc", "enemy"} and isinstance(entry.get("id"), str)
+    ]
+    if len(targets) != 1:
+        return None
+    return Action(verb="speak", to=targets[0]["id"], how="friendly")
+
+
+def _named_visible_dialogue_action(
+    player_input: str,
+    surroundings: dict[str, Any],
+) -> Action | None:
+    if not _looks_like_direct_dialogue(player_input):
+        return None
+    target = _named_entry(
+        player_input,
+        [
+            entry
+            for entry in _dicts(surroundings.get("entities"))
+            if entry.get("type") in {"npc", "enemy"}
+        ],
+    )
+    if target is None:
+        return None
+    return Action(verb="speak", to=target["id"], how="friendly")
 
 
 def _player_id(surroundings: dict[str, Any]) -> str | None:
@@ -465,6 +512,14 @@ def _looks_like_dialogue(player_input: str) -> bool:
         player_input,
         DIALOGUE_TARGET_PARTICLES,
     )
+
+
+def _looks_like_direct_dialogue(player_input: str) -> bool:
+    return _has_any(player_input, DIALOGUE_TERMS) or "「" in player_input
+
+
+def _looks_like_information_question(player_input: str) -> bool:
+    return "?" in player_input or _has_any(player_input, DIALOGUE_QUESTION_TERMS)
 
 
 def _looks_like_inspect(player_input: str) -> bool:

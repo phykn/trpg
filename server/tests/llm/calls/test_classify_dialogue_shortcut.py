@@ -81,14 +81,17 @@ async def test_korean_question_to_visible_npc_uses_llm_classification():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "player_input",
+    ("player_input", "expected_llm_calls"),
     [
-        "서울이 추우면 뭔 줄 알아? 다섯 글자야",
-        "정답은 서울시립대야 재미있지?",
-        "농담 하나 할게",
+        ("서울이 추우면 뭔 줄 알아? 다섯 글자야", []),
+        ("정답은 서울시립대야 재미있지?", []),
+        ("농담 하나 할게", ["classify"]),
     ],
 )
-async def test_joke_or_riddle_continues_recent_npc_dialogue(player_input):
+async def test_joke_or_riddle_continues_recent_npc_dialogue(
+    player_input,
+    expected_llm_calls,
+):
     llm = _DialogueLLM()
 
     result = await classify(
@@ -113,5 +116,4 @@ async def test_joke_or_riddle_continues_recent_npc_dialogue(player_input):
     assert result.actions[0].verb == "speak"
     assert result.actions[0].to == "guide_01"
     assert result.actions[0].how == "friendly"
-    assert [call["agent"] for call in llm.calls] == ["classify"]
-    assert [call["agent"] for call in llm.calls] == ["classify"]
+    assert [call["agent"] for call in llm.calls] == expected_llm_calls

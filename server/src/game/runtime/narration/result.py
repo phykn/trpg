@@ -1,20 +1,21 @@
 import json
 import os
-import re
 from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
 from src.db.repo import GraphRepo
-from src.game.domain.memory import ExchangePair, GMLogEntry, NarrationCue, TurnLogEntry
-from src.locale.render import render
+from src.game.domain.memory import (
+    ExchangePair,
+    GMLogEntry,
+    Memory,
+    NarrationCue,
+    TurnLogEntry,
+)
 from src.llm.diag import llm_diag
 
 from ..state import GameRuntimeState
 from .suggestions import GraphSuggestion, normalize_suggestion
-
-
-_LOCALE = "ko"
 
 
 def _narration_meta_marker(default: str = "---TRPG_META---") -> str:
@@ -118,54 +119,15 @@ def parse_graph_narration_answer(answer: str) -> GraphNarrationResult:
 
 def _clean_narration(text: str) -> str:
     lines = [
-        _clean_visible_narration_text(
-            _normalize_ascii_direct_speech(
-                _strip_trailing_ascii_quote_junk(line)
-            )
-        )
+        _clean_visible_narration_text(line)
         for line in text.splitlines()
-        if line.strip() and not re.fullmatch(r'(?:「\s*」|"\s*")', line.strip())
+        if line.strip()
     ]
     return "\n".join(line for line in lines if line).strip()
 
 
 def _clean_visible_narration_text(text: str, *, strip: bool = True) -> str:
-    cleaned = text.replace("،", ",")
-    for phrase in (
-        render("runtime.narration.clean.generic_action_full", _LOCALE),
-        render("runtime.narration.clean.generic_action_short", _LOCALE),
-        render("runtime.narration.clean.generic_action_sentence", _LOCALE),
-    ):
-        cleaned = cleaned.replace(phrase, "")
-    cleaned = cleaned.replace(
-        render("runtime.narration.clean.player_honorific", _LOCALE),
-        render("runtime.narration.clean.player_pronoun", _LOCALE),
-    )
-    choice = render("runtime.narration.clean.choice_word", _LOCALE)
-    cleaned = re.sub(rf"{re.escape(choice)}\([^)]*\)", choice, cleaned)
-    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
-    return cleaned.strip() if strip else cleaned
-
-
-def _strip_trailing_ascii_quote_junk(line: str) -> str:
-    return re.sub(r'(?:\\?["`]){2,}$', "", line.rstrip())
-
-
-def _normalize_ascii_direct_speech(line: str) -> str:
-    line = line.replace(r"\"", '"')
-    if '"' not in line:
-        return line.rstrip()
-    out: list[str] = []
-    in_quote = False
-    for char in line:
-        if char != '"':
-            out.append(char)
-            continue
-        out.append("」" if in_quote else "「")
-        in_quote = not in_quote
-    if in_quote:
-        out.append("」")
-    return "".join(out).rstrip()
+    return text.strip() if strip else text
 
 
 def _first_marker_at(text: str, markers: tuple[str, ...]) -> int:
@@ -197,6 +159,7 @@ async def persist_graph_narration_result(
     player_input: str | None = None,
 ) -> GameRuntimeState:
     history_entries = _history_entries(runtime, result, target)
+    memory_entries = _memory_entries(runtime, result, target)
     exchange_entries = _exchange_entries(
         runtime,
         result,
@@ -205,13 +168,16 @@ async def persist_graph_narration_result(
     )
     if history_entries:
         await repo.append_history_entries(runtime.progress.game_id, history_entries)
+    if memory_entries:
+        await repo.append_memory_entries(runtime.progress.game_id, memory_entries)
     if exchange_entries:
         await repo.append_exchange_entries(runtime.progress.game_id, exchange_entries)
-    if not history_entries and not exchange_entries:
+    if not history_entries and not memory_entries and not exchange_entries:
         return runtime
     return runtime.model_copy(
         update={
             "turn_log": [*runtime.turn_log, *history_entries],
+            "memories": [*runtime.memories, *memory_entries],
             "recent_exchanges": [*runtime.recent_exchanges, *exchange_entries],
         }
     )
@@ -230,6 +196,24 @@ def _history_entries(
             turn=runtime.progress.turn_count,
             target=target,
             summary=summary,
+            importance=result.importance,
+        )
+    ]
+
+
+def _memory_entries(
+    runtime: GameRuntimeState,
+    result: GraphNarrationResult,
+    target: str | None,
+) -> list[Memory]:
+    summary = result.turn_summary.strip()
+    if not summary:
+        return []
+    return [
+        Memory(
+            turn=runtime.progress.turn_count,
+            target=target,
+            content=summary,
             importance=result.importance,
         )
     ]

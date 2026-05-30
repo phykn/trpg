@@ -1,7 +1,12 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.game.domain.graph import Graph, SetNodePropertyChange
-from src.game.domain.quest import quest_choices, quest_triggers, quest_triggers_met
+from src.game.domain.quest import (
+    is_required_quest,
+    quest_choices,
+    quest_triggers,
+    quest_triggers_met,
+)
 
 
 class GraphProgressionResult(BaseModel):
@@ -144,7 +149,7 @@ def _quest_ids_for_chapter(graph: Graph, chapter_id: str) -> list[str]:
 
 def _is_required_quest(graph: Graph, quest_id: str) -> bool:
     node = graph.nodes.get(quest_id)
-    return node is not None and node.type == "quest" and node.properties.get("required") is not False
+    return node is not None and node.type == "quest" and is_required_quest(node)
 
 
 def _auto_activate_when_unlocked(graph: Graph, quest_id: str) -> bool:

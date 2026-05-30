@@ -19,7 +19,7 @@ from src.db.graph.rows import (
 )
 from src.game.domain.errors import PersistenceFailed
 from src.game.domain.graph import Graph
-from src.game.domain.memory import ExchangePair, LogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, LogEntry, Memory, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
 from src.game.rules import RULES
@@ -183,6 +183,23 @@ class SupabaseGraphRepo:
     ) -> None:
         await self._append_seq_rows("history_entries", game_id, list(entries))
 
+    async def append_memory_entries(
+        self, game_id: str, entries: list[Memory]
+    ) -> None:
+        if not entries:
+            return
+        rows = [
+            {
+                "game_id": game_id,
+                "target_id": entry.target,
+                "turn": entry.turn,
+                "importance": entry.importance,
+                "entry": json.loads(entry.model_dump_json()),
+            }
+            for entry in entries
+        ]
+        await self._db.insert("memory_entries", rows)
+
     async def append_exchange_entries(
         self, game_id: str, entries: list[ExchangePair]
     ) -> None:
@@ -212,6 +229,21 @@ class SupabaseGraphRepo:
             limit=RULES.memory.turn_log_size,
         )
         return [TurnLogEntry.model_validate(row["entry"]) for row in reversed(rows)]
+
+    async def load_memory_entries(
+        self, game_id: str, *, target: str | None = None
+    ) -> list[Memory]:
+        filters = {"game_id": f"eq.{game_id}"}
+        if target is not None:
+            filters["target_id"] = f"eq.{target}"
+        rows = await self._db.select(
+            "memory_entries",
+            filters=filters,
+            select="entry,target_id,turn,importance",
+            order="seq.desc",
+            limit=RULES.memory.cap,
+        )
+        return [Memory.model_validate(row["entry"]) for row in reversed(rows)]
 
     async def load_exchange_entries(self, game_id: str) -> list[ExchangePair]:
         rows = await self._db.select(

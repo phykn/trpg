@@ -1,13 +1,14 @@
 import json
 
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import ExchangePair, TurnLogEntry
+from src.game.domain.memory import ExchangePair, Memory, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.narration.memory_context import (
     classify_recent_exchanges_payload,
     narrate_recent_exchanges_payload,
     previous_scene_payload,
+    subject_memories_payload,
 )
 
 
@@ -135,3 +136,33 @@ def test_narrate_recent_exchanges_keeps_only_same_target(monkeypatch):
 
     assert [item["turn"] for item in payload] == [1, 3]
     assert payload[1]["target"] == "npc_merchant"
+
+
+def test_subject_memories_keep_campaign_and_target_only():
+    runtime = _runtime()
+    runtime.memories = [
+        Memory(turn=1, target=None, content="항구에는 2인 승선 규칙이 있습니다."),
+        Memory(turn=2, target="npc_other", content="다른 인물의 기억입니다."),
+        Memory(
+            turn=3,
+            target="npc_merchant",
+            content="상인은 당신이 젖은 표를 확인했다고 기억합니다.",
+            importance=2,
+        ),
+    ]
+
+    payload = subject_memories_payload(runtime, target="npc_merchant")
+
+    assert payload == [
+        {
+            "turn": 1,
+            "content": "항구에는 2인 승선 규칙이 있습니다.",
+            "importance": 1,
+        },
+        {
+            "turn": 3,
+            "target": "npc_merchant",
+            "content": "상인은 당신이 젖은 표를 확인했다고 기억합니다.",
+            "importance": 2,
+        },
+    ]

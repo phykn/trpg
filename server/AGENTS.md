@@ -71,12 +71,13 @@ Graph runtime tables are all keyed on `game_id`:
 - `graph_edges(game_id, edge_id, edge_type, from_node_id, to_node_id, properties jsonb)` PK `(game_id, edge_id)`.
 - `log_entries(game_id, log_id int, entry jsonb)` — `log_id = entry.id` (app-managed monotonic).
 - `history_entries(game_id, seq bigserial, entry jsonb)` — append-only turn summaries.
+- `memory_entries(game_id, seq bigserial, target_id text, turn int, importance int, entry jsonb)` — append-only target-indexed long-term memories for NPC/player/location/campaign recall.
 - `exchange_entries(game_id, seq bigserial, entry jsonb)` — append-only player input + narrator response exchanges.
 - `world_patch_entries(game_id, seq bigserial, entry jsonb)` — append-only accepted/rejected LLM story patch ledger.
 
 Generated story dev routes expose only diagnostics/ops: `/story/patches` and `/story/timeline` read the ledger, `/story/debt` derives unresolved generated clues, orphan generated characters/items, and open generated quest beats from the current graph, `/story/dev/graph` returns the raw graph inspector payload, `/story/dev/contract` returns or applies the session-local generated story contract override, `/story/rollback` removes the latest unrolled accepted generated patch, `/story/dev/preview_contract` / `/story/dev/preview_patch` validate proposed contract or patch JSON without saving it, and `/story/dev/replay_prompt` rebuilds the story writer prompt payload without calling the LLM. Player-facing play should continue through `/graph/*`.
 
-Runtime child tables should FK to `game_progress(game_id) ON DELETE CASCADE`. RLS enabled with no policies (server uses service-role key, anon/auth keys see nothing).
+Runtime child tables should FK to `game_progress(game_id) ON DELETE CASCADE`. RLS enabled with no policies (server uses service-role key, anon/auth keys see nothing). `memory_entries` should also have an index on `(game_id, target_id, seq desc)` for target-specific recall.
 
 `load_runtime_state` bumps `next_log_id` past the highest loaded log id so a partial write cannot reuse a log id on the next turn.
 

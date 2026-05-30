@@ -43,12 +43,12 @@ async def test_read_world_md_missing_ok_returns_empty():
 
 async def test_read_contract_json_returns_dict_when_present():
     repo, fs = make_scenario_repo()
-    fs.objects["white_isle_llm/contract.json"] = json.dumps(
-        {"id": "white_isle_llm"}
+    fs.objects["white_isle/contract.json"] = json.dumps(
+        {"id": "white_isle"}
     ).encode("utf-8")
 
-    assert await repo.read_contract_json("white_isle_llm", missing_ok=True) == {
-        "id": "white_isle_llm"
+    assert await repo.read_contract_json("white_isle", missing_ok=True) == {
+        "id": "white_isle"
     }
 
 

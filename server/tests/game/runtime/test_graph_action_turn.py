@@ -169,7 +169,7 @@ async def test_run_graph_action_turn_logs_quest_choice_label(tmp_path):
             "title": "별점 복구 사건",
             "status": "active",
             "choices": {
-                "restore": {"label": "별점을 복구합니다"},
+                "restore": {"label": "책임 기록"},
                 "remove": {"label": "점수표를 떼어냅니다"},
             },
         },
@@ -187,7 +187,7 @@ async def test_run_graph_action_turn_logs_quest_choice_label(tmp_path):
     )
     logs = await repo.load_log_entries("game-1")
 
-    assert logs[0].text == "당신은 별점 복구 사건에서 「별점을 복구합니다」를 선택합니다."
+    assert logs[0].text == "당신은 별점 복구 사건에서 「책임 기록」을 선택합니다."
 
 
 class _DeltaTrackingRepo(LocalFsGraphRepo):

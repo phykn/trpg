@@ -41,7 +41,7 @@ class FakeGraphRepo:
 def _story_contract() -> StoryContract:
     return StoryContract.model_validate(
         {
-            "id": "white_isle_llm",
+            "id": "white_isle",
             "world": {"title": "흰섬", "locale": "ko"},
             "fixed": [],
             "forbid": [],
@@ -110,7 +110,7 @@ def _runtime() -> GameRuntimeState:
         progress=GameProgress(
             game_id="game-1",
             player_id="player_01",
-            profile_id="white_isle_llm",
+            profile_id="white_isle",
         ),
         story_contract=_story_contract(),
     )
@@ -402,7 +402,45 @@ async def test_generated_story_allows_empty_patch_for_atmosphere_narration() -> 
     assert "patch_requirement" not in calls[0]["visible_context"]
 
 
-async def test_generated_story_falls_back_when_writer_returns_invalid_schema() -> None:
+async def test_generated_story_does_not_require_patch_for_existing_pier_mention() -> None:
+    calls = []
+
+    async def fake_writer(**kwargs) -> StoryWriteResponse:
+        calls.append(kwargs["input_"].model_dump(mode="json"))
+        return StoryWriteResponse.model_validate(
+            {"reason": "existing scene detail", "patches": []}
+        )
+
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_character", "add_location", "add_quest_beat"]}
+    )
+    runtime = _runtime().model_copy(update={"story_contract": contract})
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+    repo = FakeGraphRepo()
+
+    await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=contract,
+        player_input="올든에게 말을 겁니다.",
+        action=Action(verb="speak", what="npc_olden"),
+        accepted_narration=(
+            "선착장 끝에서는 작은 배 하나가 밧줄에 묶여 흔들리고 있습니다."
+        ),
+        writer=fake_writer,
+    )
+
+    assert len(calls) == 1
+    assert "patch_requirement" not in calls[0]["visible_context"]
+    assert [entry.status for entry in repo.story_patch_entries] == ["skipped"]
+
+
+async def test_generated_story_skips_writer_error_without_synthesizing_patch() -> None:
     async def broken_writer(**kwargs) -> StoryWriteResponse:
         raise ValueError("patches.0 needs op")
 
@@ -431,17 +469,15 @@ async def test_generated_story_falls_back_when_writer_returns_invalid_schema() -
         writer=broken_writer,
     )
 
-    assert "char_manager" in next_result.runtime.graph.nodes
-    assert (
-        next_result.runtime.graph.nodes["char_manager"].properties["name"]
-        == "항구 관리인"
-    )
-    assert "located_at:char_manager:loc_fog_harbor" in next_result.runtime.graph.edges
-    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
-    assert repo.story_patch_entries[0].changed_node_ids == ["char_manager"]
+    assert next_result is result
+    assert repo.saved is False
+    assert "char_manager" not in next_result.runtime.graph.nodes
+    assert [entry.status for entry in repo.story_patch_entries] == ["skipped"]
+    assert repo.story_patch_entries[0].reason == "story_write skipped after ValueError"
+    assert repo.story_patch_entries[0].patches == []
 
 
-async def test_generated_story_falls_back_to_quest_beat_from_player_goal() -> None:
+async def test_generated_story_skips_writer_error_even_when_goal_is_actionable() -> None:
     async def broken_writer(**kwargs) -> StoryWriteResponse:
         raise ValueError("patches.0 needs op")
 
@@ -467,13 +503,13 @@ async def test_generated_story_falls_back_to_quest_beat_from_player_goal() -> No
         writer=broken_writer,
     )
 
-    assert "quest_clue" in next_result.runtime.graph.nodes
-    assert next_result.runtime.graph.nodes["quest_clue"].properties["status"] == "pending"
-    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
-    assert repo.story_patch_entries[0].changed_node_ids == ["quest_clue"]
+    assert next_result is result
+    assert "quest_clue" not in next_result.runtime.graph.nodes
+    assert [entry.status for entry in repo.story_patch_entries] == ["skipped"]
+    assert repo.story_patch_entries[0].patches == []
 
 
-async def test_generated_story_falls_back_after_empty_actionable_retry() -> None:
+async def test_generated_story_rejects_empty_actionable_retry_without_synthesizing_patch() -> None:
     calls = 0
 
     async def empty_writer(**kwargs) -> StoryWriteResponse:
@@ -506,14 +542,17 @@ async def test_generated_story_falls_back_after_empty_actionable_retry() -> None
     )
 
     assert calls == 2
-    assert "quest_clue" in next_result.runtime.graph.nodes
-    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
-    assert repo.story_patch_entries[0].reason == (
-        "story_write fallback after empty actionable patch"
-    )
+    assert next_result is result
+    assert repo.saved is False
+    assert "quest_road" not in next_result.runtime.graph.nodes
+    assert [entry.status for entry in repo.story_patch_entries] == ["rejected"]
+    assert repo.story_patch_entries[0].reason == "nothing durable changed"
+    assert repo.story_patch_entries[0].rejected_reasons == [
+        "required_actionable_patch_missing"
+    ]
 
 
-async def test_generated_story_falls_back_to_location_from_open_move() -> None:
+async def test_generated_story_rejects_empty_open_move_without_synthesizing_location() -> None:
     calls = 0
 
     async def empty_writer(**kwargs) -> StoryWriteResponse:
@@ -546,17 +585,16 @@ async def test_generated_story_falls_back_to_location_from_open_move() -> None:
     )
 
     assert calls == 2
-    assert "loc_road" in next_result.runtime.graph.nodes
-    assert next_result.runtime.graph.nodes["loc_road"].properties["name"] == "북쪽 길목"
-    assert (
-        next_result.runtime.graph.nodes["loc_road"].properties["description"]
-        == "북쪽 길목은 더 살펴볼 수 있는 장소입니다."
-    )
-    assert "connects_to:loc_fog_harbor:loc_road" in next_result.runtime.graph.edges
-    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
+    assert next_result is result
+    assert repo.saved is False
+    assert "loc_road" not in next_result.runtime.graph.nodes
+    assert [entry.status for entry in repo.story_patch_entries] == ["rejected"]
+    assert repo.story_patch_entries[0].rejected_reasons == [
+        "required_actionable_patch_missing"
+    ]
 
 
-async def test_generated_story_replaces_memory_only_move_patch_with_location() -> None:
+async def test_generated_story_rejects_memory_only_patch_for_actionable_move() -> None:
     calls = 0
 
     async def memory_writer(**kwargs) -> StoryWriteResponse:
@@ -598,9 +636,15 @@ async def test_generated_story_replaces_memory_only_move_patch_with_location() -
     )
 
     assert calls == 2
-    assert "loc_road" in next_result.runtime.graph.nodes
+    assert next_result is result
+    assert repo.saved is False
+    assert "loc_road" not in next_result.runtime.graph.nodes
     assert "mem_north_path_taken" not in next_result.runtime.graph.nodes
-    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
+    assert [entry.status for entry in repo.story_patch_entries] == ["rejected"]
+    assert repo.story_patch_entries[0].patches[0]["id"] == "mem_north_path_taken"
+    assert repo.story_patch_entries[0].rejected_reasons == [
+        "required_actionable_patch_missing"
+    ]
 
 
 async def test_generated_story_skips_writer_error_when_no_fallback_matches() -> None:

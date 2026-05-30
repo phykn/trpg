@@ -66,6 +66,19 @@ describe('Playing overlay layering', () => {
     );
   });
 
+  test('moves discoveries into the top context slots instead of always rendering above the log', () => {
+    expect(source).toContain('buildPanelSlots({ hero, subject, chapter, discoveries, slotDots, scenarioCompleted: game.scenarioCompleted, quest, questOffers })');
+    expect(source).not.toContain('<DiscoveriesPanel discoveries={discoveries} />');
+  });
+
+  test('marks changed top context slots until each tab is opened', () => {
+    expect(source).toContain('usePanelSlotTracking');
+    expect(source).toContain('const { slotDots, markSlotSeen } = usePanelSlotTracking');
+    expect(source).toContain('markSlotSeen(next);');
+    expect(source).not.toContain('function slotContentKeys');
+    expect(source).not.toContain('setSeenSlotKeys');
+  });
+
   test('builds nearby actions from the current server snapshot', () => {
     expect(source).toContain('buildNearbyPanel(storyGraph)');
   });
@@ -99,6 +112,7 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('const showStoryDev = __DEV__ && game.gameId !== null;');
     expect(source).toContain('<StoryDevPanel gameId={game.gameId ?? \'\'} onClose={() => setStoryDevOpen(false)} />');
     expect(source).toContain('d={ICON_PATH.storyDev}');
+    expect(source).toContain('text={ko.storyDev.short}');
   });
 
   test('only uses cues from the last log entry when it is GM narration', () => {

@@ -231,10 +231,25 @@ def test_graph_narration_prompts_encode_core_contracts():
             "전투 브리핑이면 전투",
             "`장면 유형`이 `roll_prompt`이면 판정 전",
             "`ui_cues`와 `suggestions`의 기본값은 빈 배열입니다",
+            "선택 라벨이나 퀘스트 제목",
+            "임의로 성공 상태",
+            "완료된 목표",
+            "연두 체류권 획득",
+            "위치 이동, 동행자 이탈, 소유 변화",
+            "`혹은`, `아마`, `시야에서 약간`",
             "suggestions는 새 행동을 창작하는 기능이 아닙니다",
             "브리핑에 이미 드러난 대상, 장소, 물건, 목표를 플레이어 입력문으로 바꾸는 기능입니다",
             "NPC가 직접 반응하는 것을 기본값으로 씁니다",
             "설명문만 쓰지 말고 직접 발화 한 문장을 반드시 넣습니다",
+            "`앞에 선니다`처럼 잘못 합성한 표현",
+            "`앞에 섭니다`처럼 자연스러운 현재형",
+            "직접 발화 `「」` 앞뒤는 문장과 붙이지 말고",
+            "`플레이어님`",
+            "`당신의 행동이 처리됩니다`",
+            "`당신의 선택(열기)`",
+            "`하나`, `한 장`, `한 척`, `한 상점`, `한 진열대`, `둘`, `네 개`, `다섯 개`",
+            "`듯한`, `듯 보입니다`, `느껴집니다`",
+            "런타임이 고쳐 주지 않습니다",
             "`대상 정보`는 그 대상과 이번 상호작용에 붙은 공개 정보입니다",
             "전투 모드에서는 대화, 조사, 퀘스트 규칙보다",
             "전투의 `행동`, `결과`, `전투 상태`, `확정`",
@@ -345,6 +360,7 @@ def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
             "`장면 유형`",
             "`결과`",
             "`확정`",
+            "`선택 결과`",
             "`대상 정보`",
             "`공개된 사실`",
             "배경 문맥",
@@ -356,11 +372,29 @@ def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
             "막힘을 남기는 것은 필수가 아닙니다",
             "대화 대상",
             "다른 인물",
+            "엘리에게 대화 시도하기",
+            "출항 가능 여부 묻기",
+            "챕터 제목은 물리적 위치가 아닙니다",
+            "현재 연두섬의 별점 게시판",
+            "글, 영수증, 표지판, 계약서",
+            "실제 문구, 이름, 금액, 조건",
             "새 갈고리 없이 닫습니다",
             "장소 진입 퀘스트 트리거",
             "갈등을 해결한 것처럼 과장하지 않습니다",
             "소유자와 위치",
             "보관 동작",
+            "체류권 남기기",
+            "연두 체류권",
+            "출항 허가서가 발급",
+            "축하식이 이미 끝났다고",
+            "새 출발의 박자 사건",
+            "축하식의 흔적",
+            "이미 연주 중인 상태",
+            "기대감 가득한 정적",
+            "흰섬의 빈 의자 쪽",
+            "과거 장소명인 `안개 항구`",
+            "선택의 잔향",
+            "마지막 사물",
         ],
     )
 
@@ -387,6 +421,20 @@ def test_graph_narrate_prompt_requires_clear_roll_consequences():
     )
 
 
+def test_graph_narrate_prompt_rejects_silent_info_dialogue():
+    prompt = (PROMPT_ROOT / "graph_narrate" / "prompt.ko.md").read_text(
+        encoding="utf-8"
+    )
+
+    _assert_contains_all(
+        prompt,
+        [
+            "정보형 질문은 직접 발화 없이 시선 묘사만으로 끝내면 실패입니다",
+            "장소 질문이면 장소 이름이나 보이는 방의 쓰임을 먼저 말합니다",
+        ],
+    )
+
+
 def test_graph_narrate_prompt_uses_story_transition_as_lead_not_solution():
     prompt = (PROMPT_ROOT / "graph_narrate" / "prompt.ko.md").read_text(
         encoding="utf-8"
@@ -402,6 +450,18 @@ def test_graph_narrate_prompt_uses_story_transition_as_lead_not_solution():
             "handoff에 없는 이전 퀘스트의 물건",
             "플레이어 손",
             "인벤토리",
+            "여러 선택지 뒤에 공통",
+            "한쪽 선택 결과",
+            "남은 흔적",
+            "서로 다른 사물을 섞어 새 복합 사물",
+            "`별 모양 서명란`",
+            "매듭이 물길과 연결",
+            "방금 선택한 결과",
+            "`선택 결과`와 `획득`",
+            "점수표 떼어내기",
+            "`별점 복구`처럼",
+            "작은 시작으로 줄이기",
+            "플레이어 손",
         ],
     )
     _assert_contains_none(prompt, ["엘리나 동행자"])

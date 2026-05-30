@@ -9,7 +9,7 @@ from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import ExchangePair, GMLogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, GMLogEntry, Memory, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime.flow.confirmation import GraphConfirmationActive
 from src.game.runtime.flow.input import (
@@ -493,9 +493,9 @@ async def test_generated_speak_can_promote_narrated_lead_to_graph_patch(tmp_path
     await repo.save_progress(
         progress.model_copy(
             update={
-                "profile_id": "white_isle_llm",
+                "profile_id": "white_isle",
                 "story_contract_override": {
-                    "id": "white_isle_llm",
+                    "id": "white_isle",
                     "world": {"title": "흰섬", "locale": "ko"},
                     "fixed": [],
                     "forbid": [],
@@ -885,6 +885,7 @@ async def test_graph_input_reflects_speak_turn_into_memory_exchanges_and_suggest
 
     result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 북문을 묻는다")
     history = await repo.load_history_entries("game-1")
+    memories = await repo.load_memory_entries("game-1", target="goblin_01")
     exchanges = await repo.load_exchange_entries("game-1")
 
     assert [suggestion.model_dump() for suggestion in result.suggestions] == [
@@ -917,6 +918,14 @@ async def test_graph_input_reflects_speak_turn_into_memory_exchanges_and_suggest
             target="goblin_01",
         )
     ]
+    assert memories == [
+        Memory(
+            turn=1,
+            target="goblin_01",
+            content="고블린에게서 북문의 낯선 발자국 정보를 들었습니다.",
+            importance=3,
+        )
+    ]
     assert [call["agent"] for call in llm.calls].count("graph_narrate") == 1
     assert "graph_reflect" not in [call["agent"] for call in llm.calls]
 
@@ -933,6 +942,7 @@ async def test_graph_input_falls_back_to_visible_suggestions_when_llm_sends_none
     result = await run_graph_input_turn(llm, repo, "game-1", "goblin_01에게 말을 겁니다")
 
     assert [suggestion.input_text for suggestion in result.suggestions] == [
+        "goblin_01에게 「Town에서는 무엇을 확인해야 하나요?」라고 묻습니다",
         "광장으로 이동합니다",
         "주변을 살핍니다",
     ]
@@ -1136,6 +1146,57 @@ async def test_graph_input_streams_single_result_for_multiple_actions(tmp_path):
     )
     assert events[-1]["result"].front_state.place.id == "forest"
     assert [entry.kind for entry in logs] == ["player", "gm", "act", "gm"]
+
+
+async def test_graph_input_merges_adjacent_perceive_actions_into_one_narration(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(
+            update={
+                "profile_id": "white_isle",
+                "story_contract_override": {
+                    "id": "white_isle",
+                    "world": {"title": "흰섬", "locale": "ko"},
+                    "fixed": [],
+                    "forbid": [],
+                    "tone": {"register": "합니다체", "person": "second"},
+                    "budgets": {"patches_per_turn": 1, "new_terms_per_turn": 1},
+                    "allowed_ops": ["add_clue"],
+                    "stability_defaults": {"add_clue": "scene"},
+                },
+            }
+        )
+    )
+    llm = _GeneratedStoryLLM(
+        {
+            "actions": [
+                {"verb": "perceive", "what": "town"},
+                {"verb": "perceive", "what": "goblin_01"},
+            ]
+        },
+        narration="당신은 광장과 고블린을 한 번에 살핍니다.",
+        story_response={"reason": "basic look", "patches": []},
+    )
+
+    result = await run_graph_input_turn(
+        llm,
+        repo,
+        "game-1",
+        "광장과 고블린을 살핀다",
+    )
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[1].text == "당신은 광장과 고블린을 한 번에 살핍니다."
+    assert [call["agent"] for call in llm.calls] == [
+        "classify",
+        "graph_narrate",
+        "story_write",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -1387,9 +1448,9 @@ async def test_generated_perceive_without_check_uses_narrative_flow(tmp_path):
     await repo.save_progress(
         progress.model_copy(
             update={
-                "profile_id": "white_isle_llm",
+                "profile_id": "white_isle",
                 "story_contract_override": {
-                    "id": "white_isle_llm",
+                    "id": "white_isle",
                     "world": {"title": "흰섬", "locale": "ko"},
                     "fixed": [],
                     "forbid": [],

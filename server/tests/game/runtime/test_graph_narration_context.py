@@ -6,6 +6,7 @@ from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import (
     ExchangePair,
     GMLogEntry,
+    Memory,
     NarrationCue,
     RollLogEntry,
     TurnLogEntry,
@@ -364,6 +365,30 @@ def test_input_payload_includes_current_story_context():
             "description": "레아의 빈방을 계속 닫아 둘지 정합니다.",
         },
     }
+
+
+def test_input_payload_includes_target_subject_memories():
+    runtime = _runtime()
+    runtime.memories = [
+        Memory(turn=1, target="guard_01", content="경비병은 북문 이야기를 꺼냈습니다."),
+        Memory(turn=2, target="other_npc", content="다른 인물의 기억입니다."),
+    ]
+
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input="경비병에게 북문을 묻습니다",
+        action=Action(verb="speak", to="guard_01"),
+        dialogue_target=runtime.graph.nodes["guard_01"],
+    )
+
+    assert payload["reference_context"]["subject_memories"] == [
+        {
+            "turn": 1,
+            "target": "guard_01",
+            "content": "경비병은 북문 이야기를 꺼냈습니다.",
+            "importance": 1,
+        }
+    ]
 
 
 def test_input_payload_keeps_chapter_guidance_list():
@@ -1115,7 +1140,18 @@ def test_action_payload_includes_story_transition_without_forcing_solution():
             "title": "분노 환불 사건",
             "status": "active",
             "handoff": "엘리는 빈방 이야기는 레아에게서 시작될 것 같다고 말합니다.",
+            "choices": {
+                "release": {
+                    "label": "분노를 흘려보내기",
+                    "rewards": {"gold": 0, "exp": 0, "items": ["blue_key"]},
+                }
+            },
         },
+    )
+    before.graph.nodes["blue_key"] = GraphNode(
+        id="blue_key",
+        type="item",
+        properties={"name": "푸른 열쇠", "kind": "key"},
     )
     before.graph.nodes["quest_next"] = GraphNode(
         id="quest_next",
@@ -1127,6 +1163,12 @@ def test_action_payload_includes_story_transition_without_forcing_solution():
     after.graph.nodes["chapter_02"].properties["status"] = "active"
     after.graph.nodes["quest_done"].properties["status"] = "completed"
     after.graph.nodes["quest_next"].properties["status"] = "pending"
+    after.graph.edges["carries:player_01:blue_key"] = GraphEdge(
+        id="carries:player_01:blue_key",
+        type="carries",
+        from_node_id="player_01",
+        to_node_id="blue_key",
+    )
     dispatch = GraphActionDispatchResult(
         runtime=after,
         kind="decide",
@@ -1145,6 +1187,17 @@ def test_action_payload_includes_story_transition_without_forcing_solution():
     )
 
     assert payload["engine_event"]["story_transition"] == {
+        "choice_result": {
+            "quest": {"id": "quest_done", "name": "분노 환불 사건"},
+            "choice": {"id": "release", "label": "분노를 흘려보내기"},
+            "gained_items": [
+                {
+                    "id": "blue_key",
+                    "name": "푸른 열쇠",
+                    "kind": "key",
+                }
+            ],
+        },
         "completed_quests": [{"id": "quest_done", "name": "분노 환불 사건"}],
         "opened_chapter": {"id": "chapter_02", "name": "푸른섬"},
         "next_quest": {"id": "quest_next", "name": "빈방 사건"},

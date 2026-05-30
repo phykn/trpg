@@ -19,6 +19,7 @@ from src.game.domain.quest import (
 )
 from src.game.runtime.state import GameRuntimeState
 from src.locale import render
+from src.locale.generated_story import is_generic_quest_beat
 from src.wire.models import (
     DifficultyBadge,
     QuestChoicePayload,
@@ -127,6 +128,11 @@ def quest_status(quest: GraphNode) -> str:
 
 def _is_generated_quest_beat(quest: GraphNode) -> bool:
     if quest_status(quest) != "pending":
+        return False
+    if is_generic_quest_beat(
+        quest.properties.get("title"),
+        quest.properties.get("summary") or quest.properties.get("description"),
+    ):
         return False
     return isinstance(quest.properties.get("turn_id"), int) and quest.properties.get(
         "stability"

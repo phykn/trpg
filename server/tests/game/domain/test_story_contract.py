@@ -7,7 +7,7 @@ from src.game.domain.story_contract import StoryContract
 def test_story_contract_accepts_minimal_llm_contract() -> None:
     contract = StoryContract.model_validate(
         {
-            "id": "white_isle_llm",
+            "id": "white_isle",
             "world": {"title": "흰섬", "locale": "ko"},
             "fixed": ["엘리는 시작부터 동행합니다."],
             "forbid": ["플레이어의 감정을 확정하지 않습니다."],
@@ -21,7 +21,7 @@ def test_story_contract_accepts_minimal_llm_contract() -> None:
         }
     )
 
-    assert contract.id == "white_isle_llm"
+    assert contract.id == "white_isle"
     assert contract.allowed_ops == ["add_memory", "add_clue"]
     assert contract.stability_defaults.add_memory == "campaign"
 
@@ -29,7 +29,7 @@ def test_story_contract_accepts_minimal_llm_contract() -> None:
 def test_story_contract_accepts_location_op() -> None:
     contract = StoryContract.model_validate(
         {
-            "id": "white_isle_llm",
+            "id": "white_isle",
             "world": {"title": "흰섬", "locale": "ko"},
             "fixed": [],
             "forbid": [],
@@ -51,7 +51,7 @@ def test_story_contract_accepts_location_op() -> None:
 def test_story_contract_accepts_character_op() -> None:
     contract = StoryContract.model_validate(
         {
-            "id": "white_isle_llm",
+            "id": "white_isle",
             "world": {"title": "흰섬", "locale": "ko"},
             "fixed": [],
             "forbid": [],
@@ -74,7 +74,7 @@ def test_story_contract_accepts_character_op() -> None:
 def test_story_contract_accepts_item_op() -> None:
     contract = StoryContract.model_validate(
         {
-            "id": "white_isle_llm",
+            "id": "white_isle",
             "world": {"title": "흰섬", "locale": "ko"},
             "fixed": [],
             "forbid": [],
@@ -98,7 +98,7 @@ def test_story_contract_accepts_item_op() -> None:
 def test_story_contract_accepts_quest_beat_op() -> None:
     contract = StoryContract.model_validate(
         {
-            "id": "white_isle_llm",
+            "id": "white_isle",
             "world": {"title": "흰섬", "locale": "ko"},
             "fixed": [],
             "forbid": [],
@@ -124,7 +124,7 @@ def test_story_contract_rejects_unknown_top_level_fields() -> None:
     with pytest.raises(ValidationError):
         StoryContract.model_validate(
             {
-                "id": "white_isle_llm",
+                "id": "white_isle",
                 "world": {"title": "흰섬", "locale": "ko"},
                 "fixed": [],
                 "forbid": [],
@@ -144,7 +144,7 @@ def test_story_contract_rejects_unknown_ops() -> None:
     with pytest.raises(ValidationError):
         StoryContract.model_validate(
             {
-                "id": "white_isle_llm",
+                "id": "white_isle",
                 "world": {"title": "흰섬", "locale": "ko"},
                 "fixed": [],
                 "forbid": [],

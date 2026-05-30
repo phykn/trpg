@@ -5,6 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatTraceEvent
 from src.game.domain.graph import GraphChange
+from src.game.domain.graph.query import location_of
+from src.game.engines.graph.arrival import plan_arrival_branch_effects
 from src.game.engines.graph.item_use import GraphItemUseError, plan_item_use
 from src.game.engines.graph.move import GraphMoveError, plan_character_move
 from src.game.engines.graph.progression import plan_progression_after_quest_completion
@@ -81,6 +83,17 @@ def dispatch_graph_action(
             next_runtime = reward_applied.runtime
             dirty.add_apply_result(reward_applied)
             applied_count += reward_applied.applied
+        arrival_apply = _apply_arrival_branch_effects(runtime, next_runtime, kind)
+        if arrival_apply is not None:
+            next_runtime, arrival_dirty, arrival_applied, hidden_character_ids = (
+                arrival_apply
+            )
+            dirty.changed_node_ids.update(arrival_dirty.changed_node_ids)
+            dirty.changed_edge_ids.update(arrival_dirty.changed_edge_ids)
+            dirty.removed_edge_ids.update(arrival_dirty.removed_edge_ids)
+            applied_count += arrival_applied
+            if next_runtime.progress.active_subject_id in hidden_character_ids:
+                progress_update = {**progress_update, "active_subject_id": None}
         quest_apply = _apply_quest_progress_for_action(next_runtime, action, kind)
         if quest_apply is not None:
             next_runtime, quest_dirty, quest_applied, completed_quest_ids = quest_apply
@@ -284,6 +297,34 @@ def _plan_non_combat(
 
 def _advance_turn(runtime: GameRuntimeState) -> dict[str, int]:
     return {"turn_count": runtime.progress.turn_count + 1}
+
+
+def _apply_arrival_branch_effects(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+    kind: str,
+) -> tuple[GameRuntimeState, GraphRuntimeDirty, int, list[str]] | None:
+    if kind != "move":
+        return None
+    before_place_id = location_of(before.graph, before.progress.player_id)
+    after_place_id = location_of(after.graph, after.progress.player_id)
+    if before_place_id == after_place_id or after_place_id is None:
+        return None
+
+    planned = plan_arrival_branch_effects(
+        after.graph,
+        after.progress.player_id,
+        after_place_id,
+    )
+    if not planned.changes:
+        return None
+    applied = apply_runtime_graph_changes(after, planned.changes)
+    return (
+        applied.runtime,
+        GraphRuntimeDirty.from_apply_result(applied),
+        applied.applied,
+        planned.hidden_character_ids,
+    )
 
 
 def _apply_quest_progress_for_action(

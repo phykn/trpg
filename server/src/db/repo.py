@@ -3,7 +3,7 @@
 from typing import Protocol
 
 from src.game.domain.graph import Graph
-from src.game.domain.memory import ExchangePair, LogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, LogEntry, Memory, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
 
@@ -37,6 +37,10 @@ class GraphRepo(Protocol):
         self, game_id: str, entries: list[TurnLogEntry]
     ) -> None: ...
 
+    async def append_memory_entries(
+        self, game_id: str, entries: list[Memory]
+    ) -> None: ...
+
     async def append_exchange_entries(
         self, game_id: str, entries: list[ExchangePair]
     ) -> None: ...
@@ -48,6 +52,10 @@ class GraphRepo(Protocol):
     async def load_log_entries(self, game_id: str) -> list[LogEntry]: ...
 
     async def load_history_entries(self, game_id: str) -> list[TurnLogEntry]: ...
+
+    async def load_memory_entries(
+        self, game_id: str, *, target: str | None = None
+    ) -> list[Memory]: ...
 
     async def load_exchange_entries(self, game_id: str) -> list[ExchangePair]: ...
 

@@ -12,7 +12,7 @@ def _contract(
     allowed = allowed_ops or ["add_memory", "add_clue"]
     return StoryContract.model_validate(
         {
-            "id": "white_isle_llm",
+            "id": "white_isle",
             "world": {"title": "흰섬", "locale": "ko"},
             "fixed": [],
             "forbid": ["흰섬의 결말을 조기 공개하지 않습니다."],
@@ -84,6 +84,39 @@ def test_validator_accepts_single_valid_patch() -> None:
 
     assert result.ok is True
     assert result.reasons == []
+
+
+def test_validator_rejects_clue_anchor_away_from_player_location() -> None:
+    graph = _graph()
+    graph.nodes["loc_red_square"] = GraphNode(
+        id="loc_red_square",
+        type="location",
+        properties={"name": "붉은 광장"},
+    )
+    response = StoryWriteResponse.model_validate(
+        {
+            "reason": "wrong place",
+            "patches": [
+                {
+                    "op": "add_clue",
+                    "id": "clue_lea_response_001",
+                    "title": "레아의 반응",
+                    "summary": "레아가 방 안에서 질문을 듣고 고개를 돌립니다.",
+                    "anchor_id": "loc_red_square",
+                }
+            ],
+        }
+    )
+
+    result = validate_story_write_response(
+        response,
+        graph=graph,
+        contract=_contract(),
+        player_id="player_01",
+    )
+
+    assert result.ok is False
+    assert "offscreen_anchor:loc_red_square" in result.reasons
 
 
 def test_validator_rejects_whole_response_for_budget_excess() -> None:

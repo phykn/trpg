@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Chip, Surface } from '@/components/ui';
 import { ko } from '@/locale/ko';
+import { ContractEditor, Preview, PromptReplay } from './StoryDevEditors';
 import {
   getStoryContract,
   getStoryDebt,
@@ -50,6 +51,16 @@ const EMPTY_STATE: State = {
   graph: null,
   contract: null,
 };
+
+const STORY_DEV_TABS: { id: Tab; label: string }[] = [
+  { id: 'dashboard', label: ko.storyDev.dashboard },
+  { id: 'timeline', label: ko.storyDev.timeline },
+  { id: 'graph', label: ko.storyDev.graph },
+  { id: 'debt', label: ko.storyDev.debt },
+  { id: 'contract', label: ko.storyDev.contract },
+  { id: 'prompt', label: ko.storyDev.prompt },
+  { id: 'preview', label: ko.storyDev.preview },
+];
 
 export function StoryDevPanel({ gameId, onClose }: Props) {
   const [tab, setTab] = React.useState<Tab>('dashboard');
@@ -175,9 +186,9 @@ export function StoryDevPanel({ gameId, onClose }: Props) {
   };
 
   return (
-    <View className="absolute inset-x-5 top-14 z-30">
-      <Surface variant="floating" className="overflow-hidden">
-        <View className="gap-3 p-3">
+    <View className="absolute inset-x-5 top-14 z-30" style={{ height: '50%' }}>
+      <Surface variant="floating" className="flex-1 overflow-hidden">
+        <View className="flex-1 gap-3 p-3">
           <View className="flex-row items-center gap-2">
             <Text className="flex-1 font-sans-semibold text-panel text-fg-default" numberOfLines={1}>
               {ko.storyDev.title}
@@ -193,56 +204,26 @@ export function StoryDevPanel({ gameId, onClose }: Props) {
             </Pressable>
           </View>
 
-          <View className="flex-row gap-2">
-            <Chip
-              variant="tab"
-              label={ko.storyDev.dashboard}
-              active={tab === 'dashboard'}
-              onPress={() => setTab('dashboard')}
-            />
-            <Chip
-              variant="tab"
-              label={ko.storyDev.timeline}
-              active={tab === 'timeline'}
-              onPress={() => setTab('timeline')}
-            />
-            <Chip
-              variant="tab"
-              label={ko.storyDev.graph}
-              active={tab === 'graph'}
-              onPress={() => setTab('graph')}
-            />
-            <Chip
-              variant="tab"
-              label={ko.storyDev.debt}
-              active={tab === 'debt'}
-              onPress={() => setTab('debt')}
-            />
-            <Chip
-              variant="tab"
-              label={ko.storyDev.contract}
-              active={tab === 'contract'}
-              onPress={() => setTab('contract')}
-            />
-            <Chip
-              variant="tab"
-              label={ko.storyDev.prompt}
-              active={tab === 'prompt'}
-              onPress={() => setTab('prompt')}
-            />
-            <Chip
-              variant="tab"
-              label={ko.storyDev.preview}
-              active={tab === 'preview'}
-              onPress={() => setTab('preview')}
-            />
+          <View className="flex-row flex-wrap gap-2">
+            {STORY_DEV_TABS.map((item) => (
+              <StoryDevTab
+                key={item.id}
+                label={item.label}
+                active={tab === item.id}
+                onPress={() => setTab(item.id)}
+              />
+            ))}
           </View>
 
           {state.error ? (
             <Text className="font-sans text-caption text-danger-fg">{state.error}</Text>
           ) : null}
 
-          <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            className="flex-1"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={isActionEditorTab(tab) ? { flexGrow: 1 } : undefined}
+          >
             {tab === 'dashboard' ? (
               <Dashboard
                 gameId={gameId}
@@ -290,6 +271,33 @@ export function StoryDevPanel({ gameId, onClose }: Props) {
   );
 }
 
+function StoryDevTab({ label, active, onPress }: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const bg = active ? 'bg-accent-muted border-accent-fg' : 'bg-transparent border-border-default active:bg-canvas-subtle';
+  const color = active ? 'text-fg-default' : 'text-fg-muted';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      className={`h-8 items-center justify-center rounded-sm border px-3 ${bg}`}
+      style={{ minWidth: 70 }}
+    >
+      <Text numberOfLines={1} className={`font-sans-semibold text-caption ${color}`}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function isActionEditorTab(tab: Tab) {
+  return tab === 'contract' || tab === 'prompt' || tab === 'preview';
+}
+
 function Dashboard({ gameId, entries, debt, graph, loading }: {
   gameId: string;
   entries: StoryPatchLedgerEntry[];
@@ -332,152 +340,6 @@ function DashboardRow({ label, value }: { label: string; value: string }) {
       </Text>
       <Text className="flex-1 font-mono text-caption text-fg-default" numberOfLines={1}>
         {value}
-      </Text>
-    </View>
-  );
-}
-
-function Preview({ text, setText, result, loading, onPreview }: {
-  text: string;
-  setText: (value: string) => void;
-  result: StoryPatchPreviewResponse | null;
-  loading: boolean;
-  onPreview: () => void;
-}) {
-  return (
-    <View className="gap-2">
-      <TextInput
-        value={text}
-        onChangeText={setText}
-        multiline
-        autoCapitalize="none"
-        autoCorrect={false}
-        accessibilityLabel={ko.storyDev.previewInput}
-        className="min-h-24 rounded-sm border border-border-default bg-canvas-inset px-2 py-2 font-mono text-caption text-fg-default"
-        textAlignVertical="top"
-      />
-      <View className="items-start">
-        <Chip
-          variant="action"
-          label={ko.storyDev.previewRun}
-          onPress={onPreview}
-          disabled={loading}
-        />
-      </View>
-      {result ? (
-        <View className="gap-1">
-          <Text className={`font-sans-semibold text-caption ${result.ok ? 'text-success-fg' : 'text-danger-fg'}`}>
-            {result.ok ? ko.storyDev.previewOk : ko.storyDev.previewRejected}
-          </Text>
-          {result.reasons.length > 0 ? (
-            <Text className="font-sans text-caption text-fg-muted">
-              {result.reasons.join(', ')}
-            </Text>
-          ) : (
-            <Text className="font-sans text-caption text-fg-muted">
-              {ko.storyDev.changed(result.changedNodeIds.length, result.changedEdgeIds.length)}
-            </Text>
-          )}
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function ContractEditor({ text, setText, result, loading, onPreview, onApply }: {
-  text: string;
-  setText: (value: string) => void;
-  result: StoryContractPreviewResponse | null;
-  loading: boolean;
-  onPreview: () => void;
-  onApply: () => void;
-}) {
-  return (
-    <View className="gap-2">
-      <TextInput
-        value={text}
-        onChangeText={setText}
-        multiline
-        autoCapitalize="none"
-        autoCorrect={false}
-        accessibilityLabel={ko.storyDev.contractInput}
-        className="min-h-36 rounded-sm border border-border-default bg-canvas-inset px-2 py-2 font-mono text-caption text-fg-default"
-        textAlignVertical="top"
-      />
-      <View className="flex-row gap-2">
-        <Chip
-          variant="action"
-          label={ko.storyDev.contractRun}
-          onPress={onPreview}
-          disabled={loading || text.trim().length === 0}
-        />
-        <Chip
-          variant="action"
-          label={ko.storyDev.contractApply}
-          onPress={onApply}
-          disabled={loading || text.trim().length === 0}
-        />
-      </View>
-      {result ? (
-        <View className="gap-1">
-          <Text className={`font-sans-semibold text-caption ${result.ok ? 'text-success-fg' : 'text-danger-fg'}`}>
-            {result.ok ? ko.storyDev.contractOk : ko.storyDev.contractRejected}
-          </Text>
-          {result.reasons.length > 0 ? (
-            <Text className="font-sans text-caption text-fg-muted">
-              {result.reasons.join(', ')}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function PromptReplay({ text, setText, result, loading, onReplay }: {
-  text: string;
-  setText: (value: string) => void;
-  result: StoryPromptReplayResponse | null;
-  loading: boolean;
-  onReplay: () => void;
-}) {
-  return (
-    <View className="gap-2">
-      <TextInput
-        value={text}
-        onChangeText={setText}
-        multiline
-        autoCapitalize="none"
-        autoCorrect={false}
-        accessibilityLabel={ko.storyDev.promptInput}
-        className="min-h-24 rounded-sm border border-border-default bg-canvas-inset px-2 py-2 font-mono text-caption text-fg-default"
-        textAlignVertical="top"
-      />
-      <View className="items-start">
-        <Chip
-          variant="action"
-          label={ko.storyDev.promptRun}
-          onPress={onReplay}
-          disabled={loading || text.trim().length === 0}
-        />
-      </View>
-      {result ? (
-        <View className="gap-2">
-          <DashboardRow label={ko.storyDev.promptIntent} value={String(result.intent.kind ?? '-')} />
-          <PromptBlock title={ko.storyDev.systemPrompt} text={result.system_prompt} />
-          <PromptBlock title={ko.storyDev.userPayload} text={JSON.stringify(result.user_payload, null, 2)} />
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function PromptBlock({ title, text }: { title: string; text: string }) {
-  return (
-    <View className="gap-1">
-      <Text className="font-sans-semibold text-caption text-fg-muted">{title}</Text>
-      <Text className="font-mono text-caption text-fg-default" numberOfLines={8}>
-        {text}
       </Text>
     </View>
   );

@@ -126,6 +126,18 @@ def test_prompt_examples_use_allowed_manner_field_for_talk():
     assert '"manner":"friendly"' in text
 
 
+def test_prompt_documents_question_continuing_recent_npc_dialogue():
+    text = _prompt_text()
+    _assert_contains_all(
+        text,
+        [
+            "출항 규칙이 뭐예요?",
+            "최근 대화 대상이 올든",
+            '"intent":"talk","target":"npc_olden"',
+        ],
+    )
+
+
 def test_prompt_keeps_obvious_visible_checks_without_rolls():
     text = _prompt_text()
     assert "이미 보이는 사물이나 현재 장소 단서를 확인하는 행동에는 판정을 붙이지 않습니다" in text

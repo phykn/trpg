@@ -5,6 +5,8 @@ from src.game.domain.action import Action
 from src.game.domain.content import node_label, node_text, node_value
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph.character import graph_character_kind, is_visible_character
+from src.game.domain.quest import quest_choices
+from src.locale.generated_story import is_generated_current_location_memory
 from src.game.domain.memory import RollLogEntry
 from src.game.domain.graph.query import (
     characters_at,
@@ -23,6 +25,7 @@ from .combat_view import combat_narration_view
 from .memory_context import (
     narrate_recent_exchanges_payload,
     previous_scene_payload,
+    subject_memories_payload,
 )
 
 
@@ -51,7 +54,7 @@ def build_action_narration_payload(
     quest_trigger = _quest_trigger_payload(action, dispatch.kind)
     if quest_trigger is not None:
         current_event["quest_trigger"] = quest_trigger
-    story_transition = _story_transition_payload(before, after)
+    story_transition = _story_transition_payload(before, after, action)
     if story_transition is not None:
         current_event["story_transition"] = story_transition
     payload = {
@@ -64,6 +67,10 @@ def build_action_narration_payload(
         "target_view": _target_view(after, target),
         "result_cards": _result_cards(card_texts),
         "previous_scene": previous_scene_payload(after),
+        "subject_memories": subject_memories_payload(
+            after,
+            target=target.id if target is not None else None,
+        ),
         "recent_exchanges": narrate_recent_exchanges_payload(
             after,
             target=target.id if target is not None else None,
@@ -120,6 +127,10 @@ def build_roll_narration_payload(
         "target_view": _target_view(runtime, target),
         "result_cards": _result_cards(resolved_results),
         "previous_scene": previous_scene_payload(runtime),
+        "subject_memories": subject_memories_payload(
+            runtime,
+            target=target.id if target is not None else None,
+        ),
         "recent_exchanges": narrate_recent_exchanges_payload(
             runtime,
             target=target.id if target is not None else None,
@@ -156,6 +167,12 @@ def build_input_narration_payload(
         ),
         "result_cards": [],
         "previous_scene": [],
+        "subject_memories": subject_memories_payload(
+            runtime,
+            target=dialogue_target.id if dialogue_target is not None else None,
+        )
+        if dialogue_target is not None
+        else [],
         "recent_exchanges": narrate_recent_exchanges_payload(
             runtime,
             target=dialogue_target.id if dialogue_target is not None else None,
@@ -181,6 +198,7 @@ def compact_narration_payload(source: dict[str, Any]) -> dict[str, Any]:
             "world_guidance": source.get("world_guidance"),
             "current_story": source.get("current_story"),
             "previous_scene": source.get("previous_scene"),
+            "subject_memories": source.get("subject_memories"),
             "recent_exchanges": source.get("recent_exchanges"),
             "discoveries": source.get("discoveries"),
         },
@@ -384,11 +402,17 @@ def _knowledge_payloads_from_anchor(
         kind = node_value(runtime.content, knowledge, "kind")
         if kind not in {"memory", "clue"}:
             continue
-        payload: dict[str, str] = {"id": knowledge.id, "kind": kind}
         title = node_value(runtime.content, knowledge, "title")
+        summary = node_value(runtime.content, knowledge, "summary")
+        if is_generated_current_location_memory(
+            kind=kind,
+            title=title,
+            summary=summary,
+        ):
+            continue
+        payload: dict[str, str] = {"id": knowledge.id, "kind": kind}
         if isinstance(title, str) and title:
             payload["title"] = title
-        summary = node_value(runtime.content, knowledge, "summary")
         if isinstance(summary, str) and summary:
             payload["summary"] = summary
         if "summary" in payload or "title" in payload:
@@ -708,6 +732,7 @@ def _quest_trigger_payload(action: Action, kind: str) -> dict[str, str] | None:
 def _story_transition_payload(
     before: GameRuntimeState,
     after: GameRuntimeState,
+    action: Action,
 ) -> dict[str, Any] | None:
     completed_quests = _changed_nodes_by_status(
         before,
@@ -730,6 +755,9 @@ def _story_transition_payload(
     if not completed_quests and not opened_chapters and not next_quests:
         return None
     payload: dict[str, Any] = {"style": "lead_not_solution"}
+    choice_result = _choice_result_payload(before, after, action)
+    if choice_result is not None:
+        payload["choice_result"] = choice_result
     if completed_quests:
         payload["completed_quests"] = completed_quests
     if opened_chapters:
@@ -743,6 +771,51 @@ def _story_transition_payload(
     if handoff:
         payload["handoff"] = handoff
     return payload
+
+
+def _choice_result_payload(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+    action: Action,
+) -> dict[str, Any] | None:
+    if action.verb != "decide":
+        return None
+    quest_id = first_ref(action.what) or first_ref(action.to)
+    if quest_id is None:
+        return None
+    quest = after.graph.nodes.get(quest_id)
+    if quest is None or quest.type != "quest":
+        return None
+
+    payload: dict[str, Any] = {"quest": _node_ref(after, quest)}
+    choice_id = action.how
+    if choice_id is not None:
+        choice = quest_choices(quest).get(choice_id)
+        label = choice.get("label") if isinstance(choice, dict) else None
+        payload["choice"] = {
+            "id": choice_id,
+            "label": label if isinstance(label, str) and label else choice_id,
+        }
+    gained_items = _gained_inventory_items(before, after)
+    if gained_items:
+        payload["gained_items"] = gained_items
+    return payload if len(payload) > 1 else None
+
+
+def _gained_inventory_items(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+) -> list[dict[str, Any]]:
+    before_items = set(inventory_of(before.graph_index, before.progress.player_id))
+    after_items = inventory_of(after.graph_index, after.progress.player_id)
+    out: list[dict[str, Any]] = []
+    for item_id in after_items:
+        if item_id in before_items:
+            continue
+        item = after.graph.nodes.get(item_id)
+        if item is not None and item.type == "item":
+            out.append(_item_payload(after, item))
+    return out
 
 
 def _changed_nodes_by_status(

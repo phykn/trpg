@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, model_serializer
 
 class Memory(BaseModel):
     content: str
-    importance: int = Field(ge=1, le=3)
+    importance: int = Field(default=1, ge=1, le=3)
     turn: int
     target: str | None = None
 

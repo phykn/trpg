@@ -385,19 +385,19 @@ async def test_graph_intro_streams_result_before_initial_narration(tmp_path):
     ]
     assert lines[-1]["payload"]["suggestions"] == [
         {
-            "label": "talk",
-            "input_text": "에드릭에게 말을 겁니다",
+            "label": "광장 상황 묻기",
+            "input_text": "에드릭에게 「광장에서는 무엇을 확인해야 하나요?」라고 묻습니다",
             "intent": "talk",
             "action": None,
         },
         {
-            "label": "move",
+            "label": "숲길로",
             "input_text": "숲길로 이동합니다",
             "intent": "move",
             "action": None,
         },
         {
-            "label": "inspect",
+            "label": "주변 살피기",
             "input_text": "주변을 살핍니다",
             "intent": "inspect",
             "action": None,
@@ -632,19 +632,19 @@ async def test_graph_state_route_restores_graph_session(tmp_path):
     assert body["state"]["log"] == []
     assert body["suggestions"] == [
         {
-            "label": "talk",
-            "input_text": "에드릭에게 말을 겁니다",
+            "label": "광장 상황 묻기",
+            "input_text": "에드릭에게 「광장에서는 무엇을 확인해야 하나요?」라고 묻습니다",
             "intent": "talk",
             "action": None,
         },
         {
-            "label": "move",
+            "label": "숲길로",
             "input_text": "숲길로 이동합니다",
             "intent": "move",
             "action": None,
         },
         {
-            "label": "inspect",
+            "label": "주변 살피기",
             "input_text": "주변을 살핍니다",
             "intent": "inspect",
             "action": None,
@@ -959,7 +959,7 @@ async def test_story_contract_preview_route_validates_contract(tmp_path):
             f"/session/{game_id}/story/dev/preview_contract",
             json={
                 "contract": {
-                    "id": "white_isle_llm",
+                    "id": "white_isle",
                     "world": {"title": "흰섬으로 가는 안개 바다", "locale": "ko"},
                     "fixed": ["엘리는 시작부터 동행합니다."],
                     "forbid": ["결말을 조기 공개하지 않습니다."],
@@ -993,7 +993,7 @@ async def test_story_contract_preview_route_returns_validation_reasons(tmp_path)
             f"/session/{game_id}/story/dev/preview_contract",
             json={
                 "contract": {
-                    "id": "white_isle_llm",
+                    "id": "white_isle",
                     "world": {"title": "", "locale": "ko"},
                     "fixed": [],
                     "forbid": [],
@@ -1038,7 +1038,7 @@ async def test_story_contract_update_route_saves_session_override(tmp_path):
     async with _client(app) as client:
         game_id = await _init_graph_session(client)
         contract = {
-            "id": "white_isle_llm_override",
+            "id": "white_isle_override",
             "world": {"title": "흰섬으로 가는 안개 바다", "locale": "ko"},
             "fixed": ["엘리는 시작부터 동행합니다."],
             "forbid": ["결말을 조기 공개하지 않습니다."],
@@ -1061,12 +1061,12 @@ async def test_story_contract_update_route_saves_session_override(tmp_path):
         reloaded = await client.get(f"/session/{game_id}/story/dev/contract")
 
     assert response.status_code == 200, response.text
-    assert response.json()["contract"]["id"] == "white_isle_llm_override"
+    assert response.json()["contract"]["id"] == "white_isle_override"
     assert reloaded.status_code == 200, reloaded.text
-    assert reloaded.json()["contract"]["id"] == "white_isle_llm_override"
+    assert reloaded.json()["contract"]["id"] == "white_isle_override"
     progress = await app.state.graph_repo.load_progress(game_id)
     assert progress.story_contract_override is not None
-    assert progress.story_contract_override["id"] == "white_isle_llm_override"
+    assert progress.story_contract_override["id"] == "white_isle_override"
 
 
 @pytest.mark.asyncio
@@ -1206,7 +1206,7 @@ async def test_story_patch_preview_route_returns_changed_ids(tmp_path):
         "ok": True,
         "reasons": [],
         "changed_node_ids": ["clue_preview"],
-        "changed_edge_ids": ["has_knowledge:loc_fog_harbor:clue_preview"],
+        "changed_edge_ids": ["has_knowledge:loc_01:clue_preview"],
     }
 
 

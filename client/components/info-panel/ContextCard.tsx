@@ -4,6 +4,7 @@ import { ScrollView, View } from 'react-native';
 import { Chip, Surface } from '@/components/ui';
 
 import type { PanelAction, PanelSlot } from '@/logic/info-panel/types';
+import { compose } from '@/locale/ko';
 import { PanelBody } from './PanelBody';
 
 const CONTEXT_PANEL_MAX_HEIGHT = 260;
@@ -35,6 +36,8 @@ export function ContextCard({ slots, activeId, onSelect, onAction, actionDisable
               variant="tab"
               label={s.chip.short}
               active={s.id === activeId}
+              dot={s.chip.dot}
+              dotAccessibilityLabel={compose.changedNotice(s.chip.short)}
               onPress={() => onSelect(s.id)}
             />
           ))}

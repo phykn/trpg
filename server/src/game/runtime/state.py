@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.game.domain.content import RuntimeContent
 from src.game.domain.graph import Graph
 from src.game.domain.graph.query import GraphIndex
-from src.game.domain.memory import ExchangePair, LogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, LogEntry, Memory, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.domain.story_contract import StoryContract
 
@@ -19,6 +19,7 @@ class GameRuntimeState(BaseModel):
     story_contract: StoryContract | None = None
     log_entries: list[LogEntry] = Field(default_factory=list)
     turn_log: list[TurnLogEntry] = Field(default_factory=list)
+    memories: list[Memory] = Field(default_factory=list)
     recent_exchanges: list[ExchangePair] = Field(default_factory=list)
 
     @cached_property

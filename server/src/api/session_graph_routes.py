@@ -370,6 +370,7 @@ async def preview_story_patch_route(
         body.proposal,
         graph=runtime.graph,
         contract=runtime.story_contract,
+        player_id=runtime.progress.player_id,
     )
     if not validation.ok:
         return StoryPatchPreviewResponse(

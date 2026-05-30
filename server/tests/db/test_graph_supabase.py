@@ -2,7 +2,7 @@ import asyncio
 
 from src.db.graph.supabase import SupabaseGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import ExchangePair, GMLogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, GMLogEntry, Memory, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
 from tests._fakes import FakePostgREST
@@ -254,3 +254,40 @@ async def test_supabase_graph_repo_round_trips_story_patch_entries():
     ]
     assert entries[0].status == "accepted"
     assert entries[0].patches[0]["id"] == "clue_wet_ticket"
+
+
+async def test_supabase_graph_repo_round_trips_target_memory_entries():
+    repo, db = _repo()
+
+    await repo.append_memory_entries(
+        "game-1",
+        [
+            Memory(
+                turn=1,
+                target="npc_olden",
+                content="올든은 당신이 동행자를 찾는 중임을 기억합니다.",
+                importance=2,
+            ),
+            Memory(
+                turn=2,
+                target="npc_other",
+                content="다른 인물의 기억입니다.",
+                importance=3,
+            ),
+        ],
+    )
+
+    entries = await repo.load_memory_entries("game-1", target="npc_olden")
+
+    assert [call[1] for call in db.calls if call[0] == "insert"] == [
+        "memory_entries"
+    ]
+    assert db.rows["memory_entries"][0]["target_id"] == "npc_olden"
+    assert entries == [
+        Memory(
+            turn=1,
+            target="npc_olden",
+            content="올든은 당신이 동행자를 찾는 중임을 기억합니다.",
+            importance=2,
+        )
+    ]

@@ -1,6 +1,6 @@
 # trpg-server
 
-Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in graph Postgres tables keyed on `game_id` (`game_progress / graph_nodes / graph_edges / log_entries / history_entries / exchange_entries / world_patch_entries`); scenario seeds live in a Supabase Storage bucket.
+Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in graph Postgres tables keyed on `game_id` (`game_progress / graph_nodes / graph_edges / log_entries / history_entries / memory_entries / exchange_entries / world_patch_entries`); scenario seeds live in a Supabase Storage bucket.
 
 The server agent guide is [AGENTS.md](./AGENTS.md).
 
@@ -128,7 +128,8 @@ Runtime state lives in Supabase Postgres:
 | `graph_edges` | `(game_id, edge_id)` | one row per graph edge |
 | `log_entries` | `(game_id, log_id)` | `log_id = entry.id` (app-managed monotonic) |
 | `history_entries` | `(game_id, seq)` | `bigserial`, append-only turn summaries |
+| `memory_entries` | `(game_id, seq)` | `bigserial`, append-only target-indexed long-term memories. Rows also carry `target_id`, `turn`, `importance`, and `entry jsonb` |
 | `exchange_entries` | `(game_id, seq)` | `bigserial`, append-only player input + narrator response exchanges |
 | `world_patch_entries` | `(game_id, seq)` | `bigserial`, append-only accepted/rejected LLM story patch ledger |
 
-Runtime child tables should FK → `game_progress(game_id) ON DELETE CASCADE`. RLS enabled with no policies — the server uses the service-role key, anon/auth keys see nothing.
+Runtime child tables should FK → `game_progress(game_id) ON DELETE CASCADE`. RLS enabled with no policies — the server uses the service-role key, anon/auth keys see nothing. Add an index on `memory_entries(game_id, target_id, seq desc)` so NPC-specific recall does not scan the whole save.

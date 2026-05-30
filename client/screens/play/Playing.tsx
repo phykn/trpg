@@ -2,14 +2,13 @@ import React from 'react';
 import { Keyboard, Platform, Pressable, Text, View, type KeyboardEvent } from 'react-native';
 
 import { CombatStrip } from '@/logic/combat';
-import { DiscoveriesPanel } from '@/components/discoveries/DiscoveriesPanel';
 import { StoryDevPanel } from '@/components/story-dev/StoryDevPanel';
 import { buildDecisionState, DecisionStateStrip } from '@/logic/decision-state';
 import { Log } from '@/logic/log';
 import { RollPanel } from '@/logic/roll';
 import { buildNearbyPanel } from '@/logic/story-graph';
 import type { Game } from '@/logic/game/useGame';
-import { buildPanelSlots, type PanelAction, type PanelSlot } from '@/logic/info-panel';
+import { buildPanelSlots, usePanelSlotTracking, type PanelAction, type PanelSlot } from '@/logic/info-panel';
 
 import { Composer, GameOverPanel, LevelUpPrompt } from '@/logic/composer';
 import { ContextCard, IconButton, ICON_PATH } from '@/logic/info-panel';
@@ -45,6 +44,10 @@ export function Playing({ game }: Props) {
   const [playSurfaceHeight, setPlaySurfaceHeight] = React.useState(0);
   const { bgmOn, toggle: toggleBgm } = useBgm();
   const showStoryDev = __DEV__ && game.gameId !== null;
+  const { slotDots, markSlotSeen } = usePanelSlotTracking(
+    { gameId: game.gameId, hero, chapter, quest, questOffers, discoveries, scenarioCompleted: game.scenarioCompleted },
+    activeId,
+  );
 
   const runAction = (action: PanelAction) => {
     setActiveId(null);
@@ -182,15 +185,17 @@ export function Playing({ game }: Props) {
     () => {
       if (!hero) return [];
       return [
-        ...buildPanelSlots({ hero, subject, chapter, scenarioCompleted: game.scenarioCompleted, quest, questOffers }),
+        ...buildPanelSlots({ hero, subject, chapter, discoveries, slotDots, scenarioCompleted: game.scenarioCompleted, quest, questOffers }),
       ];
     },
     [
       chapter,
+      discoveries,
       game.scenarioCompleted,
       hero,
       quest,
       questOffers,
+      slotDots,
       subject,
     ],
   );
@@ -226,6 +231,7 @@ export function Playing({ game }: Props) {
               <IconButton
                 d={ICON_PATH.storyDev}
                 label={ko.storyDev.open}
+                text={ko.storyDev.short}
                 active={storyDevOpen}
                 onPress={() => {
                   setActiveId(null);
@@ -246,14 +252,13 @@ export function Playing({ game }: Props) {
           setNearbyOpen(false);
           setActiveId((prev) => {
             const next = prev === id ? null : id;
+            markSlotSeen(next);
             return next;
           });
         }}
       />
 
       <DecisionStateStrip items={decisionStateItems} />
-
-      <DiscoveriesPanel discoveries={discoveries} />
 
       {showStoryDev && storyDevOpen ? (
         <StoryDevPanel gameId={game.gameId ?? ''} onClose={() => setStoryDevOpen(false)} />

@@ -9,6 +9,7 @@ from src.game.domain.errors import PersistenceFailed
 from src.game.domain.memory import (
     ExchangePair,
     LogEntry,
+    Memory,
     TurnLogEntry,
 )
 from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
@@ -41,6 +42,10 @@ def _history_path(saves_dir: str, game_id: str) -> Path:
 
 def _exchange_path(saves_dir: str, game_id: str) -> Path:
     return _game_dir(saves_dir, game_id) / "exchange.jsonl"
+
+
+def _memory_path(saves_dir: str, game_id: str) -> Path:
+    return _game_dir(saves_dir, game_id) / "memory.jsonl"
 
 
 def _story_patch_path(saves_dir: str, game_id: str) -> Path:
@@ -98,6 +103,12 @@ async def append_exchange_entries(
     saves_dir: str, game_id: str, entries: list[ExchangePair]
 ) -> None:
     await _append_entries(game_id, _exchange_path(saves_dir, game_id), entries)
+
+
+async def append_memory_entries(
+    saves_dir: str, game_id: str, entries: list[Memory]
+) -> None:
+    await _append_entries(game_id, _memory_path(saves_dir, game_id), entries)
 
 
 async def append_story_patch_entries(

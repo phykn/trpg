@@ -3,7 +3,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from src.game.domain.content import node_label
-from src.game.domain.graph import GraphNode
+from src.game.domain.graph import GraphEdge, GraphNode
 from src.game.domain.graph.character import is_visible_character
 from src.game.domain.memory import PlayerLogEntry
 from src.game.domain.graph.query import (
@@ -15,7 +15,6 @@ from src.game.domain.graph.query import (
     known_skills_of,
     location_of,
 )
-from src.locale.ko.particles import eul_reul
 
 from ..state import GameRuntimeState
 
@@ -30,11 +29,11 @@ class GraphSuggestion(BaseModel):
 def build_intro_suggestions(runtime: GameRuntimeState) -> list[GraphSuggestion]:
     suggestions: list[GraphSuggestion] = []
     suggestions.extend(_intro_talk_suggestions(runtime, limit=1))
+    suggestions.extend(_intro_quest_beat_suggestions(runtime, limit=1))
     suggestions.extend(_intro_move_suggestions(runtime, limit=1))
-    suggestions.extend(_intro_discovery_inspect_suggestions(runtime, limit=1))
     suggestions.append(
         GraphSuggestion(
-            label="inspect",
+            label=f"{_ko_surroundings()} {_ko_inspect_label()}",
             input_text=f"{_ko_surroundings()}{_ko_object()} {_ko_inspect()}",
             intent="inspect",
         )
@@ -121,6 +120,8 @@ def _is_grounded_inspect_suggestion(
 ) -> bool:
     raw_text = suggestion.input_text
     text = _normalize(raw_text)
+    if _mentions_any(suggestion, _visible_clue_refs(runtime)):
+        return False
     if _normalize(_ko_surroundings()) in text:
         return True
     return _input_mentions_any(suggestion, _inspect_target_refs(runtime)) or (
@@ -137,8 +138,19 @@ def _inspect_target_refs(runtime: GameRuntimeState) -> set[str]:
     refs.update(_visible_character_refs(runtime))
     for item_id in items_at(runtime.graph_index, place_id):
         refs.update(_node_refs(runtime, item_id))
-    for clue_id in _visible_clue_ids(runtime):
-        refs.update(_node_refs(runtime, clue_id))
+    return refs
+
+
+def _visible_clue_refs(runtime: GameRuntimeState) -> set[str]:
+    refs: set[str] = set()
+    for node in runtime.graph.nodes.values():
+        if node.type != "knowledge":
+            continue
+        if node.properties.get("kind") != "clue":
+            continue
+        if node.properties.get("visibility", "player") != "player":
+            continue
+        refs.update(_node_refs(runtime, node.id))
     return refs
 
 
@@ -161,7 +173,10 @@ def _visible_exit_refs(runtime: GameRuntimeState) -> set[str]:
     if place_id is None:
         return set()
     refs: set[str] = set()
-    for edge in edges_from(runtime.graph_index, place_id, "connects_to"):
+    for edge in sorted(
+        edges_from(runtime.graph_index, place_id, "connects_to"),
+        key=_move_edge_priority,
+    ):
         if not connection_is_unlocked(runtime.graph_index, edge):
             continue
         node = runtime.graph.nodes.get(edge.to_node_id)
@@ -186,16 +201,42 @@ def _intro_talk_suggestions(
         if node is None or node.type != "character" or not is_visible_character(node):
             continue
         name = node_label(runtime.content, node)
+        topic, question = _intro_talk_topic(runtime, place_id)
         out.append(
             GraphSuggestion(
-                label="talk",
-                input_text=f"{name}{_ko_to_person()} {_ko_start_talk()}",
+                label=f"{topic} {_ko_ask_label()}",
+                input_text=(
+                    f"{name}{_ko_to_person()} "
+                    f"{_ko_open_quote()}{question}{_ko_close_quote()}{_ko_as_ask()}"
+                ),
                 intent="talk",
             )
         )
         if len(out) == limit:
             break
     return out
+
+
+def _intro_talk_topic(
+    runtime: GameRuntimeState,
+    place_id: str,
+) -> tuple[str, str]:
+    node = runtime.graph.nodes.get(place_id)
+    place_name = node_label(runtime.content, node).strip() if node is not None else ""
+    if _ko_room() in place_name:
+        return (
+            f"{_ko_room()}{_ko_possessive()} {_ko_meaning()}",
+            _ko_room_question(),
+        )
+    if place_name:
+        return (
+            f"{place_name} {_ko_situation()}",
+            f"{place_name}{_ko_at_topic()} {_ko_what_to_check_question()}",
+        )
+    return (
+        _ko_current_situation(),
+        f"{_ko_here()}{_ko_at_topic()} {_ko_what_to_check_question()}",
+    )
 
 
 def _intro_move_suggestions(
@@ -207,7 +248,10 @@ def _intro_move_suggestions(
     if place_id is None:
         return []
     out: list[GraphSuggestion] = []
-    for edge in edges_from(runtime.graph_index, place_id, "connects_to"):
+    for edge in sorted(
+        edges_from(runtime.graph_index, place_id, "connects_to"),
+        key=_move_edge_priority,
+    ):
         if not connection_is_unlocked(runtime.graph_index, edge):
             continue
         node = runtime.graph.nodes.get(edge.to_node_id)
@@ -216,7 +260,7 @@ def _intro_move_suggestions(
         name = node_label(runtime.content, node)
         out.append(
             GraphSuggestion(
-                label="move",
+                label=f"{name}{_ko_direction_particle(name)}",
                 input_text=f"{name}{_ko_direction_particle(name)} {_ko_move()}",
                 intent="move",
             )
@@ -226,22 +270,40 @@ def _intro_move_suggestions(
     return out
 
 
-def _intro_discovery_inspect_suggestions(
+def _move_edge_priority(edge: GraphEdge) -> int:
+    if edge.properties.get("requires_quest") or edge.properties.get("requires_active_quest"):
+        return 0
+    return 1
+
+
+def _intro_quest_beat_suggestions(
     runtime: GameRuntimeState,
     *,
     limit: int,
 ) -> list[GraphSuggestion]:
     out: list[GraphSuggestion] = []
-    for clue_id in _visible_clue_ids(runtime):
-        node = runtime.graph.nodes.get(clue_id)
-        if node is None:
+    for node in sorted(
+        runtime.graph.nodes.values(),
+        key=_quest_beat_sort_key,
+        reverse=True,
+    ):
+        if node.type != "quest":
             continue
-        name = node_label(runtime.content, node)
+        if node.properties.get("status") != "pending":
+            continue
+        if node.properties.get("required") is not False:
+            continue
+        label = node.properties.get("title")
+        input_text = node.properties.get("description")
+        if not isinstance(label, str) or not label.strip():
+            continue
+        if not isinstance(input_text, str) or not input_text.strip():
+            continue
         out.append(
             GraphSuggestion(
-                label=name,
-                input_text=f"{name}{_ko_object_particle(name)} {_ko_inspect()}",
-                intent="inspect",
+                label=label.strip(),
+                input_text=input_text.strip(),
+                intent="quest",
             )
         )
         if len(out) == limit:
@@ -249,52 +311,9 @@ def _intro_discovery_inspect_suggestions(
     return out
 
 
-def _visible_clue_ids(runtime: GameRuntimeState) -> list[str]:
-    out: list[str] = []
-    for node in runtime.graph.nodes.values():
-        if node.type != "knowledge":
-            continue
-        if node.properties.get("kind") != "clue":
-            continue
-        if node.properties.get("visibility", "player") != "player":
-            continue
-        if not _clue_is_inspectable_now(runtime, node):
-            continue
-        out.append(node.id)
-    return out
-
-
-def _clue_is_inspectable_now(
-    runtime: GameRuntimeState,
-    clue: GraphNode,
-) -> bool:
-    if clue.properties.get("stability", "scene") != "scene":
-        return True
-    anchor_id = clue.properties.get("anchor_id")
-    if not isinstance(anchor_id, str) or not anchor_id:
-        return True
-    place_id = location_of(runtime.graph_index, runtime.progress.player_id)
-    if place_id is None:
-        return False
-    if anchor_id in {place_id, runtime.progress.player_id}:
-        return True
-    anchor = runtime.graph.nodes.get(anchor_id)
-    if anchor is None:
-        return False
-    if anchor.type == "location":
-        return anchor_id == place_id
-    if anchor.type == "character":
-        return anchor_id == runtime.progress.player_id or location_of(
-            runtime.graph_index, anchor_id
-        ) == place_id
-    if anchor.type == "item":
-        return anchor_id in set(items_at(runtime.graph_index, place_id)) or anchor_id in set(
-            inventory_of(runtime.graph_index, runtime.progress.player_id)
-        )
-    if anchor.type == "quest":
-        status = anchor.properties.get("status")
-        return isinstance(status, str) and status in {"locked", "pending", "active"}
-    return False
+def _quest_beat_sort_key(node: GraphNode) -> tuple[int, str]:
+    turn_id = node.properties.get("turn_id")
+    return (turn_id if isinstance(turn_id, int) else -1, node.id)
 
 
 def _visible_character_refs(runtime: GameRuntimeState) -> set[str]:
@@ -392,7 +411,46 @@ def _is_targetless_generic_suggestion(label: str, input_text: str) -> bool:
         _codepoint_text(0xB9D0, 0xC744, 0xAC74, 0xB2E4),
         _codepoint_text(0xC0C1, 0xD669, 0xD30C, 0xC545, 0xD558, 0xAE30),
     }
-    return _normalize(label) in generic and _normalize(input_text) in generic
+    normalized_label = _normalize(label)
+    normalized_input = _normalize(input_text)
+    targetless_talk = _targetless_talk_labels()
+    if normalized_label in targetless_talk:
+        return True
+    if _has_targeted_generic_talk_label(normalized_label, targetless_talk):
+        return True
+    if normalized_label in generic and normalized_input in generic:
+        return True
+    if normalized_label != normalized_input:
+        return False
+    return any(phrase in normalized_label for phrase in targetless_talk)
+
+
+def _targetless_talk_labels() -> set[str]:
+    return {
+        _normalize(_codepoint_text(0xB300, 0xD654, 0xC2DC, 0xC791, 0xD558, 0xAE30)),
+        _normalize(_codepoint_text(0xB300, 0xD654, 0xC2DC, 0xB3C4, 0xD558, 0xAE30)),
+        _normalize(_codepoint_text(0xB9D0, 0xAC78, 0xAE30)),
+        _normalize(_codepoint_text(0xB9D0, 0xC744, 0xAC78, 0xB2E4)),
+        _normalize(
+            _codepoint_text(0xACC4, 0xC18D, 0x20, 0xC9C8, 0xBB38, 0xD558, 0xAE30)
+        ),
+    }
+
+
+def _has_targeted_generic_talk_label(
+    normalized_label: str,
+    targetless_talk: set[str],
+) -> bool:
+    target_particles = {
+        _normalize(_ko_to_person()),
+        _normalize(_codepoint_text(0xD55C, 0xD14C)),
+        _normalize(_codepoint_text(0xAED8)),
+    }
+    return any(
+        f"{particle}{phrase}" in normalized_label
+        for particle in target_particles
+        for phrase in targetless_talk
+    )
 
 
 def _codepoint_text(*values: int) -> str:
@@ -421,10 +479,6 @@ def _ko_object() -> str:
     return chr(0xC744)
 
 
-def _ko_object_particle(text: str) -> str:
-    return eul_reul(text)
-
-
 def _ko_to_person() -> str:
     return chr(0xC5D0) + chr(0xAC8C)
 
@@ -433,8 +487,92 @@ def _ko_start_talk() -> str:
     return _codepoint_text(0xB9D0, 0xC744, 0x20, 0xAC81, 0xB2C8, 0xB2E4)
 
 
+def _ko_start_talk_label() -> str:
+    return _codepoint_text(0xB9D0, 0x20, 0xAC78, 0xAE30)
+
+
+def _ko_ask_label() -> str:
+    return _codepoint_text(0xBB3B, 0xAE30)
+
+
+def _ko_open_quote() -> str:
+    return chr(0x300C)
+
+
+def _ko_close_quote() -> str:
+    return chr(0x300D)
+
+
+def _ko_as_ask() -> str:
+    return _codepoint_text(0xB77C, 0xACE0, 0x20, 0xBB3B, 0xC2B5, 0xB2C8, 0xB2E4)
+
+
+def _ko_room() -> str:
+    return chr(0xBC29)
+
+
+def _ko_meaning() -> str:
+    return _codepoint_text(0xC758, 0xBBF8)
+
+
+def _ko_situation() -> str:
+    return _codepoint_text(0xC0C1, 0xD669)
+
+
+def _ko_current_situation() -> str:
+    return _codepoint_text(0xD604, 0xC7AC, 0x20, 0xC0C1, 0xD669)
+
+
+def _ko_room_question() -> str:
+    return _codepoint_text(
+        0xC774,
+        0x20,
+        0xBC29,
+        0xC740,
+        0x20,
+        0xC5B4,
+        0xB5A4,
+        0x20,
+        0xACF3,
+        0xC778,
+        0xAC00,
+        0xC694,
+        0x3F,
+    )
+
+
+def _ko_at_topic() -> str:
+    return _codepoint_text(0xC5D0, 0xC11C, 0xB294)
+
+
+def _ko_what_to_check_question() -> str:
+    return _codepoint_text(
+        0xBB34,
+        0xC5C7,
+        0xC744,
+        0x20,
+        0xD655,
+        0xC778,
+        0xD574,
+        0xC57C,
+        0x20,
+        0xD558,
+        0xB098,
+        0xC694,
+        0x3F,
+    )
+
+
+def _ko_here() -> str:
+    return _codepoint_text(0xC5EC, 0xAE30)
+
+
 def _ko_inspect() -> str:
     return _codepoint_text(0xC0B4, 0xD54D, 0xB2C8, 0xB2E4)
+
+
+def _ko_inspect_label() -> str:
+    return _codepoint_text(0xC0B4, 0xD53C, 0xAE30)
 
 
 def _ko_move() -> str:

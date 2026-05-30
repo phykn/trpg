@@ -28,6 +28,35 @@ def recent_exchanges_payload(
     return [entry.model_dump(mode="json") for entry in runtime.recent_exchanges[-limit:]]
 
 
+def subject_memories_payload(
+    runtime: GameRuntimeState,
+    *,
+    target: str | None = None,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    entries = [
+        entry
+        for entry in runtime.memories
+        if entry.target is None or entry.target == target
+    ]
+    entries = sorted(
+        entries,
+        key=lambda entry: (entry.importance, entry.turn),
+    )[-limit:]
+    entries = sorted(entries, key=lambda entry: entry.turn)
+    return [
+        _drop_none_and_empty(
+            {
+                "turn": entry.turn,
+                "target": entry.target,
+                "content": entry.content,
+                "importance": entry.importance,
+            }
+        )
+        for entry in entries
+    ]
+
+
 def classify_recent_exchanges_payload(
     runtime: GameRuntimeState,
     *,

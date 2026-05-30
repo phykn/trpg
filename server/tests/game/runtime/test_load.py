@@ -1,7 +1,7 @@
 from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import ExchangePair, GMLogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, GMLogEntry, Memory, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import load_runtime_state
 
@@ -214,6 +214,34 @@ async def test_load_runtime_state_loads_scenario_content_when_profile_is_saved(
     assert runtime.content.mbti["ISTJ"]["speech_style"] == "짧고 정확하게 말합니다."
 
 
+async def test_load_runtime_state_loads_persisted_memories(tmp_path):
+    repo = LocalFsGraphRepo(str(tmp_path))
+    await repo.save_graph("game-1", _graph())
+    await repo.save_progress(GameProgress(game_id="game-1", player_id="player"))
+    await repo.append_memory_entries(
+        "game-1",
+        [
+            Memory(
+                turn=1,
+                target="guide",
+                content="가이드는 당신이 이미 항구 규칙을 물었다고 기억합니다.",
+                importance=2,
+            )
+        ],
+    )
+
+    runtime = await load_runtime_state(repo, "game-1")
+
+    assert runtime.memories == [
+        Memory(
+            turn=1,
+            target="guide",
+            content="가이드는 당신이 이미 항구 규칙을 물었다고 기억합니다.",
+            importance=2,
+        )
+    ]
+
+
 async def test_load_runtime_state_reloads_story_contract_from_profile(tmp_path):
     class ContractScenarioRepo(FakeScenarioRepo):
         async def read_contract_json(
@@ -224,7 +252,7 @@ async def test_load_runtime_state_reloads_story_contract_from_profile(tmp_path):
         ) -> dict | None:
             assert profile == "default"
             return {
-                "id": "white_isle_llm",
+                "id": "white_isle",
                 "world": {"title": "흰섬", "locale": "ko"},
                 "fixed": [],
                 "forbid": [],
@@ -246,4 +274,4 @@ async def test_load_runtime_state_reloads_story_contract_from_profile(tmp_path):
     runtime = await load_runtime_state(repo, "game-1", ContractScenarioRepo())
 
     assert runtime.story_contract is not None
-    assert runtime.story_contract.id == "white_isle_llm"
+    assert runtime.story_contract.id == "white_isle"

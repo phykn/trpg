@@ -148,6 +148,7 @@ def test_next_turn_suggestions_falls_back_to_visible_actions_without_repeating_r
     result = next_turn_suggestions(runtime, [])
 
     assert [suggestion.input_text for suggestion in result] == [
+        "상인에게 「마을에서는 무엇을 확인해야 하나요?」라고 묻습니다",
         "숲으로 이동합니다",
         "주변을 살핍니다",
     ]
@@ -166,13 +167,11 @@ def test_next_turn_suggestions_repeats_visible_actions_when_all_are_recent():
     result = next_turn_suggestions(runtime, [])
 
     assert [suggestion.input_text for suggestion in result] == [
-        "상인에게 말을 겁니다",
-        "숲으로 이동합니다",
-        "주변을 살핍니다",
+        "상인에게 「마을에서는 무엇을 확인해야 하나요?」라고 묻습니다",
     ]
 
 
-def test_next_turn_suggestions_uses_visible_generated_clue_when_generic_inspect_is_recent():
+def test_next_turn_suggestions_keeps_generated_clues_out_of_action_chips():
     runtime = _runtime_for_suggestions()
     runtime.graph.nodes["clue_signpost"] = GraphNode(
         id="clue_signpost",
@@ -190,8 +189,9 @@ def test_next_turn_suggestions_uses_visible_generated_clue_when_generic_inspect_
 
     result = next_turn_suggestions(runtime, [])
 
-    assert "북쪽 길목의 표지판을 살핍니다" in [
-        suggestion.input_text for suggestion in result
+    assert [suggestion.input_text for suggestion in result] == [
+        "상인에게 「마을에서는 무엇을 확인해야 하나요?」라고 묻습니다",
+        "숲으로 이동합니다",
     ]
 
 
@@ -202,24 +202,53 @@ def test_build_intro_suggestions_uses_visible_graph_state():
 
     assert [suggestion.model_dump() for suggestion in result] == [
         {
-            "label": "talk",
-            "input_text": "상인에게 말을 겁니다",
+            "label": "마을 상황 묻기",
+            "input_text": "상인에게 「마을에서는 무엇을 확인해야 하나요?」라고 묻습니다",
             "intent": "talk",
             "action": None,
         },
         {
-            "label": "move",
+            "label": "숲으로",
             "input_text": "숲으로 이동합니다",
             "intent": "move",
             "action": None,
         },
         {
-            "label": "inspect",
+            "label": "주변 살피기",
             "input_text": "주변을 살핍니다",
             "intent": "inspect",
             "action": None,
         },
     ]
+
+
+def test_build_intro_suggestions_asks_visible_character_about_current_place():
+    runtime = _runtime_for_suggestions()
+
+    result = build_intro_suggestions(runtime)
+
+    assert result[0].model_dump() == {
+        "label": "마을 상황 묻기",
+        "input_text": "상인에게 「마을에서는 무엇을 확인해야 하나요?」라고 묻습니다",
+        "intent": "talk",
+        "action": None,
+    }
+    assert "말을 겁니다" not in result[0].input_text
+
+
+def test_build_intro_suggestions_asks_room_meaning_in_room_scene():
+    runtime = _runtime_for_suggestions()
+    runtime.graph.nodes["town"].properties["name"] = "레아의 빈방"
+    runtime.graph.nodes["merchant_01"].properties["name"] = "레아"
+
+    result = build_intro_suggestions(runtime)
+
+    assert result[0].model_dump() == {
+        "label": "방의 의미 묻기",
+        "input_text": "레아에게 「이 방은 어떤 곳인가요?」라고 묻습니다",
+        "intent": "talk",
+        "action": None,
+    }
 
 
 def test_build_intro_suggestions_hides_locked_exits():
@@ -229,12 +258,37 @@ def test_build_intro_suggestions_hides_locked_exits():
     result = build_intro_suggestions(runtime)
 
     assert [suggestion.input_text for suggestion in result] == [
-        "상인에게 말을 겁니다",
+        "상인에게 「마을에서는 무엇을 확인해야 하나요?」라고 묻습니다",
         "주변을 살핍니다",
     ]
 
 
-def test_build_intro_suggestions_includes_visible_generated_clue():
+def test_build_intro_suggestions_prioritizes_unlocked_story_route_over_return_exit():
+    runtime = _runtime_for_suggestions()
+    runtime.graph.nodes["blue_street"] = GraphNode(
+        id="blue_street",
+        type="location",
+        properties={"name": "푸른 비 거리"},
+    )
+    runtime.graph.nodes["quest_01"].properties["status"] = "completed"
+    runtime.graph.edges["connects_to:town:blue_street"] = GraphEdge(
+        id="connects_to:town:blue_street",
+        type="connects_to",
+        from_node_id="town",
+        to_node_id="blue_street",
+        properties={"requires_quest": "quest_01"},
+    )
+
+    result = build_intro_suggestions(runtime)
+
+    assert [suggestion.input_text for suggestion in result] == [
+        "상인에게 「마을에서는 무엇을 확인해야 하나요?」라고 묻습니다",
+        "푸른 비 거리로 이동합니다",
+        "주변을 살핍니다",
+    ]
+
+
+def test_build_intro_suggestions_keeps_generated_clues_in_the_discovery_tab():
     runtime = _runtime_for_suggestions()
     runtime.graph.edges.pop("connects_to:town:forest")
     runtime.graph.nodes["clue_signpost"] = GraphNode(
@@ -252,19 +306,13 @@ def test_build_intro_suggestions_includes_visible_generated_clue():
 
     assert [suggestion.model_dump() for suggestion in result] == [
         {
-            "label": "talk",
-            "input_text": "상인에게 말을 겁니다",
+            "label": "마을 상황 묻기",
+            "input_text": "상인에게 「마을에서는 무엇을 확인해야 하나요?」라고 묻습니다",
             "intent": "talk",
             "action": None,
         },
         {
-            "label": "북쪽 길목의 표지판",
-            "input_text": "북쪽 길목의 표지판을 살핍니다",
-            "intent": "inspect",
-            "action": None,
-        },
-        {
-            "label": "inspect",
+            "label": "주변 살피기",
             "input_text": "주변을 살핍니다",
             "intent": "inspect",
             "action": None,
@@ -272,7 +320,58 @@ def test_build_intro_suggestions_includes_visible_generated_clue():
     ]
 
 
-def test_build_intro_suggestions_uses_object_particle_for_vowel_ending_clue():
+def test_build_intro_suggestions_prioritizes_pending_generated_quest_beat():
+    runtime = _runtime_for_suggestions()
+    runtime.graph.nodes["quest_old"] = GraphNode(
+        id="quest_old",
+        type="quest",
+        properties={
+            "title": "이전 단서 확인",
+            "description": "이전 단서를 확인합니다.",
+            "status": "pending",
+            "required": False,
+            "stability": "chapter",
+            "turn_id": 2,
+        },
+    )
+    runtime.graph.nodes["quest_noah"] = GraphNode(
+        id="quest_noah",
+        type="quest",
+        properties={
+            "title": "노아에게 접근하기",
+            "description": "광장 너머 노아가 있는 곳으로 이동합니다.",
+            "status": "pending",
+            "required": False,
+            "stability": "chapter",
+            "turn_id": 7,
+        },
+    )
+
+    result = build_intro_suggestions(runtime)
+
+    assert [suggestion.model_dump() for suggestion in result] == [
+        {
+            "label": "마을 상황 묻기",
+            "input_text": "상인에게 「마을에서는 무엇을 확인해야 하나요?」라고 묻습니다",
+            "intent": "talk",
+            "action": None,
+        },
+        {
+            "label": "노아에게 접근하기",
+            "input_text": "광장 너머 노아가 있는 곳으로 이동합니다.",
+            "intent": "quest",
+            "action": None,
+        },
+        {
+            "label": "숲으로",
+            "input_text": "숲으로 이동합니다",
+            "intent": "move",
+            "action": None,
+        },
+    ]
+
+
+def test_build_intro_suggestions_does_not_turn_clue_titles_into_actions():
     runtime = _runtime_for_suggestions()
     runtime.graph.edges.pop("connects_to:town:forest")
     runtime.graph.nodes["clue_fog"] = GraphNode(
@@ -288,7 +387,7 @@ def test_build_intro_suggestions_uses_object_particle_for_vowel_ending_clue():
 
     result = build_intro_suggestions(runtime)
 
-    assert "짙은 안개를 살핍니다" in [
+    assert "짙은 안개를 살핍니다" not in [
         suggestion.input_text for suggestion in result
     ]
 
@@ -356,7 +455,7 @@ def test_filter_grounded_suggestions_keeps_inspect_for_visible_scene_refs():
     ]
 
 
-def test_filter_grounded_suggestions_keeps_inspect_for_visible_generated_clue():
+def test_filter_grounded_suggestions_drops_generated_clue_inspect_actions():
     runtime = _runtime_for_suggestions()
     runtime.graph.nodes["clue_signpost"] = GraphNode(
         id="clue_signpost",
@@ -385,9 +484,36 @@ def test_filter_grounded_suggestions_keeps_inspect_for_visible_generated_clue():
         ],
     )
 
-    assert [suggestion.input_text for suggestion in result] == [
-        "북쪽 길목의 표지판을 살핍니다"
-    ]
+    assert result == []
+
+
+def test_filter_grounded_suggestions_drops_character_anchored_scene_clue_actions():
+    runtime = _runtime_for_suggestions()
+    runtime.graph.nodes["clue_merchant_glance"] = GraphNode(
+        id="clue_merchant_glance",
+        type="knowledge",
+        properties={
+            "kind": "clue",
+            "title": "상인의 흔들리는 시선",
+            "summary": "상인이 숲 쪽을 피해서 봅니다.",
+            "visibility": "player",
+            "stability": "scene",
+            "anchor_id": "merchant_01",
+        },
+    )
+
+    result = filter_grounded_suggestions(
+        runtime,
+        [
+            GraphSuggestion(
+                label="상인의 흔들리는 시선",
+                input_text="상인의 흔들리는 시선을 살핍니다",
+                intent="inspect",
+            )
+        ],
+    )
+
+    assert result == []
 
 
 def test_scene_clue_suggestion_stays_at_current_anchor():
@@ -723,61 +849,57 @@ def test_parse_graph_narration_answer_drops_targetless_generic_suggestions():
     ]
 
 
-def test_parse_graph_narration_answer_removes_empty_direct_speech_lines():
+def test_parse_graph_narration_answer_drops_targeted_generic_talk_attempt():
     answer = "\n".join(
         [
-            "루카가 체크리스트를 접습니다.",
-            "「」",
-            "「   」",
-            '""',
-            "그는 문가로 한 걸음 물러섭니다.",
+            "엘리가 말없이 기다립니다.",
             "---TRPG_META---",
-            '{"suggestions": []}',
+            """
+            {
+              "suggestions": [
+                {"label": "엘리에게 대화 시도하기", "input_text": "엘리에게 대화 시도하기", "intent": "talk"},
+                {"label": "루카에게 계속 질문하기", "input_text": "루카에게 계속 질문하기", "intent": "talk"},
+                {"label": "출항 조건 묻기", "input_text": "엘리에게 「붉은섬으로 가려면 무엇을 준비해야 하나요?」라고 묻습니다", "intent": "talk"}
+              ]
+            }
+            """,
         ]
     )
 
     result = parse_graph_narration_answer(answer)
 
-    assert result.narration == (
-        "루카가 체크리스트를 접습니다.\n그는 문가로 한 걸음 물러섭니다."
-    )
+    assert [suggestion.input_text for suggestion in result.suggestions] == [
+        "엘리에게 「붉은섬으로 가려면 무엇을 준비해야 하나요?」라고 묻습니다"
+    ]
 
 
-def test_parse_graph_narration_answer_strips_trailing_ascii_quote_junk():
+def test_parse_graph_narration_answer_drops_generic_talk_label_even_with_specific_input():
     answer = "\n".join(
         [
-            '선장이 낮게 말합니다. 「돌아갈 배라... 조건이 까다롭지.\\"\\"\\"',
+            "엘리가 노를 쥔 채 기다립니다.",
             "---TRPG_META---",
-            '{"suggestions": []}',
+            """
+            {
+              "suggestions": [
+                {"label": "엘리에게 대화 시도하기", "input_text": "엘리에게 「이제 출항해도 되나요?」라고 묻습니다", "intent": "talk"},
+                {"label": "출항 가능 여부 묻기", "input_text": "엘리에게 「이제 출항해도 되나요?」라고 묻습니다", "intent": "talk"}
+              ]
+            }
+            """,
         ]
     )
 
     result = parse_graph_narration_answer(answer)
 
-    assert result.narration == "선장이 낮게 말합니다. 「돌아갈 배라... 조건이 까다롭지."
+    assert [suggestion.label for suggestion in result.suggestions] == [
+        "출항 가능 여부 묻기"
+    ]
 
 
-def test_parse_graph_narration_answer_normalizes_ascii_direct_speech():
+def test_parse_graph_narration_answer_preserves_prose_contract_violations():
     answer = "\n".join(
         [
-            r'루카가 기침합니다. \"크흠.\" 그는 모자를 고쳐 씁니다. \"도와주시겠습니까?\"',
-            "---TRPG_META---",
-            '{"suggestions": []}',
-        ]
-    )
-
-    result = parse_graph_narration_answer(answer)
-
-    assert result.narration == (
-        "루카가 기침합니다. 「크흠.」 그는 모자를 고쳐 씁니다. 「도와주시겠습니까?」"
-    )
-
-
-def test_parse_graph_narration_answer_removes_runtime_status_text():
-    answer = "\n".join(
-        [
-            "당신의 행동이 처리됩니다.",
-            "방 안에 다시 숨이 돕니다. 「당신의 행동이 처리됩니다.」라는 짧은 확인과 함께, "
+            "플레이어님이 \"크흠.\"이라고 말합니다. "
             "당신의 선택(열기)이 자리를 잡습니다. 공기가 감돌며، 빛이 흔들립니다.",
             "---TRPG_META---",
             '{"suggestions": []}',
@@ -787,41 +909,8 @@ def test_parse_graph_narration_answer_removes_runtime_status_text():
     result = parse_graph_narration_answer(answer)
 
     assert result.narration == (
-        "방 안에 다시 숨이 돕니다. 당신의 선택이 자리를 잡습니다. "
-        "공기가 감돌며, 빛이 흔들립니다."
-    )
-
-
-def test_parse_graph_narration_answer_normalizes_player_honorific():
-    answer = "\n".join(
-        [
-            "플레이어님이 먼저 말을 걸자, 상대가 대답합니다.",
-            "---TRPG_META---",
-            '{"suggestions": []}',
-        ]
-    )
-
-    result = parse_graph_narration_answer(answer)
-
-    assert result.narration == "당신이 먼저 말을 걸자, 상대가 대답합니다."
-
-
-def test_parse_graph_narration_answer_closes_unmatched_ascii_direct_speech():
-    answer = "\n".join(
-        [
-            '"아이고! 드디어 오셨네요! 뭘 도와드릴까요?',
-            "",
-            "당신에게 시선을 고정시킨 채 미소를 짓습니다.",
-            "---TRPG_META---",
-            '{"suggestions": []}',
-        ]
-    )
-
-    result = parse_graph_narration_answer(answer)
-
-    assert result.narration == (
-        "「아이고! 드디어 오셨네요! 뭘 도와드릴까요?」\n"
-        "당신에게 시선을 고정시킨 채 미소를 짓습니다."
+        "플레이어님이 \"크흠.\"이라고 말합니다. "
+        "당신의 선택(열기)이 자리를 잡습니다. 공기가 감돌며، 빛이 흔들립니다."
     )
 
 

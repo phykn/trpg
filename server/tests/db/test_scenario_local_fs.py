@@ -101,11 +101,11 @@ async def test_local_json_content_cache_reloads_when_file_changes(tmp_path):
 
 
 async def test_local_fs_reads_contract_json_when_present(tmp_path):
-    _write_json(tmp_path / "white_isle_llm" / "contract.json", {"id": "white_isle_llm"})
+    _write_json(tmp_path / "white_isle" / "contract.json", {"id": "white_isle"})
     repo = LocalFsScenarioRepo(str(tmp_path))
 
-    assert await repo.read_contract_json("white_isle_llm", missing_ok=True) == {
-        "id": "white_isle_llm"
+    assert await repo.read_contract_json("white_isle", missing_ok=True) == {
+        "id": "white_isle"
     }
 
 

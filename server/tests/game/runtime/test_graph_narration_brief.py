@@ -136,6 +136,10 @@ def test_story_transition_brief_omits_recent_context():
                 "kind": "action",
                 "story_transition": {
                     "completed_quests": [{"id": "q_green", "name": "출항 허가서"}],
+                    "choice_result": {
+                        "choice": {"id": "extend", "label": "체류권 남기기"},
+                        "gained_items": [{"id": "itm_green_permit", "name": "연두 체류권"}],
+                    },
                     "next_quest": {"id": "q_purple", "name": "사랑 증명 비용 사건"},
                     "handoff": "보라섬 선착장 너머 예식장 견적서가 바람에 흔들립니다.",
                 },
@@ -154,6 +158,7 @@ def test_story_transition_brief_omits_recent_context():
     )
 
     assert "장면 유형: 사건 전환" in brief
+    assert "선택 결과: 선택: 체류권 남기기 / 획득: 연두 체류권" in brief
     assert "전환 단서: 보라섬 선착장 너머 예식장 견적서가 바람에 흔들립니다." in brief
     assert "이전 장면 요약:" not in brief
     assert "최근 대화:" not in brief
@@ -379,6 +384,7 @@ def test_dialogue_brief_prioritizes_answer_over_decorative_gestures():
 
     assert "입술, 시선, 미소 같은 장식보다 답변 내용을 먼저 씁니다." not in brief
     assert "응답 대상: 관리인" in brief
+    assert "직접 발화로 답변 필요" in brief
 
 
 def test_dialogue_brief_requires_possibility_question_condition():

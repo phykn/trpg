@@ -72,6 +72,9 @@ def _story_transition_brief(
     )
     if completed:
         lines.append(_brief("completed", value=completed))
+    choice_result = _choice_result_line(transition)
+    if choice_result:
+        lines.append(_brief("choice_result", value=choice_result))
     if next_text:
         lines.append(_brief("next", value=next_text))
     handoff = transition.get("handoff")
@@ -79,6 +82,22 @@ def _story_transition_brief(
         lines.append(_brief("handoff", value=handoff))
     _append_player_input(lines, payload)
     return "\n".join(lines)
+
+
+def _choice_result_line(transition: dict[str, Any]) -> str:
+    choice_result = _dict(transition.get("choice_result"))
+    choice = _dict(choice_result.get("choice")).get("label")
+    gained_items = ", ".join(
+        item["name"]
+        for item in _dicts(choice_result.get("gained_items"))
+        if isinstance(item.get("name"), str) and item["name"]
+    )
+    parts = []
+    if isinstance(choice, str) and choice:
+        parts.append(_brief("choice", value=choice))
+    if gained_items:
+        parts.append(_brief("gained_items", value=gained_items))
+    return " / ".join(parts)
 
 
 def _combat_action(combat: dict[str, Any], event: dict[str, Any]) -> str:

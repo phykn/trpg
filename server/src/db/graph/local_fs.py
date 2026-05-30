@@ -18,7 +18,7 @@ from src.db.graph.rows import (
 )
 from src.game.domain.errors import PersistenceFailed
 from src.game.domain.graph import Graph
-from src.game.domain.memory import ExchangePair, LogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, LogEntry, Memory, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
 from src.game.rules import RULES
@@ -110,6 +110,11 @@ class LocalFsGraphRepo:
     ) -> None:
         await store.append_history_entries(self.saves_dir, game_id, entries)
 
+    async def append_memory_entries(
+        self, game_id: str, entries: list[Memory]
+    ) -> None:
+        await store.append_memory_entries(self.saves_dir, game_id, entries)
+
     async def append_exchange_entries(
         self, game_id: str, entries: list[ExchangePair]
     ) -> None:
@@ -135,6 +140,19 @@ class LocalFsGraphRepo:
             RULES.memory.turn_log_size,
             TurnLogEntry.model_validate_json,
         )
+
+    async def load_memory_entries(
+        self, game_id: str, *, target: str | None = None
+    ) -> list[Memory]:
+        entries = await asyncio.to_thread(
+            store._load_jsonl_tail,
+            store._memory_path(self.saves_dir, game_id),
+            RULES.memory.cap,
+            Memory.model_validate_json,
+        )
+        if target is None:
+            return entries
+        return [entry for entry in entries if entry.target == target]
 
     async def load_exchange_entries(self, game_id: str) -> list[ExchangePair]:
         return await asyncio.to_thread(

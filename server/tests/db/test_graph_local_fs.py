@@ -6,6 +6,7 @@ import pytest
 from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.errors import PersistenceFailed
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.memory import Memory
 from src.game.domain.progress import GameProgress
 from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
 
@@ -135,3 +136,36 @@ async def test_local_fs_graph_repo_round_trips_story_patch_entries(tmp_path):
     assert [entry.status for entry in entries] == ["rejected", "accepted"]
     assert entries[0].rejected_reasons == ["duplicate patch id: clue_seen"]
     assert entries[1].changed_node_ids == ["mem_seen_ticket"]
+
+
+async def test_local_fs_graph_repo_round_trips_target_memory_entries(tmp_path):
+    repo = LocalFsGraphRepo(str(tmp_path))
+
+    await repo.append_memory_entries(
+        "game-1",
+        [
+            Memory(
+                turn=1,
+                target="npc_olden",
+                content="올든은 당신이 동행자를 찾는 중임을 기억합니다.",
+                importance=2,
+            ),
+            Memory(
+                turn=2,
+                target="npc_other",
+                content="다른 인물의 기억입니다.",
+                importance=3,
+            ),
+        ],
+    )
+
+    entries = await repo.load_memory_entries("game-1", target="npc_olden")
+
+    assert entries == [
+        Memory(
+            turn=1,
+            target="npc_olden",
+            content="올든은 당신이 동행자를 찾는 중임을 기억합니다.",
+            importance=2,
+        )
+    ]
