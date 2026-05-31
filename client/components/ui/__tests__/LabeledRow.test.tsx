@@ -14,4 +14,11 @@ describe('LabeledRow expand and measurement behavior', () => {
     expect(source).not.toContain('opacity-0');
     expect(source).not.toContain('onLayout={(e)');
   });
+
+  test('renders multiline text with a separate title and expandable affordance', () => {
+    expect(source).toContain('const lines = text.split');
+    expect(source).toContain('const titleLine = canUseTitleBodyLayout ? lines[0] : null;');
+    expect(source).toContain('text-fg-muted');
+    expect(source).toContain('accessibilityLabel={expanded ? ko.panel.collapse : ko.panel.expand}');
+  });
 });

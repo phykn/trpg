@@ -114,12 +114,15 @@ def confirmation_required_result(
 def cancelled_result(
     runtime: GameRuntimeState,
     front_state: GraphFrontStatePayload,
+    *,
+    suggestions: list[GraphSuggestion] | None = None,
 ) -> GraphActionRequestResult:
     return _result(
         runtime=runtime,
         status="cancelled",
         outcome="neutral",
         front_state=front_state,
+        suggestions=suggestions,
     )
 
 

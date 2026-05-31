@@ -152,7 +152,7 @@ export function Playing({ game }: Props) {
   );
 
   if (!hero) return null;
-  const showRollPanel = pendingRoll !== null && !streaming;
+  const showRollPanel = pendingRoll !== null;
   return (
     <View
       className="flex-1 bg-canvas-default py-2.5 gap-2.5"
@@ -302,7 +302,7 @@ export function Playing({ game }: Props) {
           <RollPanel
             roll={pendingRoll}
             onRoll={onRollPending}
-            disabled={pendingConfirmation !== null}
+            disabled={streaming || pendingConfirmation !== null}
           />
         ) : combat ? (
           <View>

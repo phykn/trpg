@@ -14,6 +14,7 @@ from ..request_result import (
     confirmation_required_result,
     executed_result,
 )
+from ..narration.suggestions import next_turn_suggestions
 from ..pending_action import load_pending_action
 from ..roll.gate import should_start_graph_roll
 from .confirmation_policy import (
@@ -213,6 +214,7 @@ async def run_graph_confirm(
         return cancelled_result(
             cleared_runtime,
             graph_to_front_state(cleared_runtime),
+            suggestions=next_turn_suggestions(cleared_runtime, []),
         )
 
     action = load_pending_action(pending, error_type=GraphConfirmationExpected)
@@ -280,6 +282,7 @@ async def run_graph_confirm_stream(
         result = cancelled_result(
             cleared_runtime,
             graph_to_front_state(cleared_runtime),
+            suggestions=next_turn_suggestions(cleared_runtime, []),
         )
         yield {"type": "result", "result": result}
         yield {"type": "final", "result": result}

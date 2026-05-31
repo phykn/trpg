@@ -226,6 +226,7 @@ async def test_confirm_cancel_clears_pending_without_mutating_graph(tmp_path):
     assert saved_progress.pending_confirmation is None
     assert saved_progress.graph_combat_state is None
     assert saved_progress.turn_count == 0
+    assert result.suggestions
 
 
 async def test_confirm_attack_executes_stored_action(tmp_path):

@@ -739,6 +739,58 @@ async def test_run_graph_action_turn_stream_emits_result_before_narration(tmp_pa
     ]
 
 
+async def test_run_graph_action_turn_stream_emits_result_before_generated_story(
+    tmp_path,
+    monkeypatch,
+):
+    from src.game.runtime.flow import turn as turn_flow
+
+    repo = await _repo(tmp_path)
+    runtime = await load_runtime_state(repo, "game-1")
+    story_started = asyncio.Event()
+    release_story = asyncio.Event()
+
+    async def slow_apply_generated_story_after_action(**kwargs):
+        story_started.set()
+        await release_story.wait()
+        return kwargs["result"]
+
+    monkeypatch.setattr(
+        turn_flow,
+        "apply_generated_story_after_action",
+        slow_apply_generated_story_after_action,
+    )
+
+    stream = run_graph_action_turn_from_runtime_stream(
+        repo,
+        "game-1",
+        runtime,
+        Action(verb="move", to="forest"),
+        llm=_RepeatStreamNarrationLLM("광장에 도착합니다."),  # type: ignore[arg-type]
+    )
+
+    first = await asyncio.wait_for(stream.__anext__(), timeout=0.05)
+
+    assert first["type"] == "result"
+    assert [entry.kind for entry in first["result"].front_state.log] == ["act"]
+    assert story_started.is_set() is False
+
+    next_event = asyncio.create_task(stream.__anext__())
+    await asyncio.wait_for(story_started.wait(), timeout=0.05)
+    await asyncio.sleep(0)
+    assert next_event.done() is False
+
+    release_story.set()
+    second = await asyncio.wait_for(next_event, timeout=0.5)
+    remaining = [event async for event in stream]
+
+    assert [event["type"] for event in [first, second, *remaining]] == [
+        "result",
+        "narration_delta",
+        "final",
+    ]
+
+
 async def test_run_graph_action_turn_does_not_generate_offer_when_no_work_exists(
     tmp_path,
 ):

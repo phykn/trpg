@@ -35,7 +35,7 @@ export function buildPanelSlots(
 function buildInfoSlot(state: GameSnapshot): PanelSlot {
   return {
     id: 'notes',
-    chip: { short: ko.quest.chapter, dot: state.slotDots?.notes ?? false },
+    chip: { short: ko.table.info, dot: state.slotDots?.notes ?? false },
     panel: withoutHeader(buildNotesPanel(state)),
   };
 }

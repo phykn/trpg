@@ -38,6 +38,8 @@ export const ko = {
     talk: '대화',
     inspect: '살펴보기',
     pickup: '줍기',
+    expand: '펼치기',
+    collapse: '접기',
   },
   table: {
     info: '정보',

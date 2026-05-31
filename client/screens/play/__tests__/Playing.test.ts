@@ -56,9 +56,10 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('disabled: streaming || pendingConfirmation !== null || pendingRoll !== null');
   });
 
-  test('does not show the roll panel while pre-roll narration is streaming', () => {
-    expect(source).toContain('const showRollPanel = pendingRoll !== null && !streaming;');
+  test('shows a pending roll immediately while disabling the button during streaming', () => {
+    expect(source).toContain('const showRollPanel = pendingRoll !== null;');
     expect(source).toContain(') : showRollPanel ? (');
+    expect(source).toContain('disabled={streaming || pendingConfirmation !== null}');
   });
 
   test('disables context actions while a blocking request state is active', () => {

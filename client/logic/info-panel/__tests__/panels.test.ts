@@ -81,7 +81,7 @@ describe('buildPanelSlots', () => {
       questOffers: [],
     });
 
-    expect(slots.map((slot) => slot.chip.short)).toEqual(['테스터', '챕터']);
+    expect(slots.map((slot) => slot.chip.short)).toEqual(['테스터', '정보']);
     expect(slots[0].id).toBe('hero');
     expect(slots[0].panel?.title).toBe('');
     expect(slots[0].panel?.meta).toBeUndefined();
@@ -136,7 +136,7 @@ describe('buildPanelSlots', () => {
       slotDots: { notes: true },
     });
 
-    expect(slots.map((slot) => slot.chip.short)).toEqual(['테스터', '챕터']);
+    expect(slots.map((slot) => slot.chip.short)).toEqual(['테스터', '정보']);
     expect(slots[1].id).toBe('notes');
     expect(slots[1].chip.dot).toBe(true);
     expect(slots[1].panel?.title).toBe('');

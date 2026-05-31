@@ -173,15 +173,6 @@ async def run_graph_action_turn_from_runtime_stream(
             )
         }
     )
-    result = await apply_generated_story_after_action(
-        client=llm,
-        repo=repo,
-        result=result,
-        contract=_generated_contract(result.runtime),
-        player_input=player_input or "",
-        action=prepared.action,
-    )
-    narration_runtime = result.runtime
     outcome = result_outcome or outcome_from_dispatch(prepared.dispatch)
     yield {
         "type": "result",
@@ -191,6 +182,15 @@ async def run_graph_action_turn_from_runtime_stream(
             outcome=outcome,
         ).model_copy(update={"dispatch": prepared.dispatch}),
     }
+    result = await apply_generated_story_after_action(
+        client=llm,
+        repo=repo,
+        result=result,
+        contract=_generated_contract(result.runtime),
+        player_input=player_input or "",
+        action=prepared.action,
+    )
+    narration_runtime = result.runtime
     buffer_visible_narration = _should_buffer_no_reward_choice_narration(
         prepared.before,
         result.runtime,
