@@ -326,6 +326,22 @@ def test_graph_narrate_prompt_prefers_grounded_natural_prose_over_hype():
     _assert_contains_none(prompt, ["조금 과장해서 씁니다", "플레이어의 팬인 GM"])
 
 
+def test_graph_narrate_prompt_allows_small_grounded_humor_without_moralizing():
+    prompt = get_prompt("graph_narrate", "ko")
+
+    _assert_contains_all(
+        prompt,
+        [
+            "장면이 계속 무겁게 흐르면",
+            "물건의 어색함",
+            "작은 실수",
+            "낮은 강도의 웃음",
+            "교훈",
+            "심판",
+        ],
+    )
+
+
 def test_combat_narrate_prompt_prefers_plain_play_log_style():
     prompt = get_prompt("combat_narrate", "ko")
 

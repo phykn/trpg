@@ -34,6 +34,18 @@ type ApiRequestOptions = {
   onNarrationDelta?: (text: string, outcome: GraphResultOutcome) => void;
 };
 
+function shouldLogGraphDebug(): boolean {
+  if (process.env.EXPO_PUBLIC_GRAPH_DEBUG === '1') return true;
+  if (process.env.EXPO_PUBLIC_GRAPH_DEBUG === '0') return false;
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? '';
+  return process.env.NODE_ENV !== 'test' && (__DEV__ || apiUrl.includes(':8001'));
+}
+
+function graphStreamDebug(fields: Record<string, unknown>): void {
+  if (!shouldLogGraphDebug()) return;
+  console.debug(`[trpg:graph-stream] ${JSON.stringify(fields)}`);
+}
+
 export async function getGraphSessionById(gameId: string): Promise<SessionPayload | null> {
   const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/state`, {
     headers: baseHeaders,
@@ -148,6 +160,7 @@ async function readGraphActionStream(
   options: ApiRequestOptions,
 ): Promise<GraphActionClientResponse> {
   const reader = res.body?.getReader?.();
+  const startedAt = Date.now();
   let finalPayload: GraphActionResponse | null = null;
   let resultOutcome: GraphResultOutcome = 'neutral';
   const consumeLine = (line: string) => {
@@ -158,17 +171,40 @@ async function readGraphActionStream(
       const payload = event.payload as GraphActionResponse;
       const response = adaptGraphActionResponse(payload);
       resultOutcome = response.outcome;
+      graphStreamDebug({
+        operation,
+        type: event.type,
+        gameId: response.game_id,
+        status: response.status ?? null,
+        outcome: response.outcome,
+        elapsedMs: Date.now() - startedAt,
+      });
       options.onResult?.(response);
       return;
     }
     if (event.type === 'narration_delta') {
       if (typeof event.text === 'string' && event.text) {
+        graphStreamDebug({
+          operation,
+          type: event.type,
+          chars: event.text.length,
+          outcome: resultOutcome,
+          elapsedMs: Date.now() - startedAt,
+        });
         options.onNarrationDelta?.(event.text, resultOutcome);
       }
       return;
     }
     if (event.type === 'final') {
       finalPayload = event.payload as GraphActionResponse;
+      graphStreamDebug({
+        operation,
+        type: event.type,
+        gameId: finalPayload.game_id,
+        status: finalPayload.status ?? null,
+        hasPayload: true,
+        elapsedMs: Date.now() - startedAt,
+      });
       return;
     }
     if (event.type === 'error') {

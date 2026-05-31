@@ -70,6 +70,9 @@ def test_story_write_prompt_requires_flat_patch_objects():
     assert "Do not save vague clue summaries" in text
     assert "specific information" in text
     assert "actual readable phrase" in text
+    assert "Correct `add_memory` patch" in text
+    assert '"op": "add_memory"' in text
+    assert "Do not add `title`, `anchor_id`, or other clue-only fields to `add_memory`" in text
 
 
 @pytest.mark.asyncio
@@ -182,3 +185,33 @@ async def test_story_write_accepts_location_title_summary_aliases_without_retry(
     assert patch.op == "add_location"
     assert patch.name == "보라 선물 가판"
     assert patch.description == "작은 장식과 빈 가격표가 놓인 가판입니다."
+
+
+@pytest.mark.asyncio
+async def test_story_write_accepts_memory_title_anchor_aliases_without_retry():
+    client = _OneShotClient(
+        {
+            "reason": "memory",
+            "patches": [
+                {
+                    "op": "add_memory",
+                    "id": "mem_eli_identity",
+                    "title": "엘리의 신원",
+                    "summary": "엘리는 선착장의 보조원으로 첫 물길을 압니다.",
+                    "anchor_id": "npc_eli",
+                    "stability": "campaign",
+                    "visibility": "player",
+                }
+            ],
+            "new_terms": [],
+            "narration_brief": None,
+        }
+    )
+
+    response = await story_write(client, _input(), locale="ko")
+
+    assert client.attempts == 1
+    patch = response.patches[0]
+    assert patch.op == "add_memory"
+    assert patch.id == "mem_eli_identity"
+    assert patch.summary == "엘리는 선착장의 보조원으로 첫 물길을 압니다."

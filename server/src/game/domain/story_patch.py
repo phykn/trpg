@@ -29,6 +29,18 @@ class AddMemoryPatch(BaseModel):
     stability: StoryStability = "campaign"
     visibility: Literal["player", "private", "developer"] = "player"
 
+    @model_validator(mode="before")
+    @classmethod
+    def _ignore_clue_only_aliases(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        if "title" not in data and "anchor_id" not in data:
+            return data
+        normalized = dict(data)
+        normalized.pop("title", None)
+        normalized.pop("anchor_id", None)
+        return normalized
+
 
 class AddCluePatch(BaseModel):
     model_config = ConfigDict(extra="forbid")

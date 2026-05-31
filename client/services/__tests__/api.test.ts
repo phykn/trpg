@@ -91,8 +91,19 @@ function streamResponse(lines: string[]) {
 }
 
 describe('graph API helpers', () => {
+  const originalDebugFlag = process.env.EXPO_PUBLIC_GRAPH_DEBUG;
+
   beforeEach(() => {
     fetch.mockReset();
+  });
+
+  afterEach(() => {
+    if (originalDebugFlag === undefined) {
+      delete process.env.EXPO_PUBLIC_GRAPH_DEBUG;
+    } else {
+      process.env.EXPO_PUBLIC_GRAPH_DEBUG = originalDebugFlag;
+    }
+    jest.restoreAllMocks();
   });
 
   test('posts explicit graph actions to the graph turn endpoint', async () => {
@@ -488,6 +499,40 @@ describe('graph API helpers', () => {
     expect(events).toEqual(['result', 'delta', 'delta']);
     expect(result.status).toBe('executed');
     expect(result.outcome).toBe('success');
+  });
+
+  test('emits debug logs for graph stream events', async () => {
+    process.env.EXPO_PUBLIC_GRAPH_DEBUG = '1';
+    const debug = jest.spyOn(console, 'debug').mockImplementation(() => {});
+    const response = {
+      game_id: 'game-1',
+      state: graphState(),
+      status: 'executed',
+      outcome: 'success',
+      message: null,
+    };
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({ type: 'result', payload: response }),
+        JSON.stringify({ type: 'narration_delta', text: '도착합니다.' }),
+        JSON.stringify({ type: 'final', payload: response }),
+      ]),
+    );
+
+    await sendGraphInput('game-1', '엘리에게 묻는다');
+
+    expect(debug).toHaveBeenCalledWith(
+      expect.stringContaining('"type":"result"'),
+    );
+    expect(debug).toHaveBeenCalledWith(
+      expect.stringContaining('"type":"narration_delta"'),
+    );
+    expect(debug).toHaveBeenCalledWith(
+      expect.stringContaining('"type":"final"'),
+    );
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('"operation":"sendGraphInput"'));
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('"gameId":"game-1"'));
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('"chars":6'));
   });
 
   test('uses server graph suggestions from an action response', async () => {

@@ -32,6 +32,21 @@ Correct `add_clue` patch:
 }
 ```
 
+Correct `add_memory` patch:
+
+```json
+{
+  "op": "add_memory",
+  "id": "mem_example",
+  "summary": "플레이어와 NPC가 실제로 주고받은 기억을 한 문장으로 씁니다.",
+  "stability": "campaign",
+  "visibility": "player"
+}
+```
+
+Do not add `title`, `anchor_id`, or other clue-only fields to `add_memory`.
+If you need a titled, anchored fact, use `add_clue` instead.
+
 Wrong patch shapes:
 
 ```json

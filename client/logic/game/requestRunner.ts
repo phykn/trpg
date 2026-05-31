@@ -104,10 +104,26 @@ function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === 'AbortError';
 }
 
+function shouldLogGraphRequestDebug(): boolean {
+  if (process.env.EXPO_PUBLIC_GRAPH_DEBUG === '1') return true;
+  if (process.env.EXPO_PUBLIC_GRAPH_DEBUG === '0') return false;
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? '';
+  return process.env.NODE_ENV !== 'test' && (__DEV__ || apiUrl.includes(':8001'));
+}
+
+function graphRequestDebug(
+  phase: string,
+  fields: Record<string, unknown>,
+): void {
+  if (!shouldLogGraphRequestDebug()) return;
+  console.debug(`[trpg:graph-request] ${JSON.stringify({ phase, ...fields })}`);
+}
+
 export function abortGraphActionRequest(runtime: GraphActionRequestRuntime): void {
   const controller = runtime.abortControllerRef.current;
   if (!runtime.requestInFlightRef.current && !controller) return;
   runtime.requestGenerationRef.current += 1;
+  graphRequestDebug('abort', { generation: runtime.requestGenerationRef.current });
   runtime.requestInFlightRef.current = false;
   runtime.abortControllerRef.current = null;
   controller?.abort();
@@ -122,12 +138,17 @@ export async function runGraphActionRequestOnce(
   if (runtime.requestInFlightRef.current) return;
   const generation = runtime.requestGenerationRef.current + 1;
   const controller = new AbortController();
+  const startedAt = Date.now();
   runtime.requestGenerationRef.current = generation;
   runtime.abortControllerRef.current = controller;
   runtime.requestInFlightRef.current = true;
   runtime.setRequestInFlight(true);
   runtime.setErrorMessage(null);
   runtime.setSuggestions([]);
+  graphRequestDebug('start', {
+    generation,
+    optimisticEntries: optimisticEntries.length,
+  });
   appendOptimisticLogEntries(runtime, generation, optimisticEntries);
   try {
     const response = await call(controller.signal, {
@@ -139,6 +160,14 @@ export async function runGraphActionRequestOnce(
           return;
         }
         if (runtime.isActiveGameId && !runtime.isActiveGameId(result.game_id)) return;
+        graphRequestDebug('result', {
+          generation,
+          gameId: result.game_id,
+          status: result.status ?? null,
+          pendingConfirmation: result.pendingConfirmation !== null,
+          pendingRoll: result.pendingRoll !== null,
+          elapsedMs: Date.now() - startedAt,
+        });
         runtime.applyState(result.state, result.game_id);
       },
       onNarrationDelta: (text: string, outcome: GraphResultOutcome) => {
@@ -148,11 +177,26 @@ export async function runGraphActionRequestOnce(
         ) {
           return;
         }
+        graphRequestDebug('delta', {
+          generation,
+          chars: text.length,
+          outcome,
+          elapsedMs: Date.now() - startedAt,
+        });
         appendStreamingNarration(runtime, generation, optimisticEntries.length, text, outcome);
       },
     });
     if (runtime.requestGenerationRef.current !== generation) return;
     if (runtime.isActiveGameId && !runtime.isActiveGameId(response.game_id)) return;
+    graphRequestDebug('final', {
+      generation,
+      gameId: response.game_id,
+      status: response.status ?? null,
+      pendingConfirmation: response.pendingConfirmation !== null,
+      pendingRoll: response.pendingRoll !== null,
+      suggestions: response.suggestions.length,
+      elapsedMs: Date.now() - startedAt,
+    });
     runtime.applyState(response.state, response.game_id);
     runtime.setSuggestions(response.suggestions);
     if (response.message) {
@@ -170,15 +214,28 @@ export async function runGraphActionRequestOnce(
       || controller.signal.aborted
       || isAbortError(err)
     ) {
+      graphRequestDebug('aborted', {
+        generation,
+        elapsedMs: Date.now() - startedAt,
+      });
       return;
     }
     removeStreamingNarration(runtime, generation, optimisticEntries.length);
+    graphRequestDebug('error', {
+      generation,
+      error: err instanceof Error ? err.message : String(err),
+      elapsedMs: Date.now() - startedAt,
+    });
     runtime.setErrorMessage(errorMessageForDisplay(err));
   } finally {
     if (runtime.requestGenerationRef.current === generation) {
       runtime.abortControllerRef.current = null;
       runtime.requestInFlightRef.current = false;
       runtime.setRequestInFlight(false);
+      graphRequestDebug('done', {
+        generation,
+        elapsedMs: Date.now() - startedAt,
+      });
     }
   }
 }

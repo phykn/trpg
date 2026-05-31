@@ -32,6 +32,17 @@ function runtime(activeGameId = 'game-1'): GraphActionRequestRuntime {
 }
 
 describe('runGraphActionRequestOnce', () => {
+  const originalDebugFlag = process.env.EXPO_PUBLIC_GRAPH_DEBUG;
+
+  afterEach(() => {
+    if (originalDebugFlag === undefined) {
+      delete process.env.EXPO_PUBLIC_GRAPH_DEBUG;
+    } else {
+      process.env.EXPO_PUBLIC_GRAPH_DEBUG = originalDebugFlag;
+    }
+    jest.restoreAllMocks();
+  });
+
   test('adds optimistic log entries before the request resolves', async () => {
     const rt = runtime('game-1');
     let resolveResponse: (value: GraphActionClientResponse) => void = () => {};
@@ -193,5 +204,39 @@ describe('runGraphActionRequestOnce', () => {
     expect(rt.setErrorMessage).toHaveBeenLastCalledWith(
       '요청이 끊겼습니다. 다시 시도해 주세요.',
     );
+  });
+
+  test('emits debug phases while a graph request runs', async () => {
+    process.env.EXPO_PUBLIC_GRAPH_DEBUG = '1';
+    const debug = jest.spyOn(console, 'debug').mockImplementation(() => {});
+    const rt = runtime('game-1');
+
+    await runGraphActionRequestOnce(
+      async (_signal, events) => {
+        events.onResult(response('game-1'));
+        events.onNarrationDelta('답변입니다.', 'success');
+        return response('game-1');
+      },
+      rt,
+      [{ kind: 'player', text: '엘리에게 묻습니다' }],
+    );
+
+    expect(debug).toHaveBeenCalledWith(
+      expect.stringContaining('"phase":"start"'),
+    );
+    expect(debug).toHaveBeenCalledWith(
+      expect.stringContaining('"phase":"result"'),
+    );
+    expect(debug).toHaveBeenCalledWith(
+      expect.stringContaining('"phase":"delta"'),
+    );
+    expect(debug).toHaveBeenCalledWith(
+      expect.stringContaining('"phase":"final"'),
+    );
+    expect(debug).toHaveBeenCalledWith(
+      expect.stringContaining('"phase":"done"'),
+    );
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('"gameId":"game-1"'));
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('"chars":6'));
   });
 });
