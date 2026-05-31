@@ -6,6 +6,7 @@ from src.db.repo import GraphRepo
 from src.game.domain.action import Action
 from src.game.domain.graph.apply import apply_graph_changes
 from src.game.domain.story_contract import StoryContract
+from src.game.domain.story_patch import StoryWriteIntent
 from src.game.engines.story_patch_apply import (
     changed_edge_ids as _changed_edge_ids,
     changed_node_ids as _changed_node_ids,
@@ -15,6 +16,7 @@ from src.game.engines.story_patch_validator import validate_story_write_response
 from src.game.runtime.request_result import GraphActionRequestResult
 from src.llm.calls.story_write import story_write
 from src.llm.diag import engine_diag
+from src.locale.generated_story import GENERATED_SPEAK_WORLD_LEAD_MARKERS
 from src.wire.graph.to_front import graph_to_front_state
 
 from .changes import has_actionable_world_change, requires_actionable_patch
@@ -47,6 +49,16 @@ async def apply_generated_story_after_action(
         contract,
         runtime=result.runtime,
     )
+    if should_promote_speak_world_lead(
+        action=action,
+        intent=intent,
+        contract=contract,
+        accepted_narration=accepted_narration,
+    ):
+        intent = StoryWriteIntent(
+            kind="both",
+            reason="dialogue names actionable world lead",
+        )
     if intent.kind == "none":
         return result
 
@@ -222,3 +234,42 @@ async def apply_generated_story_after_action(
             "front_state": graph_to_front_state(next_runtime),
         }
     )
+
+
+def is_deferable_speak_story_write(
+    *,
+    action: Action,
+    contract: StoryContract | None,
+    runtime: Any,
+    accepted_narration: str | None,
+) -> bool:
+    if contract is None:
+        return False
+    intent = story_write_intent_for_contract(action, contract, runtime=runtime)
+    return action.verb == "speak" and intent.kind == "memory_candidate" and not (
+        should_promote_speak_world_lead(
+            action=action,
+            intent=intent,
+            contract=contract,
+            accepted_narration=accepted_narration,
+        )
+    )
+
+
+def should_promote_speak_world_lead(
+    *,
+    action: Action,
+    intent: StoryWriteIntent,
+    contract: StoryContract,
+    accepted_narration: str | None,
+) -> bool:
+    if action.verb != "speak" or intent.kind != "memory_candidate":
+        return False
+    if not set(contract.allowed_ops).intersection(
+        {"add_location", "add_character", "add_item", "add_quest_beat"}
+    ):
+        return False
+    text = (accepted_narration or "").strip()
+    if not text:
+        return False
+    return any(marker in text for marker in GENERATED_SPEAK_WORLD_LEAD_MARKERS)

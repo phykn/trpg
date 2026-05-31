@@ -25,6 +25,8 @@ def story_write_intent_for_contract(
     intent = derive_story_write_intent(action)
     if intent.kind == "none":
         return intent
+    if action.verb == "speak" and intent.kind == "memory_candidate":
+        return intent
     world_ops = {"add_location", "add_character", "add_item", "add_quest_beat"}
     if set(contract.allowed_ops).intersection(world_ops):
         if runtime is None:

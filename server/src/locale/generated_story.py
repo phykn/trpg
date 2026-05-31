@@ -25,6 +25,12 @@ LOCATION_DESCRIPTION_SUFFIX = "더 살펴볼 수 있는 장소입니다."
 LEGACY_LOCATION_DESCRIPTION_SUFFIX = "can be investigated further."
 GENERATED_OPEN_MOVE_TERMS = ("이동", "갑니다", "가요", "나아", "향해")
 GENERATED_OPEN_MOVE_TARGET_TERMS = ("가리키", "길목", "방향", "북쪽")
+GENERATED_SPEAK_WORLD_LEAD_MARKERS = (
+    "가려면",
+    "관리인",
+    "담당자",
+    *GENERATED_OPEN_MOVE_TARGET_TERMS,
+)
 
 
 def is_generic_quest_beat(title: object, summary: object) -> bool:

@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 
 from src.db.repo import GraphRepo
@@ -26,12 +27,18 @@ from ...narration.safety import guard_speak_narration_player_quote
 from ...narration.suggestions import next_turn_suggestions
 from ...request_result import GraphActionRequestResult, rejected_result
 from ...state import GameRuntimeState
-from ..generated_input import apply_generated_story_after_action
+from ..generated_input import (
+    apply_generated_story_after_action,
+    is_deferable_speak_story_write,
+)
 from .targets import (
     action_target as _action_target,
     node_name as _node_name,
     resolve_narrative_subject as _resolve_narrative_subject,
 )
+
+
+_BACKGROUND_STORY_TASKS: set[asyncio.Task[None]] = set()
 
 
 def _input_narration_timeout_s(default: float = 120.0) -> float:
@@ -304,6 +311,7 @@ async def run_graph_narrative_input_stream(
         subject_id,
         narration_result,
         player_input=player_input,
+        defer_dialogue_story_write=True,
     )
     yield {"type": "final", "result": result}
 
@@ -346,6 +354,7 @@ async def _finish_graph_narrative_input(
     narration_result: GraphNarrationResult,
     *,
     player_input: str,
+    defer_dialogue_story_write: bool = False,
 ) -> GraphActionRequestResult:
     entry = gm_log_entry_from_narration(
         runtime.progress.next_log_id,
@@ -382,6 +391,21 @@ async def _finish_graph_narrative_input(
     )
     if action.verb not in {"speak", "perceive", "move"}:
         return result
+    if defer_dialogue_story_write and is_deferable_speak_story_write(
+        action=action,
+        contract=next_runtime.story_contract,
+        runtime=next_runtime,
+        accepted_narration=narration_result.narration,
+    ):
+        _schedule_background_story_write(
+            client=client,
+            repo=repo,
+            result=result,
+            player_input=player_input,
+            action=action,
+            accepted_narration=narration_result.narration,
+        )
+        return result
     return await apply_generated_story_after_action(
         client=client,
         repo=repo,
@@ -391,6 +415,56 @@ async def _finish_graph_narrative_input(
         action=action,
         accepted_narration=narration_result.narration,
     )
+
+
+def _schedule_background_story_write(
+    *,
+    client: LLMClient,
+    repo: GraphRepo,
+    result: GraphActionRequestResult,
+    player_input: str,
+    action: Action,
+    accepted_narration: str | None,
+) -> None:
+    task = asyncio.create_task(
+        _apply_generated_story_after_action_background(
+            client=client,
+            repo=repo,
+            result=result,
+            player_input=player_input,
+            action=action,
+            accepted_narration=accepted_narration,
+        )
+    )
+    _BACKGROUND_STORY_TASKS.add(task)
+    task.add_done_callback(_BACKGROUND_STORY_TASKS.discard)
+
+
+async def _apply_generated_story_after_action_background(
+    *,
+    client: LLMClient,
+    repo: GraphRepo,
+    result: GraphActionRequestResult,
+    player_input: str,
+    action: Action,
+    accepted_narration: str | None,
+) -> None:
+    try:
+        await apply_generated_story_after_action(
+            client=client,
+            repo=repo,
+            result=result,
+            contract=result.runtime.story_contract,
+            player_input=player_input,
+            action=action,
+            accepted_narration=accepted_narration,
+        )
+    except Exception as exc:
+        engine_diag(
+            "story_write:background_error",
+            action=action.verb,
+            error=type(exc).__name__,
+        )
 
 
 def _fallback_input_narration(runtime: GameRuntimeState, subject_id: str | None) -> str:

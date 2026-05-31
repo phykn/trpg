@@ -543,6 +543,44 @@ async def test_generated_speak_can_promote_narrated_lead_to_graph_patch(tmp_path
     ]
 
 
+async def test_generated_speak_information_answer_does_not_retry_story_write(tmp_path):
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(
+            update={
+                "profile_id": "white_isle",
+                "story_contract_override": {
+                    "id": "white_isle",
+                    "world": {"title": "흰섬", "locale": "ko"},
+                    "fixed": [],
+                    "forbid": [],
+                    "tone": {"register": "합니다체", "person": "second"},
+                    "budgets": {"patches_per_turn": 1, "new_terms_per_turn": 1},
+                    "allowed_ops": ["add_memory", "add_location"],
+                    "stability_defaults": {
+                        "add_memory": "campaign",
+                        "add_location": "scene",
+                    },
+                },
+            }
+        )
+    )
+    llm = _GeneratedStoryLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
+        narration="고블린은 먼저 두 사람이 물살을 확인해야 한다고 말합니다.",
+        story_response={"reason": "informational answer", "patches": []},
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 규칙을 묻는다")
+    story_calls = [call for call in llm.calls if call["agent"] == "story_write"]
+    entries = await repo.load_story_patch_entries("game-1")
+
+    assert result.status == "executed"
+    assert len(story_calls) == 1
+    assert [entry.status for entry in entries] == ["skipped"]
+
+
 async def test_graph_input_speak_does_not_store_invented_player_question(tmp_path):
     repo = await _repo(tmp_path)
     graph = await repo.load_graph("game-1")
@@ -1183,6 +1221,75 @@ async def test_graph_input_streams_result_before_speak_narration(tmp_path):
     assert events[-1]["result"].status == "executed"
     assert [entry.kind for entry in logs] == ["player", "gm"]
     assert logs[-1].text == "상대는 당신의 말을 듣습니다."
+
+
+async def test_graph_input_stream_final_does_not_wait_for_dialogue_story_write(
+    tmp_path,
+    monkeypatch,
+):
+    from src.game.runtime.flow.input import narration as input_narration
+
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(
+            update={
+                "profile_id": "white_isle",
+                "story_contract_override": {
+                    "id": "white_isle",
+                    "world": {"title": "흰섬", "locale": "ko"},
+                    "fixed": [],
+                    "forbid": [],
+                    "tone": {"register": "합니다체", "person": "second"},
+                    "budgets": {"patches_per_turn": 1, "new_terms_per_turn": 1},
+                    "allowed_ops": ["add_memory", "add_location"],
+                    "stability_defaults": {
+                        "add_memory": "campaign",
+                        "add_location": "scene",
+                    },
+                },
+            }
+        )
+    )
+    story_started = asyncio.Event()
+    release_story = asyncio.Event()
+
+    async def slow_apply_generated_story_after_action(**kwargs):
+        story_started.set()
+        await release_story.wait()
+        return kwargs["result"]
+
+    monkeypatch.setattr(
+        input_narration,
+        "apply_generated_story_after_action",
+        slow_apply_generated_story_after_action,
+    )
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
+        narration="고블린은 두 사람이 물살을 확인해야 한다고 말합니다.",
+    )
+
+    async def collect_until_final():
+        events = []
+        async for event in run_graph_input_turn_stream(
+            llm,
+            repo,
+            "game-1",
+            "고블린에게 규칙을 묻는다",
+        ):
+            events.append(event)
+            if event["type"] == "final":
+                break
+        return events
+
+    events = await asyncio.wait_for(collect_until_final(), timeout=0.1)
+
+    assert events[-1]["type"] == "final"
+    assert story_started.is_set() is False
+
+    await asyncio.wait_for(story_started.wait(), timeout=0.1)
+    release_story.set()
+    await asyncio.sleep(0)
 
 
 async def test_graph_input_streams_single_result_for_multiple_actions(tmp_path):
