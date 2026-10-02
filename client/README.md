@@ -1,122 +1,55 @@
-# trpg-client
+# 웹 클라이언트
 
-Client for a locale-aware TRPG. Single-screen Expo (React Native) app. The server lives at `../server/`; the agent guide is in [AGENTS.md](./AGENTS.md).
+스크롤 없이 한 화면에서 이야기를 읽고 선택하는 모바일 웹 앱입니다. 그림을 사용하지 않으며 PC에서도 같은 폭을 유지합니다. 설치와 플레이는 [루트 README](../README.md)를 따릅니다.
 
-## Stack
+## 화면과 코드
 
-- Expo SDK 54 / React Native 0.81 / React 19 (New Architecture + React Compiler)
-- expo-router (file-based routing, `typedRoutes`)
-- NativeWind v4 (Tailwind for RN), with `design/tokens.js` as the single token source
-- TypeScript strict
-- Server calls: `expo/fetch` for graph REST (`services/api/`)
+`app/index.tsx` → `screens/GameScreen.tsx` → `logic/useGame.ts` → `services/api.ts`
 
-## Setup
+- `screens/Arrival.tsx`: 소개→이름→성향 선택.
+- `screens/Adventure.tsx`: 읽기→행동 선택, 이동과 수첩 열기.
+- `components/game/`: 자원 상태, 전투 하트, 페이지로 보는 수첩.
+- `components/ui/Reader.tsx`: 실제 글자 높이를 측정해 본문을 페이지로 나눕니다. 읽기 위치는 화면 크기가 바뀌거나 수첩을 열어도 유지합니다.
+- `components/ui/PagedList.tsx`: 화면 높이에 맞는 개수로 행동과 기록을 넘깁니다. 항목을 열면 전체 내용을 확인합니다.
+- `components/ui/MenuGrid.tsx`: 수첩과 행동 분류를 두 열로 배치합니다.
+- `components/ui/ActionPreview.tsx`: 행동의 내용·비용·조건을 읽고 실행합니다.
+- `logic/useGame.ts`: 시작·복원·선택·실패 복구. 서버 응답만 게임 상태로 채택합니다.
+- `services/api.ts`: 인증된 `expo/fetch` 요청과 15초 제한. `types.ts`는 응답 형식입니다.
+- `services/storage.ts`: 이어하기 ID만 저장합니다.
+- `locale/ko.ts`: 클라이언트 문구. `design/tokens.js`: 색상·간격·글꼴·너비.
 
-```bash
-npm install
-```
+페이지 넘김은 화면 상태만 바꿉니다. 실제 행동을 확정할 때만 서버로 요청합니다. 화면 높이는 모바일 주소창과 가상 키보드의 가시 영역을 따릅니다. 본문 측정에는 웹 DOM을 사용하며 네이티브 앱은 현재 검증 대상이 아닙니다.
 
-Write `client/.env.shared` for common values:
+응답이 끊기면 다른 선택을 잠그고 동일 명령으로 재시도합니다. 409·422 응답 후에는 저장된 장면을 다시 불러옵니다. 서버 저장에 성공한 턴은 브라우저 저장소 오류가 나도 화면에 유지합니다.
 
-```
-EXPO_PUBLIC_API_USER=<basic auth user>
-EXPO_PUBLIC_API_PASS=<basic auth pass>
-```
+## 명령
 
-Write `client/.env.dev` for the local server URL:
+`client/`에서 실행합니다.
 
-```
-EXPO_PUBLIC_API_URL=<server URL>
-```
-
-`<server URL>` is either a LAN address (`http://<windows-lan-ip>:8001`) or a Tailscale Funnel domain (`https://<machine>.<tailnet>.ts.net`), depending on the test mode below.
-
-`npm start`, `npm run web`, `npm run android`, and `npm run ios` load `client/.env.shared` then `client/.env.dev`. `npm run deploy` delegates to `../release/deploy.ps1 -ClientOnly`, which loads `client/.env.shared` then `client/.env.release`.
-
-## Phone testing
-
-Install **Expo Go** on the phone (Play Store / App Store).
-
-### LAN (same Wi-Fi)
-
-1. Server bound to `0.0.0.0:8001`, with the Windows firewall allowing 8001 inbound.
-2. Phone on the same Wi-Fi as the laptop.
-3. From `client/`:
-   ```bash
-   npm start
-   ```
-4. Android: Expo Go → "Scan QR code". iOS: scan the QR with the Camera app, then tap the "Open in Expo Go" notification.
-
-### Off-LAN (Tailscale Funnel)
-
-1. Server bound to `127.0.0.1:8001`.
-2. Confirm the funnel is proxying 8001:
-   ```bash
-   tailscale funnel status
-   ```
-   If it's off:
-   ```bash
-   sudo tailscale funnel --bg 8001
-   ```
-3. Make sure `EXPO_PUBLIC_API_URL` matches the funnel domain.
-4. From `client/`:
-   ```bash
-   npm start -- --host=tunnel -c
-   ```
-5. Scan the QR with Expo Go (same as step 4 of the LAN flow).
-
-## Public web deploy
-
-Static export to Cloudflare Workers (project: `trpg`). Anyone with the URL can open the app in a browser without running a dev server, provided `EXPO_PUBLIC_API_URL` points to the release API and the deploy URL is listed in server `CORS_ORIGINS`.
-
-First time only:
-
-```bash
-npm install -g wrangler
-wrangler login
-```
-
-Each deploy:
-
-```bash
-npm run deploy
-```
-
-This wipes `dist/`, runs `expo export -p web`, then `wrangler deploy` — chained so you can't ship a stale bundle by running export without deploy (or vice versa).
-
-`EXPO_PUBLIC_API_USER` / `EXPO_PUBLIC_API_PASS` are baked into the static bundle and visible to anyone who opens devtools on the public site. Use demo credentials and rotate after the demo.
-
-## Other commands
-
-```bash
-npm start -- -c   # clear Metro cache (after editing tokens / tailwind / babel / metro config)
+```powershell
+npm run dev:public       # 웹+API+공용 HTTPS 주소, LTE 접속
+npm run dev              # 웹+API, 같은 네트워크의 휴대폰 접속
+npm run web              # 로컬 API로 접속, localhost:8081
+npm run web -- --clear   # 디자인·Metro 설정 변경 후 캐시 초기화
+npm run build:web        # 로컬 API를 사용하는 웹 빌드 → dist/
+npm test -- --runInBand
+npx tsc --noEmit
 npm run lint
+node --test scripts/dev-proxy.test.cjs
 ```
 
-## Troubleshooting
+`dev` 명령은 `/api` 요청을 로컬 API에 전달하므로 휴대폰에서도 웹과 API가 같은 주소를 사용합니다. 기존 로컬 API가 있으면 재사용합니다. `dev:public`의 주소는 실행마다 바뀌며 Windows에서는 검증된 공식 `cloudflared` 실행 파일을 `node_modules/.cache/`에 보관합니다. 세부 접속 방법은 [루트 README](../README.md#휴대폰에서-플레이)를 따릅니다.
 
-### `--host=tunnel` fails with `Cannot read properties of undefined (reading 'body')`
+## 다른 서버에 연결
 
-The bundled `@expo/ngrok` cache gets into a bad state intermittently. Wipe it and reinstall:
+로컬 웹 명령은 항상 고정된 로컬 설정을 사용합니다. 다른 서버에 연결할 때는 세 환경변수를 지정한 뒤 Expo를 직접 실행합니다. 서버의 `CORS_ORIGINS`에 브라우저 주소도 등록합니다.
 
-```bash
-rm -rf ~/.expo node_modules/@expo/ngrok
-npx expo install @expo/ngrok
-npm start -- --host=tunnel -c
+```powershell
+$env:EXPO_NO_DOTENV = '1'
+$env:EXPO_PUBLIC_API_URL = 'http://127.0.0.1:8000'
+$env:EXPO_PUBLIC_API_USER = 'local'
+$env:EXPO_PUBLIC_API_PASS = 'local'
+npx expo start --web --host localhost
 ```
 
-## Layout
-
-```
-client/
-  app/         # expo-router routes (single screen — (tabs)/index.tsx mounts Shell)
-  screens/     # screen composition: Shell, new-game/, play/
-  components/  # domain views (hero, composer, log, combat, info-panel, story-graph) + ui/ primitives
-  logic/       # domain calculation, state, hooks (game/useGame.ts is the state root)
-  services/    # server boundary — api/ (REST), wire/ (types), storage.ts (localStorage)
-  locale/      # client-owned locale labels (ko.ts today)
-  design/      # design tokens (tokens.js) shared by Tailwind config and TS
-  scripts/     # deploy helpers
-```
-
-Architecture rules (bucket boundaries, import conventions, layer responsibilities) live in [AGENTS.md](./AGENTS.md).
+이 값은 웹 번들에서 볼 수 있는 공용 접속 설정입니다. 같은 설정으로 `npx expo export --platform web`을 실행하면 해당 서버에 연결되는 정적 빌드를 만듭니다. `npm start`, `npm run android`, `npm run ios`는 `.env.shared`와 `.env.dev`를 읽는 Expo 개발 명령입니다. 이번 검증 대상은 웹이며 네이티브 앱은 별도로 확인해야 합니다.

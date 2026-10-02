@@ -1,0 +1,1540 @@
+{
+  "id": "harbor",
+  "version": 1,
+  "title": "안개 항구의 마지막 배",
+  "synopsis": "한 사람을 구하기 위해 도착한 항구에서 당신은 여러 사람의 사정을 듣습니다. 싸움은 시작할 수 있습니다. 끝내는 방법은 하나가 아닙니다.",
+  "intro": "새벽의 압송선에 당신이 찾던 뱃사람이 실립니다. 남은 시간은 짧습니다. 부두의 종이 한 번 울립니다. 당신은 아직 누구도 다치게 하지 않았습니다.",
+  "deadline": 24,
+  "graph": {
+    "nodes": {
+      "chapter": {
+        "id": "chapter",
+        "type": "chapter",
+        "properties": {
+          "elapsed_ticks": 0,
+          "alert": 0,
+          "gate_open": false,
+          "rescued": false,
+          "owed": false,
+          "merciful": false,
+          "grew": false,
+          "violence": 0,
+          "ledger_to": "",
+          "ending": "",
+          "done": [],
+          "milestones": []
+        }
+      },
+      "square": {
+        "id": "square",
+        "type": "location",
+        "properties": {}
+      },
+      "tavern": {
+        "id": "tavern",
+        "type": "location",
+        "properties": {}
+      },
+      "prison": {
+        "id": "prison",
+        "type": "location",
+        "properties": {}
+      },
+      "warehouse": {
+        "id": "warehouse",
+        "type": "location",
+        "properties": {}
+      },
+      "tower": {
+        "id": "tower",
+        "type": "location",
+        "properties": {}
+      },
+      "player": {
+        "id": "player",
+        "type": "character",
+        "properties": {
+          "name": "당신",
+          "is_player": true,
+          "alive": true,
+          "hp": 8,
+          "max_hp": 8,
+          "mp": 4,
+          "max_mp": 4,
+          "gold": 12,
+          "level": 1,
+          "stats": {
+            "body": 10,
+            "agility": 10,
+            "mind": 10,
+            "presence": 10
+          },
+          "status": [],
+          "visited": [
+            "square"
+          ]
+        }
+      },
+      "guard": {
+        "id": "guard",
+        "type": "character",
+        "properties": {
+          "name": "경비 도윤",
+          "alive": true,
+          "level": 1,
+          "status": []
+        }
+      },
+      "keeper": {
+        "id": "keeper",
+        "type": "character",
+        "properties": {
+          "name": "주인 모라",
+          "alive": true,
+          "level": 1,
+          "status": []
+        }
+      },
+      "sailor": {
+        "id": "sailor",
+        "type": "character",
+        "properties": {
+          "name": "뱃사람 나루",
+          "alive": true,
+          "level": 1,
+          "status": []
+        }
+      },
+      "clerk": {
+        "id": "clerk",
+        "type": "character",
+        "properties": {
+          "name": "서기 이든",
+          "alive": true,
+          "level": 1,
+          "status": []
+        }
+      },
+      "smuggler": {
+        "id": "smuggler",
+        "type": "character",
+        "properties": {
+          "name": "밀수상 루",
+          "alive": true,
+          "level": 1,
+          "status": []
+        }
+      },
+      "inspector": {
+        "id": "inspector",
+        "type": "character",
+        "properties": {
+          "name": "조사관 여울",
+          "alive": true,
+          "level": 1,
+          "status": []
+        }
+      },
+      "customs": {
+        "id": "customs",
+        "type": "faction",
+        "properties": {}
+      },
+      "smugglers": {
+        "id": "smugglers",
+        "type": "faction",
+        "properties": {}
+      },
+      "guard_debt": {
+        "id": "guard_debt",
+        "type": "knowledge",
+        "properties": {}
+      },
+      "forgery": {
+        "id": "forgery",
+        "type": "knowledge",
+        "properties": {}
+      },
+      "shift": {
+        "id": "shift",
+        "type": "knowledge",
+        "properties": {}
+      },
+      "signal": {
+        "id": "signal",
+        "type": "knowledge",
+        "properties": {}
+      },
+      "guard_fear": {
+        "id": "guard_fear",
+        "type": "knowledge",
+        "properties": {}
+      },
+      "ledger_truth": {
+        "id": "ledger_truth",
+        "type": "knowledge",
+        "properties": {}
+      },
+      "promise": {
+        "id": "promise",
+        "type": "item",
+        "properties": {}
+      },
+      "order": {
+        "id": "order",
+        "type": "item",
+        "properties": {}
+      },
+      "ledger": {
+        "id": "ledger",
+        "type": "item",
+        "properties": {}
+      },
+      "lockpick": {
+        "id": "lockpick",
+        "type": "item",
+        "properties": {}
+      },
+      "bandage": {
+        "id": "bandage",
+        "type": "item",
+        "properties": {}
+      },
+      "steady": {
+        "id": "steady",
+        "type": "skill",
+        "properties": {
+          "action": "attack",
+          "bonus": 3,
+          "mp_cost": 1
+        }
+      },
+      "brace": {
+        "id": "brace",
+        "type": "skill",
+        "properties": {
+          "action": "defend",
+          "bonus": 3,
+          "mp_cost": 1
+        }
+      },
+      "step": {
+        "id": "step",
+        "type": "skill",
+        "properties": {
+          "action": "flee",
+          "bonus": 3,
+          "mp_cost": 1
+        }
+      }
+    },
+    "edges": {
+      "connects_to:square:tavern": {
+        "id": "connects_to:square:tavern",
+        "type": "connects_to",
+        "from": "square",
+        "to": "tavern",
+        "properties": {}
+      },
+      "connects_to:tavern:square": {
+        "id": "connects_to:tavern:square",
+        "type": "connects_to",
+        "from": "tavern",
+        "to": "square",
+        "properties": {}
+      },
+      "connects_to:square:prison": {
+        "id": "connects_to:square:prison",
+        "type": "connects_to",
+        "from": "square",
+        "to": "prison",
+        "properties": {}
+      },
+      "connects_to:prison:square": {
+        "id": "connects_to:prison:square",
+        "type": "connects_to",
+        "from": "prison",
+        "to": "square",
+        "properties": {}
+      },
+      "connects_to:square:warehouse": {
+        "id": "connects_to:square:warehouse",
+        "type": "connects_to",
+        "from": "square",
+        "to": "warehouse",
+        "properties": {}
+      },
+      "connects_to:warehouse:square": {
+        "id": "connects_to:warehouse:square",
+        "type": "connects_to",
+        "from": "warehouse",
+        "to": "square",
+        "properties": {}
+      },
+      "connects_to:square:tower": {
+        "id": "connects_to:square:tower",
+        "type": "connects_to",
+        "from": "square",
+        "to": "tower",
+        "properties": {}
+      },
+      "connects_to:tower:square": {
+        "id": "connects_to:tower:square",
+        "type": "connects_to",
+        "from": "tower",
+        "to": "square",
+        "properties": {}
+      },
+      "connects_to:tavern:prison": {
+        "id": "connects_to:tavern:prison",
+        "type": "connects_to",
+        "from": "tavern",
+        "to": "prison",
+        "properties": {}
+      },
+      "connects_to:prison:tavern": {
+        "id": "connects_to:prison:tavern",
+        "type": "connects_to",
+        "from": "prison",
+        "to": "tavern",
+        "properties": {}
+      },
+      "connects_to:tavern:warehouse": {
+        "id": "connects_to:tavern:warehouse",
+        "type": "connects_to",
+        "from": "tavern",
+        "to": "warehouse",
+        "properties": {}
+      },
+      "connects_to:warehouse:tavern": {
+        "id": "connects_to:warehouse:tavern",
+        "type": "connects_to",
+        "from": "warehouse",
+        "to": "tavern",
+        "properties": {}
+      },
+      "connects_to:warehouse:prison": {
+        "id": "connects_to:warehouse:prison",
+        "type": "connects_to",
+        "from": "warehouse",
+        "to": "prison",
+        "properties": {}
+      },
+      "connects_to:prison:warehouse": {
+        "id": "connects_to:prison:warehouse",
+        "type": "connects_to",
+        "from": "prison",
+        "to": "warehouse",
+        "properties": {}
+      },
+      "connects_to:warehouse:tower": {
+        "id": "connects_to:warehouse:tower",
+        "type": "connects_to",
+        "from": "warehouse",
+        "to": "tower",
+        "properties": {}
+      },
+      "connects_to:tower:warehouse": {
+        "id": "connects_to:tower:warehouse",
+        "type": "connects_to",
+        "from": "tower",
+        "to": "warehouse",
+        "properties": {}
+      },
+      "located_at:player:square": {
+        "id": "located_at:player:square",
+        "type": "located_at",
+        "from": "player",
+        "to": "square",
+        "properties": {}
+      },
+      "located_at:guard:prison": {
+        "id": "located_at:guard:prison",
+        "type": "located_at",
+        "from": "guard",
+        "to": "prison",
+        "properties": {}
+      },
+      "located_at:keeper:tavern": {
+        "id": "located_at:keeper:tavern",
+        "type": "located_at",
+        "from": "keeper",
+        "to": "tavern",
+        "properties": {}
+      },
+      "located_at:sailor:prison": {
+        "id": "located_at:sailor:prison",
+        "type": "located_at",
+        "from": "sailor",
+        "to": "prison",
+        "properties": {}
+      },
+      "located_at:clerk:warehouse": {
+        "id": "located_at:clerk:warehouse",
+        "type": "located_at",
+        "from": "clerk",
+        "to": "warehouse",
+        "properties": {}
+      },
+      "located_at:smuggler:warehouse": {
+        "id": "located_at:smuggler:warehouse",
+        "type": "located_at",
+        "from": "smuggler",
+        "to": "warehouse",
+        "properties": {}
+      },
+      "located_at:inspector:square": {
+        "id": "located_at:inspector:square",
+        "type": "located_at",
+        "from": "inspector",
+        "to": "square",
+        "properties": {}
+      },
+      "member_of_faction:guard:customs": {
+        "id": "member_of_faction:guard:customs",
+        "type": "member_of_faction",
+        "from": "guard",
+        "to": "customs",
+        "properties": {}
+      },
+      "member_of_faction:clerk:customs": {
+        "id": "member_of_faction:clerk:customs",
+        "type": "member_of_faction",
+        "from": "clerk",
+        "to": "customs",
+        "properties": {}
+      },
+      "member_of_faction:inspector:customs": {
+        "id": "member_of_faction:inspector:customs",
+        "type": "member_of_faction",
+        "from": "inspector",
+        "to": "customs",
+        "properties": {}
+      },
+      "member_of_faction:smuggler:smugglers": {
+        "id": "member_of_faction:smuggler:smugglers",
+        "type": "member_of_faction",
+        "from": "smuggler",
+        "to": "smugglers",
+        "properties": {}
+      },
+      "relation:guard:keeper": {
+        "id": "relation:guard:keeper",
+        "type": "relation",
+        "from": "guard",
+        "to": "keeper",
+        "properties": {
+          "debt": true
+        }
+      },
+      "carries:keeper:promise": {
+        "id": "carries:keeper:promise",
+        "type": "carries",
+        "from": "keeper",
+        "to": "promise",
+        "properties": {}
+      },
+      "carries:inspector:order": {
+        "id": "carries:inspector:order",
+        "type": "carries",
+        "from": "inspector",
+        "to": "order",
+        "properties": {}
+      },
+      "located_at:ledger:warehouse": {
+        "id": "located_at:ledger:warehouse",
+        "type": "located_at",
+        "from": "ledger",
+        "to": "warehouse",
+        "properties": {}
+      },
+      "carries:smuggler:lockpick": {
+        "id": "carries:smuggler:lockpick",
+        "type": "carries",
+        "from": "smuggler",
+        "to": "lockpick",
+        "properties": {}
+      },
+      "carries:player:bandage": {
+        "id": "carries:player:bandage",
+        "type": "carries",
+        "from": "player",
+        "to": "bandage",
+        "properties": {}
+      }
+    }
+  },
+  "descriptions": {
+    "chapter": {
+      "name": "마지막 배",
+      "text": ""
+    },
+    "square": {
+      "name": "부두 광장",
+      "text": "안개 속에서 배의 불빛이 흔들립니다. 압송 명단 앞에 선 조사관이 지워진 이름을 살피고 있습니다."
+    },
+    "tavern": {
+      "name": "닻 없는 선술집",
+      "text": "잔은 모두 뒤집혀 있지만 작은 난로는 아직 따뜻합니다. 주인은 문이 열릴 때마다 찻잔 하나를 바로 놓습니다."
+    },
+    "prison": {
+      "name": "세관 감옥",
+      "text": "쇠창살 너머에서 익숙한 휘파람이 들립니다. 문 앞의 경비는 당신보다 피곤해 보입니다."
+    },
+    "warehouse": {
+      "name": "화물 창고",
+      "text": "젖은 밧줄 냄새 사이로 종이 넘기는 소리가 납니다. 서기와 밀수상이 서로를 못 본 척하고 있습니다."
+    },
+    "tower": {
+      "name": "신호탑",
+      "text": "항구의 지붕들이 발아래 잠겨 있습니다. 오래된 신호등은 누군가의 손길을 기다립니다."
+    },
+    "player": {
+      "name": "당신",
+      "text": ""
+    },
+    "guard": {
+      "name": "경비 도윤",
+      "text": "창자루를 자꾸 고쳐 잡습니다. 겁을 주려는 사람치고는 시선을 너무 자주 피합니다."
+    },
+    "keeper": {
+      "name": "주인 모라",
+      "text": "빈 찻잔에도 따뜻한 물을 붓습니다. 이 항구에서는 빚도 식으면 안 된다고 말합니다."
+    },
+    "sailor": {
+      "name": "뱃사람 나루",
+      "text": "휘파람의 마지막 음을 늘 틀립니다. 당신만 아는 구조 신호입니다."
+    },
+    "clerk": {
+      "name": "서기 이든",
+      "text": "잉크 묻은 손가락을 감춥니다. 명단의 숫자가 맞지 않아 퇴근하지 못했다고 말합니다."
+    },
+    "smuggler": {
+      "name": "밀수상 루",
+      "text": "비어 있는 상자 위에 앉아 있습니다. 빈 상자가 제일 비싸다고 주장합니다."
+    },
+    "inspector": {
+      "name": "조사관 여울",
+      "text": "등불을 명단 가까이 가져갑니다. 잘못을 바로잡으려면 먼저 읽을 수 있어야 한다고 말합니다."
+    },
+    "customs": {
+      "name": "세관",
+      "text": ""
+    },
+    "smugglers": {
+      "name": "밀수조직",
+      "text": ""
+    },
+    "guard_debt": {
+      "name": "경비의 외상",
+      "text": "도윤은 모라에게 찻값을 빚지고 있습니다. 돈보다 약속을 지키지 못한 일을 부끄러워합니다."
+    },
+    "forgery": {
+      "name": "고쳐 쓴 압송 명단",
+      "text": "나루의 이름은 다른 잉크로 덧써졌습니다. 조사관이 확인하면 정정 명령을 받을 수 있습니다."
+    },
+    "shift": {
+      "name": "화물문 교대 시간",
+      "text": "경비가 하품을 세 번 하면 교대가 시작됩니다. 창고의 화물문을 이용할 틈입니다."
+    },
+    "signal": {
+      "name": "나루의 출항 신호",
+      "text": "신호탑에서 등불을 두 번 가리면 작은 배가 다가옵니다."
+    },
+    "guard_fear": {
+      "name": "경비의 두려움",
+      "text": "도윤은 명령을 거스르면 자신도 수감될까 두려워합니다. 당신이 원하는 것은 복수가 아니라 구조입니다."
+    },
+    "ledger_truth": {
+      "name": "장부의 진실",
+      "text": "장부에는 세관과 밀수조직의 거래가 함께 적혀 있습니다. 주인의 약속과 조사관의 진실 중 행방을 정할 수 있습니다."
+    },
+    "promise": {
+      "name": "채무 유예 약속",
+      "text": "모라가 도윤의 외상을 미루겠다고 쓴 쪽지입니다."
+    },
+    "order": {
+      "name": "정정 명령서",
+      "text": "나루의 수감을 취소하는 조사관의 서명입니다."
+    },
+    "ledger": {
+      "name": "밀수 장부",
+      "text": "누군가에게는 증거이며 누군가에게는 생계입니다."
+    },
+    "lockpick": {
+      "name": "작은 쇠갈고리",
+      "text": "화물문의 걸쇠를 조용히 들어 올릴 수 있습니다."
+    },
+    "bandage": {
+      "name": "마른 붕대",
+      "text": "체력 3을 회복합니다. 전투 중에는 버티는 힘도 1 회복합니다."
+    },
+    "steady": {
+      "name": "흔들리지 않는 일격",
+      "text": "기술 자원 1을 사용해 공격 성공률을 높입니다."
+    },
+    "brace": {
+      "name": "숨 고르기",
+      "text": "기술 자원 1을 사용해 방어 성공률을 높입니다."
+    },
+    "step": {
+      "name": "빠져나가는 발걸음",
+      "text": "기술 자원 1을 사용해 도주 성공률을 높입니다."
+    }
+  },
+  "roles": {
+    "listener": {
+      "name": "이야기 듣는 사람",
+      "text": "작은 떨림을 알아봅니다. 존재감 14 · 방어 기술을 알고 시작합니다.",
+      "stat": "presence",
+      "skill": "brace"
+    },
+    "scout": {
+      "name": "빈틈을 찾는 사람",
+      "text": "닫힌 문 옆의 틈을 봅니다. 민첩 14 · 도주 기술과 쇠갈고리를 갖고 시작합니다.",
+      "stat": "agility",
+      "skill": "step",
+      "item": "lockpick"
+    },
+    "warden": {
+      "name": "앞을 막아서는 사람",
+      "text": "누군가의 앞에 설 용기가 있습니다. 신체 14 · 공격 기술을 알고 시작합니다.",
+      "stat": "body",
+      "skill": "steady"
+    }
+  },
+  "choices": [
+    {
+      "id": "notice.read",
+      "target": "square",
+      "label": "압송 공고를 읽습니다",
+      "description": "붙인 지 얼마 되지 않은 공고입니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "square"
+        }
+      ],
+      "success": {
+        "text": "나루의 이름만 유난히 잉크가 진합니다. 명단 원본은 화물 창고의 서기가 보관하고 있습니다. 당신은 종이의 젖지 않은 귀퉁이를 펴 줍니다.",
+        "effects": []
+      },
+      "ticks": 0
+    },
+    {
+      "id": "keeper.debt",
+      "target": "keeper",
+      "label": "경비가 어떤 사람인지 묻습니다",
+      "description": "빈 찻잔에 얽힌 이야기를 듣습니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "tavern"
+        },
+        {
+          "kind": "knows",
+          "target": "guard_debt",
+          "negate": true
+        }
+      ],
+      "success": {
+        "text": "모라는 도윤의 찻잔을 가리킵니다. 외상이 늘어난 뒤로 그가 오지 않는다고 말합니다. 당신은 빚보다 부끄러움이 더 무거울 때도 있다는 것을 알게 됩니다.",
+        "effects": [
+          {
+            "kind": "learn",
+            "target": "guard_debt"
+          }
+        ]
+      }
+    },
+    {
+      "id": "keeper.promise",
+      "target": "keeper",
+      "label": "외상을 대신 갚겠다고 약속합니다",
+      "description": "금화 4개를 맡기고, 나루를 구한 뒤 밀수 장부를 가져오기로 약속합니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "tavern"
+        },
+        {
+          "kind": "knows",
+          "target": "guard_debt",
+          "negate": false
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "owed",
+          "value": false,
+          "op": "eq"
+        }
+      ],
+      "success": {
+        "text": "모라는 도윤의 외상을 미루겠다는 쪽지를 건넵니다. 장부에는 세관에 빼앗긴 가게들의 이름도 있다고 덧붙입니다. 당신의 손에 다른 사람의 약속이 얹힙니다.",
+        "effects": [
+          {
+            "kind": "give",
+            "target": "promise",
+            "source": "player"
+          },
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "owed",
+            "value": true
+          }
+        ]
+      },
+      "gold": 4,
+      "confirm": true
+    },
+    {
+      "id": "keeper.rest",
+      "target": "keeper",
+      "label": "따뜻한 차를 마시며 쉽니다",
+      "description": "체력과 기술 자원을 모두 회복합니다. 출항 시간은 계속 흐릅니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "tavern"
+        }
+      ],
+      "success": {
+        "text": "당신은 두 손으로 잔을 감쌉니다. 모라는 왜 왔는지 묻지 않습니다. 찻물이 식는 동안 당신의 숨이 고르게 돌아옵니다.",
+        "effects": [
+          {
+            "kind": "set",
+            "target": "player",
+            "key": "hp",
+            "value": 8
+          },
+          {
+            "kind": "set",
+            "target": "player",
+            "key": "mp",
+            "value": 4
+          }
+        ]
+      },
+      "gold": 3,
+      "ticks": 2,
+      "once": false
+    },
+    {
+      "id": "guard.promise",
+      "target": "guard",
+      "label": "모라의 쪽지를 건넵니다",
+      "description": "경비의 빚과 약속을 이야기합니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "prison"
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "gate_open",
+          "value": false,
+          "op": "eq"
+        },
+        {
+          "kind": "knows",
+          "target": "guard_debt",
+          "negate": false
+        }
+      ],
+      "success": {
+        "text": "도윤은 쪽지를 두 번 읽습니다. 찻잔을 돌려주러 가야겠다고 중얼거리며 문을 엽니다. 당신과 눈이 마주치자 이번에는 피하지 않습니다.",
+        "effects": [
+          {
+            "kind": "give",
+            "target": "promise",
+            "source": "guard"
+          },
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "gate_open",
+            "value": true
+          },
+          {
+            "kind": "relation",
+            "source": "guard",
+            "target": "player",
+            "key": "affinity",
+            "value": 10
+          }
+        ]
+      },
+      "requires": [
+        {
+          "kind": "carries",
+          "target": "promise",
+          "source": "player"
+        },
+        {
+          "kind": "relation",
+          "source": "guard",
+          "target": "keeper",
+          "key": "debt",
+          "value": true
+        }
+      ],
+      "blocked": "모라의 채무 유예 약속이 필요합니다."
+    },
+    {
+      "id": "guard.bribe",
+      "target": "guard",
+      "label": "통행을 대가로 금화를 건넵니다",
+      "description": "문은 열리지만 항구의 경계가 1 올라갑니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "prison"
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "gate_open",
+          "value": false,
+          "op": "eq"
+        }
+      ],
+      "success": {
+        "text": "도윤은 금화를 오래 바라봅니다. 결국 열쇠를 돌리지만, 뒤편의 다른 경비가 당신의 얼굴을 기억합니다.",
+        "effects": [
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "gate_open",
+            "value": true
+          },
+          {
+            "kind": "add",
+            "target": "chapter",
+            "key": "alert",
+            "value": 1
+          }
+        ]
+      },
+      "gold": 8,
+      "requires": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "alert",
+          "value": 4,
+          "op": "lt"
+        }
+      ],
+      "blocked": "경계가 높아져 경비가 거래를 거절합니다.",
+      "confirm": true
+    },
+    {
+      "id": "manifest.read",
+      "target": "clerk",
+      "label": "압송 명단의 잉크를 비교합니다",
+      "description": "서기가 덮어 둔 원본을 함께 살펴봅니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "warehouse"
+        },
+        {
+          "kind": "knows",
+          "target": "forgery",
+          "negate": true
+        }
+      ],
+      "success": {
+        "text": "당신이 다른 잉크를 짚자 이든이 한숨을 쉽니다. 나루의 이름은 원본에 없습니다. 서기는 도장을 찍은 사본을 내밉니다. 광장의 조사관에게 보여 줄 증거입니다.",
+        "effects": [
+          {
+            "kind": "learn",
+            "target": "forgery"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ledger.take",
+      "target": "ledger",
+      "label": "밀수 장부를 챙깁니다",
+      "description": "증거로 공개하거나 주인에게 돌려줄 수 있습니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "warehouse"
+        }
+      ],
+      "success": {
+        "text": "비뚤어진 상자 밑에서 장부를 찾습니다. 세관의 도장과 가게들의 이름이 같은 페이지에 있습니다. 루는 당신이 그 책을 어디에 가져갈지 묻지 않습니다.",
+        "effects": [
+          {
+            "kind": "give",
+            "target": "ledger",
+            "source": "player"
+          },
+          {
+            "kind": "learn",
+            "target": "ledger_truth"
+          }
+        ]
+      }
+    },
+    {
+      "id": "shift.read",
+      "target": "smuggler",
+      "label": "조용히 들어갈 길을 묻습니다",
+      "description": "루가 경비의 하품을 세고 있습니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "warehouse"
+        },
+        {
+          "kind": "knows",
+          "target": "shift",
+          "negate": true
+        }
+      ],
+      "success": {
+        "text": "루는 경비가 세 번 하품하면 교대한다고 알려 줍니다. 화물문을 지날 틈은 짧습니다. 쇠갈고리가 있으면 굳이 운에 맡길 필요가 없다고 덧붙입니다.",
+        "effects": [
+          {
+            "kind": "learn",
+            "target": "shift"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tools.buy",
+      "target": "smuggler",
+      "label": "작은 쇠갈고리를 삽니다",
+      "description": "화물문의 걸쇠를 조용히 들어 올릴 수 있습니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "warehouse"
+        },
+        {
+          "kind": "carries",
+          "target": "lockpick",
+          "source": "smuggler"
+        }
+      ],
+      "success": {
+        "text": "루는 상자값은 받지 않겠다고 생색을 냅니다. 당신은 손바닥만 한 쇠갈고리를 챙깁니다.",
+        "effects": [
+          {
+            "kind": "give",
+            "target": "lockpick",
+            "source": "player"
+          }
+        ]
+      },
+      "gold": 3
+    },
+    {
+      "id": "tunnel.sneak",
+      "target": "prison",
+      "label": "교대 시간에 화물문으로 스며듭니다",
+      "description": "실패하면 경계가 2 올라갑니다. 경계가 높을수록 성공률이 내려가며, 같은 틈은 다시 오지 않습니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "warehouse"
+        },
+        {
+          "kind": "knows",
+          "target": "shift",
+          "negate": false
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "gate_open",
+          "value": false,
+          "op": "eq"
+        }
+      ],
+      "success": {
+        "text": "세 번째 하품이 끝나기 전에 당신은 걸쇠를 들어 올립니다. 신발 끝이 물웅덩이를 비껴갑니다. 감옥 안쪽 문에 도착합니다.",
+        "effects": [
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "gate_open",
+            "value": true
+          },
+          {
+            "kind": "move",
+            "target": "prison"
+          }
+        ]
+      },
+      "check": {
+        "stat": "agility",
+        "dc": 12
+      },
+      "failure": {
+        "text": "젖은 걸쇠가 손에서 미끄러집니다. 경비들이 소리를 향해 돌아봅니다. 당신은 창고로 물러납니다. 쇠갈고리나 다른 사람의 도움이 필요합니다.",
+        "effects": [
+          {
+            "kind": "add",
+            "target": "chapter",
+            "key": "alert",
+            "value": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "tunnel.tools",
+      "target": "prison",
+      "label": "쇠갈고리로 화물문을 엽니다",
+      "description": "교대 시간과 도구를 함께 사용하면 확실하게 통과합니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "warehouse"
+        },
+        {
+          "kind": "knows",
+          "target": "shift",
+          "negate": false
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "gate_open",
+          "value": false,
+          "op": "eq"
+        }
+      ],
+      "success": {
+        "text": "당신은 쇠갈고리를 틈에 밀어 넣습니다. 걸쇠가 소리 없이 올라갑니다. 감옥 안쪽에서 나루의 휘파람이 멈춥니다.",
+        "effects": [
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "gate_open",
+            "value": true
+          },
+          {
+            "kind": "move",
+            "target": "prison"
+          }
+        ]
+      },
+      "requires": [
+        {
+          "kind": "carries",
+          "target": "lockpick",
+          "source": "player"
+        }
+      ],
+      "blocked": "작은 쇠갈고리가 필요합니다."
+    },
+    {
+      "id": "inspector.evidence",
+      "target": "inspector",
+      "label": "고쳐 쓴 압송 명단을 보여 줍니다",
+      "description": "사본의 잉크와 도장이 증거입니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "square"
+        },
+        {
+          "kind": "knows",
+          "target": "forgery",
+          "negate": false
+        }
+      ],
+      "success": {
+        "text": "여울은 사본과 공고를 나란히 놓습니다. 글씨를 지우는 손보다 바로잡는 손이 늦어서는 안 된다고 말하며 정정 명령서에 서명합니다.",
+        "effects": [
+          {
+            "kind": "give",
+            "target": "order",
+            "source": "player"
+          }
+        ]
+      }
+    },
+    {
+      "id": "guard.order",
+      "target": "guard",
+      "label": "정정 명령서를 제시합니다",
+      "description": "조사관의 서명으로 문을 엽니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "prison"
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "gate_open",
+          "value": false,
+          "op": "eq"
+        }
+      ],
+      "success": {
+        "text": "도윤은 서명을 확인하고 열쇠를 꺼냅니다. 누군가는 이 잘못을 알아볼 줄 알았다고 말합니다. 당신 뒤에서 문이 조용히 열립니다.",
+        "effects": [
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "gate_open",
+            "value": true
+          }
+        ]
+      },
+      "requires": [
+        {
+          "kind": "carries",
+          "target": "order",
+          "source": "player"
+        }
+      ],
+      "blocked": "조사관의 정정 명령서가 필요합니다."
+    },
+    {
+      "id": "guard.fight",
+      "target": "guard",
+      "label": "경비와 맞섭니다",
+      "description": "전투 중에도 이야기하거나 물러날 수 있습니다. 공격으로 쓰러뜨리면 경비는 죽고 항구가 기억합니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "prison"
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "gate_open",
+          "value": false,
+          "op": "eq"
+        }
+      ],
+      "success": {
+        "text": "당신이 한 걸음 다가서자 도윤이 창을 겨눕니다. 창끝만큼이나 그의 목소리도 흔들립니다.",
+        "effects": []
+      },
+      "enemy": "guard",
+      "confirm": true,
+      "once": false
+    },
+    {
+      "id": "sailor.rescue",
+      "target": "sailor",
+      "label": "나루의 손을 잡습니다",
+      "description": "문을 열고 함께 항구를 떠날 준비를 합니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "prison"
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "rescued",
+          "value": false,
+          "op": "eq"
+        }
+      ],
+      "success": {
+        "text": "당신은 열린 문 너머로 손을 내밉니다. 나루는 마지막 음을 제대로 불고 나서야 당신의 손을 잡습니다. 이제 발소리가 둘입니다.",
+        "effects": [
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "rescued",
+            "value": true
+          },
+          {
+            "kind": "companion",
+            "target": "sailor"
+          }
+        ]
+      },
+      "requires": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "gate_open",
+          "value": true,
+          "op": "eq"
+        }
+      ],
+      "blocked": "먼저 감옥 문을 열어야 합니다."
+    },
+    {
+      "id": "sailor.signal",
+      "target": "sailor",
+      "label": "나루에게 다른 뱃길을 묻습니다",
+      "description": "함께 다니는 나루가 항구를 올려다봅니다.",
+      "show": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "rescued",
+          "value": true,
+          "op": "eq"
+        },
+        {
+          "kind": "knows",
+          "target": "signal",
+          "negate": true
+        }
+      ],
+      "success": {
+        "text": "나루는 신호탑을 가리킵니다. 등불을 두 번 가리면 친구의 작은 배가 올 것이라고 말합니다. 광장이 부담스럽다면 탑에서 떠날 수 있습니다.",
+        "effects": [
+          {
+            "kind": "learn",
+            "target": "signal"
+          }
+        ]
+      }
+    },
+    {
+      "id": "keeper.ledger",
+      "target": "keeper",
+      "label": "약속대로 장부를 돌려줍니다",
+      "description": "장부가 주인에게 넘어가면 조사관에게 공개할 수 없습니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "tavern"
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "rescued",
+          "value": true,
+          "op": "eq"
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "owed",
+          "value": true,
+          "op": "eq"
+        }
+      ],
+      "success": {
+        "text": "모라는 장부를 품에 넣고 당신의 찻잔을 하나 더 꺼냅니다. 가게들은 이름을 되찾을 것입니다. 항구의 비밀은 당분간 비밀로 남습니다.",
+        "effects": [
+          {
+            "kind": "give",
+            "target": "ledger",
+            "source": "keeper"
+          },
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "ledger_to",
+            "value": "keeper"
+          },
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "owed",
+            "value": false
+          }
+        ]
+      },
+      "requires": [
+        {
+          "kind": "carries",
+          "target": "ledger",
+          "source": "player"
+        }
+      ],
+      "blocked": "밀수 장부를 가지고 있어야 합니다.",
+      "confirm": true
+    },
+    {
+      "id": "inspector.ledger",
+      "target": "inspector",
+      "label": "장부를 증거로 공개합니다",
+      "description": "장부가 조사관에게 넘어가면 주인에게 돌려줄 수 없습니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "square"
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "rescued",
+          "value": true,
+          "op": "eq"
+        }
+      ],
+      "success": {
+        "text": "여울은 장부를 펼칩니다. 이번에는 지워진 이름뿐 아니라 도장을 찍은 사람들도 조사하겠다고 약속합니다. 아침의 항구는 조금 달라질 것입니다.",
+        "effects": [
+          {
+            "kind": "give",
+            "target": "ledger",
+            "source": "inspector"
+          },
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "ledger_to",
+            "value": "inspector"
+          }
+        ]
+      },
+      "requires": [
+        {
+          "kind": "carries",
+          "target": "ledger",
+          "source": "player"
+        }
+      ],
+      "blocked": "밀수 장부를 가지고 있어야 합니다.",
+      "confirm": true
+    },
+    {
+      "id": "escape",
+      "target": "square",
+      "label": "나루와 함께 항구를 떠납니다",
+      "description": "장부와 약속의 행방에 따라 이 밤의 후일담이 정해집니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "square"
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "rescued",
+          "value": true,
+          "op": "eq"
+        }
+      ],
+      "success": {
+        "text": "당신은 나루와 함께 부두 끝으로 걸어갑니다. 안개 속에서 작은 배 한 척이 다가옵니다.",
+        "effects": [
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "ending",
+            "value": "escape"
+          }
+        ]
+      },
+      "confirm": true
+    },
+    {
+      "id": "signal.escape",
+      "target": "tower",
+      "label": "등불을 두 번 가리고 떠납니다",
+      "description": "나루의 신호로 작은 배를 부릅니다.",
+      "show": [
+        {
+          "kind": "at",
+          "target": "tower"
+        },
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "rescued",
+          "value": true,
+          "op": "eq"
+        },
+        {
+          "kind": "knows",
+          "target": "signal",
+          "negate": false
+        }
+      ],
+      "success": {
+        "text": "당신이 등불을 두 번 가리자 바다에서 불빛이 답합니다. 나루가 웃습니다. 이번에는 마지막 음까지 완전한 휘파람입니다.",
+        "effects": [
+          {
+            "kind": "set",
+            "target": "chapter",
+            "key": "ending",
+            "value": "escape"
+          }
+        ]
+      },
+      "confirm": true
+    }
+  ],
+  "milestones": [
+    {
+      "id": "first_bell",
+      "tick": 8,
+      "result": {
+        "text": "항구의 종이 두 번 울립니다. 선원들이 압송선의 밧줄을 정리하기 시작합니다.",
+        "effects": []
+      }
+    },
+    {
+      "id": "last_watch",
+      "tick": 16,
+      "result": {
+        "text": "마지막 교대가 시작됩니다. 경비들의 걸음이 빨라집니다. 항구의 경계가 올라갑니다.",
+        "effects": [
+          {
+            "kind": "add",
+            "target": "chapter",
+            "key": "alert",
+            "value": 1
+          }
+        ]
+      }
+    }
+  ],
+  "endings": {
+    "public": {
+      "name": "지워진 이름",
+      "text": "나루의 이름은 압송 명단에서 지워집니다. 당신이 남긴 장부는 다른 이름들을 다시 불러냅니다. 배가 안개를 벗어날 때 항구에 아침이 찾아옵니다."
+    },
+    "bargain": {
+      "name": "갚은 빚, 남은 항구",
+      "text": "당신은 친구를 구하고 약속을 지킵니다. 항구의 모든 잘못을 고치지는 못했지만, 누군가의 찻잔은 다시 따뜻해집니다."
+    },
+    "quiet": {
+      "name": "안개 너머의 두 사람",
+      "text": "당신과 나루는 항구를 벗어납니다. 진실은 아직 안개 속에 남아 있지만, 배 위에는 더 이상 혼자인 사람이 없습니다."
+    },
+    "departed": {
+      "name": "마지막 종소리",
+      "text": "압송선이 부두를 떠납니다. 당신은 빈 밧줄을 바라봅니다. 오늘의 선택은 여기서 끝나지만, 바다로 향하는 길이 사라진 것은 아닙니다."
+    },
+    "stranded": {
+      "name": "함께 맞는 새벽",
+      "text": "마지막 배는 떠났지만 나루는 당신 곁에 있습니다. 두 사람은 항구 한쪽에 앉아 아침을 기다립니다. 다음 길은 함께 찾을 수 있습니다."
+    }
+  },
+  "reactions": [
+    {
+      "target": "prison",
+      "when": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "violence",
+          "value": 1,
+          "op": "gte"
+        }
+      ],
+      "text": "문은 열렸습니다. 창은 바닥에 놓여 있고, 더는 아무도 그 앞을 지키지 않습니다. 당신의 발소리가 유난히 크게 울립니다."
+    },
+    {
+      "target": "prison",
+      "when": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "merciful",
+          "value": true,
+          "op": "eq"
+        }
+      ],
+      "text": "문 앞에 세워 둔 창에는 더 이상 손이 닿아 있지 않습니다. 도윤은 열쇠를 만지작거리며 당신이 지나갈 자리를 비켜 줍니다."
+    },
+    {
+      "target": "prison",
+      "when": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "gate_open",
+          "value": true,
+          "op": "eq"
+        }
+      ],
+      "text": "쇠문이 열려 있습니다. 차가운 방 안으로 부두의 바람이 들어옵니다. 이제 길을 고를 차례입니다."
+    },
+    {
+      "target": "guard",
+      "when": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "merciful",
+          "value": true,
+          "op": "eq"
+        }
+      ],
+      "text": "당신과 눈을 마주칩니다. 창끝을 세우는 대신 아직 시간이 있다고 알려 줍니다."
+    },
+    {
+      "target": "sailor",
+      "when": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "rescued",
+          "value": true,
+          "op": "eq"
+        }
+      ],
+      "text": "당신의 걸음에 발을 맞춥니다. 이번에는 휘파람의 마지막 음까지 제대로 붑니다."
+    },
+    {
+      "target": "keeper",
+      "when": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "ledger_to",
+          "value": "keeper",
+          "op": "eq"
+        }
+      ],
+      "text": "장부를 난로에서 가장 먼 서랍에 넣습니다. 당신이 돌아오면 내줄 잔을 남겨 두겠다고 말합니다."
+    },
+    {
+      "target": "keeper",
+      "when": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "owed",
+          "value": true,
+          "op": "eq"
+        }
+      ],
+      "text": "당신 몫의 잔을 닦아 둡니다. 장부를 가져오겠다는 당신의 약속을 기다립니다."
+    },
+    {
+      "target": "inspector",
+      "when": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "ledger_to",
+          "value": "inspector",
+          "op": "eq"
+        }
+      ],
+      "text": "압송 명단 대신 장부를 펼쳐 듭니다. 오늘은 퇴근이 늦어질 것 같다고 말합니다."
+    },
+    {
+      "target": "square",
+      "when": [
+        {
+          "kind": "property",
+          "target": "chapter",
+          "key": "alert",
+          "value": 3,
+          "op": "gte"
+        }
+      ],
+      "text": "경비들이 등불을 높이 듭니다. 안개 속의 발소리가 늘었습니다. 조용히 움직이기가 전보다 어려워집니다."
+    }
+  ]
+}

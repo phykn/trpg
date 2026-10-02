@@ -1,64 +1,29 @@
 import '../global.css';
-import React from 'react';
-import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
-import {
-  NanumGothic_400Regular,
-  NanumGothic_700Bold,
-  useFonts as useGothic,
-} from '@expo-google-fonts/nanum-gothic';
-import {
-  GeistMono_400Regular,
-  GeistMono_500Medium,
-  GeistMono_600SemiBold,
-  useFonts as useMono,
-} from '@expo-google-fonts/geist-mono';
+import { NanumGothic_400Regular, NanumGothic_700Bold } from '@expo-google-fonts/nanum-gothic';
+import { GeistMono_400Regular, GeistMono_500Medium } from '@expo-google-fonts/geist-mono';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { useFonts } from 'expo-font';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { View } from 'react-native';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
-type NavigatorWithVirtualKeyboard = Navigator & {
-  virtualKeyboard?: { overlaysContent: boolean };
-};
-
-function enableWebKeyboardOverlay() {
-  if (Platform.OS !== 'web') return;
-
-  const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
-  if (viewport && !viewport.content.includes('interactive-widget=')) {
-    viewport.content = `${viewport.content}, interactive-widget=overlays-content`;
-  }
-
-  const webNavigator = navigator as NavigatorWithVirtualKeyboard;
-  if ('virtualKeyboard' in navigator && webNavigator.virtualKeyboard) {
-    webNavigator.virtualKeyboard.overlaysContent = true;
-  }
-}
+import { colors } from '@/design/tokens';
 
 export default function RootLayout() {
-  const [gothicLoaded] = useGothic({
-    NanumGothic_400Regular,
-    NanumGothic_700Bold,
+  const [loaded, error] = useFonts({
+    NanumGothic_400Regular, NanumGothic_700Bold,
+    GeistMono_400Regular, GeistMono_500Medium,
   });
-  const [monoLoaded] = useMono({ GeistMono_400Regular, GeistMono_500Medium, GeistMono_600SemiBold });
-
-  React.useEffect(() => {
-    enableWebKeyboardOverlay();
-  }, []);
-
-  if (!gothicLoaded || !monoLoaded) return null;
+  if (!loaded && !error) return null;
 
   return (
-    <ThemeProvider value={DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-      <StatusBar style="auto" />
+    <ThemeProvider value={DarkTheme}>
+      <View className="flex-1 bg-canvas-default">
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas.default } }} />
+      </View>
+      <StatusBar style="light" />
     </ThemeProvider>
   );
 }

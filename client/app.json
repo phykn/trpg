@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "trpg_client",
+    "name": "안개 항구",
     "slug": "trpg_client",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "trpgclient",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
@@ -39,8 +39,7 @@
           }
         }
       ],
-      "expo-font",
-      "expo-audio"
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,

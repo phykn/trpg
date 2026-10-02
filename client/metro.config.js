@@ -18,4 +18,11 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   return context.resolveRequest(context, moduleName, platform);
 };
 
+if (process.env.TRPG_DEV_PROXY === '1') {
+  const { proxyApi } = require('./scripts/dev-proxy.cjs');
+  const enhance = config.server.enhanceMiddleware;
+  config.server.enhanceMiddleware = (middleware, server) =>
+    proxyApi(enhance ? enhance(middleware, server) : middleware);
+}
+
 module.exports = withNativeWind(config, { input: './global.css' });

@@ -1,50 +1,31 @@
-import { loadSuggestions, storeSuggestions } from '../storage';
+import { loadGameId, storeGameId } from '../storage';
 
-const storage = new Map<string, string>();
-
+const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
+const storage = { getItem: jest.fn(), setItem: jest.fn() };
 beforeEach(() => {
-  storage.clear();
-  const mockStorage: Storage = {
-    get length() {
-      return storage.size;
-    },
-    clear: () => storage.clear(),
-    getItem: (key: string) => storage.get(key) ?? null,
-    key: (index: number) => [...storage.keys()][index] ?? null,
-    removeItem: (key: string) => {
-      storage.delete(key);
-    },
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-    },
-  };
-  Object.defineProperty(globalThis, 'window', {
-    configurable: true,
-    value: { localStorage: mockStorage },
-  });
+  jest.resetAllMocks();
+  Object.defineProperty(window, 'localStorage', { configurable: true, value: storage });
+});
+afterAll(() => {
+  if (descriptor) Object.defineProperty(window, 'localStorage', descriptor);
+  else Reflect.deleteProperty(window, 'localStorage');
 });
 
-afterEach(() => {
-  Object.defineProperty(globalThis, 'window', {
-    configurable: true,
-    value: undefined,
-  });
+test('continues to use the existing browser pointer', () => {
+  storage.getItem.mockReturnValue('adv_saved');
+  expect(loadGameId()).toBe('adv_saved');
+  expect(storage.getItem).toHaveBeenCalledWith('trpg.adventure_game_id');
+  expect(storeGameId('adv_next')).toBe(true);
+  expect(storage.setItem).toHaveBeenCalledWith('trpg.adventure_game_id', 'adv_next');
 });
 
-describe('suggestion storage', () => {
-  test('drops stale non-chip suggestions', () => {
-    storage.set('trpg.suggestions.game-1', JSON.stringify(['북문으로 이동합니다']));
+test('denied storage access does not crash the game', () => {
+  Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new Error('denied'); } });
+  expect(loadGameId()).toBeNull();
+  expect(storeGameId('adv_next')).toBe(false);
+});
 
-    expect(loadSuggestions('game-1')).toEqual([]);
-  });
-
-  test('stores chip suggestions without degrading input text', () => {
-    storeSuggestions('game-1', [
-      { label: '북문으로', inputText: '북문으로 이동합니다', intent: 'move' },
-    ]);
-
-    expect(JSON.parse(storage.get('trpg.suggestions.game-1') ?? 'null')).toEqual([
-      { label: '북문으로', inputText: '북문으로 이동합니다', intent: 'move' },
-    ]);
-  });
+test('a full storage device reports that the pointer could not be saved', () => {
+  storage.setItem.mockImplementation(() => { throw new Error('quota exceeded'); });
+  expect(storeGameId('adv_next')).toBe(false);
 });

@@ -28,7 +28,10 @@ scenarios/*/.decomp/
 agency/
 docs/
 release/
-scenarios/
+scenarios/*
+!scenarios/harbor/
+scenarios/harbor/*
+!scenarios/harbor/adventure.json
 tools/
 notebooks/
 .notebooks/

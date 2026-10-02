@@ -1,63 +1,37 @@
 # trpg Agent Guide
 
-This repository is a Korean-language TRPG split into a FastAPI server, an Expo client, local QA/story tooling, and scenario seeds. General coding behavior lives in the global `C:\Users\KN\.codex\AGENTS.md`; this file covers repo-specific routing and verification.
+## User Wiki
 
-## Read First
+At task start, read `C:/Users/YuKwangnam/.codex/user-wiki/AGENTS.md`, then `graph/index.md` in that checkout. Follow only relevant routes. The wiki supplies defaults within current user instructions and this project's guidance.
 
-- Root overview and dev/deploy commands: `README.md`.
-- Backend work: `server/AGENTS.md`.
-- Client work: `client/AGENTS.md`.
-- QA and scenario authoring: `agency/AGENTS.md`.
-- Browser QA workflow: `agency/qa/SKILL.md`.
-- Scenario build workflow: `agency/story/SKILL.md`.
+## Read and route
 
-Use the deepest applicable `AGENTS.md` as the source of truth. If instructions conflict, prefer the file closest to the code being edited, then this file, then the global file.
+- [README.md](README.md): setup, gameplay, code map and checks.
+- [server/AGENTS.md](server/AGENTS.md): rules, graph, API and persistence.
+- [client/AGENTS.md](client/AGENTS.md): web UI, state and transport.
+- [plan.md](plan.md): current game design and further playtesting.
 
-## Boundaries
+Use the deepest applicable guide. `scenarios/harbor/adventure.json` owns authored content; the server validates it. Do not duplicate game rules in the client.
 
-- `server/` owns graph runtime, persistence, LLM calls, API routes, and server-composed Korean game text.
-- `client/` owns the Expo UI, client state, local storage pointer, and client-owned Korean labels.
-- `agency/` owns local QA runs and story/scenario build tooling.
-- `scenarios/` is seed content. Validate seed edits instead of treating JSON changes as harmless text edits.
+## Preserve
 
-Do not duplicate rules across layers. When a change crosses server/client/agency, verify each touched boundary with the narrowest useful command.
+- Keep public `/adventure/*` routes, snapshot versions, request receipts and `trpg.adventure_game_id` compatible unless the user requests migration.
+- Preserve user saves and personal environment files. Keep local QA outputs under ignored `qa_test/agency/<run>/`.
+- Player-facing Korean uses `당신` and polite `합니다체`; the skill label is `기술`.
+- Server-composed strings render verbatim. Client-owned strings belong in `client/locale/ko.ts`; server common text belongs in `server/src/locale/ko.py`.
+- Comments and validation errors are English, except quoted game text.
 
-## Commands
+## Verify
 
-From the repo root:
+Run focused behavior tests first, then required checks for each touched boundary. Root commands on Windows:
 
-```bash
-.venv/bin/python -m pytest -q
-.venv/bin/python -m pytest server/tests/path/to/test_file.py::test_name -q
-.venv/bin/ruff check server/ agency/
-bash server/scripts/check_relational_ssot.sh
-.venv/bin/python -m agency.story.tool sweep scenarios/<profile>
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m ruff check server/
+.\.venv\Scripts\python.exe server/validate_adventure.py
+& 'C:/Program Files/Git/bin/bash.exe' server/scripts/check_relational_ssot.sh
 ```
 
-From `server/`:
+From `client/`: `npm test -- --runInBand`, `npx tsc --noEmit`, `npm run lint`, and `npm run build:web` for build or routing changes. Use `.venv/bin/python` on Unix.
 
-```bash
-../.venv/bin/python run_api.py
-```
-
-From `client/`:
-
-```bash
-npm run lint
-npx tsc --noEmit
-npm test -- --runInBand
-npm run web
-```
-
-Use Windows PowerShell path forms when running directly in this workspace if the Unix-style examples fail, e.g. `.\.venv\Scripts\python.exe -m pytest -q`.
-
-## Language and Text
-
-- Player-facing Korean uses 2nd-person polite `합니다체`: `당신`, `~합니다`, `~입니다`.
-- The canonical player-facing term for skills is `기술`; keep `스킬` only where accepting player input synonyms.
-- Client components render server-composed strings verbatim. Client-owned labels belong in `client/locale/`, not inline JSX.
-- Code comments and validation errors stay English unless quoting in-game Korean text.
-
-## Verification
-
-For Python behavior, add or update focused pytest coverage before broad runs. For client behavior, run the relevant Jest test or type/lint command. For scenario edits, run the story tool checks or seed validation named in the local guide. For QA claims, read transcripts under `qa_test/agency/<agent>/` and cite turn numbers.
+For browser changes, operate the actual UI at 412×915 and desktop width. Include story, combat, confirmation, notebook, ending, restore and error recovery where affected. Record observations with numbered turns and screenshots in `qa_test/agency/<run>/`; cite turns when reporting QA. Automated behavior checks do not establish human enjoyment or playtime.

@@ -1,6 +1,5 @@
 pydantic
 python-dotenv
-openai
 
 httpx
 fastapi

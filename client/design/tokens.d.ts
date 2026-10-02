@@ -1,4 +1,5 @@
 export declare const colors: {
+  transparent: string;
   canvas: { default: string; subtle: string; inset: string; floating: string };
   fg: { default: string; muted: string; subtle: string; 'on-emphasis': string };
   border: { default: string; strong: string };
@@ -7,41 +8,11 @@ export declare const colors: {
   success: { fg: string };
   hp: { fg: string };
   mp: { fg: string };
-  exp: { fg: string };
   gold: { fg: string };
+  overlay: string;
 };
-
 export declare const spacing: Record<string, number>;
-
-export declare const radius: {
-  none: number;
-  sm: number;
-  md: number;
-  lg: number;
-  xl: number;
-  full: number;
-};
-
+export declare const radius: Record<string, number>;
 export declare const fontFamily: Record<string, string[]>;
-
-export declare const fontSize: Record<
-  string,
-  readonly [string, { lineHeight: string; letterSpacing: string }]
->;
-
-import type { Tone } from '@/components/ui/types';
-
-export declare const toneColor: Record<Tone, string>;
-
-type ShadowDef = {
-  shadowColor: string;
-  shadowOpacity: number;
-  shadowRadius: number;
-  shadowOffset: { width: number; height: number };
-  elevation: number;
-};
-
-export declare const shadow: {
-  floating: ShadowDef;
-  paper: ShadowDef;
-};
+export declare const fontSize: Record<string, readonly [string, { lineHeight: string }]>;
+export declare const layout: { mobile: number; listRow: number };
