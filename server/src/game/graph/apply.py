@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Any
 
 from pydantic import TypeAdapter
@@ -38,7 +39,7 @@ def _apply_graph_change_in_place(graph: Graph, change: GraphChange) -> None:
     if isinstance(change, AddNodeChange):
         if change.node.id in graph.nodes:
             raise GraphInvariantError(f"duplicate node: {change.node.id}")
-        graph.nodes[change.node.id] = change.node
+        graph.nodes[change.node.id] = change.node.model_copy(deep=True)
     elif isinstance(change, SetNodePropertyChange):
         node = graph.nodes.get(change.node_id)
         if node is None:
@@ -47,7 +48,7 @@ def _apply_graph_change_in_place(graph: Graph, change: GraphChange) -> None:
     elif isinstance(change, AddEdgeChange):
         if change.edge.id in graph.edges:
             raise GraphInvariantError(f"duplicate edge: {change.edge.id}")
-        graph.edges[change.edge.id] = change.edge
+        graph.edges[change.edge.id] = change.edge.model_copy(deep=True)
     elif isinstance(change, SetEdgePropertyChange):
         edge = graph.edges.get(change.edge_id)
         if edge is None:
@@ -71,4 +72,4 @@ def _set_property(properties: dict[str, Any], path: str, value: Any) -> None:
             nested = {}
             current[part] = nested
         current = nested
-    current[parts[-1]] = value
+    current[parts[-1]] = deepcopy(value)

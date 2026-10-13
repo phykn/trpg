@@ -56,7 +56,8 @@ npm run dev:public
 | 목적 | 파일 |
 |---|---|
 | 대사·단서·선택·결말 | [scenarios/harbor/adventure.json](scenarios/harbor/adventure.json) |
-| 행동 조건·비용·판정·성장 | [server/src/game/engine.py](server/src/game/engine.py) |
+| 행동 목록·조건·판정 미리보기 | [server/src/game/choices.py](server/src/game/choices.py) |
+| 선택 실행·비용 차감·성장·시간 진행 | [server/src/game/engine.py](server/src/game/engine.py) |
 | API·저장·응답 흐름 | [server/README.md](server/README.md) |
 | 장면·전투·수첩 화면 | [client/screens/GameScreen.tsx](client/screens/GameScreen.tsx) |
 | 화면 상태·재시도 | [client/logic/useGame.ts](client/logic/useGame.ts) |

@@ -8,7 +8,8 @@ FastAPI가 모험의 시작·조회·선택을 처리합니다. 설치와 로컬
 
 - `api.py`: Basic 인증, 입력 검사, HTTP 오류 매핑.
 - `service.py`: 게임별 잠금, 요청 영수증과 revision 확인, 규칙 실행과 저장.
-- `game/engine.py`: 현재 선택 목록, 조건, 비용, 판정, 사건과 결말. 원본 상태를 복사해 변경합니다.
+- `game/choices.py`: 선택 목록, 조건·자원 확인과 판정 미리보기. 상태를 변경하지 않으며 엔진과 응답 화면이 함께 사용합니다.
+- `game/engine.py`: 선택 실행, 비용 차감, 효과·전투·사건·결말. 원본 상태를 복사해 한 턴을 진행합니다.
 - `game/graph/`: 관계 질의, `GraphChange` 적용, 그래프 불변식.
 - `store.py`: 전체 상태를 임시 파일에 쓰고 원자적으로 교체합니다.
 - `view.py`: 플레이어에게 공개할 장면과 선택을 만듭니다. 응답을 준비한 뒤 저장이 성공해야 반환합니다.
@@ -50,5 +51,7 @@ ADVENTURE_SAVE_DIR=../saves/adventure
 ## 원고 수정
 
 `scenarios/harbor/adventure.json`의 `choices`에서 선택 ID를 찾습니다. 예를 들어 경비병의 보증 대화는 `guard.promise`의 `success.text`에 있습니다. 조건은 `at / knows / carries / property / relation`, 효과는 `set / add / learn / give / move / companion / relation`입니다. 판정 선택에는 실패 결과, 실행 조건에는 잠긴 이유가 필요합니다.
+
+원고 선택의 시간·금화·기술 자원 비용은 `choices`의 `ticks / gold / mp`에서 정합니다. 이동·도구·성장·전투의 자동 선택은 `game/choices.py`, 비용 차감과 시간 진행은 `game/engine.py`에서 처리합니다. 표시 비용은 `view.py`가 이 규칙을 읽어 구성하므로 클라이언트에 별도로 계산식을 추가하지 않습니다.
 
 원고를 고치면 서버를 재시작하고 `server/validate_adventure.py`와 `server/tests/test_game.py`를 실행합니다. 저장의 의미가 바뀌는 수정은 콘텐츠 `version`을 올립니다. 서버는 맞지 않는 저장을 덮어쓰지 않습니다. API·저장 변경은 `server/tests/test_api.py`, 그래프 변경은 `server/tests/graph/`로 검증합니다.

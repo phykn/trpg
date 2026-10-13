@@ -63,9 +63,13 @@ class SaveStore:
                 _atomic_write, self._path(state.game_id), state.model_dump_json()
             )
         )
-        try:
-            await asyncio.shield(write)
-        except asyncio.CancelledError:
-            # Keep the command lock until the write finishes, even on disconnect.
-            await write
-            raise
+        cancelled = False
+        while not write.done():
+            try:
+                await asyncio.shield(write)
+            except asyncio.CancelledError:
+                # Repeated cancellation must not release the lock during file I/O.
+                cancelled = True
+        write.result()
+        if cancelled:
+            raise asyncio.CancelledError

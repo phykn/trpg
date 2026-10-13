@@ -2,8 +2,8 @@
 
 from pydantic import BaseModel, Field
 
+from src.game.choices import can_choose, list_choices, matches_condition, required_roll
 from src.game.dice import compute_grade
-from src.game.engine import can_choose, list_choices, matches_condition, required_roll
 from src.game.graph.query import (
     characters_at,
     edges_from,

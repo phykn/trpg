@@ -2,7 +2,7 @@
 # Keep relation traversal in game/graph/query.py.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-FILES=(src/api.py src/service.py src/view.py src/game/engine.py src/game/combat.py src/game/move.py)
+FILES=(src/api.py src/service.py src/view.py src/game/engine.py src/game/choices.py src/game/combat.py src/game/move.py)
 violations=0
 for name in "${FILES[@]}"; do
   file="$ROOT/server/$name"

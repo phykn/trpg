@@ -7,6 +7,8 @@ Read [README.md](README.md) for the request flow, API and configuration. Run Pyt
 - `run_api.py`: construction and local/configured startup.
 - `src/api.py`: HTTP boundary; `src/service.py`: serialized commands.
 - `src/game/`: data models and pure game rules; no network or file I/O.
+- `src/game/choices.py`: read-only choices, conditions and roll previews shared by the engine and view.
+- `src/game/engine.py`: copy and resolve a turn, including costs, effects, combat and world progression.
 - `src/game/graph/`: graph data, queries, changes and invariants.
 - `src/store.py`: atomic snapshot persistence.
 - `src/view.py`: public response; `src/content.py`: authored-content validation.
