@@ -6,7 +6,7 @@ import os
 import re
 from pathlib import Path
 
-from src.game.models import GameState, IncompatibleSave
+from src.world.state import GameState, IncompatibleSave
 
 
 class SaveError(RuntimeError):
@@ -33,7 +33,7 @@ class SaveStore:
         self._locks: dict[str, asyncio.Lock] = {}
 
     def _path(self, game_id: str) -> Path:
-        if not re.fullmatch(r"adv_[a-f0-9]{32}", game_id):
+        if not re.fullmatch(r"g_[a-f0-9]{32}", game_id):
             raise FileNotFoundError(game_id)
         return self.root / f"{game_id}.json"
 

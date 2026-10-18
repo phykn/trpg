@@ -31,7 +31,7 @@ function start(command, args, cwd, env = process.env) {
 async function apiRunning() {
   try {
     const response = await fetch('http://127.0.0.1:8000/health', { signal: AbortSignal.timeout(1000) });
-    if (!response.ok || (await response.json()).mode !== 'adventure') {
+    if (!response.ok || (await response.json()).mode !== 'engine') {
       throw new Error('Port 8000 is occupied by a different service.');
     }
     return true;
@@ -43,16 +43,16 @@ async function apiRunning() {
 
 async function main() {
   await new Promise((resolve, reject) => {
-    const socket = createConnection({ host: '127.0.0.1', port: 8081 });
+    const socket = createConnection({ host: '127.0.0.1', port: 8090 });
     socket.once('connect', () => {
       socket.destroy();
-      reject(new Error('Port 8081 is already in use. Stop the previous web command first.'));
+      reject(new Error('Port 8090 is already in use. Stop the previous web command first.'));
     });
     socket.once('error', (error) => error.code === 'ECONNREFUSED' ? resolve() : reject(error));
   });
   const publicAccess = process.argv.includes('--public');
   const tunnel = publicAccess ? await tunnelBinary() : null;
-  if (await apiRunning()) console.log('기존 모험 API를 사용합니다.');
+  if (await apiRunning()) console.log('기존 게임 API를 사용합니다.');
   else {
     const python = path.join(root, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
     start(python, ['server/run_api.py', '--local'], root);
@@ -66,11 +66,11 @@ async function main() {
   console.log('\n휴대폰 접속 주소:');
   for (const addresses of Object.values(networkInterfaces())) {
     for (const address of addresses ?? []) {
-      if (address.family === 'IPv4' && !address.internal) console.log(`  http://${address.address}:8081`);
+      if (address.family === 'IPv4' && !address.internal) console.log(`  http://${address.address}:8090`);
     }
   }
-  console.log('  PC: http://localhost:8081\n');
-  start(process.execPath, [require.resolve('expo/bin/cli'), 'start', '--web', '--host', 'lan', '--port', '8081', ...process.argv.slice(2).filter((arg) => arg !== '--public')], path.join(root, 'client'), {
+  console.log('  PC: http://localhost:8090\n');
+  start(process.execPath, [require.resolve('expo/bin/cli'), 'start', '--web', '--host', 'lan', '--port', '8090', ...process.argv.slice(2).filter((arg) => arg !== '--public')], path.join(root, 'client'), {
     ...process.env,
     EXPO_NO_DOTENV: '1',
     EXPO_PUBLIC_API_URL: '/api',
@@ -80,7 +80,7 @@ async function main() {
   });
   if (tunnel) {
     console.log('LTE 접속: 아래에 표시되는 https://…trycloudflare.com 주소를 엽니다.');
-    start(tunnel, ['tunnel', '--no-autoupdate', '--url', 'http://127.0.0.1:8081'], root);
+    start(tunnel, ['tunnel', '--no-autoupdate', '--url', 'http://127.0.0.1:8090'], root);
   }
 }
 

@@ -13,7 +13,7 @@ async function listen(t, handler) {
 
 test('forwards an authenticated choice, query and receipt and preserves conflict responses', async (t) => {
   const api = await listen(t, async (req, res) => {
-    assert.equal(req.url, '/adventure/adv_saved/choose?source=phone');
+    assert.equal(req.url, '/games/g_saved/act?source=phone');
     assert.equal(req.method, 'POST');
     assert.equal(req.headers.authorization, 'Basic bG9jYWw6bG9jYWw=');
     let body = '';
@@ -23,7 +23,7 @@ test('forwards an authenticated choice, query and receipt and preserves conflict
     res.end(JSON.stringify({ detail: 'stale choice' }));
   });
   const web = await listen(t, proxyApi(() => assert.fail('API request fell through'), api.address().port));
-  const response = await fetch(`http://127.0.0.1:${web.address().port}/api/adventure/adv_saved/choose?source=phone`, {
+  const response = await fetch(`http://127.0.0.1:${web.address().port}/api/games/g_saved/act?source=phone`, {
     method: 'POST', headers: { Authorization: 'Basic bG9jYWw6bG9jYWw=', 'Content-Type': 'application/json' },
     body: JSON.stringify({ option_id: 'move:quay', revision: 3, request_id: 'same-receipt' }),
   });
@@ -43,7 +43,7 @@ test('returns 502 instead of hanging when the API is stopped', async (t) => {
   const port = api.address().port;
   await new Promise((resolve) => api.close(resolve));
   const web = await listen(t, proxyApi(() => {}, port));
-  const response = await fetch(`http://127.0.0.1:${web.address().port}/api/adventure/catalog`);
+  const response = await fetch(`http://127.0.0.1:${web.address().port}/api/catalog`);
   assert.equal(response.status, 502);
   assert.deepEqual(await response.json(), { error: 'api_unavailable' });
 });
@@ -57,7 +57,7 @@ test('a broken API response does not take down the web server', async (t) => {
   const web = await listen(t, proxyApi((req, res) => res.end('web alive'), api.address().port));
   const url = `http://127.0.0.1:${web.address().port}`;
   await assert.rejects(async () => {
-    const response = await fetch(`${url}/api/adventure/catalog`);
+    const response = await fetch(`${url}/api/catalog`);
     await response.text();
   });
   assert.equal(await (await fetch(`${url}/`)).text(), 'web alive');

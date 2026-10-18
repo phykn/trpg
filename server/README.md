@@ -1,57 +1,102 @@
-# 서버
+# trpg-server
 
-FastAPI가 모험의 시작·조회·선택을 처리합니다. 설치와 로컬 실행은 [루트 README](../README.md)를 따릅니다.
+Story-agnostic engine for a Korean TRPG: FastAPI + Pydantic v2, two required local models (Kev decides, Qwen writes), one atomic JSON snapshot per game. The server agent guide is [AGENTS.md](./AGENTS.md).
 
-## 요청이 처리되는 순서
+## Turn flow
 
-`run_api.py` → `src/api.py` → `src/service.py` → `src/game/engine.py` → `src/view.py` → `src/store.py` → 응답
+```
+text ─► interpret (one Kev call) ─► confirm card if high risk ─► resolve (pure rules) ─► save ─► respond
+button ───────────────────────────┘
+                                   narration stream (Qwen) ─► Kev check ─► rewrite ≤2 ─► cache in save
+```
 
-- `api.py`: Basic 인증, 입력 검사, HTTP 오류 매핑.
-- `service.py`: 게임별 잠금, 요청 영수증과 revision 확인, 규칙 실행과 저장.
-- `game/choices.py`: 선택 목록, 조건·자원 확인과 판정 미리보기. 상태를 변경하지 않으며 엔진과 응답 화면이 함께 사용합니다.
-- `game/engine.py`: 선택 실행, 비용 차감, 효과·전투·사건·결말. 원본 상태를 복사해 한 턴을 진행합니다.
-- `game/graph/`: 관계 질의, `GraphChange` 적용, 그래프 불변식.
-- `store.py`: 전체 상태를 임시 파일에 쓰고 원자적으로 교체합니다.
-- `view.py`: 플레이어에게 공개할 장면과 선택을 만듭니다. 응답을 준비한 뒤 저장이 성공해야 반환합니다.
-- `content.py`, `game/models.py`: 원고 검증과 콘텐츠·저장 형식.
+- `scene.build` extracts only what the player knows; interpretation, narration and the view all read it.
+- `rules.candidates` lists legal actions (`move:`, `inspect:`, `talk:`, `take:`, `give:`, `act:`; button-only `solve:`, `use_tag:`, `topic:`; and `improvise`).
+- `interpret` asks Kev closed questions (steps 1–3, improvise details, talk details) and assembles steps. Unsure targets come back as a clarify list; unsure actions become improvisation; impossible ones are rejected without using a turn.
+- `rules.resolve` runs up to three steps on a copy of the state, stops on a miss, settles full obstacles, danger, wounds, quests, chapter goals and endings, and never mutates the input.
+- `narrate` streams Qwen text, hides `@<tag> name` lines, and asks Kev whether the text contradicts the facts or invents new things. A failed check emits `reset` and rewrites.
 
-## API
+## Run
 
-`GET /health`는 공개합니다. 아래 경로에는 Basic 인증이 필요합니다.
+From the repository root:
 
-| 메서드·경로 | 입력 | 결과 |
-|---|---|---|
-| `GET /adventure/catalog` | 없음 | 이야기 소개와 시작 성향 |
-| `POST /adventure/start` | `{name, role}` | 새 게임 화면 |
-| `GET /adventure/{game_id}` | 없음 | 저장된 게임 화면 |
-| `POST /adventure/{game_id}/choose` | `{option_id, revision, request_id}` | 선택 후 화면 |
+```bash
+.venv/bin/python server/run_api.py --local    # 127.0.0.1:8000, local/local, Kev :8081, Qwen :8082
+```
 
-`request_id`는 선택마다 만들고 재시도할 때 그대로 보냅니다. 같은 ID·입력이면 행동을 반복하지 않고 현재 저장 화면을 반환합니다. 같은 ID에 다른 입력, 오래된 revision, 지원하지 않는 저장 버전은 409입니다. 불가능한 선택은 422, 없는 게임은 404, 저장 실패는 503입니다.
+Without `--local`, `run_api.py` loads `server/.env.shared` then `server/.env.<APP_ENV>` (default `dev`); process env wins, missing keys fail at startup:
 
-## 실행 설정
-
-`--local`은 저장소의 `saves/adventure/`, 포트 8000, 로컬 전용 인증 `local/local`을 사용합니다. 설정 실행은 `server/.env.shared` → `server/.env.<APP_ENV>` 순서로 읽습니다. 기본 `APP_ENV`는 `dev`이며 운영체제 환경변수가 우선합니다.
-
-```dotenv
+```
 HOST=127.0.0.1
 PORT=8000
-BASIC_AUTH_USER=local
-BASIC_AUTH_PASS=local
-CORS_ORIGINS=http://localhost:8081
-ADVENTURE_SAVE_DIR=../saves/adventure
+BASIC_AUTH_USER=<id>
+BASIC_AUTH_PASS=<pass>
+CORS_ORIGINS=http://localhost:8090
+SCENARIO_DIR=../scenarios
+SAVE_DIR=../saves/engine
+KEV_BASE_URL=http://127.0.0.1:8081
+KEV_MIN_CONFIDENCE=0.5         # optional; answers below are "unsure"
+KEV_TARGET_MASS=0.6            # optional; verb probability needed to ask back instead of improvising
+KEV_API_KEY=                   # optional
+QWEN_BASE_URL=http://127.0.0.1:8082/v1
+QWEN_MODEL=auto                # optional; auto picks the model /v1/models marks loaded
+QWEN_SAMPLING={"temperature": 0.7, "top_p": 0.8, "top_k": 20, "presence_penalty": 1.5}   # optional
 ```
 
-```powershell
-# 저장소 루트에서 설정 실행
-.\.venv\Scripts\python.exe server/run_api.py
+Startup validates every story folder (a broken story stops the server) and checks both models. Qwen always gets `enable_thinking: false` (top level for mlx-vlm, `chat_template_kwargs` for mlx-lm); there is no thinking switch.
+
+## Routes
+
+`/health` is public; everything else needs Basic Auth.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/health` | `{"ok": true, "mode": "engine"}` |
+| GET | `/catalog` | Stories (folders starting with `_` are hidden) and their creation options |
+| POST | `/games` | `{story, approaches?, traits?}` → `GameView` |
+| GET | `/games/{id}` | Saved `GameView` |
+| POST | `/games/{id}/act` | `{revision, request_id}` + one of `{text}`, `{action_id}`, `{confirm, accept}` → `{kind, view, turn, options, reason}`; kind is `turn`, `confirm`, `clarify`, `rejected` or `cancelled` |
+| GET | `/games/{id}/turns/{n}/narration` | NDJSON events `delta`, `reset`, `done {text, tags}`, `error {retry}`; only the latest turn is generated, older ones come from the cache |
+
+Errors: 404 missing game, 409 stale revision or story version, 422 bad request, 503 model or save failure. A reused `request_id` with the same body replays the saved result.
+
+## Stories
+
+A story folder holds `scenario.json` (schema in `src/content/schema.py`) and `world.md` (style notes passed to the narrator). Validate before running:
+
+```bash
+cd server && ../.venv/bin/python -m src.content validate ../scenarios/<name>
 ```
 
-상대 저장 경로는 `server/` 기준입니다. 파일 잠금은 단일 프로세스 안에서만 유효하므로 여러 worker를 사용하지 않습니다. 공용 Basic 인증은 개별 사용자 계정 격리 기능이 아닙니다.
+The validator checks ids, references, 3–5 senses per place, two or more solutions per obstacle, two or more free paths per topic, six traits, the +2/+1/+1/0 spread, and optimistic reachability of every chapter and ending. `scenarios/_template/` is the minimal example and the fixture every test uses.
 
-## 원고 수정
+## Scripts
 
-`scenarios/harbor/adventure.json`의 `choices`에서 선택 ID를 찾습니다. 예를 들어 경비병의 보증 대화는 `guard.promise`의 `success.text`에 있습니다. 조건은 `at / knows / carries / property / relation`, 효과는 `set / add / learn / give / move / companion / relation`입니다. 판정 선택에는 실패 결과, 실행 조건에는 잠긴 이유가 필요합니다.
+From `server/`, with both models running:
 
-원고 선택의 시간·금화·기술 자원 비용은 `choices`의 `ticks / gold / mp`에서 정합니다. 이동·도구·성장·전투의 자동 선택은 `game/choices.py`, 비용 차감과 시간 진행은 `game/engine.py`에서 처리합니다. 표시 비용은 `view.py`가 이 규칙을 읽어 구성하므로 클라이언트에 별도로 계산식을 추가하지 않습니다.
+- `scripts/bench_kev.py --story harbor --state prison`: Kev latency at 10, 20 and all questions.
+- `scripts/eval_interpret.py --story harbor`: accuracy, clarify, wrong-commit and improvise rates over `scenarios/<story>/evals/interpret.jsonl`; writes `qa_test/agency/<run>/interpret.json`.
+- `scripts/play.py --story harbor`: terminal play with timings in `qa_test/agency/<run>/transcript.jsonl`.
 
-원고를 고치면 서버를 재시작하고 `server/validate_adventure.py`와 `server/tests/test_game.py`를 실행합니다. 저장의 의미가 바뀌는 수정은 콘텐츠 `version`을 올립니다. 서버는 맞지 않는 저장을 덮어쓰지 않습니다. API·저장 변경은 `server/tests/test_api.py`, 그래프 변경은 `server/tests/graph/`로 검증합니다.
+## Tests
+
+```bash
+.venv/bin/python -m pytest -q        # from the repo root; fake Kev/Qwen, template story
+```
+
+## Layout
+
+```
+server/
+  run_api.py           app construction, --local defaults, story loading
+  src/
+    api.py service.py store.py config.py
+    content/           schema, load, validate, CLI
+    world/             graph, query, state models
+    rules/             dsl, candidates, check, costs, talk, chapter, resolve, recommend
+    scene/             build (known facts), render (Kev/Qwen text), view (GameView)
+    interpret.py narrate.py
+    models/            kev, qwen
+    locale/ko.py       engine-owned Korean
+  scripts/ tests/
+```

@@ -16,22 +16,30 @@ beforeEach(() => {
 });
 afterEach(() => jest.useRealTimers());
 
-test('sends authenticated structured choices without changing the receipt', async () => {
-  const view = { game_id: 'adv_saved', revision: 1 };
-  (fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => view });
-  const command = { option_id: 'move:tavern', revision: 0, request_id: 'same-receipt' };
-  expect(await api.chooseOption('adv_saved', command)).toEqual(view);
-  expect(fetch).toHaveBeenCalledWith('http://localhost:8000/adventure/adv_saved/choose', expect.objectContaining({
-    method: 'POST', body: JSON.stringify(command),
-    headers: { Authorization: `Basic ${btoa('local:local')}`, 'Content-Type': 'application/json' },
+const headers = { Authorization: `Basic ${btoa('local:local')}`, 'Content-Type': 'application/json' };
+
+test('sends an authenticated act envelope without changing the receipt', async () => {
+  const result = { kind: 'turn', turn: 1 };
+  (fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => result });
+  const envelope = { text: '문을 연다', revision: 0, request_id: 'same-receipt' };
+  expect(await api.act('g_saved', envelope)).toEqual(result);
+  expect(fetch).toHaveBeenCalledWith('http://localhost:8000/games/g_saved/act', expect.objectContaining({
+    method: 'POST', body: JSON.stringify(envelope), headers,
   }));
   expect(jest.getTimerCount()).toBe(0);
 });
 
+test('starts a story with or without creation choices', async () => {
+  (fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({}) });
+  await api.startGame('harbor');
+  await api.startGame('harbor', { approaches: { wits: 2 }, traits: ['a', 'b'] });
+  expect((fetch as jest.Mock).mock.calls[0][1].body).toBe(JSON.stringify({ story: 'harbor' }));
+  expect((fetch as jest.Mock).mock.calls[1][1].body).toBe(JSON.stringify({ story: 'harbor', approaches: { wits: 2 }, traits: ['a', 'b'] }));
+});
+
 test('keeps a server conflict message and status for recovery', async () => {
-  (fetch as jest.Mock).mockResolvedValue({ ok: false, status: 409, json: async () => ({ detail: 'stale choice' }) });
-  await expect(api.loadGame('adv_saved')).rejects.toMatchObject({ status: 409, message: 'stale choice' });
-  expect(jest.getTimerCount()).toBe(0);
+  (fetch as jest.Mock).mockResolvedValue({ ok: false, status: 409, json: async () => ({ detail: 'stale' }) });
+  await expect(api.loadGame('g_saved')).rejects.toMatchObject({ status: 409, message: 'stale' });
 });
 
 test.each([
@@ -53,14 +61,18 @@ test('aborts a stalled request after fifteen seconds', async () => {
   expect(jest.getTimerCount()).toBe(0);
 });
 
-test('timeout also covers a response body that stops arriving', async () => {
-  (fetch as jest.Mock).mockImplementation(async (_url, init) => ({
-    ok: true,
-    json: () => new Promise((_resolve, reject) => {
-      init.signal.addEventListener('abort', () => reject(new Error('body aborted')));
-    }),
-  }));
-  const result = expect(api.getCatalog()).rejects.toThrow('body aborted');
-  await jest.advanceTimersByTimeAsync(15_000);
-  await result;
+test('reads narration events split across chunks', async () => {
+  const encoder = new TextEncoder();
+  const chunks = ['{"type":"delta","text":"안"}\n{"type":"del', 'ta","text":"녕"}\n', '{"type":"done","text":"안녕","tags":{}}\n'];
+  const reader = { read: jest.fn() };
+  chunks.forEach((c) => reader.read.mockResolvedValueOnce({ done: false, value: encoder.encode(c) }));
+  reader.read.mockResolvedValueOnce({ done: true, value: undefined });
+  (fetch as jest.Mock).mockResolvedValue({ ok: true, body: { getReader: () => reader } });
+  const events: unknown[] = [];
+  await api.streamNarration('g_saved', 3, (e) => events.push(e));
+  expect(fetch).toHaveBeenCalledWith('http://localhost:8000/games/g_saved/turns/3/narration', expect.objectContaining({ headers }));
+  expect(events).toEqual([
+    { type: 'delta', text: '안' }, { type: 'delta', text: '녕' }, { type: 'done', text: '안녕', tags: {} },
+  ]);
+  expect(jest.getTimerCount()).toBe(0);
 });

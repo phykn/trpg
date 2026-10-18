@@ -1,0 +1,353 @@
+{
+  "id": "harbor",
+  "version": 1,
+  "title": "안개 항구의 마지막 배",
+  "synopsis": "새벽 압송선에 실릴 친구를 구하러 온 항구에서 당신은 여러 사람의 사정을 듣습니다. 끝내는 방법은 하나가 아닙니다.",
+  "intro": "새벽의 압송선에 당신이 찾던 뱃사람 나루가 실립니다. 남은 시간은 짧습니다. 부두의 종이 한 번 울립니다. 당신은 아직 누구도 다치게 하지 않았습니다.",
+  "creation": {
+    "choose": false,
+    "approaches": {"force": 0, "finesse": 1, "wits": 2, "charm": 1},
+    "traits": ["trait_old_friend", "trait_deckhand"]
+  },
+  "traits": [
+    {"id": "trait_deckhand", "name": "전직 갑판원", "text": "밧줄, 화물, 배의 구조를 몸으로 압니다."},
+    {"id": "trait_old_friend", "name": "나루의 오랜 친구", "text": "나루의 휘파람과 버릇을 누구보다 잘 압니다."},
+    {"id": "trait_paperwork", "name": "서류에 밝음", "text": "명단과 장부의 숫자가 어긋나는 곳을 금방 찾습니다."},
+    {"id": "trait_brawler", "name": "싸움판 출신", "text": "멱살잡이와 몸싸움에 익숙합니다."},
+    {"id": "trait_hunted", "name": "빚쟁이에게 쫓김", "text": "이 항구에도 당신 얼굴을 아는 빚쟁이가 있습니다."},
+    {"id": "trait_soft_voice", "name": "차분한 목소리", "text": "흥분한 사람도 당신 앞에서는 목소리를 낮춥니다."}
+  ],
+  "start": {"place": "square", "chapter": "ch_harbor", "items": ["bandage"], "gold": 5},
+  "places": {
+    "square": {
+      "name": "부두 광장",
+      "text": "안개 속에서 배의 불빛이 흔들립니다. 압송 명단이 붙은 게시판 앞에 조사관이 서 있습니다.",
+      "chapter": "ch_harbor",
+      "senses": ["젖은 밧줄 냄새", "안개 속에서 흔들리는 배의 불빛", "게시판에 붙은 압송 명단", "멀리서 울리는 종소리"],
+      "exits": [{"to": "tavern"}, {"to": "prison"}, {"to": "warehouse"}, {"to": "tower"}]
+    },
+    "tavern": {
+      "name": "닻 없는 선술집",
+      "text": "잔은 모두 뒤집혀 있지만 작은 난로는 아직 따뜻합니다.",
+      "chapter": "ch_harbor",
+      "senses": ["뒤집힌 잔들", "따뜻한 난로", "문이 열릴 때마다 바로 놓이는 찻잔"],
+      "exits": [{"to": "square"}, {"to": "prison"}, {"to": "warehouse"}]
+    },
+    "prison": {
+      "name": "세관 감옥",
+      "text": "쇠창살 너머에서 익숙한 휘파람이 들립니다. 문 앞의 경비는 당신보다 피곤해 보입니다.",
+      "chapter": "ch_harbor",
+      "senses": ["쇠창살의 녹 냄새", "마지막 음이 틀린 휘파람", "창자루를 고쳐 잡는 소리"],
+      "exits": [{"to": "square"}, {"to": "tavern"}, {"to": "warehouse"}]
+    },
+    "warehouse": {
+      "name": "화물 창고",
+      "text": "젖은 상자 사이로 종이 넘기는 소리가 납니다. 서기와 밀수상이 서로를 못 본 척하고 있습니다.",
+      "chapter": "ch_harbor",
+      "senses": ["젖은 상자 냄새", "종이 넘기는 소리", "감옥 쪽으로 난 화물문"],
+      "exits": [{"to": "square"}, {"to": "tavern"}, {"to": "prison"}, {"to": "tower"}]
+    },
+    "tower": {
+      "name": "신호탑",
+      "text": "항구의 지붕들이 발아래 잠겨 있습니다. 오래된 신호등이 누군가의 손길을 기다립니다.",
+      "chapter": "ch_harbor",
+      "senses": ["발아래 잠긴 지붕들", "그을린 신호등 유리", "탑을 흔드는 바닷바람"],
+      "exits": [{"to": "square"}, {"to": "warehouse"}]
+    }
+  },
+  "characters": {
+    "guard": {
+      "name": "도윤",
+      "role": "감옥 문을 지키는 경비",
+      "place": "prison",
+      "desire": "모라에게 진 외상을 갚고 떳떳해지고 싶습니다.",
+      "fear": "명령을 거스르면 자신도 수감될까 두렵습니다.",
+      "contradiction": "겁을 주려 하지만 시선을 너무 자주 피합니다.",
+      "voice": "말끝을 흐리고, 명령이라는 말을 자주 붙입니다.",
+      "boundary": "서명 없는 부탁으로는 문을 열지 않습니다.",
+      "knows": ["guard_fear"],
+      "relation": 0,
+      "gifts": {
+        "debt_note": [{"kind": "relation", "target": "guard", "value": 2}, {"kind": "progress", "target": "gate_guard", "value": 3}],
+        "order": [{"kind": "progress", "target": "gate_guard", "value": 3}]
+      }
+    },
+    "keeper": {
+      "name": "모라",
+      "role": "선술집 주인",
+      "place": "tavern",
+      "desire": "항구 사람들의 빚과 약속이 식지 않게 지키고 싶습니다.",
+      "fear": "장부가 밖으로 나가면 선술집이 문을 닫게 될까 두렵습니다.",
+      "contradiction": "남의 빚은 미뤄 주면서 자기 비밀은 꽁꽁 숨깁니다.",
+      "voice": "느긋하게 말하고, 찻잔을 내려놓으며 말을 끊습니다.",
+      "boundary": "손님을 세관에 팔지 않습니다.",
+      "knows": ["guard_debt", "ledger_truth"],
+      "relation": 1,
+      "gifts": {"ledger": [{"kind": "flag", "target": "ledger_to", "value": "keeper"}, {"kind": "relation", "target": "keeper", "value": 2}]}
+    },
+    "sailor": {
+      "name": "나루",
+      "role": "압송을 기다리는 뱃사람",
+      "place": "prison",
+      "desire": "당신과 함께 바다로 돌아가고 싶습니다.",
+      "fear": "자기 때문에 당신이 다칠까 두렵습니다.",
+      "contradiction": "괜찮다고 말하면서 휘파람은 멈추지 않습니다.",
+      "voice": "짧게 웃고, 농담 뒤에 진심을 숨깁니다.",
+      "boundary": "다른 수감자를 버리고 가자는 말에는 대답하지 않습니다.",
+      "knows": ["signal"],
+      "relation": 2
+    },
+    "clerk": {
+      "name": "이든",
+      "role": "창고의 세관 서기",
+      "place": "warehouse",
+      "desire": "명단의 숫자를 맞추고 집에 가고 싶습니다.",
+      "fear": "명단이 고쳐진 것을 알고도 침묵한 일이 드러날까 두렵습니다.",
+      "contradiction": "잘못을 알면서도 잉크 묻은 손가락을 감춥니다.",
+      "voice": "숫자를 섞어 빠르게 말하고, 묻기 전에 변명부터 합니다.",
+      "boundary": "상관의 이름은 끝까지 말하지 않습니다.",
+      "knows": ["forgery"],
+      "relation": 0
+    },
+    "smuggler": {
+      "name": "루",
+      "role": "빈 상자 위의 밀수상",
+      "place": "warehouse",
+      "desire": "세관과 엮이지 않고 오늘 밤 장사를 끝내고 싶습니다.",
+      "fear": "장부가 조사관 손에 들어갈까 두렵습니다.",
+      "contradiction": "아무것도 팔지 않는다면서 값부터 부릅니다.",
+      "voice": "농담처럼 말하지만 값을 말할 때는 웃지 않습니다.",
+      "boundary": "공짜로는 아무것도 알려 주지 않습니다.",
+      "knows": ["shift"],
+      "relation": 0
+    },
+    "inspector": {
+      "name": "여울",
+      "role": "명단을 살피는 조사관",
+      "place": "square",
+      "desire": "잘못 적힌 이름을 바로잡고 세관의 거래를 밝히고 싶습니다.",
+      "fear": "증거 없이 움직였다가 자신이 밀려날까 두렵습니다.",
+      "contradiction": "규칙을 믿지만 규칙이 고쳐 쓰인 것을 알고 있습니다.",
+      "voice": "또박또박 말하고, 증거라는 말을 아낍니다.",
+      "boundary": "증거 없는 소문으로는 서명하지 않습니다.",
+      "knows": ["forgery"],
+      "relation": 0,
+      "gifts": {"ledger": [{"kind": "flag", "target": "ledger_to", "value": "inspector"}, {"kind": "relation", "target": "inspector", "value": 2}]}
+    }
+  },
+  "items": {
+    "bandage": {"name": "마른 붕대", "text": "상처를 싸맬 수 있는 깨끗한 붕대입니다."},
+    "notice": {"name": "압송 명단", "text": "게시판에 붙은 명단입니다. 나루의 이름만 잉크 색이 다릅니다.", "place": "square", "reveals": "forgery"},
+    "debt_note": {"name": "외상 유예 쪽지", "text": "모라가 도윤의 외상을 미루겠다고 쓴 쪽지입니다."},
+    "order": {"name": "정정 명령서", "text": "나루의 수감을 취소하는 조사관의 서명입니다.", "holder": "inspector"},
+    "ledger": {"name": "밀수 장부", "text": "세관과 밀수조직의 거래가 함께 적힌 장부입니다.", "place": "warehouse", "reveals": "ledger_truth"},
+    "lockpick": {"name": "작은 쇠갈고리", "text": "화물문의 걸쇠를 조용히 들어 올릴 수 있습니다.", "holder": "smuggler"}
+  },
+  "knowledge": {
+    "guard_debt": {"title": "경비의 외상", "summary": "도윤은 모라에게 찻값을 빚지고 있고, 돈보다 약속을 못 지킨 일을 부끄러워합니다."},
+    "guard_fear": {"title": "경비의 두려움", "summary": "도윤은 명령을 거스르면 자신도 수감될까 두려워합니다."},
+    "forgery": {"title": "고쳐 쓴 명단", "summary": "나루의 이름은 다른 잉크로 덧써졌습니다. 조사관이 확인하면 정정 명령을 받을 수 있습니다."},
+    "shift": {"title": "화물문 교대 시간", "summary": "경비가 하품을 세 번 하면 교대가 시작되고, 그동안 창고 화물문을 지켜보는 사람이 없습니다."},
+    "signal": {"title": "나루의 출항 신호", "summary": "신호탑에서 등불을 두 번 가리면 나루의 동료가 작은 배를 몰고 옵니다."},
+    "ledger_truth": {"title": "장부의 진실", "summary": "장부에는 세관과 밀수조직의 거래가 함께 적혀 있습니다."}
+  },
+  "topics": [
+    {
+      "id": "topic_debt", "character": "keeper", "knowledge": "guard_debt", "title": "경비 도윤",
+      "free_when": [[{"kind": "relation", "target": "keeper", "value": 2}], [{"kind": "knows", "target": "guard_fear"}]],
+      "mods": {"empathy": 1, "threaten": -2}
+    },
+    {
+      "id": "topic_fear", "character": "guard", "knowledge": "guard_fear", "title": "명령과 처벌",
+      "free_when": [[{"kind": "relation", "target": "guard", "value": 1}], [{"kind": "knows", "target": "guard_debt"}]],
+      "mods": {"empathy": 1, "threaten": -1}
+    },
+    {
+      "id": "topic_forgery", "character": "clerk", "knowledge": "forgery", "title": "명단의 숫자",
+      "free_when": [[{"kind": "relation", "target": "clerk", "value": 1}], [{"kind": "carries", "target": "ledger"}]],
+      "mods": {"persuade": 1, "threaten": 1}
+    },
+    {
+      "id": "topic_shift", "character": "smuggler", "knowledge": "shift", "title": "조용히 들어가는 길",
+      "free_when": [[{"kind": "relation", "target": "smuggler", "value": 2}], [{"kind": "flag", "target": "paid_smuggler", "value": true}]],
+      "mods": {"deceive": 1, "polite": -1}
+    },
+    {
+      "id": "topic_signal", "character": "sailor", "knowledge": "signal", "title": "다른 뱃길",
+      "free_when": [[{"kind": "relation", "target": "sailor", "value": 2}], [{"kind": "flag", "target": "rescued", "value": true}]],
+      "mods": {"empathy": 1}
+    }
+  ],
+  "obstacles": {
+    "gate_guard": {
+      "name": "도윤의 감시",
+      "place": "prison",
+      "boxes": 3,
+      "fits": ["charm", "wits"],
+      "clashes": ["force"],
+      "costs": [{"kind": "snag"}, {"kind": "wound"}, {"kind": "gold", "value": 2}],
+      "on_full": [{"kind": "flag", "target": "gate_open", "value": true}],
+      "solutions": [
+        {"label": "모라의 쪽지를 내민다", "approach": "charm", "risk": "low", "requires": [{"kind": "carries", "target": "debt_note"}]},
+        {"label": "정정 명령서를 내민다", "approach": "charm", "risk": "low", "requires": [{"kind": "carries", "target": "order"}]},
+        {"label": "도윤의 두려움을 달래며 설득한다", "approach": "charm", "risk": "normal", "requires": [{"kind": "knows", "target": "guard_fear"}]},
+        {"label": "경비와 맞붙는다", "approach": "force", "risk": "high"}
+      ]
+    },
+    "cargo_door": {
+      "name": "감옥 화물문 걸쇠",
+      "place": "warehouse",
+      "boxes": 2,
+      "fits": ["finesse", "wits"],
+      "clashes": ["charm"],
+      "costs": [{"kind": "snag"}, {"kind": "wound"}],
+      "on_full": [{"kind": "flag", "target": "gate_open", "value": true}],
+      "solutions": [
+        {"label": "쇠갈고리로 걸쇠를 든다", "approach": "finesse", "risk": "low", "requires": [{"kind": "carries", "target": "lockpick"}]},
+        {"label": "교대 틈에 화물문으로 스며든다", "approach": "finesse", "risk": "normal", "requires": [{"kind": "knows", "target": "shift"}]},
+        {"label": "화물문을 어깨로 민다", "approach": "force", "risk": "high"}
+      ]
+    },
+    "inspector_doubt": {
+      "name": "여울의 의심",
+      "place": "square",
+      "boxes": 3,
+      "fits": ["wits", "charm"],
+      "costs": [{"kind": "snag"}, {"kind": "gold", "value": 1}],
+      "on_full": [{"kind": "give", "target": "order"}, {"kind": "relation", "target": "inspector", "value": 1}],
+      "solutions": [
+        {"label": "고쳐 쓴 명단을 짚어 보인다", "approach": "wits", "risk": "low", "requires": [{"kind": "knows", "target": "forgery"}]},
+        {"label": "나루의 사정을 털어놓는다", "approach": "charm", "risk": "normal"}
+      ]
+    },
+    "clerk_watch": {
+      "name": "이든의 눈길",
+      "place": "warehouse",
+      "boxes": 2,
+      "fits": ["finesse", "wits", "charm"],
+      "costs": [{"kind": "snag"}, {"kind": "gold", "value": 1}],
+      "on_full": [{"kind": "flag", "target": "ledger_free", "value": true}],
+      "guards": ["ledger"],
+      "solutions": [
+        {"label": "이든이 숫자를 세는 틈에 장부를 빼낸다", "approach": "finesse", "risk": "normal"},
+        {"label": "이든에게 명단 정리를 돕겠다고 말을 건다", "approach": "charm", "risk": "low"}
+      ]
+    },
+    "signal_lamp": {
+      "name": "꺼진 신호등",
+      "place": "tower",
+      "boxes": 2,
+      "fits": ["wits", "finesse"],
+      "costs": [{"kind": "snag"}, {"kind": "wound"}],
+      "on_full": [{"kind": "flag", "target": "boat_called", "value": true}],
+      "solutions": [
+        {"label": "등불을 두 번 가린다", "approach": "wits", "risk": "low", "requires": [{"kind": "knows", "target": "signal"}]},
+        {"label": "등불을 마구 흔들어 아무 배나 부른다", "approach": "finesse", "risk": "high"}
+      ]
+    },
+    "patrol": {
+      "name": "부두 순찰대",
+      "place": "square",
+      "boxes": 3,
+      "fits": ["force", "finesse", "wits"],
+      "clashes": ["charm"],
+      "costs": [{"kind": "wound"}, {"kind": "snag"}],
+      "on_full": [{"kind": "flag", "target": "patrol_lost", "value": true}],
+      "foe": true,
+      "hidden": true,
+      "solutions": [
+        {"label": "골목으로 순찰대를 따돌린다", "approach": "finesse", "risk": "normal"},
+        {"label": "순찰대장과 맞선다", "approach": "force", "risk": "high"},
+        {"label": "가짜 신호로 순찰대를 돌린다", "approach": "wits", "risk": "normal", "requires": [{"kind": "knows", "target": "signal"}]}
+      ]
+    }
+  },
+  "chapters": [
+    {
+      "id": "ch_harbor",
+      "title": "마지막 배",
+      "danger": {
+        "name": "압송선의 출항 준비",
+        "boxes": 8,
+        "tick_every": 3,
+        "on_full": [
+          {"kind": "flag", "target": "ship_gone", "value": true},
+          {"kind": "reveal", "target": "patrol"},
+          {"kind": "tag", "key": "wanted"}
+        ]
+      },
+      "goal": [{"kind": "flag", "target": "escaped", "value": true}]
+    }
+  ],
+  "actions": [
+    {
+      "id": "promise_debt",
+      "label": "도윤의 외상을 대신 갚겠다고 약속한다",
+      "place": "tavern",
+      "show": [{"kind": "knows", "target": "guard_debt"}],
+      "hit": [{"kind": "give", "target": "debt_note"}, {"kind": "flag", "target": "owed", "value": true}]
+    },
+    {
+      "id": "pay_smuggler",
+      "label": "루에게 금화를 건네며 길을 묻는다",
+      "place": "warehouse",
+      "requires": [{"kind": "gold", "value": 2}],
+      "hit": [{"kind": "gold", "value": -2}, {"kind": "flag", "target": "paid_smuggler", "value": true}, {"kind": "give", "target": "lockpick"}]
+    },
+    {
+      "id": "free_sailor",
+      "label": "나루의 손을 잡는다",
+      "place": "prison",
+      "show": [{"kind": "flag", "target": "gate_open", "value": true}],
+      "hit": [{"kind": "flag", "target": "rescued", "value": true}, {"kind": "companion", "target": "sailor"}]
+    },
+    {
+      "id": "steal_boat",
+      "label": "나루와 함께 부두의 작은 배를 훔쳐 탄다",
+      "place": "square",
+      "show": [{"kind": "flag", "target": "rescued", "value": true}],
+      "check": {"label": "배를 훔친다", "approach": "finesse", "risk": "normal"},
+      "hit": [{"kind": "flag", "target": "escaped", "value": true}],
+      "miss": [{"kind": "danger", "value": 1}],
+      "once": false
+    },
+    {
+      "id": "board_signal_boat",
+      "label": "신호를 보고 다가온 배에 오른다",
+      "place": "tower",
+      "show": [{"kind": "flag", "target": "boat_called", "value": true}],
+      "requires": [{"kind": "flag", "target": "rescued", "value": true}],
+      "hit": [{"kind": "flag", "target": "escaped", "value": true}]
+    }
+  ],
+  "downed": [
+    {"kind": "move", "target": "tavern"},
+    {"kind": "danger", "value": 1}
+  ],
+  "endings": [
+    {
+      "id": "departed",
+      "title": "마지막 종소리",
+      "when": [{"kind": "flag", "target": "ship_gone", "value": true}, {"kind": "flag", "target": "rescued", "value": true, "negate": true}],
+      "text": "압송선이 부두를 떠납니다. 당신은 빈 밧줄을 바라봅니다. 오늘의 선택은 여기서 끝나지만, 바다로 향하는 길이 사라진 것은 아닙니다."
+    },
+    {
+      "id": "public",
+      "title": "지워진 이름",
+      "when": [{"kind": "flag", "target": "escaped", "value": true}, {"kind": "flag", "target": "ledger_to", "value": "inspector"}],
+      "text": "나루의 이름은 압송 명단에서 지워집니다. 당신이 남긴 장부는 다른 이름들을 다시 불러냅니다. 배가 안개를 벗어날 때 항구에 아침이 찾아옵니다."
+    },
+    {
+      "id": "bargain",
+      "title": "갚은 빚, 남은 항구",
+      "when": [{"kind": "flag", "target": "escaped", "value": true}, {"kind": "flag", "target": "ledger_to", "value": "keeper"}],
+      "text": "당신은 친구를 구하고 약속을 지킵니다. 항구의 모든 잘못을 고치지는 못했지만, 누군가의 찻잔은 다시 따뜻해집니다."
+    },
+    {
+      "id": "quiet",
+      "title": "안개 너머의 두 사람",
+      "when": [{"kind": "flag", "target": "escaped", "value": true}],
+      "text": "당신과 나루는 항구를 벗어납니다. 진실은 아직 안개 속에 남아 있지만, 배 위에는 더 이상 혼자인 사람이 없습니다."
+    }
+  ]
+}

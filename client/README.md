@@ -1,35 +1,32 @@
 # 웹 클라이언트
 
-스크롤 없이 한 화면에서 이야기를 읽고 선택하는 모바일 웹 앱입니다. 그림을 사용하지 않으며 PC에서도 같은 폭을 유지합니다. 설치와 플레이는 [루트 README](../README.md)를 따릅니다.
+스크롤 없이 한 화면에서 장면을 읽고 문장이나 버튼으로 행동하는 모바일 웹 앱입니다. 그림을 사용하지 않으며 PC에서도 같은 폭을 유지합니다. 설치와 플레이는 [루트 README](../README.md)를 따릅니다.
 
 ## 화면과 코드
 
 `app/index.tsx` → `screens/GameScreen.tsx` → `logic/useGame.ts` → `services/api.ts`
 
-- `screens/Arrival.tsx`: 소개→이름→성향 선택.
-- `screens/Adventure.tsx`: 읽기→행동 선택, 이동과 수첩 열기.
-- `components/game/`: 자원 상태, 전투 하트, 페이지로 보는 수첩.
-- `components/ui/Reader.tsx`: 실제 글자 높이를 측정해 본문을 페이지로 나눕니다. 읽기 위치는 화면 크기가 바뀌거나 수첩을 열어도 유지합니다.
-- `components/ui/PagedList.tsx`: 화면 높이에 맞는 개수로 행동과 기록을 넘깁니다. 항목을 열면 전체 내용을 확인합니다.
-- `components/ui/MenuGrid.tsx`: 수첩과 행동 분류를 두 열로 배치합니다.
-- `components/ui/ActionPreview.tsx`: 행동의 내용·비용·조건을 읽고 실행합니다.
-- `logic/useGame.ts`: 시작·복원·선택·실패 복구. 서버 응답만 게임 상태로 채택합니다.
-- `services/api.ts`: 인증된 `expo/fetch` 요청과 15초 제한. `types.ts`는 응답 형식입니다.
-- `services/storage.ts`: 이어하기 ID만 저장합니다.
-- `locale/ko.ts`: 클라이언트 문구. `design/tokens.js`: 색상·간격·글꼴·너비.
+- `screens/Start.tsx`: 이야기 고르기, 원고가 허용하면 방식(+2와 0)과 특성 2개 고르기.
+- `screens/Play.tsx`: 장애물·태그, 서술, 그리고 아래 칸 하나(추천 버튼과 입력창, 위험 확인 카드, 되묻기, 성장 선택, 결말 중 하나).
+- `components/game/`: 장소·위험 머리글, 진행도 칸, 서술 스트림, 확인 카드, 당신(시트)과 기록 대화상자.
+- `components/ui/Reader.tsx`: 실제 글자 높이를 측정해 본문을 페이지로 나눕니다. 서술 뒤에 이번 턴에 바뀐 것을 붙여 보여 줍니다.
+- `logic/useGame.ts`: 시작·복원·행동·서술 스트림·실패 복구. 서버 응답만 게임 상태로 채택합니다.
+- `services/api.ts`: 인증된 `expo/fetch` 요청(15초 제한)과 NDJSON 서술 스트림. `types.ts`는 응답 형식입니다.
+- `services/storage.ts`: 이어하기 ID(`trpg.game_id`)만 저장합니다.
+- `locale/ko.ts`: 클라이언트 문구. 이야기 문구는 모두 서버 응답에서 옵니다.
 
-페이지 넘김은 화면 상태만 바꿉니다. 실제 행동을 확정할 때만 서버로 요청합니다. 화면 높이는 모바일 주소창과 가상 키보드의 가시 영역을 따릅니다. 본문 측정에는 웹 DOM을 사용하며 네이티브 앱은 현재 검증 대상이 아닙니다.
+행동이 저장되면 화면이 먼저 바뀌고, 그 턴의 서술을 스트림으로 받습니다. 서술이 끝나거나 실패할 때까지 다음 행동은 잠깁니다. 검사에 실패한 서술은 지워지고 다시 쓰입니다. 서술이 실패하면 상태는 이미 저장되어 있으므로 다시 쓰기만 요청합니다.
 
-응답이 끊기면 다른 선택을 잠그고 동일 명령으로 재시도합니다. 409·422 응답 후에는 저장된 장면을 다시 불러옵니다. 서버 저장에 성공한 턴은 브라우저 저장소 오류가 나도 화면에 유지합니다.
+응답이 끊기면 다른 행동을 잠그고 같은 명령(같은 `request_id`)으로 재시도합니다. 409·422 응답 후에는 저장된 장면을 다시 불러옵니다.
 
 ## 명령
 
 `client/`에서 실행합니다.
 
-```powershell
+```bash
 npm run dev:public       # 웹+API+공용 HTTPS 주소, LTE 접속
 npm run dev              # 웹+API, 같은 네트워크의 휴대폰 접속
-npm run web              # 로컬 API로 접속, localhost:8081
+npm run web              # 로컬 API로 접속, localhost:8090
 npm run web -- --clear   # 디자인·Metro 설정 변경 후 캐시 초기화
 npm run build:web        # 로컬 API를 사용하는 웹 빌드 → dist/
 npm test -- --runInBand

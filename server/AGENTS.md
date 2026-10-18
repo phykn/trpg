@@ -1,27 +1,28 @@
 # Server Agent Guide
 
-Read [README.md](README.md) for the request flow, API and configuration. Run Python from the root `.venv`; do not create `server/.venv`.
+Read [README.md](README.md) for the turn flow, routes and configuration. Run Python from the root `.venv`; do not create `server/.venv`.
 
 ## Responsibilities
 
-- `run_api.py`: construction and local/configured startup.
-- `src/api.py`: HTTP boundary; `src/service.py`: serialized commands.
-- `src/game/`: data models and pure game rules; no network or file I/O.
-- `src/game/choices.py`: read-only choices, conditions and roll previews shared by the engine and view.
-- `src/game/engine.py`: copy and resolve a turn, including costs, effects, combat and world progression.
-- `src/game/graph/`: graph data, queries, changes and invariants.
-- `src/store.py`: atomic snapshot persistence.
-- `src/view.py`: public response; `src/content.py`: authored-content validation.
-- `src/locale/ko.py`: common player text; scenario JSON: story text.
-
-Read relationships through graph query helpers. Node properties contain attributes, not a second relation store. Apply graph changes through `GraphChange`; never use a client response as authoritative state. `scripts/check_relational_ssot.sh` guards this boundary.
+- `run_api.py`: app construction, `--local` defaults, story loading and validation at startup.
+- `src/api.py`: HTTP boundary; `src/service.py`: locks, revisions, receipts, the order of a turn.
+- `src/content/`: story schema, loading, validation and the `validate` CLI. Only `load.py` reads files.
+- `src/world/`: graph, edge queries and saved state models. Edge traversal stays in `graph.py` and `query.py`.
+- `src/rules/`: pure rules. Every state change goes through an op in `rules/dsl.py` and emits a `Change`.
+- `src/scene/`: what the player knows (`build`), its text for models (`render`), and the client view (`view`).
+- `src/interpret.py` and `src/narrate.py`: the only model callers besides service startup; `src/models/`: Kev and Qwen clients.
+- `src/locale/ko.py`: engine-owned Korean. Story text lives only in `scenarios/`.
 
 ## Behavior contracts
 
-Keep the original state unchanged when a choice fails. Check conditions and calculate roll thresholds before deducting costs. Preserve deterministic saved random state, content/schema versions, per-game locks and command receipts. A response is successful only after its entire turn is saved. The file store supports one server process.
-
-Keep secret graph knowledge and random state out of `GameView`. Preserve the `body / agility / mind / presence` stat keys. Korean uses `당신`, polite `합니다체`, and `기술`.
+- The engine knows no story. No story id, name or sentence appears in `src/`; `tests/test_boundaries.py` enforces it.
+- Both models are required. Do not add a mode that runs without them or replaces narration with authored text.
+- Models never create places, people, items or knowledge. Kev only picks from closed options; rules decide every outcome.
+- `resolve` works on a copy and leaves the original state unchanged on any error. Dice come from `(seed, turn, step)`.
+- A turn is saved before its response; narration is generated afterwards, checked by Kev, and cached in the same save.
+- Qwen runs non-thinking only. Keep `enable_thinking: false` on every request.
+- Korean uses `당신`, polite `합니다체`, and `기술`. Comments and validation errors stay English.
 
 ## Checks
 
-From the root, run the applicable file under `server/tests/` before the full suite. Rules/content: `test_game.py`; API/save/retry: `test_api.py`; graph: `tests/graph/`; startup/env: `test_env.py`. Run the scenario validator for content changes and Ruff for server changes. Root [AGENTS.md](../AGENTS.md) lists exact commands.
+From the root: `.venv/bin/python -m pytest -q`, `.venv/bin/ruff check server/`, `bash server/scripts/check_relational_ssot.sh`. Validate any story you touch with `python -m src.content validate`. Real-model behavior needs the scripts in `server/scripts/`; record runs under `qa_test/agency/<run>/` and cite turn numbers.

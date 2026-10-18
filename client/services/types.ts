@@ -1,53 +1,66 @@
-export type NamedText = { id: string; name: string; text: string };
+export type Named = { id: string; name: string; text: string };
+export type Button = { id: string; label: string; enabled: boolean };
+export type Meter = { id: string; name: string; value: number; boxes: number; fits: string[] };
+export type Chip = { id: string; name: string; kind: 'edge' | 'snag'; target: string };
+export type Card = { id: string; steps: string[]; odds: [number, number, number]; costs: string[] };
 
-export type GameCatalog = {
+export type StoryCard = {
+  id: string;
   title: string;
   synopsis: string;
-  roles: NamedText[];
-};
-
-export type GameAction = {
-  id: string;
-  target: string;
-  label: string;
-  description: string;
-  cost: string;
-  enabled: boolean;
-  blocked: string;
-  confirm: boolean;
-  group: 'story' | 'move' | 'combat' | 'item' | 'growth';
+  creation: { choose: boolean; approaches: { id: string; name: string }[]; traits: Named[] };
 };
 
 export type GameView = {
   game_id: string;
   revision: number;
+  turn: number;
   title: string;
-  player_name: string;
-  role: string;
-  hp: number;
-  max_hp: number;
-  mp: number;
-  max_mp: number;
-  gold: number;
-  scene: NamedText;
-  characters: NamedText[];
-  objective: string;
-  clock: string;
-  remaining: number;
-  alert: string;
-  actions: GameAction[];
-  knowledge: NamedText[];
-  inventory: NamedText[];
-  skills: NamedText[];
-  journal: { turn: number; kind: 'story' | 'action' | 'roll' | 'world'; text: string }[];
-  combat: {
-    opponent: string;
-    player_hearts: number;
-    enemy_hearts: number;
-    understanding: number;
-    round: number;
-  } | null;
-  ending: (NamedText & { epilogue: string[] }) | null;
+  chapter: string;
+  intro: string;
+  place: Named;
+  senses: string[];
+  exits: Button[];
+  people: { id: string; name: string; role: string; mood: string }[];
+  obstacles: Meter[];
+  danger: Meter;
+  tags: Chip[];
+  player: {
+    approaches: Meter[];
+    traits: Named[];
+    wounds: number;
+    gold: number;
+    items: Named[];
+    knowledge: Named[];
+    skills: Named[];
+  };
+  quests: Named[];
+  buttons: Button[];
+  journal: { n: number; input: string; lines: string[]; narration: string | null }[];
+  pending: { kind: 'confirm' | 'growth'; card: Card | null; options: Button[] } | null;
+  ending: Named | null;
+  narrated: boolean;
 };
 
-export type GameCommand = { option_id: string; revision: number; request_id: string };
+export type ActResult = {
+  kind: 'turn' | 'confirm' | 'clarify' | 'rejected' | 'cancelled';
+  view: GameView;
+  turn: number | null;
+  options: Button[];
+  reason: string;
+};
+
+export type Command =
+  | { text: string }
+  | { action_id: string }
+  | { confirm: string; accept: boolean };
+
+export type Envelope = Command & { revision: number; request_id: string };
+
+export type NarrationEvent =
+  | { type: 'delta'; text: string }
+  | { type: 'reset' }
+  | { type: 'done'; text: string; tags: Record<string, string> }
+  | { type: 'error'; retry: boolean };
+
+export type Creation = { approaches: Record<string, number>; traits: string[] };

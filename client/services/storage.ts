@@ -1,4 +1,4 @@
-const KEY = 'trpg.adventure_game_id';
+const KEY = 'trpg.game_id';
 
 export function loadGameId(): string | null {
   try {

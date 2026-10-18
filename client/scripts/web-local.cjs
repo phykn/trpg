@@ -4,7 +4,7 @@ const build = process.argv.includes('--export');
 const extraArgs = process.argv.slice(2).filter((arg) => arg !== '--export');
 const hasHostOption = extraArgs.some((arg) => ['--offline', '--host', '--localhost', '--lan', '--tunnel'].includes(arg) || arg.startsWith('--host='));
 const hostArgs = hasHostOption ? [] : ['--host', 'localhost'];
-const command = build ? ['export', '--platform', 'web'] : ['start', '--web', '--port', '8081', ...hostArgs];
+const command = build ? ['export', '--platform', 'web'] : ['start', '--web', '--port', '8090', ...hostArgs];
 const child = spawn(process.execPath, [require.resolve('expo/bin/cli'), ...command, ...extraArgs], {
   stdio: 'inherit',
   env: {

@@ -8,7 +8,7 @@ Read [README.md](README.md) for the screen/state flow and commands. Stack: Expo 
 - `screens/`: screen composition.
 - `components/game/`: game visuals; `components/ui/`: reusable controls.
 - `logic/useGame.ts`: server state, command lifecycle and recovery.
-- `services/api.ts`: the only `expo/fetch` import and HTTP boundary.
+- `services/api.ts`: the only `expo/fetch` import and HTTP boundary, including the NDJSON narration stream.
 - `services/storage.ts`: browser save pointer; `services/types.ts`: public wire types.
 - `locale/ko.ts`: client-owned Korean; `design/tokens.js` and `.d.ts`: shared design tokens.
 
@@ -18,7 +18,7 @@ Use direct imports and keep the normal play path visible. Do not add forwarding 
 
 Use NativeWind classes and shared tokens for color, spacing and typography. Keep the mobile frame at viewport height with no scrolling or scene illustrations; desktop uses the same narrow frame. Use Reader and PagedList for long content, and show full action details before committing. Reading, paging and opening notes must never send a game command. Add required spacing tokens before using new width utilities. Clear Metro with `npm run web -- --clear` after token, Tailwind, Babel or Metro changes.
 
-Only `trpg.adventure_game_id` is stored in the browser. A missing response freezes further choices until the identical command is retried or a fresh server snapshot is accepted. Do not clear the saved pointer on a failed restore. Keep immediate request guards as well as rendered disabled states.
+Only `trpg.game_id` is stored in the browser. A missing response freezes further commands until the identical command is retried or a fresh server snapshot is accepted. Commands stay locked while a narration streams. Do not clear the saved pointer on a failed restore. Keep immediate request guards as well as rendered disabled states.
 
 ## Verify
 

@@ -29,9 +29,8 @@ agency/
 docs/
 release/
 scenarios/*
+!scenarios/_template/
 !scenarios/harbor/
-scenarios/harbor/*
-!scenarios/harbor/adventure.json
 tools/
 notebooks/
 .notebooks/

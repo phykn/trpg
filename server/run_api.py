@@ -1,82 +1,96 @@
-"""Create the API and run the local development server."""
+"""Create the API and run the server. Both models must answer before it starts."""
 
 import argparse
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.api import router
-from src.content import load_story
-from src.env import load_server_env
+from src.config import Settings, load_server_env, settings
+from src.content.load import Loaded, load_story, story_folders
+from src.content.validate import validate
+from src.models.kev import KevClient
+from src.models.qwen import QwenClient
 from src.service import GameService
 from src.store import SaveStore
 
 SERVER_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SERVER_DIR.parent
 
 
-def build_app(
-    *,
-    save_dir: Path,
-    basic_auth_user: str,
-    basic_auth_pass: str,
-    cors_origins: list[str],
-) -> FastAPI:
-    story = load_story(REPO_ROOT / "scenarios/harbor/adventure.json")
-    app = FastAPI(title="Harbor Adventure API", version="1.0.0")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "Accept"],
-    )
+def load_stories(root: Path) -> dict[str, Loaded]:
+    stories, problems = {}, []
+    for folder in story_folders(root):
+        loaded = load_story(folder)
+        problems += [f"{folder.name}: {e}" for e in validate(loaded.story)]
+        if loaded.story.id in stories:
+            problems.append(f"{folder.name}: duplicate story id {loaded.story.id}")
+        stories[loaded.story.id] = loaded
+    if problems:
+        raise SystemExit("invalid stories:\n" + "\n".join(problems))
+    return stories
+
+
+def build_app(*, service: GameService, basic_auth_user: str, basic_auth_pass: str,
+              cors_origins: list[str], check_models: bool = True) -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        if check_models:
+            await service.check_models()
+        yield
+
+    app = FastAPI(title="TRPG engine", version="1.0.0", lifespan=lifespan)
+    app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_methods=["GET", "POST", "OPTIONS"],
+                       allow_headers=["Authorization", "Content-Type", "Accept"])
     app.state.basic_auth_user = basic_auth_user
     app.state.basic_auth_pass = basic_auth_pass
-    app.state.adventure = GameService(story, SaveStore(save_dir))
+    app.state.service = service
     app.include_router(router)
 
     @app.get("/health")
     async def health():
-        return {"status": "ok", "mode": "adventure", "content_version": story.version}
+        return {"ok": True, "mode": "engine"}
 
     return app
 
 
-def create_local_app() -> FastAPI:
-    return build_app(
-        save_dir=REPO_ROOT / "saves/adventure",
-        basic_auth_user="local",
-        basic_auth_pass="local",
-        cors_origins=["http://localhost:8081", "http://127.0.0.1:8081"],
+def local_settings() -> Settings:
+    """Loopback defaults for `--local`; only the model URLs may come from the process environment."""
+    return Settings(
+        host="127.0.0.1", port=8000, basic_auth_user="local", basic_auth_pass="local",
+        cors_origins=["http://localhost:8090", "http://127.0.0.1:8090"],
+        scenario_dir=SERVER_DIR.parent / "scenarios", save_dir=SERVER_DIR.parent / "saves" / "engine",
+        kev_base_url=os.environ.get("KEV_BASE_URL", "http://127.0.0.1:8081"), kev_min_confidence=0.5,
+        kev_target_mass=0.6, kev_api_key=os.environ.get("KEV_API_KEY", ""),
+        qwen_base_url=os.environ.get("QWEN_BASE_URL", "http://127.0.0.1:8082/v1"), qwen_model="auto",
+        qwen_sampling=None,
     )
 
 
-def create_app() -> FastAPI:
-    load_server_env(SERVER_DIR)
-    save_dir = Path(os.environ["ADVENTURE_SAVE_DIR"])
-    if not save_dir.is_absolute():
-        save_dir = (SERVER_DIR / save_dir).resolve()
-    return build_app(
-        save_dir=save_dir,
-        basic_auth_user=os.environ["BASIC_AUTH_USER"],
-        basic_auth_pass=os.environ["BASIC_AUTH_PASS"],
-        cors_origins=[
-            origin.strip()
-            for origin in os.environ["CORS_ORIGINS"].split(",")
-            if origin.strip()
-        ],
+def create_app(local: bool = False) -> tuple[FastAPI, str, int]:
+    if local:
+        cfg = local_settings()
+    else:
+        load_server_env(SERVER_DIR)
+        cfg = settings(SERVER_DIR)
+    service = GameService(
+        load_stories(cfg.scenario_dir),
+        SaveStore(cfg.save_dir),
+        KevClient(cfg.kev_base_url, min_confidence=cfg.kev_min_confidence, api_key=cfg.kev_api_key),
+        QwenClient(cfg.qwen_base_url, model=cfg.qwen_model, sampling=cfg.qwen_sampling),
+        mass_needed=cfg.kev_target_mass,
     )
+    app = build_app(service=service, basic_auth_user=cfg.basic_auth_user, basic_auth_pass=cfg.basic_auth_pass,
+                    cors_origins=cfg.cors_origins)
+    return app, cfg.host, cfg.port
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--local", action="store_true", help="Run on 127.0.0.1:8000")
-    args = parser.parse_args()
-    app = create_local_app() if args.local else create_app()
-    host = "127.0.0.1" if args.local else os.environ["HOST"]
-    port = 8000 if args.local else int(os.environ["PORT"])
+    parser.add_argument("--local", action="store_true", help="loopback defaults on 127.0.0.1:8000, no dotenv")
+    app, host, port = create_app(local=parser.parse_args().local)
     uvicorn.run(app, host=host, port=port)
 
 
