@@ -57,7 +57,7 @@ export function GameScreen() {
       </View>
       {dialog && view ? (
         <Dialog title={dialog === 'sheet' ? ko.sheet : ko.journal} onClose={() => setDialog(null)}>
-          {dialog === 'sheet' ? <Sheet view={view} /> : <Journal view={view} />}
+          {dialog === 'sheet' ? <Sheet view={view} onNew={() => { setDialog(null); game.openNew(); }} /> : <Journal view={view} />}
         </Dialog>
       ) : null}
     </View>

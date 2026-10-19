@@ -49,7 +49,9 @@ def expand(story: Story, state: GameState, step: Step) -> Step:
     if kind == "solve":
         oid, index = rest.rsplit(":", 1)
         sol = story.obstacles[oid].solutions[int(index)]
-        return ImproviseStep(target=oid, approach=sol.approach, risk=sol.risk)
+        # The item or clue a solution needs is what the player uses: +1 to the roll, as any use is.
+        needed = next((c.target for c in sol.requires if c.kind in ("carries", "knows")), None)
+        return ImproviseStep(target=oid, approach=sol.approach, risk=sol.risk, label=sol.label, uses=Uses(thing=needed))
     if kind == "use_tag":
         tag, oid = rest.split(":")
         return ImproviseStep(target=oid, approach=best_fit(story, state, oid), uses=Uses(tag=tag))
@@ -98,7 +100,10 @@ def run_action(story: Story, state: GameState, step: ActionStep, rng: Random) ->
         effects = action.hit
         if action.check is not None:
             approach = action.check.approach
-            result.roll = roll(rng, modifier(story, state, approach, None, Uses()))
+            uses = usable(story, state, None, step.uses)
+            result.roll = roll(rng, modifier(story, state, approach, None, uses))
+            if uses.trait:
+                state.player.trait_used.append(uses.trait)
             if result.roll.grade == "miss":
                 effects = action.miss
             pay(story, state, action.check.risk, result.roll.grade, None, rng, out)
@@ -115,6 +120,8 @@ def improvise_purpose(story: Story, step: ImproviseStep) -> str:
 
 
 def improvise_label(story: Story, step: ImproviseStep) -> str:
+    if step.label:
+        return ko.fill(ko.SOLVE_LABEL, label=step.label, approach=approach_label(story, step.approach))
     if step.target is None and not step.check:
         return ko.LABELS["flavor"]
     obstacle = step.target in story.obstacles

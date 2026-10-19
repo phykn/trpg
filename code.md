@@ -302,7 +302,7 @@ class GameState(Model):
 | id | 조건 |
 |---|---|
 | `move:<place>` | `connects`가 있고 `open` |
-| `inspect:<id>` | 지금 장소의 인물, 물건, 드러난 장애물 |
+| `inspect:<id>` | 지금 장소의 인물, 물건, 드러난 장애물. 지닌 물건은 아직 읽지 않은 `reveals`가 있을 때만(먼저 집어도 단서를 잃지 않게) |
 | `talk:<character>` | 지금 장소의 인물 |
 | `take:<item>` | 장소에 있고 지키는 장애물이 다 찼거나 없음 |
 | `give:<character>:<item>` | 지닌 물건 × 장소의 인물 |
@@ -443,7 +443,7 @@ def recommend(story, state) -> list[Button]:          # 최대 3개, 서로 다�
   - 위험, 플레이어 시트, 진행 중인 퀘스트, 동료
   - 아는 지식, 인물별 아직 공개되지 않은 화제 제목
 - Scene에 없는 것은 해석, 서술, 화면 어디에도 나가지 않습니다. 숨은 장애물, 인물이 숨기는 지식의 내용, 다른 장의 장소가 그 예입니다.
-- `render.kev_state(scene, text)`: Kev 상태 문장입니다. 라벨 붙은 짧은 줄로 쓰고 마지막 줄은 `플레이어 입력: …`입니다. 1,500토큰 이하입니다.
+- Kev의 상태 문장은 플레이어 문장 하나입니다. 장면은 선택지 설명으로만 전달합니다. 장면을 상태에 넣으면 항구 평가에서 첫 행동 정확도가 26/58에서 9/58로 떨어졌습니다.
 - `render.facts(scene, record)`: Qwen과 Kev 검사가 함께 쓰는 사실 목록입니다. 각 줄은 `- 장소: …`, `- 바뀜: 부두 경비 1→3/3`처럼 씁니다.
 - `view.game_view(story, state) -> GameView`: 클라이언트 응답입니다(8.2).
 
@@ -485,7 +485,6 @@ class QwenClient:
 ```
 KEV_BASE_URL=http://127.0.0.1:8081
 KEV_MIN_CONFIDENCE=0.5
-KEV_TARGET_MASS=0.6            # 되묻기 판단 (8.1)
 QWEN_BASE_URL=http://127.0.0.1:8082/v1
 QWEN_MODEL=auto
 SCENARIO_DIR=../scenarios
@@ -522,33 +521,49 @@ BASIC_AUTH_USER=… BASIC_AUTH_PASS=… CORS_ORIGINS=…
 | `talk.attitude` | choice | 태도 5개 |
 | `talk.claim` | noul | 자신의 신분·자격·경력을 주장하는가 |
 | `talk.touch` | choice | desire, fear, none |
-| `talk.contradicts` | choice | 상대가 아는 지식 + `none` |
+| `talk.lie.<지식>` | choice | 상대가 아는 지식마다 하나: `agree`, `deny`, `none`. 확신 있는 `deny`만 거짓입니다 |
 | `why_not` | choice | 그런 대상이 없음, 능력 밖, 세계의 규칙에 어긋남 |
 
 선택지 수가 1개인 질문은 보내지 않습니다. 대화 질문은 단계 중 처음 나오는 `talk:` 후보의 상대에 대해서만 만듭니다. 한 턴에 대화는 한 단계까지입니다.
 
-질문은 최대 35개입니다. 해석 단계(14절 2단계)의 첫 작업은 `scripts/bench_kev.py`로 10, 20, 35개 질문의 지연을 재는 것입니다. 35개가 1초를 넘으면 두 번에 나눕니다. 첫 호출에는 `s1~s3`, `s1.*`, `talk.*`를 넣고, 둘째 호출은 2·3단계가 즉흥 행동일 때만 `s2.*`, `s3.*`로 합니다. 어느 쪽이든 `interpret()`의 반환은 같습니다.
+해석은 Kev 호출을 많아야 두 번 합니다. Kev 4B는 질문 수가 늘면 지연이 크게 늘어서(감옥 장면 30개 4,972ms) 한 번에 다 묻지 않습니다.
+
+1. **단계 호출**: `s1`, `s2`, `s3` 세 질문(399ms). 목록에 있는 행동만이면 여기서 끝납니다.
+2. **세부 호출**: 고른 단계에 필요한 것만 묻습니다. 즉흥 행동이면 방식, 말이 되는가, 그리고 선택지가 있을 때만 대상·태그·물건·특성(4개 안팎, 226ms). 대화면 고른 상대의 화제·태도·주장·바람·모순 지식(5개, 294ms).
+
+목적, 사소한 행동 여부, 위험도, 거절 이유는 Kev가 믿을 만하게 답하지 못해 묻지 않고 규칙이 정합니다. 목적은 대상이 불리한 태그면 `clear`, 아니면 `overcome`입니다. 대상이 없으면 판정 없는 행동입니다. 위험도는 `normal`에서 시작해 `check.risk_of`가 어긋난 방식과 무리한 행동에 올립니다. 거절 이유는 "능력 밖" 하나입니다. 그래서 문장 입력으로는 유리한 태그를 만드는 `setup`을 고를 수 없고, 해법 버튼과 원고 효과로만 만듭니다.
 
 ### 8.2 조립과 되묻기
 
+Kev는 선택지가 많으면 맞는 답도 확률이 0.2~0.4에 머뭅니다. 그래서 절대 확신 대신 선택지끼리 비교합니다. 값은 `interpret.py` 상수이며 Kev 4B의 항구 평가 답을 저장해 두고 값을 바꿔 가며 정했습니다(되묻기 1.6배, 다음 단계 0.2, 거절 0.8).
+
 ```python
-async def interpret(kev, story, scene, cands, text) -> Interpretation:
-    answers = await kev.decide(render.kev_state(scene, text), questions(scene, cands))
-    s1 = answers["s1"]
-    if s1.answer == "none":                                  return Rejected(reason=ko.NOT_ACTION)
-    if s1.low_confidence:
-        verb, mass = top_verb(s1.probabilities)              # "move:a"+"move:b" 확률을 동사별로 합침
-        if mass >= KEV_TARGET_MASS and verb != "improvise":  return Clarify(options=top3(s1, verb))
-        s1 = improvise                                       # 행동이 애매하면 즉흥 행동으로
-    steps = [step_from(answers, i) for i in 1..3 if s{i} not in (none, low-confidence)]
-    if steps[0].plausibility == "impossible":                 return Rejected(reason=ko.WHY_NOT[answers["why_not"]])
+async def interpret(kev, story, state, text) -> Interpretation:
+    answers = await kev.decide(text, step_questions(cands))  # 상태는 문장 하나, 질문 3개
+    if same_verb(top1, top2) and p1 < 1.6 * p2:              return Clarify(top3 of that verb)
+    answers |= await kev.decide(text, detail_questions(chosen))   # 즉흥·대화 단계가 있을 때만
+    for i in 1..3:
+        if i > 1 and (s{i} in (none, s{i-1}) or p(s{i}) < 0.2): break   # Kev는 첫 행동을 되풀이하는 경향
+        improvise: plausible == impossible 이고 확신 ≥ 0.8이면 거절(1단계) 또는 중단
+                   대상: 장애물·불리한 태그가 하나면 규칙이 고름, 여럿이면 Kev(none 없음)
+                   목적·위험도·판정 여부는 규칙이 정함(위 8.1)
     return Steps(steps)
 ```
 
-- 2·3단계 답의 확신이 낮으면 그 단계부터 버립니다.
-- 세부 답(대상, 방식, 위험, 태도 등)은 닫힌 목록이라 확신과 상관없이 가장 높은 답을 씁니다. 질문을 보내지 않았으면 기본값입니다: 대상 `none`, 방식은 플레이어 최고 방식, 위험 `normal`.
+- 1단계 선택지에는 `none`이 없습니다. Kev가 맞는 후보가 없을 때 즉흥 행동 대신 `none`을 고르는 경향이 있어서입니다. 엉뚱한 입력은 판정 없는 즉흥 행동으로 흘러가 서술이 받습니다.
 - 대화 화제와 모순 지식은 고른 상대의 것일 때만 받습니다. 아니면 잡담, 모순 없음으로 바꿉니다.
 - 거절과 되묻기는 상태를 바꾸지 않고 턴도 쓰지 않습니다.
+
+**항구 평가 (58개)**
+
+| | 0.8B 처음 | 0.8B 고친 뒤 | 4B 한 번에 묻기 | 4B 두 번 나눠 묻기 | 4B 질문 줄임 |
+|---|---|---|---|---|---|
+| 정확도 | 10% | 53% | 53% | 55% | 57% |
+| 잘못 확정 | 29% | 47% | 47% | 43% | 41% |
+| 되묻기 | 5% | 0% | 0% | 2% | 2% |
+| 지연 p50 / p95 | 816 / 1,081ms | 849 / 1,202ms | 7,306 / 16,752ms | 719 / 1,013ms | 605 / 853ms |
+
+4B로 바꿔도 1단계 행동은 41개에서 43개로 조금만 늘었습니다. 남은 실패는 세부 답(방식, 여러 장애물 중 대상, 주장 여부), 엉뚱한 입력 3개, 연쇄의 첫 행동입니다. 잘못 확정이 5% 목표보다 훨씬 높으므로 다음 단계는 평가 세트의 기대값 검토입니다.
 
 ## 9. 서술 (`narrate.py`)
 
@@ -563,7 +578,7 @@ async def interpret(kev, story, scene, cands, text) -> Interpretation:
   {Change 줄들}
   [결과] 대가 있는 성공 / 효과 2
   [인물] 이름 · 말투 · 기억 3개
-  [직전 서술] {직전 턴 서술 300자}
+  [직전 장면의 끝] {직전 서술의 마지막 두 문장}  # 전문을 주면 Qwen이 통째로 베꼈습니다
   [플레이어 입력] {record.input}
   [힌트] {record.hint가 있으면: 장애물 이름과 어울리는 방식 하나를 동료나 장면이 짚게}
   [되돌아보기] {record.recap이면: notable 5개}
@@ -578,9 +593,11 @@ async def narrate(game, n) -> AsyncIterator[Event]:
     if record.narration: yield Done(record.narration, record.tag_names); return
     for attempt in range(3):                       # 첫 시도 + 다시 쓰기 2회
         text, names = "", {}
-        async for chunk in qwen.stream(messages):
-            visible, names = tag_filter.feed(chunk)   # 줄 첫 글자가 "@"면 그 줄은 화면에 내보내지 않음
+        async for chunk in qwen.stream(messages, seed=random()):   # 서버 기본 시드가 고정이라 다시 쓰기마다 새 시드
+            visible, names = tag_filter.feed(chunk)   # "@" 또는 따옴표+"@"로 시작하는 줄은 숨김, [고칠 점] 같은 프롬프트 머리줄이 나오면 그 뒤를 버림
             text += visible; yield Delta(visible)
+        form = form_feedback(text, previous, must)   # 규칙 검사: 한자, '-다'체, 9문장 초과, 직전 문장 2개 이상 복사, 얻고 잃은 물건 이름 누락
+        if form and attempt < last: yield Reset(); messages = with_feedback(messages, form); continue
         verdict = await kev.decide(check_state(facts, text), CHECK_QUESTIONS)   # contradicts, invents
         if verdict.ok:
             await service.save_narration(game, n, text, valid(names))           # 잠금 안에서, 그 턴만 고침
@@ -590,6 +607,8 @@ async def narrate(game, n) -> AsyncIterator[Event]:
 ```
 
 - 태그 이름은 1~12자, 한 줄이어야 합니다. 틀리면 버리고 locale 기본 이름을 씁니다.
+- 규칙 검사 문제는 지루함이지 틀림이 아니므로 마지막 시도에서는 실패시키지 않고(한자만 지움) Kev 검사로 넘깁니다.
+- 모델용 [바뀐 것]에는 뜻을 덧붙입니다: 장애물이 다 차면 "극복함", 얻음·알게 됨에는 "이제 당신이 지니고/압니다".
 - 같은 게임의 서술 생성은 게임별 잠금 하나로 줄 세웁니다. 뒤에 온 요청은 앞의 결과를 캐시에서 받습니다.
 - `Reset` 비율을 기록합니다. 서술 단계(14절 3단계) 끝에 5%를 넘으면 첫 문장을 검사한 뒤에 내보내는 방식을 검토합니다.
 - 턴 0(새 게임)도 같은 경로입니다. 입력은 원고의 `intro`이고 바뀐 것은 없습니다.
@@ -738,7 +757,7 @@ plan.md "순서"의 단계를 코드 작업으로 나눈 것입니다. 번호는
 |---|---|---|---|
 | 0 준비 | 완료 | 경계 테스트 | - |
 | 1 뼈대 | 완료 | 템플릿 버튼 두 경로와 위험 경로 테스트, 항구 버튼 두 경로를 규칙으로 끝까지(조용한 결말, 공개 결말), 412×915·320×568 화면 | 웹에서 사람이 항구를 끝까지 |
-| 2 해석 | 완료 | 가짜 Kev로 조립·되묻기·거절 테스트, 항구 평가 58개(창의·복합·엉뚱 45%) | 실제 Kev로 `bench_kev.py`, `eval_interpret.py` |
+| 2 해석 | 완료 | 가짜 Kev로 조립·되묻기·거절 테스트, 실제 Kev 4B로 항구 평가 58개 정확도 57%, 지연 p50 605ms | 잘못 확정 41%를 5%로 |
 | 3 서술 | 완료 | 가짜 Qwen으로 필터·검사·다시 쓰기·캐시 테스트, 화면 스트림 | 실제 Qwen으로 `play.py` 20턴 |
 | 4 대화 | 완료 | 무료 공개, 위협, 주장과 들통 테스트 | 실제 모델로 인물이 이전 턴을 되짚는 장면 |
 | 5 전투와 성장 | 완료 | 쓰러짐, 성장과 다음 장 테스트 | 전투 평가 항목, 성장 화면 실제 확인 |
@@ -757,7 +776,7 @@ plan.md "순서"의 단계를 코드 작업으로 나눈 것입니다. 번호는
    - 끝: `test_flows.py`, 항구 validate 통과, 웹에서 버튼만으로 항구 첫 장 두 경로
 2. **해석**
    - `models/kev.py`, `bench_kev.py`로 질문 나누기 결정, `interpret.py`
-   - `render.kev_state`, 시작 확인, 확인 카드와 되묻기 화면
+   - 문장만 보내는 Kev 질문, 시작 확인, 확인 카드와 되묻기 화면
    - 항구 평가 50개 이상(엉뚱하거나 복합적인 것 30% 이상)
    - 끝: `eval_interpret.py` 결과를 `qa_test/agency/<run>/`에 기록, 잘못 확정한 비율 5% 이하
 3. **서술**

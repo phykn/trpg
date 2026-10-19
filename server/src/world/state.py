@@ -63,6 +63,7 @@ class Uses(Model):
 class ActionStep(Model):
     kind: Literal["action"] = "action"
     action_id: str
+    uses: Uses = Field(default_factory=Uses)  # a trait the words call on helps an authored action's check
 
 
 class ImproviseStep(Model):
@@ -74,6 +75,7 @@ class ImproviseStep(Model):
     plausibility: Plausibility = "natural"
     check: bool = True
     uses: Uses = Field(default_factory=Uses)
+    label: str = ""  # an authored solution's own words, shown instead of the generic "approach vs obstacle"
 
 
 class TalkStep(Model):

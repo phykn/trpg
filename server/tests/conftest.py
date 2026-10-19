@@ -58,14 +58,22 @@ class FakeQwen:
         self.texts = list(texts or ["당신은 광장에 서 있습니다. 바람이 붑니다. 이제 무엇을 할지 정할 때입니다."])
         self.error = error
         self.calls: list[list[dict]] = []
+        self.seeds: list[int | None] = []
 
     async def resolve_model(self) -> str:
         if self.error is not None:
             raise self.error
         return "fake"
 
-    async def stream(self, messages, max_tokens: int = 500):
+    async def pick(self, messages, max_tokens: int = 6) -> str:
         self.calls.append(messages)
+        if self.error is not None:
+            raise self.error
+        return self.texts[0]
+
+    async def stream(self, messages, max_tokens: int = 500, seed: int | None = None):
+        self.calls.append(messages)
+        self.seeds.append(seed)
         if self.error is not None:
             raise self.error
         text = self.texts[min(len(self.calls) - 1, len(self.texts) - 1)]

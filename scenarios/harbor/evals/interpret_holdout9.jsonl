@@ -1,0 +1,25 @@
+{"state": "start", "text": "세관 감옥 쪽으로 걸어간다", "expect": [{"kind": "action", "id": "move:prison"}], "tags": ["plain"]}
+{"state": "start", "text": "여울에게 이 명단 누가 쓴 거냐고 묻는다", "expect": [{"kind": "talk", "character": "inspector"}], "tags": ["talk"]}
+{"state": "start", "text": "게시판의 압송 명단을 훑어본다", "expect": [{"kind": "action", "id": "inspect:notice"}], "tags": ["plain"]}
+{"state": "start", "text": "여울이 안 볼 때 명단을 몰래 떼어 낸다", "expect": [{"kind": "action", "id": "take:notice"}], "tags": ["creative"]}
+{"state": "start", "text": "여울에게 나루를 풀어 달라고 무릎 꿇고 빈다", "expect": [{"kind": "improvise", "target": "inspector_doubt", "approach": "charm"}], "tags": ["creative"]}
+{"state": "start", "text": "종소리에 귀를 기울인다", "expect": [{"kind": "improvise", "check": false}], "tags": ["plain"]}
+{"state": "tavern", "text": "모라에게 따뜻하게 인사를 건넨다", "expect": [{"kind": "talk", "character": "keeper"}], "tags": ["talk"]}
+{"state": "tavern", "text": "모라에게 도윤이 빚진 게 있냐고 넌지시 묻는다", "expect": [{"kind": "talk", "character": "keeper", "topic": "topic_debt"}], "tags": ["talk"]}
+{"state": "tavern", "text": "모라에게 내가 세관 사람이라고 속인다", "expect": [{"kind": "talk", "character": "keeper", "attitude": "deceive", "claim": true}], "tags": ["talk"]}
+{"state": "tavern", "text": "화물 창고로 간다", "expect": [{"kind": "action", "id": "move:warehouse"}], "tags": ["plain"]}
+{"state": "prison", "text": "도윤에게 고생이 많다고 다정하게 말을 건다", "expect": [{"kind": "talk", "character": "guard", "attitude": "empathy"}], "tags": ["talk"]}
+{"state": "prison", "text": "나루를 창살 너머로 바라본다", "expect": [{"kind": "action", "id": "inspect:sailor"}], "tags": ["plain"]}
+{"state": "prison", "text": "도윤의 열쇠 꾸러미를 몰래 빼 온다", "expect": [{"kind": "improvise", "target": "gate_guard", "approach": "finesse"}], "tags": ["creative"]}
+{"state": "prison", "text": "문을 힘으로 밀어젖힌다", "expect": [{"kind": "improvise", "approach": "force"}], "tags": ["plain"]}
+{"state": "prison", "text": "부두 광장으로 돌아간다", "expect": [{"kind": "action", "id": "move:square"}], "tags": ["plain"]}
+{"state": "warehouse", "text": "루에게 감옥으로 들어가는 샛길이 있냐고 묻는다", "expect": [{"kind": "talk", "character": "smuggler", "topic": "topic_shift"}], "tags": ["talk"]}
+{"state": "warehouse", "text": "루에게 금화를 내밀고 길을 알려 달라고 한다", "expect": [{"kind": "action", "id": "act:pay_smuggler"}], "tags": ["plain"]}
+{"state": "warehouse", "text": "이든 옆에서 장부 정리를 거든다", "expect": [{"kind": "improvise", "target": "clerk_watch", "approach": "charm"}], "tags": ["creative"]}
+{"state": "warehouse", "text": "화물문을 어깨로 세게 민다", "expect": [{"kind": "action", "id": "solve:cargo_door:2"}], "tags": ["plain"]}
+{"state": "warehouse", "text": "창고 안 공기를 깊이 들이마신다", "expect": [{"kind": "improvise", "check": false}], "tags": ["plain"]}
+{"state": "tower", "text": "신호등을 손으로 문질러 닦는다", "expect": [{"kind": "improvise", "target": "signal_lamp"}], "tags": ["creative"]}
+{"state": "tower", "text": "꺼진 신호등을 들여다본다", "expect": [{"kind": "action", "id": "inspect:signal_lamp"}], "tags": ["plain"]}
+{"state": "tower", "text": "화물 창고로 내려간다", "expect": [{"kind": "action", "id": "move:warehouse"}], "tags": ["plain"]}
+{"state": "tower", "text": "마법으로 배를 불러온다", "expect": [{"kind": "rejected"}], "tags": ["nonsense"]}
+{"state": "tower", "text": "다음 할 일 추천해줘", "expect": [{"kind": "rejected"}], "tags": ["nonsense"]}

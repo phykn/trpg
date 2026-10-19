@@ -73,7 +73,8 @@ def hint_target(story: Story, state: GameState) -> str | None:
 def growth_options(story: Story, state: GameState) -> dict[str, str]:
     labels = {**ko.APPROACHES, **story.labels.approaches}
     options = {
-        f"grow:approach:{a}": ko.fill(ko.LABELS["grow_approach"], name=labels[a])
+        f"grow:approach:{a}": ko.fill(ko.LABELS["grow_approach"], name=labels[a], before=state.player.approaches[a],
+                                      after=state.player.approaches[a] + 1)
         for a in APPROACHES
         if state.player.approaches[a] < APPROACH_CAP
     }

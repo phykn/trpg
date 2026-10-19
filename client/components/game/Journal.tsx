@@ -20,5 +20,5 @@ export function Journal({ view }: { view: GameView }) {
       </View>
     );
   }
-  return <PagedList entries={entries.map((e) => ({ id: String(e.n), label: e.input || ko.turn(e.n), meta: `${ko.turn(e.n)} · ${e.lines[0] ?? ''}` }))} onSelect={(id) => setOpen(Number(id))} />;
+  return <PagedList entries={entries.map((e) => ({ id: String(e.n), label: e.input || ko.turn(e.n), meta: [ko.turn(e.n), e.lines[0]].filter(Boolean).join(' · ') }))} onSelect={(id) => setOpen(Number(id))} />;
 }

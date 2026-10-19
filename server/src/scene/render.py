@@ -11,24 +11,6 @@ def _join(items, fmt=lambda x: x.name) -> str:
     return ", ".join(fmt(x) for x in items) or "-"
 
 
-def kev_state(scene: Scene, text: str, last: TurnRecord | None = None) -> str:
-    lines = [
-        f"장소: {scene.place.name}. {scene.place.text}",
-        f"출구: {_join([e for e in scene.exits if not e.text])}",
-        f"인물: {_join(scene.people, lambda p: f'{p.name}({p.role})')}",
-        f"보이는 물건: {_join(scene.items_here)}",
-        f"장애물: {_join(scene.obstacles, lambda o: f'{o.name} {o.value}/{o.boxes}')}",
-        f"장면 상황: {_join(scene.tags, lambda t: f'{t.name}({ko.TAG_DEFAULT[t.kind]})')}",
-        f"당신의 특성: {_join(scene.traits)}",
-        f"지닌 것: {_join(scene.carried)}",
-        f"아는 것: {_join(scene.knowledge)}",
-    ]
-    if last is not None and last.input:
-        lines.append(f"직전 행동: {last.input}")
-    lines.append(f"플레이어 입력: {text}")
-    return "\n".join(lines)
-
-
 def tag_label(kind: str, name, names: dict[str, str], tag_id: str) -> str:
     if names.get(tag_id):
         return names[tag_id]
@@ -82,6 +64,9 @@ def record_lines(story: Story, state: GameState, record: TurnRecord) -> list[str
                                    grade=ko.GRADES[r.grade])
         lines.append(step.label + roll)
         lines += [change_line(story, state, c, record.tag_names) for c in step.changes]
+        if step.kind == "talk" and not step.roll and not step.changes:
+            # Small talk changes nothing by design; say so, or the player cannot tell it from a lost turn.
+            lines.append(ko.IDLE_TALK)
     lines += [change_line(story, state, c, record.tag_names) for c in record.changes]
     return [line for line in lines if line]
 
@@ -95,11 +80,13 @@ def facts(story: Story, state: GameState, scene: Scene) -> list[str]:
     for p in scene.people:
         c = story.characters[p.id]
         memo = f" 기억: {' / '.join(p.memories[-3:])}" if p.memories else ""
-        out.append(f"인물: {p.name}({p.role}), 관계 {p.relation:+d}. 말투: {c.voice} 바람: {c.desire} "
+        mate = ", 당신과 동행 중이며 갇혀 있지 않음" if p.companion else ""
+        mate += f", 서술에서 '{c.pronoun}'(으)로 부름" if c.pronoun else ""
+        out.append(f"인물: {p.name}({p.role}{mate}), 관계 {p.relation:+d}. 말투: {c.voice} 바람: {c.desire} "
                    f"두려움: {c.fear} 지키는 선: {c.boundary}{memo}")
     out += [
         f"보이는 물건: {_join(scene.items_here)}",
-        f"장애물: {_join(scene.obstacles, lambda o: f'{o.name} {o.value}/{o.boxes}')}",
+        f"장애물(아직 앞을 막고 있음): {_join(scene.obstacles, lambda o: f'{o.name} {o.value}/{o.boxes}')}",
         f"장면 상황: {_join(scene.tags + scene.traces)}",
         f"위험: {scene.danger.name} {scene.danger_value}/{scene.danger_boxes}",
         f"당신이 지닌 것: {_join(scene.carried)}",

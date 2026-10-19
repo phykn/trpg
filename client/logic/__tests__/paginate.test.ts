@@ -37,3 +37,16 @@ test('empty text and a zero-capacity viewport still terminate', () => {
   expect(paginate('', () => true)).toEqual([{ start: 0, end: 0, text: '' }]);
   expect(paginate('abc', () => false).map((page) => page.text)).toEqual(['a', 'b', 'c']);
 });
+
+test('ends a page at a sentence rather than mid-sentence when one fits', () => {
+  const text = '여울이 고개를 끄덕입니다. 그의 눈빛이 조금씩 부드러워집니다. 의심은 남아 있습니다.';
+  const pages = paginate(text, (part) => Array.from(part).length <= 40);
+  expect(pages[0].text).toBe('여울이 고개를 끄덕입니다. 그의 눈빛이 조금씩 부드러워집니다.');
+  expect(pages.map((page) => page.text).join('')).toBe(text);
+});
+
+test('a line break also ends a page cleanly', () => {
+  const text = '· 결과 한 줄\n\n루는 장부 페이지를 넘기는 손을 멈추지 않습니다.';
+  const pages = paginate(text, (part) => Array.from(part).length <= 14);
+  expect(pages[0].text.trim()).toBe('· 결과 한 줄');
+});

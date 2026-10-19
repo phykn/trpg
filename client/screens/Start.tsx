@@ -51,6 +51,7 @@ export function Start({ catalog, busy, canResume, onStart, onResume }: {
         onDone={() => (story.creation.choose ? setStep('mode') : begin())} /> : null}
       {step === 'mode' ? (
         <View className="flex-1 min-h-0 justify-end gap-3">
+          <Text className="flex-1 font-sans text-body text-fg-muted">{ko.modeHelp}</Text>
           <Button label={ko.defaults} disabled={busy} onPress={() => begin()} />
           <Button label={ko.customize} primary disabled={busy} onPress={() => setStep('strong')} />
         </View>
@@ -58,13 +59,13 @@ export function Start({ catalog, busy, canResume, onStart, onResume }: {
       {step === 'strong' ? (
         <View className="flex-1 min-h-0 gap-3">
           <Text className="font-sans text-body text-gold-fg">{ko.strongest}</Text>
-          <PagedList entries={approaches.map((a) => ({ id: a.id, label: a.name }))} onSelect={(id) => { setStrong(id); setStep('weak'); }} />
+          <PagedList entries={approaches.map((a) => ({ id: a.id, label: a.name, meta: a.text }))} onSelect={(id) => { setStrong(id); setStep('weak'); }} />
         </View>
       ) : null}
       {step === 'weak' ? (
         <View className="flex-1 min-h-0 gap-3">
           <Text className="font-sans text-body text-gold-fg">{ko.weakest}</Text>
-          <PagedList entries={approaches.filter((a) => a.id !== strong).map((a) => ({ id: a.id, label: a.name }))} onSelect={(id) => { setWeak(id); setStep('traits'); }} />
+          <PagedList entries={approaches.filter((a) => a.id !== strong).map((a) => ({ id: a.id, label: a.name, meta: a.text }))} onSelect={(id) => { setWeak(id); setStep('traits'); }} />
         </View>
       ) : null}
       {step === 'traits' && story ? (

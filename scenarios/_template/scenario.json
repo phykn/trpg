@@ -166,6 +166,7 @@
       "hit": [{"kind": "give", "target": "spare_key"}]
     }
   ],
+  "impossible": ["하늘을 날", "마법"],
   "downed": [
     {"kind": "move", "target": "square"},
     {"kind": "danger", "value": 1}

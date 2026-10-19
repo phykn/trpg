@@ -8,7 +8,7 @@ export type StoryCard = {
   id: string;
   title: string;
   synopsis: string;
-  creation: { choose: boolean; approaches: { id: string; name: string }[]; traits: Named[] };
+  creation: { choose: boolean; approaches: { id: string; name: string; text?: string }[]; traits: Named[] };
 };
 
 export type GameView = {

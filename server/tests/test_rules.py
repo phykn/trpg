@@ -6,6 +6,7 @@ from src.rules.check import effect_size, modifier, odds, risk_of
 from src.rules.costs import pay
 from src.rules.recommend import recommend
 from src.rules.resolve import Impossible, resolve
+from src.world import query
 from src.world.state import ActionStep, ImproviseStep, TalkStep, Uses
 
 
@@ -214,3 +215,42 @@ def test_trait_counts_once_per_chapter(story, state):
     _, r2 = resolve(story, s, [step], "또 딴다") if s.obstacles["door"].value < 2 else (s, None)
     if r2 is not None:
         assert r2.steps[0].roll.modifier == 2
+
+
+def test_carried_item_can_still_be_read(story, state):
+    dsl.give(state, "logbook", [])
+    assert "inspect:logbook" in candidates(story, state), "taking an item first must not hide its clue"
+    dsl.give(state, "bread", [])
+    assert "inspect:bread" not in candidates(story, state), "a carried item with nothing to reveal adds no button"
+    new, _ = resolve(story, state, [ActionStep(action_id="inspect:logbook")], "일지를 읽는다")
+    assert query.knows(new.graph, "player", "kn_lamp_trick")
+    assert "inspect:logbook" not in candidates(story, new), "once read, it is just carried"
+
+
+def test_recommend_offers_a_freed_prize_first(story, state):
+    door = story.obstacles["door"]
+    story.obstacles["door"] = door.model_copy(update={"guards": ["bread"]})
+    assert "take:bread" not in [c.id for c in recommend(story, state)], "still guarded"
+    state.obstacles["door"].value = door.boxes
+    assert recommend(story, state)[0].id == "take:bread"
+
+
+def test_a_solution_keeps_its_own_words(story, state):
+    dsl.move(state, "player", "base", [])
+    _, record = resolve(story, state, [ActionStep(action_id="solve:door:2")], "자물쇠를 딴다")
+    assert record.steps[0].label.startswith(story.obstacles["door"].solutions[2].label)
+
+
+def test_a_solution_uses_what_it_needs(story, state):
+    from src.rules.resolve import expand
+    dsl.move(state, "player", "base", [])
+    dsl.give(state, "spare_key", [])
+    assert expand(story, state, ActionStep(action_id="solve:door:0")).uses.thing == "spare_key"
+
+
+def test_a_place_where_a_held_key_opens_a_way_calls_most(story, state):
+    from src.rules.recommend import _pull
+    move = candidates(story, state)["move:base"]
+    assert _pull(story, state, move) == 1
+    dsl.give(state, "spare_key", [])
+    assert _pull(story, state, move) == 2

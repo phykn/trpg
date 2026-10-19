@@ -1,0 +1,20 @@
+{"state": "start", "text": "신호탑 쪽으로 천천히 걸어간다", "expect": [{"kind": "action", "id": "move:tower"}], "tags": ["plain"]}
+{"state": "start", "text": "여울에게 압송선이 언제 떠나는지 물어본다", "expect": [{"kind": "talk", "character": "inspector"}], "tags": ["talk"]}
+{"state": "start", "text": "게시판에 붙은 종이를 가까이 들여다본다", "expect": [{"kind": "action", "id": "inspect:notice"}], "tags": ["plain"]}
+{"state": "start", "text": "조사관의 표정을 슬쩍 훔쳐본다", "expect": [{"kind": "action", "id": "inspect:inspector"}], "tags": ["plain"]}
+{"state": "start", "text": "여울에게 나루는 죄가 없다고 간곡히 호소한다", "expect": [{"kind": "improvise", "target": "inspector_doubt", "approach": "charm"}], "tags": ["creative"]}
+{"state": "tavern", "text": "모라 곁 난롯가에 앉아 손을 녹인다", "expect": [{"kind": "improvise", "check": false}], "tags": ["plain"]}
+{"state": "tavern", "text": "주인장한테 도윤의 외상 이야기를 꺼낸다", "expect": [{"kind": "talk", "character": "keeper", "topic": "topic_debt"}], "tags": ["talk"]}
+{"state": "tavern", "text": "모라에게 나는 도윤의 오랜 친구라고 거짓말을 한다", "expect": [{"kind": "talk", "character": "keeper", "attitude": "deceive", "claim": true}], "tags": ["talk"]}
+{"state": "tavern", "text": "부두 광장으로 다시 나간다", "expect": [{"kind": "action", "id": "move:square"}], "tags": ["plain"]}
+{"state": "prison", "text": "경비 도윤의 얼굴을 유심히 살핀다", "expect": [{"kind": "action", "id": "inspect:guard"}], "tags": ["plain"]}
+{"state": "prison", "text": "도윤에게 문을 열지 않으면 가만두지 않겠다고 협박한다", "expect": [{"kind": "talk", "character": "guard", "attitude": "threaten"}], "tags": ["talk"]}
+{"state": "prison", "text": "경비가 하품하는 틈을 타 문 쪽으로 슬금슬금 다가간다", "expect": [{"kind": "improvise", "target": "gate_guard", "approach": "finesse"}], "tags": ["creative"]}
+{"state": "prison", "text": "나루에게 조금만 버티라고 말한다", "expect": [{"kind": "talk", "character": "sailor"}], "tags": ["talk"]}
+{"state": "warehouse", "text": "루에게 여기서 몰래 빠져나갈 길을 묻는다", "expect": [{"kind": "talk", "character": "smuggler", "topic": "topic_shift"}], "tags": ["talk"]}
+{"state": "warehouse", "text": "서기가 정신없는 틈에 장부를 소매에 감춘다", "expect": [{"kind": "improvise", "target": "clerk_watch", "approach": "finesse"}], "tags": ["creative"]}
+{"state": "warehouse", "text": "화물문을 온몸으로 밀어붙인다", "expect": [{"kind": "improvise", "target": "cargo_door", "approach": "force"}], "tags": ["plain"]}
+{"state": "warehouse", "text": "밀수상 루를 찬찬히 뜯어본다", "expect": [{"kind": "action", "id": "inspect:smuggler"}], "tags": ["plain"]}
+{"state": "tower", "text": "그을린 등불 유리를 소매로 문질러 닦는다", "expect": [{"kind": "improvise", "target": "signal_lamp"}], "tags": ["creative"]}
+{"state": "tower", "text": "난간에 기대어 바닷바람을 맞는다", "expect": [{"kind": "improvise", "check": false}], "tags": ["plain"]}
+{"state": "tower", "text": "하늘을 나는 배를 타고 떠난다", "expect": [{"kind": "rejected"}], "tags": ["nonsense"]}

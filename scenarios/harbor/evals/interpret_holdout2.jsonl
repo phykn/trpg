@@ -1,0 +1,15 @@
+{"state": "start", "text": "창고 쪽으로 서둘러 뛰어간다", "expect": [{"kind": "action", "id": "move:warehouse"}], "tags": ["plain"]}
+{"state": "start", "text": "조사관에게 나루가 어디로 끌려가는지 묻는다", "expect": [{"kind": "talk", "character": "inspector"}], "tags": ["talk"]}
+{"state": "start", "text": "여울의 얼굴을 찬찬히 살핀다", "expect": [{"kind": "action", "id": "inspect:inspector"}], "tags": ["plain"]}
+{"state": "start", "text": "명단을 확 잡아채서 품에 넣는다", "expect": [{"kind": "action", "id": "take:notice"}], "tags": ["plain"]}
+{"state": "start", "text": "마법 주문으로 여울을 잠재운다", "expect": [{"kind": "rejected"}], "tags": ["nonsense"]}
+{"state": "tavern", "text": "모라에게 도윤의 외상이 얼마나 되는지 넌지시 물어본다", "expect": [{"kind": "talk", "character": "keeper", "topic": "topic_debt"}], "tags": ["talk"]}
+{"state": "tavern", "text": "세관 감옥으로 곧장 간다", "expect": [{"kind": "action", "id": "move:prison"}], "tags": ["plain"]}
+{"state": "prison", "text": "도윤에게 나는 세관장의 심부름꾼이라고 둘러댄다", "expect": [{"kind": "talk", "character": "guard", "attitude": "deceive", "claim": true}], "tags": ["talk", "creative"]}
+{"state": "prison", "text": "쇠창살 너머 나루의 상태를 살펴본다", "expect": [{"kind": "action", "id": "inspect:sailor"}], "tags": ["plain"]}
+{"state": "prison", "text": "경비의 어깨를 밀치고 감옥 문으로 달려든다", "expect": [{"kind": "improvise", "target": "gate_guard", "approach": "force"}], "tags": ["creative"]}
+{"state": "warehouse", "text": "밀수상 루에게 조용히 들어갈 방법이 있는지 묻는다", "expect": [{"kind": "talk", "character": "smuggler", "topic": "topic_shift"}], "tags": ["talk"]}
+{"state": "warehouse", "text": "서기가 등을 돌린 틈에 장부를 슬그머니 빼낸다", "expect": [{"kind": "improvise", "target": "clerk_watch", "approach": "finesse"}], "tags": ["creative"]}
+{"state": "warehouse", "text": "신호탑으로 올라간다", "expect": [{"kind": "action", "id": "move:tower"}], "tags": ["plain"]}
+{"state": "tower", "text": "등불 심지를 손봐서 불을 되살린다", "expect": [{"kind": "improvise", "target": "signal_lamp"}], "tags": ["creative"]}
+{"state": "tower", "text": "탑 위에서 항구 전체를 내려다본다", "expect": [{"kind": "improvise", "check": false}], "tags": ["plain"]}

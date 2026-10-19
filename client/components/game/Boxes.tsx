@@ -6,6 +6,7 @@ export function Boxes({ value, boxes, tone = 'gold' }: { value: number; boxes: n
   return (
     <Text accessibilityLabel={`${value}/${boxes}`} className={`font-mono text-caption ${TONES[tone]}`}>
       {'■'.repeat(Math.min(value, boxes))}{'□'.repeat(Math.max(0, boxes - value))}
+      <Text className="text-fg-subtle"> {value}/{boxes}</Text>
     </Text>
   );
 }

@@ -5,16 +5,17 @@ Story-agnostic engine for a Korean TRPG: FastAPI + Pydantic v2, two required loc
 ## Turn flow
 
 ```
-text ─► interpret (one Kev call) ─► confirm card if high risk ─► resolve (pure rules) ─► save ─► respond
+text ─► interpret (Kev: steps, then details if needed) ─► confirm card if high risk ─► resolve (pure rules) ─► save ─► respond
 button ───────────────────────────┘
                                    narration stream (Qwen) ─► Kev check ─► rewrite ≤2 ─► cache in save
 ```
 
 - `scene.build` extracts only what the player knows; interpretation, narration and the view all read it.
 - `rules.candidates` lists legal actions (`move:`, `inspect:`, `talk:`, `take:`, `give:`, `act:`; button-only `solve:`, `use_tag:`, `topic:`; and `improvise`).
-- `interpret` asks Kev closed questions (steps 1–3, improvise details, talk details) and assembles steps. Unsure targets come back as a clarify list; unsure actions become improvisation; impossible ones are rejected without using a turn.
+- `interpret` first turns back, without a turn, sentences with the story's `impossible` phrases and requests to the game that name nothing in the scene. It sends Kev only the player's sentence; when Kev's best first step is below 0.5, Qwen picks from the same closed options (a Qwen failure keeps Kev's answer). The first call asks which actions it holds (steps 1–3); a second call asks details only for improvise or talk steps, because Kev's latency grows with the question count. Two close options of the same kind come back as a clarify list; Kev's best guess is otherwise taken; only a confident "impossible" is rejected, without using a turn.
+  Rules then correct Kev where the words are plain (`interpret.assemble`): a sentence that names an open solution's required item or clue, or nearly repeats a solution or authored action label, uses it; words to a named person (`…에게` plus a speech verb) are talk to that person, gift nothing to anyone else and walk nowhere; small talk aimed at an obstacle becomes an attempt on it; a named topic is that topic; a known place with a movement verb walks the open route (up to three moves); a gift needs a giving verb; a single approach verb (`APPROACH_CUES`) sets the approach and attitude verbs and first-person claims set the talk; a trait named by a word is used; taking what an obstacle guards attempts that obstacle; a bare look is a moment without a roll. When Kev's two best concrete readings are nearly tied and no rule settled it, the player is asked back. Only a confident "stretch" raises risk.
 - `rules.resolve` runs up to three steps on a copy of the state, stops on a miss, settles full obstacles, danger, wounds, quests, chapter goals and endings, and never mutates the input.
-- `narrate` streams Qwen text, hides `@<tag> name` lines, and asks Kev whether the text contradicts the facts or invents new things. A failed check emits `reset` and rewrites.
+- `narrate` streams Qwen text, hides `@<tag> name` lines, and asks Kev whether the text contradicts the facts or invents new things. A failed check emits `reset` and rewrites. Before the check, rules turn sentence-final plain verbs into 합니다체 (`ko.polite`) and ask for a rewrite on broken letters, the player called `너`, a sentence written twice, a held item handed over, or a reward named before its obstacle is overcome; out of attempts, the draft with the fewest such problems is kept. After a move the previous scene's last lines are not passed on; after a growth pick the new chapter opens with no player action. Lines starting with `- ` (an echoed change list) are dropped, and the scene is rewritten if `당신` handles a story item the turn never mentions or a companion appears when there is none.
 
 ## Run
 
@@ -36,7 +37,6 @@ SCENARIO_DIR=../scenarios
 SAVE_DIR=../saves/engine
 KEV_BASE_URL=http://127.0.0.1:8081
 KEV_MIN_CONFIDENCE=0.5         # optional; answers below are "unsure"
-KEV_TARGET_MASS=0.6            # optional; verb probability needed to ask back instead of improvising
 KEV_API_KEY=                   # optional
 QWEN_BASE_URL=http://127.0.0.1:8082/v1
 QWEN_MODEL=auto                # optional; auto picks the model /v1/models marks loaded
@@ -75,7 +75,7 @@ The validator checks ids, references, 3–5 senses per place, two or more soluti
 From `server/`, with both models running:
 
 - `scripts/bench_kev.py --story harbor --state prison`: Kev latency at 10, 20 and all questions.
-- `scripts/eval_interpret.py --story harbor`: accuracy, clarify, wrong-commit and improvise rates over `scenarios/<story>/evals/interpret.jsonl`; writes `qa_test/agency/<run>/interpret.json`.
+- `scripts/eval_interpret.py --story harbor [--file interpret_holdout.jsonl]`: accuracy, clarify, wrong-commit and improvise rates over `scenarios/<story>/evals/interpret.jsonl`; writes `qa_test/agency/<run>/interpret.json`.
 - `scripts/play.py --story harbor`: terminal play with timings in `qa_test/agency/<run>/transcript.jsonl`.
 
 ## Tests

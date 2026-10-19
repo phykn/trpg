@@ -1,0 +1,20 @@
+{"state": "start", "text": "술집 쪽으로 걸음을 옮긴다", "expect": [{"kind": "action", "id": "move:tavern"}], "tags": ["plain"]}
+{"state": "start", "text": "게시판 앞에서 명단을 하나하나 읽어 내려간다", "expect": [{"kind": "action", "id": "inspect:notice"}], "tags": ["plain"]}
+{"state": "start", "text": "여울한테 안녕하시냐고 인사를 건넨다", "expect": [{"kind": "talk", "character": "inspector"}], "tags": ["talk"]}
+{"state": "start", "text": "여울에게 이 명단은 누가 고친 거라고 따진다", "expect": [{"kind": "improvise", "target": "inspector_doubt"}], "tags": ["creative"]}
+{"state": "start", "text": "주머니의 붕대를 여울에게 건넨다", "expect": [{"kind": "action", "id": "give:inspector:bandage"}], "tags": ["plain"]}
+{"state": "start", "text": "하늘로 솟아올라 배를 찾아본다", "expect": [{"kind": "rejected"}], "tags": ["nonsense"]}
+{"state": "tavern", "text": "모라에게 따뜻한 차를 한 잔 부탁한다", "expect": [{"kind": "talk", "character": "keeper"}], "tags": ["talk"]}
+{"state": "tavern", "text": "주인에게 감옥 경비가 어떤 사람인지 넌지시 묻는다", "expect": [{"kind": "talk", "character": "keeper", "topic": "topic_debt"}], "tags": ["talk"]}
+{"state": "tavern", "text": "선술집을 나와 부두 광장으로 돌아간다", "expect": [{"kind": "action", "id": "move:square"}], "tags": ["plain"]}
+{"state": "prison", "text": "나루를 향해 휘파람을 불어 내가 왔다고 알린다", "expect": [{"kind": "talk", "character": "sailor"}], "tags": ["talk", "creative"]}
+{"state": "prison", "text": "도윤의 허리춤에서 열쇠를 몰래 빼낸다", "expect": [{"kind": "improvise", "target": "gate_guard", "approach": "finesse"}], "tags": ["creative"]}
+{"state": "prison", "text": "도윤에게 명령을 어기면 벌을 받는 게 두렵냐고 조용히 묻는다", "expect": [{"kind": "talk", "character": "guard", "topic": "topic_fear"}], "tags": ["talk"]}
+{"state": "prison", "text": "철창을 발로 힘껏 걷어찬다", "expect": [{"kind": "improvise", "approach": "force"}], "tags": ["plain"]}
+{"state": "warehouse", "text": "루에게 금화를 건네며 몰래 들어가는 길을 묻는다", "expect": [{"kind": "action", "id": "act:pay_smuggler"}], "tags": ["plain"]}
+{"state": "warehouse", "text": "이든에게 명단 숫자가 왜 틀렸는지 물어본다", "expect": [{"kind": "talk", "character": "clerk", "topic": "topic_forgery"}], "tags": ["talk"]}
+{"state": "warehouse", "text": "화물문 걸쇠를 꼼꼼히 들여다본다", "expect": [{"kind": "action", "id": "inspect:cargo_door"}], "tags": ["plain"]}
+{"state": "warehouse", "text": "상자 더미 뒤에 숨어 서기가 한눈팔기를 기다린다", "expect": [{"kind": "improvise", "target": "clerk_watch", "approach": "finesse"}], "tags": ["creative"]}
+{"state": "tower", "text": "꺼진 신호등의 그을음을 천으로 닦아 낸다", "expect": [{"kind": "improvise", "target": "signal_lamp"}], "tags": ["creative"]}
+{"state": "tower", "text": "부두 광장으로 다시 내려간다", "expect": [{"kind": "action", "id": "move:square"}], "tags": ["plain"]}
+{"state": "tower", "text": "등불의 힘으로 순간이동을 한다", "expect": [{"kind": "rejected"}], "tags": ["nonsense"]}

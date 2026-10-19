@@ -17,9 +17,13 @@ export function paginate(text: string, fits: (part: string) => boolean): TextPag
       } else high = mid - 1;
     }
     if (end < chars.length) {
-      const earliest = start + Math.floor((end - start) * 0.6);
-      for (let i = end; i > earliest; i--) {
-        if (/\s|[.!?。！？]/u.test(chars[i - 1])) { end = i; break; }
+      // Prefer ending a page with a sentence, then with a word; never mid-word when a space fits.
+      const earliest = start + Math.floor((end - start) * 0.5);
+      const sentence = (i: number) => chars[i - 1] === '\n' || (/[.!?。！？"”']/u.test(chars[i - 1]) && /\s/u.test(chars[i] ?? ' '));
+      const word = (i: number) => /\s/u.test(chars[i - 1]);
+      for (const ok of [sentence, word]) {
+        const found = Array.from({ length: end - earliest }, (_, k) => end - k).find(ok);
+        if (found) { end = found; break; }
       }
     }
     const part = chars.slice(start, end).join('');

@@ -30,7 +30,6 @@ class Settings:
     save_dir: Path
     kev_base_url: str
     kev_min_confidence: float
-    kev_target_mass: float
     kev_api_key: str
     qwen_base_url: str
     qwen_model: str
@@ -55,7 +54,6 @@ def settings(server_dir: Path) -> Settings:
         save_dir=_path(server_dir, env["SAVE_DIR"]),
         kev_base_url=env["KEV_BASE_URL"],
         kev_min_confidence=float(env.get("KEV_MIN_CONFIDENCE") or 0.5),
-        kev_target_mass=float(env.get("KEV_TARGET_MASS") or 0.6),
         kev_api_key=env.get("KEV_API_KEY", ""),
         qwen_base_url=env["QWEN_BASE_URL"],
         qwen_model=env.get("QWEN_MODEL") or "auto",

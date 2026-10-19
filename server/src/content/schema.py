@@ -90,6 +90,7 @@ class Character(Model):
     relation: int = Field(default=0, ge=-3, le=3)
     companion: bool = False
     gifts: dict[str, list[Effect]] = Field(default_factory=dict)
+    pronoun: Literal["", "그", "그녀"] = ""  # how the narration refers to them; empty leaves it to the model
 
 
 class Item(Model):
@@ -220,6 +221,9 @@ class Story(Model):
     actions: list[SceneAction] = Field(default_factory=list)
     downed: list[Effect] = Field(min_length=1)
     endings: list[Ending] = Field(min_length=1)
+    # Phrases for what cannot happen in this world ("용을", "날개를 펴"): such a sentence is turned back
+    # without using a turn. Story data, because a world with dragons may want them.
+    impossible: list[str] = Field(default_factory=list)
 
     def chapter(self, chapter_id: str) -> Chapter:
         return next(c for c in self.chapters if c.id == chapter_id)

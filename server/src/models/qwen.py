@@ -41,19 +41,30 @@ class QwenClient:
         self.model = loaded[0]["id"]
         return self.model
 
-    def body(self, messages: list[dict[str, str]], max_tokens: int) -> dict[str, Any]:
+    async def pick(self, messages: list[dict[str, str]], max_tokens: int = 6) -> str:
+        """A short deterministic answer (a number from a closed list), never sampled."""
+        saved = self.sampling
+        self.sampling = {"temperature": 0.0}
+        try:
+            return "".join([chunk async for chunk in self.stream(messages, max_tokens, seed=1)])
+        finally:
+            self.sampling = saved
+
+    def body(self, messages: list[dict[str, str]], max_tokens: int, seed: int | None = None) -> dict[str, Any]:
         # mlx-lm reads chat_template_kwargs, mlx-vlm reads the top-level flag; send both, always off.
+        # The server samples with a fixed seed unless told otherwise, so a rewrite needs its own seed.
         return {
             "model": self.model, "messages": messages, "stream": True, "max_tokens": max_tokens,
             "enable_thinking": False, "chat_template_kwargs": {"enable_thinking": False},
-            **self.sampling,
+            **self.sampling, **({"seed": seed} if seed is not None else {}),
         }
 
-    async def stream(self, messages: list[dict[str, str]], max_tokens: int = 500) -> AsyncIterator[str]:
+    async def stream(self, messages: list[dict[str, str]], max_tokens: int = 500,
+                     seed: int | None = None) -> AsyncIterator[str]:
         if self.model == AUTO:
             await self.resolve_model()
         try:
-            url, body = f"{self.base_url}/chat/completions", self.body(messages, max_tokens)
+            url, body = f"{self.base_url}/chat/completions", self.body(messages, max_tokens, seed)
             async with self._client() as client, client.stream("POST", url, json=body) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():

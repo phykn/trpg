@@ -63,7 +63,7 @@ def local_settings() -> Settings:
         cors_origins=["http://localhost:8090", "http://127.0.0.1:8090"],
         scenario_dir=SERVER_DIR.parent / "scenarios", save_dir=SERVER_DIR.parent / "saves" / "engine",
         kev_base_url=os.environ.get("KEV_BASE_URL", "http://127.0.0.1:8081"), kev_min_confidence=0.5,
-        kev_target_mass=0.6, kev_api_key=os.environ.get("KEV_API_KEY", ""),
+        kev_api_key=os.environ.get("KEV_API_KEY", ""),
         qwen_base_url=os.environ.get("QWEN_BASE_URL", "http://127.0.0.1:8082/v1"), qwen_model="auto",
         qwen_sampling=None,
     )
@@ -80,7 +80,6 @@ def create_app(local: bool = False) -> tuple[FastAPI, str, int]:
         SaveStore(cfg.save_dir),
         KevClient(cfg.kev_base_url, min_confidence=cfg.kev_min_confidence, api_key=cfg.kev_api_key),
         QwenClient(cfg.qwen_base_url, model=cfg.qwen_model, sampling=cfg.qwen_sampling),
-        mass_needed=cfg.kev_target_mass,
     )
     app = build_app(service=service, basic_auth_user=cfg.basic_auth_user, basic_auth_pass=cfg.basic_auth_pass,
                     cors_origins=cfg.cors_origins)

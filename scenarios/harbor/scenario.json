@@ -57,6 +57,7 @@
   },
   "characters": {
     "guard": {
+      "pronoun": "그",
       "name": "도윤",
       "role": "감옥 문을 지키는 경비",
       "place": "prison",
@@ -73,6 +74,7 @@
       }
     },
     "keeper": {
+      "pronoun": "그",
       "name": "모라",
       "role": "선술집 주인",
       "place": "tavern",
@@ -86,6 +88,7 @@
       "gifts": {"ledger": [{"kind": "flag", "target": "ledger_to", "value": "keeper"}, {"kind": "relation", "target": "keeper", "value": 2}]}
     },
     "sailor": {
+      "pronoun": "그",
       "name": "나루",
       "role": "압송을 기다리는 뱃사람",
       "place": "prison",
@@ -98,6 +101,7 @@
       "relation": 2
     },
     "clerk": {
+      "pronoun": "그",
       "name": "이든",
       "role": "창고의 세관 서기",
       "place": "warehouse",
@@ -110,6 +114,7 @@
       "relation": 0
     },
     "smuggler": {
+      "pronoun": "그",
       "name": "루",
       "role": "빈 상자 위의 밀수상",
       "place": "warehouse",
@@ -122,6 +127,7 @@
       "relation": 0
     },
     "inspector": {
+      "pronoun": "그",
       "name": "여울",
       "role": "명단을 살피는 조사관",
       "place": "square",
@@ -320,16 +326,18 @@
       "hit": [{"kind": "flag", "target": "escaped", "value": true}]
     }
   ],
+  "impossible": ["용을", "용이", "용과", "용에게", "날개를", "날아간", "날아올", "하늘을 날", "하늘을 나는", "하늘로 솟", "솟아올라", "공중으로", "마법", "주문을 외", "괴물", "총을", "총으로", "순간이동"],
   "downed": [
     {"kind": "move", "target": "tavern"},
-    {"kind": "danger", "value": 1}
+    {"kind": "danger", "value": 1},
+    {"kind": "flag", "target": "fell", "value": true}
   ],
   "endings": [
     {
       "id": "departed",
       "title": "마지막 종소리",
-      "when": [{"kind": "flag", "target": "ship_gone", "value": true}, {"kind": "flag", "target": "rescued", "value": true, "negate": true}],
-      "text": "압송선이 부두를 떠납니다. 당신은 빈 밧줄을 바라봅니다. 오늘의 선택은 여기서 끝나지만, 바다로 향하는 길이 사라진 것은 아닙니다."
+      "when": [{"kind": "flag", "target": "ship_gone", "value": true}, {"kind": "flag", "target": "rescued", "value": true, "negate": true}, {"kind": "flag", "target": "fell", "value": true}],
+      "text": "당신은 선술집 바닥에서 눈을 뜹니다. 압송선은 이미 떠났고, 감옥 쪽 골목은 순찰대로 막혔습니다. 오늘의 선택은 여기서 끝나지만, 바다로 향하는 길이 사라진 것은 아닙니다."
     },
     {
       "id": "public",

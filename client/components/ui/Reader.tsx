@@ -37,11 +37,13 @@ export function Reader({ text, onDone, doneLabel = ko.chooseAction, disabled }: 
         setSize((old) => old.width === layout.width && old.height === layout.height ? old : { width: layout.width, height: layout.height });
       }}>
         <Text ref={probe} aria-hidden className="reader-text absolute left-0 right-0 top-0 font-sans text-lead opacity-0" style={{ pointerEvents: 'none' }} />
-        <Text testID="reader-text" accessibilityLiveRegion="polite" className="reader-text font-sans text-lead text-fg-default">{pages[index]?.text ?? ''}</Text>
+        <Text testID="reader-text" accessibilityLiveRegion="polite" className="reader-text font-sans text-lead text-fg-default">{pages[index]?.text.trimStart() ?? ''}</Text>
       </View>
       <View className="flex-row items-center gap-3 border-t border-border-default pt-4">
         <Button label={ko.previousPage} disabled={!pages.length || index === 0} onPress={() => setOffset(pages[index - 1].start)} />
-        <Text accessibilityLabel={ko.pageNumber(index + 1, pages.length || 1)} className="flex-1 text-center font-mono text-caption text-fg-subtle">{String(index + 1).padStart(2, '0')} / {String(pages.length || 1).padStart(2, '0')}</Text>
+        {pages.length > 1 ? (
+          <Text accessibilityLabel={ko.pageNumber(index + 1, pages.length)} numberOfLines={1} className="flex-1 text-center font-mono text-caption text-fg-subtle">{String(index + 1).padStart(2, '0')} / {String(pages.length).padStart(2, '0')}</Text>
+        ) : <View className="flex-1" />}
         <Button label={last && onDone ? doneLabel : ko.nextPage} primary={!!onDone && last} disabled={!pages.length || (last && (!onDone || disabled))} onPress={() => {
           if (last) onDone?.();
           else setOffset(pages[index + 1].start);

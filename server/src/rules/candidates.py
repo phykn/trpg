@@ -50,7 +50,10 @@ def candidates(story: Story, state: GameState) -> dict[str, Candidate]:
     obstacles = open_obstacles(story, state)
     for cid in people:
         out.append(Candidate(f"talk:{cid}", "talk", ko.fill(ko.LABELS["talk"], name=name(cid))))
-    for target in [*people, *query.items_at(g, place), *obstacles]:
+    # A carried item that reveals something stays inspectable: taking it first must not lose the clue.
+    readable = [i for i in query.carried(g, PLAYER)
+                if story.items[i].reveals and not query.knows(g, PLAYER, story.items[i].reveals)]
+    for target in dict.fromkeys([*people, *query.items_at(g, place), *readable, *obstacles]):
         out.append(Candidate(f"inspect:{target}", "inspect", ko.fill(ko.LABELS["inspect"], name=name(target))))
     for iid in query.items_at(g, place):
         if not guarded(story, state, iid):

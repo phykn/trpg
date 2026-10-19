@@ -14,9 +14,23 @@ def validate(story: Story) -> list[str]:
     errors: list[str] = []
     _ids(story, errors)
     _references(story, errors)
+    _impossible(story, errors)
     if not errors:
         errors += _reachability(story)
     return errors
+
+
+def _impossible(story: Story, errors: list[str]) -> None:
+    """An impossible phrase must not block an authored name or button."""
+    texts = [*(x.name for table in (story.places, story.characters, story.items) for x in table.values()),
+             *(sol.label for o in story.obstacles.values() for sol in o.solutions),
+             *(a.label for a in story.actions)]
+    for phrase in story.impossible:
+        if not phrase.strip():
+            errors.append("impossible: empty phrase")
+        for text in texts:
+            if phrase in text:
+                errors.append(f"impossible: {phrase!r} also matches {text!r}")
 
 
 def _ids(story: Story, errors: list[str]) -> None:

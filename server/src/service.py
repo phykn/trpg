@@ -48,13 +48,12 @@ class Outcome:
 
 class GameService:
     def __init__(self, stories: dict[str, Loaded], store: SaveStore, kev: KevClient, qwen: QwenClient,
-                 *, mass_needed: float = 0.6):
+                 ):
         self.stories = stories
         self.store = store
         self.kev = kev
         self.qwen = qwen
         self.narrator = Narrator(qwen, kev)
-        self.mass_needed = mass_needed
         self._narrating: dict[str, asyncio.Lock] = {}
 
     async def check_models(self) -> None:
@@ -65,7 +64,8 @@ class GameService:
         return [
             {"id": sid, "title": s.story.title, "synopsis": s.story.synopsis,
              "creation": {"choose": s.story.creation.choose,
-                          "approaches": [{"id": a, "name": n} for a, n in approach_names(s.story).items()],
+                          "approaches": [{"id": a, "name": n, "text": ko.APPROACH_HINT[a]}
+                                         for a, n in approach_names(s.story).items()],
                           "traits": [t.model_dump() for t in s.story.traits]}}
             for sid, s in self.stories.items()
             if not s.folder.name.startswith("_")
@@ -126,7 +126,7 @@ class GameService:
                 said = cand.label
             else:
                 said = (text or "").strip()
-                result = await interpret(self.kev, story, state, said, self.mass_needed)
+                result = await interpret(self.kev, story, state, said, self.qwen)
                 if isinstance(result, Rejected):
                     return Outcome(kind="rejected", view=self._view(state), reason=result.reason)
                 if isinstance(result, Clarify):
