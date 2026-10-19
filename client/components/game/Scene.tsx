@@ -6,7 +6,7 @@ import type { GameView } from '@/services/types';
 import { Boxes } from './Boxes';
 import { Item, Row } from './Row';
 
-export function Scene({ scene, beats, beatsMax }: { scene: GameView['scene']; beats: number; beatsMax: number }) {
+export function Scene({ scene }: { scene: GameView['scene'] }) {
   const around = scene.people.length + scene.things.length + scene.obstacles.length + scene.tags.length;
   return (
     <>
@@ -25,10 +25,6 @@ export function Scene({ scene, beats, beatsMax }: { scene: GameView['scene']; be
       ) : null}
       <Row label={ko.row.here}>
         <Item>{scene.place.name}</Item>
-        <View className="flex-row items-center gap-1">
-          <Item tone="muted">{ko.beats}</Item>
-          <Boxes fill={beats} boxes={beatsMax} tone="time" />
-        </View>
       </Row>
       {scene.exits.length ? (
         <Row label={ko.row.exits}>
