@@ -1,0 +1,22 @@
+import { View } from 'react-native';
+
+import { ko } from '@/locale/ko';
+import type { GameView } from '@/services/types';
+import { Boxes } from './Boxes';
+import { Item, Row } from './Row';
+
+/** Risk clocks, deadlines, threats and forks; a crisis empties a clock and says so. */
+export function Clocks({ clocks, crisis }: { clocks: GameView['clocks']; crisis?: string[] }) {
+  if (!clocks.length) return null;
+  return (
+    <Row border={false}>
+      {clocks.map((c) => (
+        <View key={c.id} className="flex-row items-center gap-1">
+          <Item tone={c.kind === 'clock' ? 'danger' : 'muted'}>{c.name}</Item>
+          <Boxes fill={c.fill} boxes={c.boxes} />
+          {crisis?.includes(c.id) ? <Item tone="gold">{ko.crisis}</Item> : null}
+        </View>
+      ))}
+    </Row>
+  );
+}

@@ -17,3 +17,9 @@ export function storeGameId(id: string): boolean {
     return false;
   }
 }
+
+export function clearGameId(): void {
+  try {
+    if (typeof window !== 'undefined') window.localStorage.removeItem(KEY);
+  } catch { /* storage unavailable: nothing to clear */ }
+}

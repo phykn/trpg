@@ -1,0 +1,20 @@
+import { ko } from '@/locale/ko';
+import type { GameView } from '@/services/types';
+import { Item, Row } from './Row';
+
+/** What is pending now: open promises and kindnesses, and beliefs about this scene (ui.md 2.1). */
+export function Record({ journal }: { journal: GameView['journal'] }) {
+  const owes = journal.owes;
+  const beliefs = journal.beliefs.filter((b) => b.here);
+  if (!owes.length && !beliefs.length) return null;
+  return (
+    <Row>
+      {owes.map((o) => (
+        <Item key={`${o.debtor}${o.creditor}${o.kind}`} tone="gold">
+          {o.kind === 'promise' ? ko.promise(o.name, o.promise) : ko.kindness(o.name)}
+        </Item>
+      ))}
+      {beliefs.map((b) => <Item key={b.id} tone="muted">{ko.belief}: {b.text}</Item>)}
+    </Row>
+  );
+}

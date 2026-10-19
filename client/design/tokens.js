@@ -15,11 +15,13 @@ const colors = {
   },
   border: { default: '#2a3c43', strong: '#506369' },
   accent: { fg: '#e5bd76', muted: '#302d24' },
-  danger: { fg: '#f19a8d' },
-  success: { fg: '#9fcabd' },
-  hp: { fg: '#f19a8d' },
-  mp: { fg: '#9fcabd' },
+  danger: { fg: '#f19a8d', muted: '#3a2422' },
+  success: { fg: '#9fcabd', muted: '#1f3530' },
   gold: { fg: '#e5bd76' },
+  // Chips by modifier kind (ui.md 4.3) and result bands (ui.md 4.5).
+  chip: { stat: '#8fb3d9', help: '#9fcabd', hinder: '#f19a8d' },
+  band: { fail: '#5a2f2b', mixed: '#5a4a2b', success: '#2b5a4a' },
+  box: { empty: '#2a3c43', full: '#e5bd76', fit: '#9fcabd', next: '#f19a8d' },
   overlay: 'rgba(3,9,12,0.82)',
 };
 const spacing = {
@@ -35,13 +37,21 @@ const fontFamily = {
   'mono-medium': ['GeistMono_500Medium'],
 };
 const fontSize = {
+  chip: ['12px', { lineHeight: '18px' }],
   caption: ['12px', { lineHeight: '18px' }],
   panel: ['13px', { lineHeight: '20px' }],
   body: ['15px', { lineHeight: '24px' }],
   title: ['17px', { lineHeight: '26px' }],
   lead: ['18px', { lineHeight: '30px' }],
-  scene: ['26px', { lineHeight: '36px' }],
-  hero: ['36px', { lineHeight: '48px' }],
+  hero: ['28px', { lineHeight: '36px' }],
 };
-const layout = { mobile: 480, listRow: 124 };
-module.exports = { colors, spacing, radius, fontFamily, fontSize, layout };
+// Narration sizes from largest to the floor (ui.md 2.1); line height is 1.6 × size.
+const text = { narration: [18, 17, 16, 15, 14, 13], min: 13, chipMin: 12, lineHeight: 1.6 };
+const layout = { mobile: 412 };
+// Motion in ms (ui.md 4.5); `reduced` replaces every beat under prefers-reduced-motion.
+const motion = {
+  cloud: 600, die: 250, dieGap: 120, line: 200, chip: 180, settle: 300, decisive: 150,
+  box: 150, fold: 200, change: 150, blockedFade: 300, odds: 250, reduced: 100,
+  typeRate: 60, shakeMax: 1500, stuck: 30000,
+};
+module.exports = { colors, spacing, radius, fontFamily, fontSize, text, layout, motion };

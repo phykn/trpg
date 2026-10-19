@@ -1,81 +1,69 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
-import { Button } from '@/components/ui/Button';
-import { PagedList } from '@/components/ui/PagedList';
-import { Reader } from '@/components/ui/Reader';
 import { ko } from '@/locale/ko';
-import type { Creation, StoryCard } from '@/services/types';
+import type { Creation, Story } from '@/services/types';
 
-type Step = 'list' | 'story' | 'mode' | 'strong' | 'weak' | 'traits';
-
-export function Start({ catalog, busy, canResume, onStart, onResume }: {
-  catalog: StoryCard[];
-  busy: boolean;
-  canResume: boolean;
-  onStart: (story: string, creation?: Creation) => Promise<void>;
-  onResume: () => void;
-}) {
-  const [step, setStep] = useState<Step>(catalog.length === 1 ? 'story' : 'list');
-  const [storyId, setStoryId] = useState(catalog.length === 1 ? catalog[0].id : '');
-  const [strong, setStrong] = useState('');
-  const [weak, setWeak] = useState('');
+/** ui.md 5.5: the stories, the approach values placed by tapping, and the traits, on one screen. */
+export function Start({ stories, busy, onCreate }: { stories: Story[]; busy: boolean; onCreate: (story: string, c: Creation) => void }) {
+  const [id, setId] = useState(stories[0]?.id ?? '');
+  const story = stories.find((s) => s.id === id);
+  const [placed, setPlaced] = useState<Record<string, number>>({});
   const [traits, setTraits] = useState<string[]>([]);
-  const story = catalog.find((s) => s.id === storyId);
-  const approaches = story?.creation.approaches ?? [];
-  const title = step === 'list' || !story ? ko.stories : story.title;
+  if (!story) return null;
 
-  function begin(creation?: Creation) {
-    if (story) void onStart(story.id, creation);
-  }
-
-  function toggle(id: string) {
-    const next = traits.includes(id) ? traits.filter((t) => t !== id) : [...traits, id].slice(-2);
-    setTraits(next);
-  }
-
-  function finish() {
-    const values = Object.fromEntries(approaches.map((a) => [a.id, a.id === strong ? 2 : a.id === weak ? 0 : 1]));
-    begin({ approaches: values, traits });
-  }
+  const values = [...story.approaches].sort((a, b) => b - a);
+  const left = values.slice(Object.keys(placed).length);
+  const place = (ap: string) => {
+    if (ap in placed || !left.length) return;
+    setPlaced({ ...placed, [ap]: left[0] });
+  };
+  const toggle = (t: string) => setTraits(traits.includes(t) ? traits.filter((x) => x !== t)
+    : traits.length < story.pick ? [...traits, t] : traits);
+  const ready = !left.length && traits.length === story.pick && !busy;
+  const choose = (s: string) => { setId(s); setPlaced({}); setTraits([]); };
 
   return (
-    <View className="flex-1 min-h-0 gap-5 px-6 pb-5 pt-6">
-      <View className="flex-row items-center gap-3">
-        {step !== 'list' && catalog.length > 1 ? <Button label={ko.back} disabled={busy} onPress={() => setStep('list')} /> : null}
-        <Text accessibilityRole="header" className="flex-1 font-sans-semibold text-scene text-fg-default">{title}</Text>
+    <View className="min-h-0 flex-1 gap-3 px-4 py-3">
+      <Text accessibilityRole="header" className="font-sans-semibold text-panel text-fg-muted">{ko.stories}</Text>
+      <View className="flex-row flex-wrap gap-2">
+        {stories.map((s) => (
+          <Pressable key={s.id} accessibilityRole="radio" accessibilityState={{ selected: s.id === id }} onPress={() => choose(s.id)}
+            className={`rounded-md border px-3 py-2 ${s.id === id ? 'border-gold-fg bg-accent-muted' : 'border-border-default'}`}>
+            <Text className="font-sans-semibold text-body text-fg-default">{s.title}</Text>
+          </Pressable>
+        ))}
       </View>
-      {step === 'list' ? <PagedList entries={catalog.map((s) => ({ id: s.id, label: s.title, meta: s.synopsis }))} disabled={busy}
-        onSelect={(id) => { setStoryId(id); setStep('story'); }} /> : null}
-      {step === 'story' && story ? <Reader text={story.synopsis + (canResume ? `\n\n${ko.newGameHelp}` : '')} doneLabel={ko.begin} disabled={busy}
-        onDone={() => (story.creation.choose ? setStep('mode') : begin())} /> : null}
-      {step === 'mode' ? (
-        <View className="flex-1 min-h-0 justify-end gap-3">
-          <Text className="flex-1 font-sans text-body text-fg-muted">{ko.modeHelp}</Text>
-          <Button label={ko.defaults} disabled={busy} onPress={() => begin()} />
-          <Button label={ko.customize} primary disabled={busy} onPress={() => setStep('strong')} />
-        </View>
-      ) : null}
-      {step === 'strong' ? (
-        <View className="flex-1 min-h-0 gap-3">
-          <Text className="font-sans text-body text-gold-fg">{ko.strongest}</Text>
-          <PagedList entries={approaches.map((a) => ({ id: a.id, label: a.name, meta: a.text }))} onSelect={(id) => { setStrong(id); setStep('weak'); }} />
-        </View>
-      ) : null}
-      {step === 'weak' ? (
-        <View className="flex-1 min-h-0 gap-3">
-          <Text className="font-sans text-body text-gold-fg">{ko.weakest}</Text>
-          <PagedList entries={approaches.filter((a) => a.id !== strong).map((a) => ({ id: a.id, label: a.name, meta: a.text }))} onSelect={(id) => { setWeak(id); setStep('traits'); }} />
-        </View>
-      ) : null}
-      {step === 'traits' && story ? (
-        <View className="flex-1 min-h-0 gap-3">
-          <Text className="font-sans text-body text-gold-fg">{ko.pickTraits(traits.length)}</Text>
-          <PagedList entries={story.creation.traits.map((t) => ({ id: t.id, label: (traits.includes(t.id) ? '✓ ' : '') + t.name, meta: t.text }))} onSelect={toggle} />
-          <Button label={ko.begin} primary disabled={busy || traits.length !== 2} onPress={finish} />
-        </View>
-      ) : null}
-      {canResume && step !== 'traits' ? <Button label={ko.resume} disabled={busy} onPress={onResume} /> : null}
+      <Text className="font-sans text-body text-fg-default">{story.premise}</Text>
+      <Text className="font-sans text-chip text-fg-muted">{ko.placeApproaches}</Text>
+      <View className="flex-row flex-wrap gap-2">
+        {story.approach_names.map((a) => (
+          <Pressable key={a.id} accessibilityRole="button" onPress={() => place(a.id)}
+            className={`w-[47%] rounded-md border px-3 py-2 ${a.id in placed ? 'border-gold-fg' : 'border-border-default'}`}>
+            <Text className="font-sans-semibold text-body text-fg-default">{a.name} {a.id in placed ? placed[a.id] : '·'}</Text>
+            <Text className="font-sans text-chip text-fg-muted">{a.hint}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Pressable accessibilityRole="button" onPress={() => setPlaced({})} className="self-start">
+        <Text className="font-sans text-chip text-fg-subtle">{ko.resetApproaches}</Text>
+      </Pressable>
+      <Text className="font-sans text-chip text-fg-muted">{ko.pickTraits(traits.length, story.pick)}</Text>
+      <View className="flex-row flex-wrap gap-2">
+        {story.traits.map((t) => (
+          <Pressable key={t.id} accessibilityRole="checkbox" accessibilityState={{ checked: traits.includes(t.id) }}
+            onPress={() => toggle(t.id)}
+            className={`w-[47%] rounded-md border px-3 py-1 ${traits.includes(t.id) ? 'border-gold-fg bg-accent-muted' : 'border-border-default'}`}>
+            <Text className="font-sans-semibold text-panel text-fg-default">{t.name}</Text>
+            <Text className="font-sans text-chip text-fg-muted">{t.text}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Pressable accessibilityRole="button" accessibilityState={{ disabled: !ready }} disabled={!ready}
+        onPress={() => onCreate(story.id, { approaches: placed, traits })}
+        className={`mt-auto items-center rounded-md bg-gold-fg py-3 ${ready ? '' : 'opacity-40'}`}>
+        <Text className="font-sans-semibold text-body text-fg-on-emphasis">{ko.create}</Text>
+      </Pressable>
     </View>
   );
 }

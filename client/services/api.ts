@@ -1,7 +1,7 @@
+// The only boundary to HTTP and NDJSON (api.md).
 import { fetch } from 'expo/fetch';
 
-import { ko } from '@/locale/ko';
-import type { ActResult, Creation, Envelope, GameView, NarrationEvent, StoryCard } from './types';
+import type { CommandBody, CommandResult, Creation, GameView, NarrationEvent, Story } from './types';
 
 const baseUrl = process.env.EXPO_PUBLIC_API_URL;
 const user = process.env.EXPO_PUBLIC_API_USER;
@@ -13,75 +13,87 @@ const headers = {
   Authorization: `Basic ${btoa(`${user}:${pass}`)}`,
   'Content-Type': 'application/json',
 };
-const REQUEST_MS = 15_000;
-const NARRATION_IDLE_MS = 30_000;
 
+/** A non-2xx answer: 404 missing, 409 with a view or `incompatible`, 422 invalid. */
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
+  constructor(public status: number, public view: GameView | null, public reason: string | null) {
+    super(`HTTP ${status}`);
   }
 }
 
-async function failure(response: { status: number; json: () => Promise<unknown> }): Promise<ApiError> {
-  let message = ko.requestFailed;
-  try {
-    const payload = await response.json() as { detail?: unknown };
-    if (typeof payload?.detail === 'string' && response.status !== 401) message = payload.detail;
-  } catch { /* Non-JSON errors use the localized fallback. */ }
-  return new ApiError(response.status, message);
+async function request<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal,
+  });
+  if (!response.ok) {
+    let payload: { view?: GameView; reason?: string } = {};
+    try { payload = await response.json() as typeof payload; } catch { /* a body that is not JSON */ }
+    throw new ApiError(response.status, payload.view ?? null, payload.reason ?? null);
+  }
+  return await response.json() as T;
 }
 
-async function request<T>(path: string, body?: unknown): Promise<T> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_MS);
-  try {
-    const response = await fetch(`${baseUrl}${path}`, {
-      method: body === undefined ? 'GET' : 'POST',
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal: controller.signal,
-    });
-    if (!response.ok) throw await failure(response);
-    return await response.json() as T;
-  } finally {
-    clearTimeout(timeout);
+const game = (id: string) => `/games/${encodeURIComponent(id)}`;
+
+export const getStories = () => request<Story[]>('/stories');
+export const createGame = (requestId: string, story: string, creation: Creation, signal?: AbortSignal) =>
+  request<{ game_id: string; view: GameView }>('/games', { request_id: requestId, story, creation }, signal);
+export const getGame = (id: string) => request<GameView>(game(id));
+export const sendCommand = (id: string, requestId: string, revision: number, body: CommandBody, signal?: AbortSignal) =>
+  request<CommandResult>(`${game(id)}/commands`, { request_id: requestId, revision, ...body }, signal);
+
+/** Splits NDJSON chunks at line boundaries, wherever the chunks were cut. */
+export class LineReader {
+  private buffer = '';
+
+  feed(chunk: string): NarrationEvent[] {
+    this.buffer += chunk;
+    const out: NarrationEvent[] = [];
+    let newline = this.buffer.indexOf('\n');
+    while (newline >= 0) {
+      const line = this.buffer.slice(0, newline).trim();
+      this.buffer = this.buffer.slice(newline + 1);
+      if (line) out.push(JSON.parse(line) as NarrationEvent);
+      newline = this.buffer.indexOf('\n');
+    }
+    return out;
+  }
+
+  end(): NarrationEvent[] {
+    const rest = this.buffer.trim();
+    this.buffer = '';
+    return rest ? [JSON.parse(rest) as NarrationEvent] : [];
   }
 }
 
-export const getCatalog = () => request<StoryCard[]>('/catalog');
-export const startGame = (story: string, creation?: Creation) =>
-  request<GameView>('/games', { story, ...creation });
-export const loadGame = (id: string) => request<GameView>(`/games/${encodeURIComponent(id)}`);
-export const act = (id: string, envelope: Envelope) =>
-  request<ActResult>(`/games/${encodeURIComponent(id)}/act`, envelope);
-
-/** Read the newline-delimited narration events of one turn; resolves when the stream ends. */
-export async function streamNarration(id: string, turn: number, onEvent: (event: NarrationEvent) => void) {
-  const controller = new AbortController();
-  let idle = setTimeout(() => controller.abort(), NARRATION_IDLE_MS);
+/** Reads a narration or recap stream; a broken stream or a non-2xx answer ends in an error event. */
+export async function stream(path: string, onEvent: (event: NarrationEvent) => void): Promise<void> {
+  let ended = false;
+  const emit = (e: NarrationEvent) => {
+    if (e.type === 'error' || e.type === 'done') ended = true;
+    onEvent(e);
+  };
   try {
-    const response = await fetch(`${baseUrl}/games/${encodeURIComponent(id)}/turns/${turn}/narration`, {
-      headers, signal: controller.signal,
-    });
-    if (!response.ok || !response.body) throw await failure(response);
+    const response = await fetch(`${baseUrl}${path}`, { headers });
+    if (!response.ok || !response.body) throw new ApiError(response.status, null, null);
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
+    const lines = new LineReader();
     for (;;) {
       const { done, value } = await reader.read();
-      clearTimeout(idle);
-      idle = setTimeout(() => controller.abort(), NARRATION_IDLE_MS);
-      buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
-      let newline = buffer.indexOf('\n');
-      while (newline >= 0) {
-        const line = buffer.slice(0, newline).trim();
-        buffer = buffer.slice(newline + 1);
-        if (line) onEvent(JSON.parse(line) as NarrationEvent);
-        newline = buffer.indexOf('\n');
-      }
+      lines.feed(decoder.decode(value ?? new Uint8Array(), { stream: !done })).forEach(emit);
       if (done) break;
     }
-  } finally {
-    clearTimeout(idle);
+    lines.end().forEach(emit);
+  } catch {
+    if (!ended) emit({ type: 'error' });
+    return;
   }
+  if (!ended) emit({ type: 'error' });
 }
+
+export const narrationPath = (id: string, n: number) => `${game(id)}/turns/${n}/narration`;
+export const recapPath = (id: string, k: number) => `${game(id)}/chapters/${k}/recap`;

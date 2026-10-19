@@ -1,188 +1,315 @@
+// Every server state and the life of each command (ui.md 3). The screen draws this machine's state.
 import { useEffect, useRef, useState } from 'react';
 
+import { motion } from '@/design/tokens';
 import { ko } from '@/locale/ko';
-import { ApiError, act, getCatalog, loadGame, startGame, streamNarration } from '@/services/api';
-import { loadGameId, storeGameId } from '@/services/storage';
-import type { Button, Command, Creation, Envelope, GameView, NarrationEvent, StoryCard } from '@/services/types';
+import {
+  ApiError, createGame, getGame, getStories, narrationPath, recapPath, sendCommand, stream,
+} from '@/services/api';
+import { clearGameId, loadGameId, storeGameId } from '@/services/storage';
+import type {
+  Card, CommandBody, CommandResult, Creation, GameView, NarrationEvent, StepRecord, Story,
+} from '@/services/types';
+import { type Beat, duration, timeline } from './reveal';
 
-export type Narration = { turn: number; text: string; status: 'idle' | 'streaming' | 'done' | 'error'; canRetry: boolean };
-export type Notice = { reason: string; options: Button[] } | null;
+export type Phase =
+  | 'loading' | 'start' | 'idle' | 'sending' | 'card' | 'rolling' | 'revealing' | 'narrating'
+  | 'stuck' | 'narration_error' | 'blocked' | 'ending';
 
-const IDLE: Narration = { turn: -1, text: '', status: 'idle', canRetry: false };
+export type Reveal = { steps: StepRecord[]; beats: Beat[]; start: number; card: Card | null; skipped: boolean };
+export type Narration = { stage: string | null; text: string | null; recap: string | null; error: string | null };
 
-function requestId(): string {
-  return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
+type Pending =
+  | { kind: 'command'; requestId: string; revision: number; body: CommandBody; gameId: string }
+  | { kind: 'create'; requestId: string; story: string; creation: Creation };
+
+const EMPTY: Narration = { stage: null, text: null, recap: null, error: null };
+
+export function requestId(): string {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
 }
 
-export function useGame() {
-  const [catalog, setCatalog] = useState<StoryCard[] | null>(null);
+/** Where an accepted view leads (ui.md 3): ending, cost, card, growth, idle. */
+export function destination(view: GameView, growthLater: boolean): Phase {
+  if (view.ending) return 'ending';
+  if (view.due.length || view.card) return 'card';
+  if (view.growth.length && !growthLater) return 'card';
+  return 'idle';
+}
+
+/** The chapter whose recap follows this turn (api.md 4), or null. */
+export function recapChapter(steps: StepRecord[], view: GameView): number | null {
+  for (const s of steps) {
+    for (const c of s.changes) {
+      if (c.kind === 'chapter') return c.from as number;
+      if (c.kind === 'ending') return view.chapter.k;
+    }
+  }
+  return null;
+}
+
+function renameTags(view: GameView, tags: { slot: number; owner: string; name: string }[]): GameView {
+  if (!tags.length) return view;
+  const named = (owner: string, slot: number) => tags.find((t) => t.owner === owner && t.slot === slot)?.name;
+  return {
+    ...view,
+    player: { ...view.player, tags: view.player.tags.map((t) => ({ ...t, name: named('player', t.slot) ?? t.name })) },
+    scene: { ...view.scene, tags: view.scene.tags.map((t) => ({ ...t, name: named(t.owner ?? '', t.slot) ?? t.name })) },
+  };
+}
+
+export function useGame(reduced = false) {
+  const [phase, setPhase] = useState<Phase>('loading');
+  const [stories, setStories] = useState<Story[]>([]);
   const [view, setView] = useState<GameView | null>(null);
-  const [busy, setBusy] = useState(true);
-  const [error, setError] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [needsSync, setNeedsSync] = useState(false);
-  const [narration, setNarration] = useState<Narration>(IDLE);
-  const [notice, setNotice] = useState<Notice>(null);
-  const inFlight = useRef(false);
-  const streaming = useRef(false);
+  const [before, setBefore] = useState<GameView | null>(null);   // rows keep these values until their beat
+  const [notice, setNotice] = useState<string | null>(null);
+  const [reveal, setReveal] = useState<Reveal | null>(null);
+  const [narration, setNarration] = useState<Narration>(EMPTY);
+  const [growthLater, setGrowthLater] = useState(false);
+  const [recaps, setRecaps] = useState<Record<number, string>>({});
+  const [sent, setSent] = useState<string | null>(null);         // the sentence shown while sending
+
+  const gameId = useRef<string | null>(null);
+  const viewRef = useRef<GameView | null>(null);
+  const pending = useRef<Pending | null>(null);
+  const rollAt = useRef<number | null>(null);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const turn = useRef<{ revealed: boolean; narrated: boolean; typed: boolean; recap: number | null; failed: boolean }>(
+    { revealed: true, narrated: true, typed: true, recap: null, failed: false });
   const mounted = useRef(true);
-  const pending = useRef<{ gameId: string; envelope: Envelope } | null>(null);
+  const growthRef = useRef(false);
+
+  const later = (fn: () => void, ms: number) => { timers.current.push(setTimeout(fn, ms)); };
+
+  function accept(next: GameView) {
+    viewRef.current = next;
+    setView(next);
+  }
+
+  function settle() {
+    const v = viewRef.current;
+    if (v) setPhase(destination(v, growthRef.current));
+    if (v?.ending) void loadRecaps(v);
+  }
+
+  /** The turn ends when the reveal is over, the narration is in and typed, and any recap has come. */
+  function maybeEnd() {
+    const s = turn.current;
+    if (!s.revealed) return;
+    if (s.failed) { setPhase('narration_error'); return; }
+    if (!s.narrated || !s.typed) { setPhase('narrating'); return; }
+    settle();
+  }
+
+  async function read(path: string, onText: (text: string) => void, onDone: (e: NarrationEvent) => void) {
+    let failed = false;
+    await stream(path, (e) => {
+      if (!mounted.current) return;
+      if (e.type === 'stage') setNarration((n) => ({ ...n, stage: e.stage }));
+      else if (e.type === 'text') onText(e.text);
+      else if (e.type === 'done') onDone(e);
+      else if (e.type === 'error') {
+        failed = true;
+        setNarration((n) => ({ ...n, stage: null, error: e.message ?? '' }));
+      }
+    });
+    return !failed;
+  }
+
+  async function narrate(n: number, recap: number | null) {
+    const id = gameId.current;
+    if (!id) return;
+    turn.current = { ...turn.current, narrated: false, typed: false, recap, failed: false };
+    setNarration(EMPTY);
+    const ok = await read(narrationPath(id, n), (text) => setNarration((x) => ({ ...x, text, stage: null })), (e) => {
+      if (e.type === 'done' && viewRef.current) accept(renameTags(viewRef.current, e.tags));
+    });
+    if (ok && recap !== null) {
+      const recapped = await read(recapPath(id, recap), (text) => setNarration((x) => ({ ...x, recap: text, stage: null })),
+        () => undefined);
+      if (!recapped) { turn.current.failed = true; maybeEnd(); return; }
+    }
+    if (!mounted.current) return;
+    if (!ok) { turn.current.failed = true; maybeEnd(); return; }
+    turn.current.narrated = true;
+    maybeEnd();
+  }
+
+  async function loadRecaps(v: GameView) {
+    const id = gameId.current;
+    if (!id) return;
+    for (const k of v.recaps) {
+      await read(recapPath(id, k), (text) => setRecaps((r) => ({ ...r, [k]: text })), () => undefined);
+    }
+  }
+
+  function startReveal(steps: StepRecord[], n: number, next: GameView, card: Card | null) {
+    const beats = timeline(steps, motion, reduced);
+    setReveal({ steps, beats, start: Date.now(), card, skipped: false });
+    turn.current = { revealed: false, narrated: false, typed: false, recap: null, failed: false };
+    setNarration(EMPTY);
+    setPhase('revealing');
+    void narrate(n, recapChapter(steps, next));
+    later(() => finishReveal(), duration(beats));
+  }
+
+  function finishReveal() {
+    if (turn.current.revealed) return;
+    turn.current.revealed = true;
+    setBefore(null);
+    setReveal((r) => (r ? { ...r, skipped: true } : r));
+    maybeEnd();
+  }
+
+  function handle(p: Pending, result: CommandResult) {
+    if (pending.current !== p) return;              // a late copy of an answer already used
+    pending.current = null;
+    setSent(null);
+    const card = p.kind === 'command' && 'pick' in p.body ? viewRef.current?.card ?? null : null;
+    const old = viewRef.current;
+    if (result.kind === 'refused') setNotice(result.reason);
+    if (!result.steps.length || result.turn === null) {
+      accept(result.view);
+      rollAt.current = null;
+      settle();
+      return;
+    }
+    const go = () => {
+      setBefore(old);
+      accept(result.view);
+      startReveal(result.steps, result.turn as number, result.view, card?.kind === 'roll' ? card : null);
+    };
+    const wait = rollAt.current === null ? 0 : Math.max(0, rollAt.current + motion.cloud - Date.now());
+    rollAt.current = null;
+    if (wait) later(go, wait); else go();
+  }
+
+  function fail(p: Pending, cause: unknown) {
+    if (pending.current !== p) return;
+    if (cause instanceof ApiError) {
+      pending.current = null;
+      setSent(null);
+      rollAt.current = null;
+      if (cause.status === 409 && cause.view) {
+        accept(cause.view);
+        setNotice(ko.conflict);
+        settle();
+      } else if (cause.status === 409) {
+        setPhase('blocked');
+      } else if (cause.status === 404) {
+        clearGameId();
+        gameId.current = null;
+        setPhase('start');
+      } else {
+        setNotice(cause.reason);
+        settle();
+      }
+      return;
+    }
+    setPhase('stuck');                               // no answer: only the identical command may follow
+  }
+
+  function dispatch(p: Pending) {
+    const attempt = p.kind === 'command'
+      ? sendCommand(p.gameId, p.requestId, p.revision, p.body)
+      : createGame(p.requestId, p.story, p.creation).then((out) => {
+        gameId.current = out.game_id;
+        storeGameId(out.game_id);
+        return { kind: 'turn', turn: null, steps: [], reason: null, view: out.view } as CommandResult;
+      });
+    let answered = false;
+    later(() => { if (!answered && pending.current === p) setPhase('stuck'); }, motion.stuck);
+    attempt.then((r) => { answered = true; if (mounted.current) handle(p, r); },
+      (e) => { answered = true; if (mounted.current) fail(p, e); });
+  }
+
+  function command(body: CommandBody) {
+    const v = viewRef.current;
+    const id = gameId.current;
+    if (!v || !id || pending.current) return;
+    if (!['idle', 'card'].includes(phase)) return;
+    const p: Pending = { kind: 'command', requestId: requestId(), revision: v.revision, body, gameId: id };
+    pending.current = p;
+    setNotice(null);
+    if ('pick' in body && v.card?.kind === 'roll') {
+      rollAt.current = Date.now();
+      setPhase('rolling');
+    } else {
+      setSent('text' in body ? body.text : null);
+      setPhase('sending');
+    }
+    dispatch(p);
+  }
+
+  function resend() {
+    const p = pending.current;
+    if (!p || phase !== 'stuck') return;
+    if (p.kind === 'command' && 'pick' in p.body && viewRef.current?.card?.kind === 'roll') {
+      rollAt.current = Date.now();
+      setPhase('rolling');
+    } else setPhase('sending');
+    dispatch(p);                                     // the same request id and body: the receipt answers
+  }
+
+  function create(story: string, creation: Creation) {
+    if (pending.current) return;
+    const p: Pending = { kind: 'create', requestId: requestId(), story, creation };
+    pending.current = p;
+    setPhase('sending');
+    dispatch(p);
+  }
+
+  async function restore() {
+    try {
+      setStories(await getStories());
+      const id = loadGameId();
+      if (!id) { setPhase('start'); return; }
+      gameId.current = id;
+      const saved = await getGame(id);
+      if (!mounted.current) return;
+      accept(saved);
+      if (saved.last) {
+        turn.current = { revealed: true, narrated: false, typed: true, recap: null, failed: false };
+        setPhase('narrating');
+        await narrate(saved.last.turn, recapChapter(saved.last.steps, saved));
+      } else settle();
+    } catch (cause) {
+      if (!mounted.current) return;
+      if (cause instanceof ApiError && cause.status === 404) {
+        clearGameId();
+        setPhase('start');
+      } else setPhase('blocked');                    // the pointer stays: a failed restore never clears it
+    }
+  }
 
   useEffect(() => {
     mounted.current = true;
-    let cancelled = false;
-    async function restore() {
-      inFlight.current = true;
-      try {
-        const book = await getCatalog();
-        if (cancelled) return;
-        setCatalog(book);
-        const id = loadGameId();
-        if (!id) setCreating(true);
-        else {
-          const saved = await loadGame(id);
-          if (!cancelled) {
-            accept(saved);
-            if (!saved.narrated) void narrate(saved, saved.turn);
-          }
-        }
-      } catch (cause) {
-        if (!cancelled) setError(cause instanceof ApiError ? cause.message : ko.restoreFailed);
-      } finally {
-        if (!cancelled) {
-          inFlight.current = false;
-          setBusy(false);
-        }
-      }
-    }
     void restore();
     return () => {
-      cancelled = true;
       mounted.current = false;
+      timers.current.forEach(clearTimeout);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function run(work: () => Promise<void>, fallback: string) {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError('');
-    try {
-      await work();
-    } catch (cause) {
-      if (mounted.current) setError(cause instanceof ApiError ? cause.message : fallback);
-    } finally {
-      inFlight.current = false;
-      if (mounted.current) setBusy(false);
-    }
-  }
-
-  function accept(next: GameView) {
-    if (!mounted.current) return;
-    pending.current = null;
-    setNeedsSync(false);
-    setView(next);
-    setCreating(false);
-    if (!storeGameId(next.game_id)) setError(ko.storageUnavailable);
-  }
-
-  async function narrate(target: GameView, turn: number) {
-    if (streaming.current) return;
-    streaming.current = true;
-    let text = '';
-    setNarration({ turn, text, status: 'streaming', canRetry: false });
-    const onEvent = (event: NarrationEvent) => {
-      if (!mounted.current) return;
-      if (event.type === 'delta') text += event.text;
-      else if (event.type === 'reset') text = '';
-      if (event.type === 'done') {
-        setNarration({ turn, text: event.text, status: 'done', canRetry: false });
-        setView((old) => old && old.game_id === target.game_id ? {
-          ...old,
-          narrated: old.turn === turn,
-          journal: old.journal.map((entry) => entry.n === turn ? { ...entry, narration: event.text } : entry),
-          tags: old.tags.map((tag) => event.tags[tag.id] ? { ...tag, name: event.tags[tag.id] } : tag),
-        } : old);
-      } else if (event.type === 'error') {
-        setNarration({ turn, text, status: 'error', canRetry: event.retry });
-      } else {
-        setNarration({ turn, text, status: 'streaming', canRetry: false });
-      }
-    };
-    try {
-      await streamNarration(target.game_id, turn, onEvent);
-    } catch {
-      if (mounted.current) setNarration({ turn, text, status: 'error', canRetry: true });
-    } finally {
-      streaming.current = false;
-    }
-  }
-
-  async function refresh() {
-    await run(async () => {
-      if (!catalog) setCatalog(await getCatalog());
-      const id = view?.game_id ?? loadGameId();
-      if (id) accept(await loadGame(id));
-      else setCreating(true);
-    }, ko.restoreFailed);
-  }
-
-  async function start(story: string, creation?: Creation) {
-    let started: GameView | null = null;
-    await run(async () => {
-      started = await startGame(story, creation);
-      accept(started);
-      setNotice(null);
-    }, ko.startFailed);
-    if (started) await narrate(started, 0);
-  }
-
-  async function sendPending() {
-    const saved = pending.current;
-    if (!saved) return;
-    let turn: { view: GameView; n: number } | null = null;
-    await run(async () => {
-      setNeedsSync(true);
-      try {
-        const out = await act(saved.gameId, saved.envelope);
-        accept(out.view);
-        setNotice(out.kind === 'clarify' || out.kind === 'rejected'
-          ? { reason: out.reason || ko.clarify, options: out.options } : null);
-        if (out.kind === 'turn' && out.turn !== null) turn = { view: out.view, n: out.turn };
-      } catch (cause) {
-        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 422)) {
-          accept(await loadGame(saved.gameId));
-        }
-        throw cause;
-      }
-    }, ko.connectionLost);
-    const next = turn as { view: GameView; n: number } | null;
-    if (next) await narrate(next.view, next.n);
-  }
-
-  async function send(command: Command) {
-    if (!view || inFlight.current || streaming.current || needsSync) return;
-    pending.current = { gameId: view.game_id, envelope: { ...command, revision: view.revision, request_id: requestId() } };
-    await sendPending();
-  }
-
-  function openNew() {
-    if (inFlight.current) return;
-    setCreating(true);
-    if (!pending.current) setError('');
-  }
-
-  async function retry() {
-    if (pending.current) return sendPending();
-    if (view && narration.status === 'error' && narration.canRetry) return narrate(view, narration.turn);
-    return refresh();
-  }
-
   return {
-    catalog, view, busy, error, creating, needsSync, narration, notice,
-    start, send, refresh, openNew, retry,
-    retryNarration: () => view && narration.canRetry ? narrate(view, narration.turn) : undefined,
+    phase, stories, view, before, notice, reveal, narration, recaps, sent, growthLater,
+    command, resend, create,
+    /** A press during the reveal jumps to its end state. */
+    skip: () => { if (phase === 'revealing') finishReveal(); },
+    /** The narration finished appearing. */
+    typed: () => { turn.current.typed = true; maybeEnd(); },
+    retryNarration: () => {
+      const last = viewRef.current?.last;
+      if (phase !== 'narration_error' || !last) return;
+      setPhase('narrating');
+      void narrate(last.turn, turn.current.recap);
+    },
+    laterGrowth: () => { growthRef.current = true; setGrowthLater(true); settle(); },
+    openGrowth: () => { growthRef.current = false; setGrowthLater(false); if (phase === 'idle') setPhase('card'); },
+    newGame: () => { if (!pending.current) { setNotice(null); setPhase('start'); } },
     dismissNotice: () => setNotice(null),
-    resume: () => setCreating(false),
   };
 }
+
+export type Game = ReturnType<typeof useGame>;

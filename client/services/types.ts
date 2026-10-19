@@ -1,66 +1,83 @@
-export type Named = { id: string; name: string; text: string };
-export type Button = { id: string; label: string; enabled: boolean };
-export type Meter = { id: string; name: string; value: number; boxes: number; fits: string[] };
-export type Chip = { id: string; name: string; kind: 'edge' | 'snag'; target: string };
-export type Card = { id: string; steps: string[]; odds: [number, number, number]; costs: string[] };
+// The server's shapes (api.md). The client adopts them as state and computes no rule.
 
-export type StoryCard = {
-  id: string;
-  title: string;
-  synopsis: string;
-  creation: { choose: boolean; approaches: { id: string; name: string; text?: string }[]; traits: Named[] };
+export type Story = {
+  id: string; title: string; premise: string; approaches: number[]; pick: number;
+  approach_names: { id: string; name: string; hint: string }[];
+  traits: { id: string; name: string; text: string }[];
 };
-
-export type GameView = {
-  game_id: string;
-  revision: number;
-  turn: number;
-  title: string;
-  chapter: string;
-  intro: string;
-  place: Named;
-  senses: string[];
-  exits: Button[];
-  people: { id: string; name: string; role: string; mood: string }[];
-  obstacles: Meter[];
-  danger: Meter;
-  tags: Chip[];
-  player: {
-    approaches: Meter[];
-    traits: Named[];
-    wounds: number;
-    gold: number;
-    items: Named[];
-    knowledge: Named[];
-    skills: Named[];
-  };
-  quests: Named[];
-  buttons: Button[];
-  journal: { n: number; input: string; lines: string[]; narration: string | null }[];
-  pending: { kind: 'confirm' | 'growth'; card: Card | null; options: Button[] } | null;
-  ending: Named | null;
-  narrated: boolean;
-};
-
-export type ActResult = {
-  kind: 'turn' | 'confirm' | 'clarify' | 'rejected' | 'cancelled';
-  view: GameView;
-  turn: number | null;
-  options: Button[];
-  reason: string;
-};
-
-export type Command =
-  | { text: string }
-  | { action_id: string }
-  | { confirm: string; accept: boolean };
-
-export type Envelope = Command & { revision: number; request_id: string };
-
-export type NarrationEvent =
-  | { type: 'delta'; text: string }
-  | { type: 'reset' }
-  | { type: 'done'; text: string; tags: Record<string, string> }
-  | { type: 'error'; retry: boolean };
-
 export type Creation = { approaches: Record<string, number>; traits: string[] };
+
+export type Chip = { kind: 'stat' | 'help' | 'hinder'; label: string; value: number };
+export type Change = { kind: string; [key: string]: unknown };
+export type StepRecord = {
+  t: number; action: string; label: string; result: 'success' | 'mixed' | 'fail' | 'none' | 'blocked';
+  risk: 'low' | 'normal' | 'high'; roll: { d1: number; d2: number } | null; mods: Chip[];
+  total: number | null; decisive: number[]; changes: Change[];
+};
+
+export type Preview = {
+  risk: 'low' | 'normal' | 'high'; mods: Chip[]; z: number;
+  odds: { fail: number; mixed: number; success: number };
+  stakes: { mixed: { clock: number; weight: string | null }; fail: { clock: number; weight: string | null } };
+  clock: { id: string; name: string; boxes: number; fill: number } | null;
+  gain: { kind: 'fill'; boxes: number; fit: number } | { kind: 'tag'; remove: string | null }
+    | { kind: 'topic' } | { kind: 'favor'; effects: string[] };
+};
+export type Target = { id: string; name: string; fill?: number; boxes?: number } | null;
+export type CardOption = {
+  id: string; label: string; consumed?: boolean; note?: string | null; preview?: Preview; effects?: string[];
+};
+export type Card = {
+  id: string; kind: 'roll' | 'clarify' | 'confirm';
+  echo: { text: string; slots: { slot: string; label: string }[] };
+  question?: string;
+  plan: { step: { action: string; label: string; target: Target } | null; rest: string[] };
+  options: CardOption[]; selected: string | null;
+};
+
+export type Box = { id: string; name: string; fill: number; boxes: number };
+export type Tag = { owner?: string; slot: number; kind: 'edge' | 'snag'; life: string; name: string };
+export type GameView = {
+  revision: number;
+  chapter: { k: number; title: string };
+  scene: {
+    place: { id: string; name: string; senses: string[] };
+    people: { id: string; name: string; attitude: string }[];
+    things: { id: string; name: string }[];
+    obstacles: (Box & { blocks: string[] })[];
+    exits: { id: string; name: string; blocked: boolean }[];
+    tags: Tag[];
+  };
+  player: {
+    approaches: { id: string; name: string; value: number }[];
+    traits: { id: string; name: string; spent: boolean }[];
+    tags: Tag[]; things: { id: string; name: string }[];
+    wounds: number; wound_boxes: number; beats: number; beats_max: number; growth: number;
+  };
+  clocks: (Box & { kind: string })[];
+  journal: {
+    beliefs: { id: string; text: string; order: number; here: boolean }[];
+    owes: { debtor: string; creditor: string; kind: 'promise' | 'kindness'; name: string; promise: string }[];
+    relations: { id: string; name: string; attitude: string }[];
+    choices: { kind: 'cost' | 'fork'; name: string; chapter: number }[];
+  };
+  buttons: { action: string; label: string; rolls: boolean }[];
+  due: { action: string; name: string; weight: string }[];
+  growth: { action: string; label: string }[];
+  card: Card | null;
+  last: { turn: number; steps: StepRecord[]; narrated: boolean } | null;
+  recaps: number[];
+  bands: { mixed: number; success: number; min: number; max: number };
+  ending: { id: string; title: string } | null;
+};
+
+export type CommandBody =
+  | { text: string } | { action: string } | { card: string; pick: string } | { card: string; cancel: true };
+export type CommandResult = {
+  kind: 'turn' | 'card' | 'refused'; turn: number | null; steps: StepRecord[]; reason: string | null; view: GameView;
+};
+export type NarrationEvent =
+  | { type: 'stage'; stage: 'writing' | 'checking' | 'rewriting'; attempt?: number }
+  | { type: 'text'; text: string }
+  | { type: 'done'; tags: { slot: number; owner: string; name: string }[] }
+  | { type: 'error'; message?: string };

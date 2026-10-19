@@ -1,50 +1,64 @@
-import { ActivityIndicator, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 
-import { Button } from '@/components/ui/Button';
-import { Reader } from '@/components/ui/Reader';
-import { colors } from '@/design/tokens';
+import { motion, text as sizes } from '@/design/tokens';
 import { ko } from '@/locale/ko';
-import type { Narration as State } from '@/logic/useGame';
-import type { GameView } from '@/services/types';
+import { fitSize } from '@/logic/fit';
+import type { Narration as N } from '@/logic/useGame';
 
-const TAIL = 700;
+/** The narration area: the stage while writing, the accepted text appearing at 60 chars/s, then the recap. */
+export function Narration({ narration, hold, fallback, onTyped, onRetry, failed }: {
+  narration: N; hold: boolean; fallback: string; onTyped: () => void; onRetry: () => void; failed: boolean;
+}) {
+  const [box, setBox] = useState({ width: 0, height: 0 });
+  const [shown, setShown] = useState(0);
+  const full = narration.text ?? '';
+  const typedFor = useRef<string | null>(null);
 
-// What the player did and what the rules decided. It leads the first page so the outcome is never on a later one.
-export function outcome(view: GameView): string {
-  if (view.turn === 0) return view.intro;
-  const latest = view.journal[view.journal.length - 1];
-  if (!latest) return '';
-  // A pressed button's label is also the first step's label; show it once.
-  const said = latest.input && !latest.lines[0]?.startsWith(latest.input) ? [ko.said(latest.input)] : [];
-  return [...said, ...latest.lines.map((line) => `· ${line}`)].join('\n');
-}
+  useEffect(() => {
+    if (hold || !full) return undefined;
+    setShown(0);
+    const id = setInterval(() => setShown((n) => {
+      if (n + 1 >= full.length) { clearInterval(id); return full.length; }
+      return n + 1;
+    }), 1000 / motion.typeRate);
+    return () => clearInterval(id);
+  }, [full, hold]);
 
-export function Narration({ view, narration, onRetry }: { view: GameView; narration: State; onRetry: () => void }) {
-  const latest = view.journal[view.journal.length - 1];
-  const head = outcome(view);
-  if (narration.status === 'streaming') {
-    return (
-      <View className="flex-1 min-h-0 gap-3 overflow-hidden">
-        {head ? <Text className="font-sans text-body text-gold-fg">{head}</Text> : null}
-        <Text accessibilityLiveRegion="polite" className="reader-text font-sans text-lead text-fg-default">{narration.text.slice(-TAIL)}</Text>
-        <View className="flex-row items-center gap-2">
-          <ActivityIndicator color={colors.gold.fg} />
-          <Text className="font-sans text-caption text-gold-fg">{ko.writing}</Text>
+  useEffect(() => {
+    if (!hold && full && shown >= full.length && typedFor.current !== full) {
+      typedFor.current = full;
+      onTyped();
+    }
+  }, [shown, full, hold, onTyped]);
+
+  const body = [full, narration.recap].filter(Boolean).join('\n\n') || (narration.text === null && !narration.stage ? fallback : '');
+  const size = box.width ? fitSize(body, box.width, box.height, sizes.narration, sizes.lineHeight) : sizes.narration[0];
+  const visible = hold ? '' : full.slice(0, shown);
+
+  return (
+    <Pressable accessibilityRole="text" className="min-h-0 flex-1 px-4 py-2" onPress={() => setShown(full.length)}
+      onLayout={(e) => setBox({ width: e.nativeEvent.layout.width - 32, height: e.nativeEvent.layout.height - 16 })}>
+      {narration.stage && !full ? (
+        <Text accessibilityLiveRegion="polite" className="font-sans text-chip text-fg-subtle">{ko.stage[narration.stage]}</Text>
+      ) : null}
+      <Text className="font-sans text-fg-default" style={{ fontSize: size, lineHeight: size * sizes.lineHeight }}>
+        {full ? visible : narration.text === null && !narration.stage && !failed ? fallback : ''}
+      </Text>
+      {narration.recap && !hold && shown >= full.length ? (
+        <Text className="mt-3 font-sans text-fg-muted" style={{ fontSize: size, lineHeight: size * sizes.lineHeight }}>
+          {narration.recap}
+        </Text>
+      ) : null}
+      {failed ? (
+        <View className="mt-2 gap-2">
+          <Text accessibilityRole="alert" className="font-sans-semibold text-body text-danger-fg">{ko.narrationFailed}</Text>
+          {narration.error ? <Text className="font-sans text-chip text-fg-subtle">{narration.error}</Text> : null}
+          <Pressable accessibilityRole="button" onPress={onRetry} className="self-start rounded-md border border-border-default px-3 py-1">
+            <Text className="font-sans text-panel text-fg-default">{ko.retryNarration}</Text>
+          </Pressable>
         </View>
-      </View>
-    );
-  }
-  if (narration.status === 'error' && narration.turn === view.turn) {
-    return (
-      <View className="flex-1 min-h-0 gap-4">
-        {head ? <Text className="font-sans text-body text-gold-fg">{head}</Text> : null}
-        <Text accessibilityRole="alert" className="font-sans text-body text-danger-fg">{ko.narrationFailed}</Text>
-        {narration.canRetry ? <Button label={ko.rewrite} onPress={onRetry} /> : null}
-      </View>
-    );
-  }
-  const ending = view.ending ? `${ko.endingTitle(view.ending.name)}\n\n${view.ending.text}` : '';
-  const story = [latest?.narration ?? '', ending].filter(Boolean).join('\n\n');
-  const text = [head, story].filter(Boolean).join('\n\n');
-  return <Reader key={`${view.turn}:${text.length}`} text={text} />;
+      ) : null}
+    </Pressable>
+  );
 }
