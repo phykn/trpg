@@ -8,7 +8,8 @@ from .rules.candidates import active_threats, candidates, held_clock, solution_l
 from .rules.recommend import recommend
 from .rules.roll import DC, band, risk, rolls
 
-ACTIVE = ("clock", "deadline", "threat", "fork")
+# The order clocks show in, most pressing first.
+CLOCK_ORDER = ("clock", "deadline", "threat", "fork")
 
 
 def tag_name(u, p: dict, atom) -> str:
@@ -66,7 +67,8 @@ def atom_label(u, p: dict, atom) -> str:
     if k == "believes":
         return prop_label(u, atom[2])
     if k == "regards":
-        return f"{u.name(atom[1])} {ko.TRUST_WORDS.get(atom[4], '') if atom[3] == 'trust' else ko.FEAR_WORD}"
+        word = ko.TRUST_WORDS.get(atom[4], "") if atom[3] == "trust" else ko.UNAFRAID if atom[4] < 0 else ko.FEAR_WORD
+        return f"{u.name(atom[1])} {word}"
     return str(atom)
 
 
@@ -134,13 +136,20 @@ def action_label(u, o: Obs, p: dict, a: Action) -> str:
     if s == "choose":
         return next(n for c, n, _ in u.obstacles[i[0]].choices if c == i[1])
     if s == "grow":
-        if i[0] == "trait":
-            return ko.fill(ko.ACTION["grow_trait"], old=u.traits[i[1]][0], new=u.traits[i[2]][0])
-        if i[0] == "scar":
-            return ko.fill(ko.ACTION["grow_scar"], name=tag_name(u, p, ("mark", PLAYER, "snag", "scar", int(i[1]))))
-        v = o.facts.stat(PLAYER, i[0]) or 0
-        return ko.fill(ko.ACTION["grow"], approach=ko.APPROACHES[i[0]], before=v, after=v + 1)
+        kind, name = growth_name(u, o, p, a)
+        return name if kind == "approach" else ko.fill(ko.ACTION[f"grow_{kind}"], name=name)
     return str(a)
+
+
+def growth_name(u, o, p, a) -> tuple[str, str]:
+    """A growth's kind and the short name the growth card lists it by, under that kind."""
+    i = a.intent
+    if i[0] == "trait":
+        return "trait", ko.fill(ko.SWAP, old=u.traits[i[1]][0], new=u.traits[i[2]][0])
+    if i[0] == "scar":
+        return "scar", tag_name(u, p, ("mark", PLAYER, "snag", "scar", int(i[1])))
+    v = o.facts.stat(PLAYER, i[0]) or 0
+    return "approach", ko.fill(ko.ACTION["grow"], approach=ko.APPROACHES[i[0]], before=v, after=v + 1)
 
 
 def _relying(u, o: Obs, p: dict, a: Action) -> str:
@@ -259,7 +268,7 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
         if at[0] == "owes":
             g, h, k = at[1:]
             other = h if g == PLAYER else g
-            state = "made" if at in add else _closing(seen, other)
+            state = "made" if at in add else _closing(u, p, seen, other) if k == "promise" else "closed"
             label = u.agents[other].favor.promise if k == "promise" and u.agents[other].favor else ""
             out.append({"kind": "promise", "id": other, "name": u.name(other), "owes": k, "debtor": g,
                         "state": state, "promise": label})
@@ -273,12 +282,12 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
     return out
 
 
-def _closing(seen: Seen, h: str) -> str:
-    for at in seen.delta.add:
-        if at[0] == "regards" and at[1] == h and at[3] == "trust":
-            before = next((b[4] for b in seen.delta.remove if b[0] == "regards" and b[1] == h and b[3] == "trust"), at[4])
-            return "kept" if at[4] > before else "broken"
-    return "closed"
+def _closing(u, p: dict, seen: Seen, h: str) -> str:
+    # Trust is clamped, so a kept promise at full trust may change nothing; a break always tags the player.
+    broken = ko.TAG_KEYS["@broken_promise"]
+    if any(at[0] == "mark" and at[1] == PLAYER and tag_name(u, p, at) == broken for at in seen.delta.add):
+        return "broken"
+    return "kept"
 
 
 def chapter_k(u, facts: State) -> int:
@@ -302,13 +311,14 @@ def game_view(u, g) -> dict:
         "player": {"name": g.creation.get("name", ""), **_player(u, o, p)},
         "clocks": [{"id": c, "name": u.name(c), "fill": f.fill(c), "boxes": u.boxes(c), "kind": u.obstacles[c].sub}
                    for c in sorted(filter(None, [held_clock(u, f), *active_threats(u, f)]),
-                                   key=lambda c: ACTIVE.index(u.obstacles[c].sub))],
+                                   key=lambda c: CLOCK_ORDER.index(u.obstacles[c].sub))],
         "journal": _journal(u, g, o, p, here),
         "buttons": [] if ending else [
             {"action": str(a), "label": action_label(u, o, p, a), "rolls": rolls(u, f, o.hist, a)}
             for a in recommend(u, o)],
         "growth": [] if ending or (f.stat(PLAYER, "growth") or 0) < 1 else [
-            {"action": str(a), "label": action_label(u, o, p, a)} for a in candidates(u, o) if a.schema == "grow"],
+            {"action": str(a), "label": action_label(u, o, p, a), **dict(zip(("kind", "name"), growth_name(u, o, p, a)))}
+            for a in candidates(u, o) if a.schema == "grow"],
         "card": (p.get("card") or {}).get("public"),
         "last": None if last is None else {
             "turn": last["n"], "steps": last["steps"], "narrated": str(last["n"]) in p.get("narration", {})},

@@ -8,7 +8,7 @@ from conftest import REPO
 from run_api import build_app
 from src.lang.polite import polite
 from src.models.decision import ModelUnavailable
-from src.narrate import Narrator, sentences_of, split
+from src.narrate import Narrator, change_line, sentences_of, split
 from src.service import GameService
 from src.story.validate import load_all
 
@@ -191,3 +191,9 @@ async def test_a_person_named_in_delta_or_here_may_act(tmp_path):
     assert per == {}
     per, _ = svc.narrator.rules(replace(job, delta=[]), said, [])
     assert list(per) == [0]
+
+
+def test_a_lowered_threat_recedes_instead_of_approaching(u):
+    up = {"kind": "clock", "id": "hound", "name": "사냥개", "from": 0, "to": 1}
+    assert change_line(u, up).endswith("다가왔습니다")
+    assert change_line(u, {**up, "from": 1, "to": 0}).endswith("물러났습니다")

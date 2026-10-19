@@ -4,16 +4,11 @@
 
 :root { color-scheme: dark; }
 html, body, #root { height: 100%; overflow: hidden; overscroll-behavior: none; }
-body { background: theme('colors.canvas.inset'); }
-.reader-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Korean lines break between words, never inside one. */
+body { background: theme('colors.canvas.inset'); word-break: keep-all; overflow-wrap: break-word; }
 .mobile-frame { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
-[role='button']:focus-visible, input:focus-visible {
+[role='button']:focus-visible {
   outline: 2px solid theme('colors.gold.fg');
   outline-offset: theme('spacing.1');
 }
-::selection { background: theme('colors.accent.muted'); }
-
-@media (prefers-reduced-motion: no-preference) {
-  [data-testid='reader-text'] { animation: page-in 160ms ease-out; }
-  @keyframes page-in { from { opacity: 0; } to { opacity: 1; } }
-}
+::selection { background: theme('colors.gold.muted'); }

@@ -100,7 +100,7 @@ CommandResult
 | `clocks` | 지닌 위험 시계, 마감, 활성 위협과 갈림(이름, `fill`, 칸 수, 종류) |
 | `journal` | 믿는 것(`B`의 문장, 믿게 된 차례, 지금 장면의 개체를 말하는지), 약속과 신세(`owes`), 인물별 관계, 갈림의 선택(이름, 장) |
 | `buttons` | 추천(rule.md 9절): 행동 id, 이름, 굴리는지 |
-| `growth` | 성장 행동 `[{action, label}]`(성장이 1 이상일 때) |
+| `growth` | 성장 행동 `[{action, label, kind, name}]`(성장이 1 이상일 때). `kind`는 `approach`, `trait`, `scar`이고 `name`은 그 갈래 아래에 적는 짧은 이름("뱃사람 → 토박이") |
 | `card` | 기다리는 카드(아래) 또는 없음 |
 | `last` | 마지막 턴의 번호, 단계 기록, 서술이 캐시되었는지 |
 | `recaps` | 되돌아보기가 있는 장 번호들 |

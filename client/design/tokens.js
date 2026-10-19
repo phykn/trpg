@@ -13,15 +13,14 @@ const colors = {
     'on-emphasis': '#132024',
   },
   border: { default: '#2a3c43', strong: '#506369' },
-  accent: { fg: '#e5bd76', muted: '#302d24' },
   danger: { fg: '#f19a8d', muted: '#3a2422' },
   success: { fg: '#9fcabd', muted: '#1f3530' },
-  gold: { fg: '#e5bd76' },
+  gold: { fg: '#e5bd76', muted: '#302d24' },
   chip: { stat: '#8fb3d9', help: '#9fcabd', hinder: '#f19a8d' },
   // What kind a scene entry is, told apart by hue alone (ui.md 2.1).
   kind: { person: '#8fb3d9', thing: '#9fcabd', obstacle: '#c9a8e8' },
-  // Full boxes say whose side the fill is on: gold is the player's progress, red is trouble, grey is time spent.
-  box: { empty: '#2a3c43', full: '#e5bd76', fit: '#9fcabd', next: '#f19a8d', danger: '#b8574b', time: '#84989e' },
+  // Full boxes say whose side the fill is on: gold is the player's progress, red is trouble.
+  box: { empty: '#2a3c43', full: '#e5bd76', danger: '#b8574b' },
   overlay: 'rgba(3,9,12,0.82)',
 };
 const spacing = {
@@ -43,16 +42,14 @@ const fontSize = {
   panel: ['13px', { lineHeight: '20px' }],
   body: ['15px', { lineHeight: '24px' }],
   title: ['17px', { lineHeight: '26px' }],
-  lead: ['18px', { lineHeight: '30px' }],
   hero: ['28px', { lineHeight: '36px' }],
   display: ['40px', { lineHeight: '48px' }],
 };
-const text = { narration: [18, 17, 16, 15, 14, 13], min: 13, chipMin: 12, lineHeight: 1.6 };
 const layout = { mobile: 412 };
 // `reduced` replaces every beat under prefers-reduced-motion (ui.md 4.5).
 const motion = {
   cloud: 600, die: 250, dieGap: 120, line: 200, chip: 180, settle: 2200, decisive: 150,
-  box: 150, fold: 200, change: 150, blockedFade: 300, odds: 250, reduced: 100,
-  typeRate: 60, shakeMax: 1500, stuck: 30000,
+  box: 150, fold: 200, change: 150, blockedFade: 300, reduced: 100,
+  typeRate: 60, shakeMax: 1500, stuck: 30000, enter: 220, ripple: 800,
 };
-module.exports = { colors, spacing, radius, fontFamily, fontSize, text, layout, motion };
+module.exports = { colors, spacing, radius, fontFamily, fontSize, layout, motion };

@@ -1,41 +1,38 @@
 import { Pressable, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
+import { IconButton } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { useEnter } from '@/components/ui/motion';
+import { useDialog } from '@/components/ui/useDialog';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
-import { Record } from './Record';
 import { Item, Row } from './Row';
-import { useDialog } from './useDialog';
 
 // Health counts what is left, so it must not look like a clock's boxes, which count what has gone wrong.
 function Health({ left, of }: { left: number; of: number }) {
   return (
     <View className="flex-row items-center gap-[3px]">
+      <View className="mr-0.5"><Icon name="heart" size={12} color={colors.success.fg} width={2.2} /></View>
       {Array.from({ length: of }, (_, i) => (
-        <View key={i} className="h-[8px] w-[8px] rounded-full border"
+        <View key={i} className="h-2 w-2 rounded-full border"
           style={{ borderColor: colors.success.fg, backgroundColor: i < left ? colors.success.fg : 'transparent' }} />
       ))}
     </View>
   );
 }
 
-// Health is the one hero fact always on screen; the rest waits behind the icon (ui.md 2.1).
-export function HeroIcon({ player, open, growth, onPress }: {
+// Health is the one hero fact always on screen; the rest waits behind the button.
+export function HeroButton({ player, open, growth, onPress }: {
   player: GameView['player']; open: boolean; growth: boolean; onPress?: () => void;
 }) {
   const name = player.name || ko.hero;
   const left = player.wound_boxes - player.wounds;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={ko.heroButton(name, left, player.wound_boxes)}
-      accessibilityState={{ disabled: !onPress, expanded: open }} disabled={!onPress} onPress={onPress}
-      className={`h-[24px] flex-row items-center gap-1.5 rounded-md pl-1.5 pr-1 ${open ? 'bg-accent-muted' : ''} ${onPress ? '' : 'opacity-40'}`}>
+    <IconButton icon="user" label={ko.heroButton(name, left, player.wound_boxes)} open={open} dot={growth} onPress={onPress}>
       <Health left={left} of={player.wound_boxes} />
-      <View className="w-[16px] items-center">
-        <View className="h-[7px] w-[7px] rounded-full border-[1.5px] border-fg-muted" />
-        <View className="mt-[2px] h-[6px] w-[13px] rounded-t-full border-[1.5px] border-b-0 border-fg-muted" />
-        {growth ? <View className="absolute -right-[2px] top-0 h-[6px] w-[6px] rounded-full bg-gold-fg" /> : null}
-      </View>
-    </Pressable>
+    </IconButton>
   );
 }
 
@@ -44,37 +41,57 @@ export function HeroSheet({ player, journal, onGrowth, onClose }: {
   player: GameView['player']; journal: GameView['journal']; onGrowth?: () => void; onClose: () => void;
 }) {
   const ref = useDialog(onClose);
+  const enter = useEnter(-6);
+  const owes = journal.owes;
+  const beliefs = journal.beliefs.filter((b) => b.here);
   return (
-    <View ref={ref} accessibilityRole={'dialog' as never}
-      className="absolute left-3 right-3 top-full z-20 rounded-md border border-border-strong bg-canvas-floating py-2">
-        <Text className="px-4 pb-1 font-sans-semibold text-body text-fg-default">{player.name || ko.hero}</Text>
-        <Row inset label={ko.health}>
-          <Health left={player.wound_boxes - player.wounds} of={player.wound_boxes} />
+    <Animated.View style={[{ position: 'absolute', left: 12, right: 12, top: '100%', zIndex: 20 }, enter]}>
+      <View ref={ref} accessibilityRole={'dialog' as never}
+        className="rounded-2xl border border-border-strong bg-canvas-floating py-2">
+        <View className="h-9 flex-row items-center px-3">
+          <Text className="min-w-0 flex-1 font-sans-semibold text-body text-fg-default">{player.name || ko.hero}</Text>
+          {onGrowth ? (
+            <Pressable accessibilityRole="button" accessibilityLabel={ko.growth} onPress={onGrowth}
+              className="h-7 flex-row items-center gap-1 rounded-full bg-gold-fg px-2.5">
+              <Icon name="spark" size={12} color={colors.fg['on-emphasis']} width={2.2} />
+              <Text className="font-sans-semibold text-chip text-fg-on-emphasis">{player.growth}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+        <Row inset icon="heart" tone={colors.success.fg} label={ko.health}>
+          <View className="h-[22px] justify-center"><Health left={player.wound_boxes - player.wounds} of={player.wound_boxes} /></View>
         </Row>
         {player.tags.length ? (
-          <Row inset label={ko.row.state}>
+          <Row inset icon="tag" label={ko.row.state}>
             {player.tags.map((t) => (
-              <Item key={`tag${t.slot}`} tone={t.kind === 'edge' ? 'gold' : 'danger'}>{t.name}</Item>
+              <Item key={`tag${t.slot}`} color={t.kind === 'edge' ? colors.gold.fg : colors.danger.fg}>{t.name}</Item>
             ))}
           </Row>
         ) : null}
-        <Row inset label={ko.row.ability}>
-          {player.approaches.map((a) => <Item key={a.id}>{a.name} {a.value}</Item>)}
-          {onGrowth ? (
-            <Pressable accessibilityRole="button" onPress={onGrowth} className="rounded-sm border border-gold-fg px-1">
-              <Item tone="gold">{ko.growth(player.growth)}</Item>
-            </Pressable>
-          ) : null}
+        <Row inset icon="bolt" label={ko.row.ability}>
+          {player.approaches.map((a) => (
+            <Item key={a.id}>{a.name} <Text className="font-mono-medium text-gold-fg">{a.value}</Text></Item>
+          ))}
         </Row>
-        <Row inset label={ko.traits}>
-          {player.traits.map((t) => <Item key={t.id} dim={t.spent}>{t.name}{t.spent ? ko.spent : ''}</Item>)}
+        <Row inset icon="star" label={ko.traits}>
+          {player.traits.map((t) => <Item key={t.id} dim={t.spent}>{t.name}</Item>)}
         </Row>
         {player.things.length ? (
-          <Row inset label={ko.row.carried}>
+          <Row inset icon="bag" label={ko.row.carried}>
             {player.things.map((x) => <Item key={x.id} color={colors.kind.thing}>{x.name}</Item>)}
           </Row>
         ) : null}
-        <Record inset journal={journal} />
-    </View>
+        {owes.length || beliefs.length ? (
+          <Row inset icon="book" label={ko.row.record}>
+            {owes.map((o) => (
+              <Item key={`${o.debtor}${o.creditor}${o.kind}`} color={colors.gold.fg}>
+                {o.kind === 'promise' ? ko.promise(o.name, o.promise) : ko.kindness(o.name)}
+              </Item>
+            ))}
+            {beliefs.map((b) => <Item key={b.id} color={colors.fg.muted}>{b.text}</Item>)}
+          </Row>
+        ) : null}
+      </View>
+    </Animated.View>
   );
 }

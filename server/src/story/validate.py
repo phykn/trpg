@@ -8,7 +8,7 @@ from ..onto.atoms import APPROACHES, PLAYER
 from ..onto.change import Work
 from ..onto.cond import atoms_of, holds
 from ..onto.log import Log
-from ..onto.universe import Universe, build, conforms, initial
+from ..onto.universe import CreationError, Universe, conforms, initial
 from ..onto.view import observe, record
 from ..rules.acts import Action, parse
 from ..rules.candidates import admits, candidates
@@ -17,6 +17,7 @@ from ..rules.resolve import Step, event_of, resolve
 from ..rules.roll import outcome, preview, roll, rolls
 from ..rules.schemas import Ctx
 from ..rules.triggers import ENGINE, ended
+from .compile import build
 from .load import StoryError, read, story_files
 
 MAX_STORY_COMPLICATIONS = 58      # u is 0…59 and the engine adds two per weight (rule.md 3.3)
@@ -88,7 +89,7 @@ def _story_complications(u: Universe):
 def v2(u: Universe) -> None:
     try:
         s0 = initial(u, _creation(u))
-    except StoryError as e:
+    except CreationError as e:
         fail("V2", "witnesses.creation", str(e))
     problems = conforms(u, s0)
     if problems:

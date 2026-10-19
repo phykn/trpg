@@ -1,4 +1,3 @@
-import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -58,11 +57,9 @@ class DecisionClient:
         self.min_confidence = DECISION_MODELS[model].min_confidence if min_confidence is None else min_confidence
         self.timeout_s = timeout_s
         self.transport = transport
-        self.last_ms = 0
 
     async def decide(self, state: str, questions: dict[str, dict[str, Any]]) -> dict[str, Answer]:
         body = {"state": state, "model": self.model, "questions": questions}
-        started = time.perf_counter()
         try:
             async with httpx.AsyncClient(timeout=self.timeout_s, transport=self.transport) as client:
                 response = await client.post(f"{self.base_url}/v1/systemone", json=body, headers=self.headers)
@@ -70,7 +67,6 @@ class DecisionClient:
             answers = {qid: normalize(raw, self.min_confidence) for qid, raw in response.json()["answers"].items()}
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
             raise ModelUnavailable(f"decision: {type(exc).__name__}: {exc}") from exc
-        self.last_ms = round((time.perf_counter() - started) * 1000)
         missing = set(questions) - set(answers)
         if missing:
             raise ModelUnavailable(f"decision: no answer for {sorted(missing)}")

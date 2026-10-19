@@ -7,7 +7,8 @@ import pytest
 SERVER = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SERVER))
 
-from src.onto.universe import build, initial
+from src.onto.universe import initial
+from src.story.compile import build
 from src.story.load import read
 
 REPO = SERVER.parent

@@ -25,15 +25,8 @@ class Delta:
         return Delta(frozenset(tuple(a) for a in d["add"]), frozenset(tuple(a) for a in d["remove"]))
 
 
-EMPTY = Delta(frozenset(), frozenset())
-
-
 def _key(a) -> tuple:
     return tuple((0, x) if isinstance(x, int) else (1, str(x)) for x in a)
-
-
-def sort_atoms(atoms) -> list[Atom]:
-    return sorted(atoms, key=_key)
 
 
 @dataclass(frozen=True)

@@ -4,12 +4,12 @@ A story-agnostic Korean web TRPG engine. The player types a Korean sentence; rul
 
 ## Current state
 
-The engine is rebuilt from the theory in [plan.md](plan.md) (stages 1–8 done).
+The engine follows the design in docs/; the rebuild plan is finished and removed.
 
 - **Design (source of truth)**: [docs/](docs/) — `ontology.md` (world, invariants, operations, save format), `story.md` (story format and validation), `rule.md` (candidates, rolls, time, people), `engine.md` (interpretation, cards, narration, turn protocol), `api.md`, `ui.md`, `fun.md` (metrics).
 - **Story**: [scenarios/skeleton/](scenarios/skeleton/) (`story.yaml` with id `lighthouse`, and `evals.yaml` for interpretation) is the only story.
 - **Server** (`server/src/`): `onto/` (world, log, saves), `rules/` (pure rules), `story/` (loading, validation, evals), `interpret.py`, `narrate.py`, `cards.py`, `view.py`, `service.py`, `api.py`, `fun.py` (offline metrics).
-- **Client** (`client/`): `logic/useGame.ts` (state machine), `logic/reveal.ts`, `components/game/`, `screens/`.
+- **Client** (`client/`): `logic/useGame.ts` (state machine), `logic/reveal.ts`, `components/ui/` (shared icon, button, sheet, motion, dialog), `components/game/`, `screens/`.
 - Real-UI QA runs and interpretation evals live in ignored `qa_test/agency/` (`ui-1/turns.md` lists the open findings).
 
 ## Models

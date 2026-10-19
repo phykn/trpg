@@ -1,8 +1,8 @@
 import pytest
 import yaml
 from conftest import REPO, skeleton_raw
-from src.onto.universe import build
 from src.story import validate as V
+from src.story.compile import build
 from src.story.load import StoryError
 
 
@@ -20,6 +20,7 @@ BROKEN = [
     ("V1", lambda r: r["places"]["dock"]["complications"].update(
         {f"c_{i}": {"name": "물", "weight": "light", "wound": 1} for i in range(58)})),
     ("V1", lambda r: r["places"]["dock"].__setitem__("smell", "x")),
+    ("V1", lambda r: r["chapters"][1]["clock"]["crisis"].__setitem__(1, {"set": ["flag", "gale", "windy"]})),
     ("V2", lambda r: r["witnesses"]["creation"]["approaches"].__setitem__("charm", 3)),
     ("V3", lambda r: r["triggers"].__setitem__("tr_x", {"when": {"at": ["player", "dock"]}})),
     ("V3", lambda r: r["obstacles"]["door"]["solutions"]["s_shoulder"].__setitem__("when", {"flag": ["gale", 1]})),

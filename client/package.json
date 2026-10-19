@@ -9,7 +9,6 @@
     "android": "dotenv -e .env.shared -e .env.dev -- expo start --android",
     "ios": "dotenv -e .env.shared -e .env.dev -- expo start --ios",
     "web": "node scripts/web-local.cjs",
-    "web:local": "node scripts/web-local.cjs",
     "build:web": "node scripts/web-local.cjs --export",
     "lint": "expo lint",
     "test": "jest"

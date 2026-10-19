@@ -6,8 +6,9 @@ from src.onto.atoms import PLAYER, ConformError, State
 from src.onto.change import Work
 from src.onto.log import Delta, Event, Log
 from src.onto.save import SaveError, new_game, rebuild, to_json
-from src.onto.universe import build, conforms, initial
+from src.onto.universe import CreationError, conforms, initial
 from src.onto.view import observe, record, witnesses
+from src.story.compile import build
 from src.story.load import StoryError, parse
 
 
@@ -28,11 +29,11 @@ def test_start_state_conforms_and_holds_defaults(u, s0):
 def test_creation_spends_the_story_total_within_its_highest_value(u):
     initial(u, {"approaches": {"force": 1, "finesse": 1, "wits": 1, "charm": 1}, "traits": ["sailor", "tinker"]})
     initial(u, {"approaches": {"force": 2, "finesse": 2, "wits": 0, "charm": 0}, "traits": ["sailor", "tinker"]})
-    with pytest.raises(StoryError):
+    with pytest.raises(CreationError):
         initial(u, {"approaches": {"force": 1, "finesse": 1, "wits": 1, "charm": 0}, "traits": ["sailor", "tinker"]})
-    with pytest.raises(StoryError):
+    with pytest.raises(CreationError):
         initial(u, {"approaches": {"force": 3, "finesse": 1, "wits": 1, "charm": 0}, "traits": ["sailor", "tinker"]})
-    with pytest.raises(StoryError):
+    with pytest.raises(CreationError):
         initial(u, {"approaches": {"force": 2, "finesse": 1, "wits": 1, "charm": 0}, "traits": ["sailor"]})
 
 

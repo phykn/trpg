@@ -1,29 +1,28 @@
 import { Pressable, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
+import { Icon } from '@/components/ui/Icon';
+import { useEnter } from '@/components/ui/motion';
+import { useDialog } from '@/components/ui/useDialog';
 import { ko } from '@/locale/ko';
-import { useDialog } from './useDialog';
-
-export function MenuIcon({ open, onPress }: { open: boolean; onPress?: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={ko.menu} accessibilityState={{ disabled: !onPress, expanded: open }}
-      disabled={!onPress} onPress={onPress}
-      className={`h-[24px] w-[32px] items-center justify-center gap-[3px] rounded-md ${open ? 'bg-accent-muted' : ''} ${onPress ? '' : 'opacity-40'}`}>
-      {[0, 1, 2].map((i) => <View key={i} className="h-[2px] w-4 rounded-full bg-fg-muted" />)}
-    </Pressable>
-  );
-}
 
 export function Menu({ onClose, onTitle }: { onClose: () => void; onTitle: () => void }) {
   const ref = useDialog(onClose);
+  const enter = useEnter(-6);
   return (
     <>
       <Pressable accessibilityLabel={ko.closeMenu} className="absolute bottom-0 left-0 right-0 top-0 z-10" onPress={onClose} />
-      <View ref={ref} accessibilityRole={'menu' as never}
-        className="absolute right-3 top-[34px] z-20 w-[160px] rounded-md border border-border-strong bg-canvas-floating py-1">
-        <Pressable accessibilityRole={'menuitem' as never} onPress={onTitle} className="px-3 py-2">
-          <Text className="font-sans-semibold text-body text-fg-default">{ko.toTitle}</Text>
-        </Pressable>
-      </View>
+      {/* Animated views take no className, so the dropdown is placed by style. */}
+      <Animated.View style={[{ position: 'absolute', right: 12, top: 42, zIndex: 20 }, enter]}>
+        <View ref={ref} accessibilityRole={'menu' as never}
+          className="w-[168px] rounded-2xl border border-border-strong bg-canvas-floating p-1">
+          <Pressable accessibilityRole={'menuitem' as never} onPress={onTitle}
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })} className="h-10 flex-row items-center gap-2.5 rounded-xl px-3">
+            <Icon name="home" size={16} />
+            <Text className="font-sans-semibold text-panel text-fg-default">{ko.toTitle}</Text>
+          </Pressable>
+        </View>
+      </Animated.View>
     </>
   );
 }

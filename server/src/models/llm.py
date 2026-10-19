@@ -60,28 +60,26 @@ class LLMClient:
         return self.model
 
     async def pick(self, messages: list[dict[str, str]], max_tokens: int = 6) -> str:
-        saved = self.sampling
-        self.sampling = {"temperature": 0.0}
-        try:
-            return "".join([chunk async for chunk in self.stream(messages, max_tokens, seed=1)])
-        finally:
-            self.sampling = saved
+        # Greedy for this call only: the narrator streams on the same client meanwhile.
+        chunks = self.stream(messages, max_tokens, seed=1, sampling={"temperature": 0.0})
+        return "".join([chunk async for chunk in chunks])
 
-    def body(self, messages: list[dict[str, str]], max_tokens: int, seed: int | None = None) -> dict[str, Any]:
+    def body(self, messages: list[dict[str, str]], max_tokens: int, seed: int | None = None,
+             sampling: dict[str, Any] | None = None) -> dict[str, Any]:
         # mlx-lm reads chat_template_kwargs, mlx-vlm reads the top-level flag; send both, always off.
         # The server samples with a fixed seed unless told otherwise, so a rewrite needs its own seed.
         return {
             "model": self.model, "messages": messages, "stream": True, "max_tokens": max_tokens,
             "enable_thinking": False, "chat_template_kwargs": {"enable_thinking": False},
-            **self.sampling, **({"seed": seed} if seed is not None else {}),
+            **(self.sampling if sampling is None else sampling), **({"seed": seed} if seed is not None else {}),
         }
 
     async def stream(self, messages: list[dict[str, str]], max_tokens: int = 500,
-                     seed: int | None = None) -> AsyncIterator[str]:
+                     seed: int | None = None, sampling: dict[str, Any] | None = None) -> AsyncIterator[str]:
         if self.model is None:
             await self.resolve_model()
         try:
-            url, body = f"{self.base_url}/chat/completions", self.body(messages, max_tokens, seed)
+            url, body = f"{self.base_url}/chat/completions", self.body(messages, max_tokens, seed, sampling)
             async with self._client() as client, client.stream("POST", url, json=body) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():

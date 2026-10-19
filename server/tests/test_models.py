@@ -44,3 +44,9 @@ async def test_llm_finds_its_loaded_id_and_uses_its_sampling():
 async def test_llm_that_is_not_loaded_is_an_error_and_a_distill_is_not_qwen():
     with pytest.raises(ModelUnavailable, match="qwen is configured but not loaded"):
         await LLMClient("http://l/v1", model="qwen", transport=llm_server("empero-ai--Qwen3.8-2B-Distill")).resolve_model()
+
+
+def test_a_greedy_pick_leaves_the_shared_sampling_alone():
+    llm = LLMClient("http://l/v1", model="gemma4")
+    assert llm.body([], 6, 1, {"temperature": 0.0})["temperature"] == 0.0
+    assert llm.sampling["top_k"] == 64 and llm.body([], 6)["top_k"] == 64

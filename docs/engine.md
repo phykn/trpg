@@ -13,10 +13,11 @@
 ```
 server/src/
   onto/  rules/          ontology.md, rule.md
-  story/                 load.py(원고 읽기), validate.py(story.md V1~V6)
+  story/                 load.py(YAML 읽기), compile.py(원고 → Universe, V1의 구조),
+                         validate.py(story.md V1~V6), evals.py(해석 평가)
   locale/ko.py           틀 표 𝔗, 행동 이름 λ, 공통 문장, 해석 어휘
   lang/                  context.py(ρ), claims.py(κ), polite.py(합니다체)
-  models/                kev.py(결정 모델), qwen.py(서술 모델)
+  models/                decision.py(결정 모델), llm.py(서술 모델)
   interpret.py           질문 나무와 받아들이기
   cards.py               되묻기, 굴림, 확인 카드
   narrate.py             서술, 검사, 다시 쓰기, 되돌아보기

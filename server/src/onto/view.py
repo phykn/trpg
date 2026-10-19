@@ -100,18 +100,5 @@ def record(u, log: Log, before: State, after: State, e: Event) -> None:
     for a in sorted(e.delta.add, key=str):
         if a[0] == "believes" and (a[1], a[2]) not in log.believed:
             log.believed[(a[1], a[2])] = len(log.believed)
-    mine = project(u, before, after, e, PLAYER)
-    log.seen.setdefault(PLAYER, []).append(mine)
-    rule_seen = seen_by(u, before, PLAYER) | seen_by(u, after, PLAYER)
-
-    def keep(a):
-        return fact_rule(PLAYER, rule_seen, a)
-
-    for g in e.witnesses:
-        if g == PLAYER:
-            continue
-        theirs = project(u, before, after, e, g)
-        log.seen.setdefault(g, []).append(Seen(
-            theirs.t, theirs.action, theirs.roll, theirs.result, theirs.witnesses,
-            Delta(frozenset(filter(keep, theirs.delta.add)), frozenset(filter(keep, theirs.delta.remove))),
-            tuple(filter(keep, theirs.mods))))
+    # Only the player's projection is read (narration, step records, recaps); people have no prompts of their own.
+    log.seen.setdefault(PLAYER, []).append(project(u, before, after, e, PLAYER))

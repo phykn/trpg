@@ -2,15 +2,16 @@ import random
 
 import pytest
 from src.onto.atoms import PLAYER
-from src.onto.log import Log
+from src.onto.log import Delta, Log
 from src.onto.universe import conforms, initial
-from src.onto.view import facts_of, observe, record
+from src.onto.view import Seen, facts_of, observe, record
 from src.rules.acts import format, parse
 from src.rules.candidates import admits, candidates, space
 from src.rules.recommend import recommend
 from src.rules.resolve import event_of, resolve
 from src.rules.roll import DC, chance, outcome, preview, risk, roll, rolls
 from src.rules.triggers import ended
+from src.view import atom_label, changes
 
 
 class Play:
@@ -293,3 +294,23 @@ def test_recommend_walks_toward_a_goal_place_out_of_reach(play):
     """With nothing to talk about, the button is the first step toward the chapter goal (rule.md 9)."""
     play.do("talk:yunseul:t_wall", (6, 6, 0))
     assert [format(x) for x in recommend(play.u, play.obs)] == ["go:yard"]
+
+
+def _closed(u, delta_add, delta_remove, tags=()):
+    seen = Seen(0, "give:key:dohae", None, "none", (PLAYER,), Delta(frozenset(delta_add), frozenset(delta_remove)), ())
+    return [c["state"] for c in changes(u, {"tags": list(tags)}, seen, parse("give:key:dohae"), None) if c["kind"] == "promise"]
+
+
+def test_a_promise_kept_at_full_trust_still_reads_as_kept(u):
+    # Trust is already 3, so keeping the promise changes no regards atom.
+    assert _closed(u, {("at", "key", "dohae")}, {("owes", PLAYER, "dohae", "promise"), ("at", "key", PLAYER)}) == ["kept"]
+
+
+def test_a_broken_promise_reads_as_broken_even_at_lowest_trust(u):
+    mark = ("mark", PLAYER, "snag", "chapter", 1)
+    assert _closed(u, {mark}, {("owes", PLAYER, "dohae", "promise")}, [[list(mark), 0, "약속을 어김"]]) == ["broken"]
+
+
+def test_a_threat_against_no_fear_names_the_missing_fear(u):
+    assert atom_label(u, {}, ("regards", "dohae", PLAYER, "fear", -1)).endswith("겁 없음")
+    assert atom_label(u, {}, ("regards", "dohae", PLAYER, "trust", -1)).endswith("경계")

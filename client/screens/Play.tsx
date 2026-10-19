@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, type TextInput, View } from 'react-native';
 
 import { ClarifyCard } from '@/components/game/ClarifyCard';
 import { Clocks } from '@/components/game/Clocks';
@@ -37,6 +37,8 @@ export function Play({ game }: { game: Game }) {
   const [now, setNow] = useState(Date.now());
   const [menu, setMenu] = useState(false);
   const [sheet, setSheet] = useState(false);
+  const [draft, setDraft] = useState('');
+  const input = useRef<TextInput>(null);
   const log = useLog(game.gameId, view.story.premise);
   const turnNo = view.last?.turn ?? null;
   const live = turnNo !== null && !log.has(`story:${turnNo}`);
@@ -66,7 +68,6 @@ export function Play({ game }: { game: Game }) {
   const frame = revealing && reveal ? frameAt(reveal.beats, now - reveal.start) : null;
   const step = frame && reveal ? reveal.steps[frame.step] : undefined;
   const rows = game.before ?? view;
-  const shownSteps = revealing && !frame?.folded ? game.before?.last?.steps : (reveal?.steps ?? view.last?.steps);
   const rollOpen = (phase === 'rolling' && view.card?.kind === 'roll')
     || (revealing && reveal?.card && step?.roll && !frame?.folded);
   const crisis = view.last?.steps.flatMap((s) => s.changes.filter((c) => c.kind === 'crisis').map((c) => c.id as string));
@@ -113,16 +114,16 @@ export function Play({ game }: { game: Game }) {
       {phase === 'ending' ? <Ending view={view} recaps={game.recaps} onNew={game.newGame} /> : (
         <View className="min-h-0 flex-1">
           <View className="min-h-0 flex-1">
-            <Scene scene={rows.scene} />
             <Clocks clocks={rows.clocks} crisis={revealing ? [] : crisis} />
+            <Scene scene={rows.scene} onDraft={commandsOpen ? (t) => { setDraft(t); input.current?.focus(); } : undefined} />
             <Chat entries={log.entries} live={live} roll={roll} waiting={phase === 'sending' || phase === 'revealing' || (phase === 'narrating' && live)}
               narration={game.narration} hold={revealing} failed={phase === 'narration_error'}
               onTyped={onTyped} onRetry={game.retryNarration} />
             {revealing ? (
-              <Pressable accessibilityLabel="skip" className="absolute bottom-0 left-0 right-0 top-0" onPress={game.skip} />
+              <Pressable accessibilityLabel={ko.skip} className="absolute bottom-0 left-0 right-0 top-0" onPress={game.skip} />
             ) : null}
           </View>
-          <CommandBar mode={mode} sent={game.sent} notice={game.notice}
+          <CommandBar mode={mode} sent={game.sent} notice={game.notice} text={draft} onText={setDraft} inputRef={input}
             placeholder={hint(view.scene)}
             onSend={(text) => { log.add({ id: `you:${Date.now()}`, kind: 'you', text }); game.command({ text }); }} onResend={game.resend} onNew={game.newGame} />
           {card ? <View className="absolute bottom-0 left-0 right-0 max-h-full">{card}</View> : null}

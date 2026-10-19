@@ -1,27 +1,47 @@
 import type { ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
-// Every row names its category so the screen reads without help text (ui.md 2.1).
-// Wrap, never truncate: names are never shortened.
-export function Row({ label, children, inset }: { label: ReactNode; children: ReactNode; inset?: boolean }) {
+import { Icon, type IconName } from '@/components/ui/Icon';
+import { colors } from '@/design/tokens';
+
+// Every row starts with its icon in one fixed column, so the content of all rows shares one left edge.
+// A row wraps instead of truncating, so names in it are never shortened.
+export function Row({ icon, tone, label, children, inset }: {
+  icon: IconName; tone?: string; label: string; children: ReactNode; inset?: boolean;
+}) {
   return (
-    <View className={`flex-row items-start py-0.5 ${inset ? 'pl-4 pr-3' : 'px-4'}`}>
-      {typeof label === 'string'
-        ? <Text className="w-[52px] font-sans text-chip text-fg-subtle">{label}</Text>
-        : <View className="min-w-[52px]">{label}</View>}
-      <View className="min-w-0 flex-1 flex-row flex-wrap items-center" style={{ columnGap: 10, rowGap: 2 }}>
+    <View accessibilityLabel={label} className={`flex-row items-start py-[3px] ${inset ? 'px-3' : 'px-4'}`}>
+      <View className="h-[22px] w-5 justify-center">
+        <Icon name={icon} size={14} color={tone ?? colors.fg.subtle} />
+      </View>
+      <View className="ml-2 min-w-0 flex-1 flex-row flex-wrap items-center" style={{ columnGap: 6, rowGap: 4 }}>
         {children}
       </View>
     </View>
   );
 }
 
-// Break Korean lines between words, so a sentence never leaves one syllable on its own line.
-export const keepWords = { wordBreak: 'keep-all' } as object;
-
-export function Item({ children, dim, tone, color: hue }: {
-  children: ReactNode; dim?: boolean; tone?: 'danger' | 'gold' | 'muted'; color?: string;
+export function Item({ children, dim, color = colors.fg.default, strong }: {
+  children: ReactNode; dim?: boolean; color?: string; strong?: boolean;
 }) {
-  const color = tone === 'danger' ? 'text-danger-fg' : tone === 'gold' ? 'text-gold-fg' : tone === 'muted' ? 'text-fg-muted' : 'text-fg-default';
-  return <Text className={`font-sans text-chip ${color}`} style={[{ opacity: dim ? 0.45 : 1, color: hue }, keepWords]}>{children}</Text>;
+  return (
+    <Text className={`${strong ? 'font-sans-semibold' : 'font-sans'} text-chip`}
+      style={{ color, opacity: dim ? 0.45 : 1, lineHeight: 22 }}>
+      {children}
+    </Text>
+  );
+}
+
+// A name the player can tap to start a sentence about it.
+export function Pill({ label, color = colors.fg.default, icon, onPress, dim }: {
+  label: string; color?: string; icon?: IconName; onPress?: () => void; dim?: boolean;
+}) {
+  return (
+    <Pressable accessibilityRole={onPress ? 'button' : undefined} disabled={!onPress} onPress={onPress}
+      style={({ pressed }) => ({ opacity: dim ? 0.45 : pressed ? 0.6 : 1 })}
+      className="h-[22px] flex-row items-center gap-1 rounded-full border border-border-default px-2">
+      {icon ? <Icon name={icon} size={11} color={color} width={2.2} /> : null}
+      <Text className="font-sans text-chip" style={{ color, lineHeight: 16 }}>{label}</Text>
+    </Pressable>
+  );
 }

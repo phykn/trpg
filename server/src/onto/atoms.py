@@ -8,10 +8,7 @@ PLAYER = "player"
 APPROACHES = ("force", "finesse", "wits", "charm")
 AXES = ("trust", "fear")
 KINDS = ("edge", "snag")
-LIVES = ("scene", "chapter", "scar")
-SLOTS = (1, 2, 3)
 SET_PREDS = ("link", "believes", "owes", "due", "spent")
-PREDICATES = ("at", "mark", "regards", "fill", "stat", "flag") + SET_PREDS
 
 
 class ConformError(ValueError):

@@ -19,7 +19,7 @@ from .narrate import (
 )
 from .onto.atoms import PLAYER
 from .onto.save import Game, SaveError, new_game, rebuild, replay, save
-from .onto.universe import Universe, check_creation
+from .onto.universe import CreationError, Universe, check_creation
 from .onto.view import observe, record
 from .rules.acts import parse
 from .rules.candidates import admits
@@ -177,7 +177,7 @@ class GameService:
                 raise Invalid("unknown story")
             try:
                 check_creation(u, creation)
-            except StoryError as e:
+            except CreationError as e:
                 raise Invalid(str(e)) from None
             g = new_game(u, game_id, self.seeds(), creation)
             g.presentation = fresh_presentation(h)
@@ -238,7 +238,8 @@ class GameService:
             else:
                 plan = [{"action": body["pick"], "accepted": True}, *card["rest"]]
             echo = card["public"]["echo"]
-            return await self._run(u, g, plan, echo, "card", echo["text"] if card["kind"] == "clarify" else None)
+            # A card a sentence opened still carries that sentence to the narrator (engine.md 5.1).
+            return await self._run(u, g, plan, echo, "card", echo["text"] if card.get("origin") == "text" else None)
         if "action" in body:
             try:
                 a = parse(body["action"])

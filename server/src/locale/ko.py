@@ -9,8 +9,6 @@ APPROACH_HINT = {
 }
 TONES = {"polite": "정중하게", "friendly": "친근하게", "plead": "간청하며", "threaten": "위협하며", "deceive": "속여서"}
 STRAINS = {"natural": "자연스럽게", "forced": "무리해서"}
-RISKS = {"low": "낮음", "normal": "보통", "high": "높음"}
-WEIGHTS = {"light": "가벼운 대가", "heavy": "무거운 대가"}
 RESULTS = {"success": "성공", "fail": "실패", "none": "", "blocked": "막힘"}
 SHEET = {"beats": "박자", "wounds": "상처", "growth": "성장"}
 
@@ -21,6 +19,8 @@ TAG_KEYS = {"@suspicion": "의심", "@broken_promise": "약속을 어김", "@sca
 # How a person regards the player, by trust; fear above this shows instead.
 TRUST_WORDS = {-3: "적대", -2: "불신", -1: "경계", 0: "무덤덤", 1: "호의", 2: "신뢰", 3: "유대"}
 FEARFUL, FEAR_WORD = 2, "두려움"
+# A threat meets negative fear, so that chip names its absence.
+UNAFRAID = "겁 없음"
 
 # {을}/{이}/{은}/{와}/{으로} follow the value before them.
 ACTION = {
@@ -39,9 +39,10 @@ ACTION = {
     "rest": "쉬어 간다",
     "choose": "{name}",
     "grow": "{approach} {before}→{after}",
-    "grow_trait": "특성 바꾸기: {old} → {new}",
+    "grow_trait": "특성 바꾸기: {name}",
     "grow_scar": "흉터 지우기: {name}",
 }
+SWAP = "{old} → {new}"
 RELYING = "{rely}에 기대어 "
 NO_RELY = "기대지 않음"
 CONSUMED = {"tag": "쓰면 사라짐", "trait": "장에 한 번"}
@@ -69,7 +70,6 @@ REFUSED = {
 }
 ERRORS = {
     "missing": "저장된 게임을 찾을 수 없습니다.",
-    "incompatible": "incompatible",
     "invalid": "받아들일 수 없는 요청입니다.",
 }
 
@@ -177,7 +177,6 @@ TONE_DESC = {"polite": "정중하게 묻거나 부탁함", "friendly": "친근�
 APPROACH_DESC = {"force": "힘으로 밀어붙이거나 부수거나 버팀", "finesse": "손재주, 몸놀림, 몰래 움직임",
                  "wits": "관찰, 계획, 꾀, 시선 돌리기", "charm": "말이나 태도로 마음을 움직임"}
 NO_CLAIM = "거짓 주장이 없음"
-SLOT_LABEL = {"target": "대상", "approach": "방식", "strain": "무리함", "tone": "태도"}
 NOT_IN_WORLD = "이 세계에는 없는 것입니다."
 NOT_POSSIBLE = "이 장면에서는 할 수 없는 일입니다."
 META_REPLY = "이야기 속에서 당신이 하는 일을 적어 주세요. 저장은 저절로 됩니다."

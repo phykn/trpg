@@ -14,9 +14,6 @@ class StoryError(ValueError):
 
 
 INT = re.compile(r"[-+]?\d+")
-DEFAULT_TAGS = {"tag:yaml.org,2002:str", "tag:yaml.org,2002:seq", "tag:yaml.org,2002:map",
-                "tag:yaml.org,2002:int", "tag:yaml.org,2002:bool", "tag:yaml.org,2002:null",
-                "tag:yaml.org,2002:float", "tag:yaml.org,2002:timestamp"}
 
 
 def parse(text: str, where: str = "story") -> object:

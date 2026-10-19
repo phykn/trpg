@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { Button, IconButton } from '@/components/ui/Button';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { Creation, GameView, Story } from '@/services/types';
@@ -10,12 +12,19 @@ function zero(story: Story): Record<string, number> {
   return Object.fromEntries(story.approach_names.map((a) => [a.id, 0]));
 }
 
-function Arrow({ label, glyph, onPress }: { label: string; glyph: string; onPress?: () => void }) {
+// What is left to choose shows as empty dots, so the section says how far along it is without a count.
+function Section({ icon, label, used, of }: { icon: IconName; label: string; used: number; of: number }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !onPress }}
-      disabled={!onPress} onPress={onPress} className={`px-1.5 py-1 ${onPress ? '' : 'opacity-20'}`}>
-      <Text className="font-sans text-panel text-fg-muted">{glyph}</Text>
-    </Pressable>
+    <View accessibilityLabel={`${label} ${used}/${of}`} className="h-5 flex-row items-center gap-2 px-1">
+      <Icon name={icon} size={14} color={colors.gold.fg} />
+      <Text className="min-w-0 flex-1 font-sans-semibold text-chip text-fg-muted">{label}</Text>
+      <View className="flex-row gap-1">
+        {Array.from({ length: of }, (_, i) => (
+          <View key={i} className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: i < used ? colors.gold.fg : 'transparent', borderWidth: 1, borderColor: i < used ? colors.gold.fg : colors.border.strong }} />
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -27,6 +36,7 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
   const [placed, setPlaced] = useState<Record<string, number>>({});
   const [traits, setTraits] = useState<string[]>([]);
   const [name, setName] = useState('');
+  const [focus, setFocus] = useState(false);
   const pick = (s: string) => {
     const next = stories.find((x) => x.id === s);
     setId(s); setPlaced(next ? zero(next) : {}); setTraits([]);
@@ -42,56 +52,52 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
   const ready = spent === total && traits.length === story.pick && !busy;
 
   return (
-    <View className="min-h-0 flex-1 gap-3 px-5 pb-4 pt-2">
-      <View className="flex-row items-center gap-3">
-        <Pressable accessibilityRole="button" accessibilityLabel={ko.back} onPress={() => setId(null)}
-          className="h-[32px] w-[32px] items-center justify-center rounded-full border border-border-default">
-          <View style={{ width: 8, height: 8, marginLeft: 3, borderLeftWidth: 1.5, borderBottomWidth: 1.5, transform: [{ rotate: '45deg' }] }}
-            className="border-fg-muted" />
-        </Pressable>
-        <Text accessibilityRole="header" className="min-w-0 flex-1 font-serif text-title text-fg-default">{story.title}</Text>
+    <View className="min-h-0 flex-1 gap-2.5 px-4 pb-3 pt-2">
+      <View className="h-11 flex-row items-center gap-2">
+        <IconButton icon="back" label={ko.back} tone="outline" onPress={() => setId(null)} />
+        <View className={`h-11 min-w-0 flex-1 flex-row items-center gap-2 rounded-full border bg-canvas-subtle px-4 ${focus ? 'border-gold-fg' : 'border-border-default'}`}>
+          <Icon name="user" size={15} color={focus ? colors.gold.fg : colors.fg.subtle} />
+          <TextInput accessibilityLabel={ko.name} value={name} onChangeText={setName} maxLength={10}
+            onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
+            placeholder={ko.hero} placeholderTextColor={colors.fg.subtle}
+            className="h-full min-w-0 flex-1 font-sans text-body text-fg-default" style={{ outlineStyle: 'none' } as object} />
+        </View>
       </View>
-      <View className="gap-1.5">
-        <Text className="font-sans-semibold text-chip text-gold-fg">{ko.name}</Text>
-        <TextInput accessibilityLabel={ko.name} value={name} onChangeText={setName} maxLength={10}
-          placeholder={ko.hero} placeholderTextColor={colors.fg.subtle}
-          className="h-[44px] rounded-md border border-border-default px-4 font-sans text-body text-fg-default" />
+      <View className="gap-1">
+        <Section icon="bolt" label={ko.approaches} used={spent} of={total} />
+        {story.approach_names.map((a) => (
+          <View key={a.id} className="h-10 flex-row items-center gap-2 rounded-xl bg-canvas-subtle pl-3 pr-1">
+            <Text className="w-[44px] font-sans-semibold text-panel text-fg-default">{a.name}</Text>
+            <Text numberOfLines={1} className="min-w-0 flex-1 font-sans text-chip text-fg-muted">{a.hint}</Text>
+            <IconButton icon="minus" size={30} label={`${a.name} ${ko.lower}`} onPress={placed[a.id] > 0 ? () => add(a.id, -1) : undefined} />
+            <Text className="w-4 text-center font-mono-medium text-body text-gold-fg">{placed[a.id]}</Text>
+            <IconButton icon="plus" size={30} label={`${a.name} ${ko.raise}`}
+              onPress={placed[a.id] < cap && spent < total ? () => add(a.id, 1) : undefined} />
+          </View>
+        ))}
       </View>
-      <View className="gap-1.5">
-        <Text className="font-sans-semibold text-chip text-gold-fg">{ko.count(ko.approaches, spent, total)}</Text>
-        <View className="gap-1">
-          {story.approach_names.map((a) => (
-            <View key={a.id} className="h-[44px] flex-row items-center gap-2 rounded-md border border-border-default px-4">
-              <Text className="w-[52px] font-sans-semibold text-body text-fg-default">{a.name}</Text>
-              <Text className="min-w-0 flex-1 font-sans text-panel text-fg-muted">{a.hint}</Text>
-              <View className="flex-row items-center gap-1">
-                <Arrow label={`${a.name} ${ko.lower}`} glyph="◀" onPress={placed[a.id] > 0 ? () => add(a.id, -1) : undefined} />
-                <Text className="w-[24px] text-center font-mono-medium text-body text-gold-fg">{placed[a.id]}</Text>
-                <Arrow label={`${a.name} ${ko.raise}`} glyph="▶"
-                  onPress={placed[a.id] < cap && spent < total ? () => add(a.id, 1) : undefined} />
+      <View className="gap-1">
+        <Section icon="star" label={ko.traits} used={traits.length} of={story.pick} />
+        {story.traits.map((t) => {
+          const on = traits.includes(t.id);
+          return (
+            <Pressable key={t.id} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => toggle(t.id)}
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+              className={`h-10 flex-row items-center gap-2 rounded-xl px-3 ${on ? 'bg-gold-muted' : 'bg-canvas-subtle'}`}>
+              <Text className="w-[44px] font-sans-semibold text-panel text-fg-default">{t.name}</Text>
+              <Text numberOfLines={1} className="min-w-0 flex-1 font-sans text-chip text-fg-muted">{t.text}</Text>
+              <View className="h-5 w-5 items-center justify-center rounded-[6px]"
+                style={{ borderWidth: 1.5, borderColor: on ? colors.gold.fg : colors.border.strong, backgroundColor: on ? colors.gold.fg : 'transparent' }}>
+                {on ? <Icon name="check" size={12} color={colors.fg['on-emphasis']} width={3} /> : null}
               </View>
-            </View>
-          ))}
-        </View>
-      </View>
-      <View className="gap-1.5">
-        <Text className="font-sans-semibold text-chip text-gold-fg">{ko.count(ko.traits, traits.length, story.pick)}</Text>
-        <View className="gap-1">
-          {story.traits.map((t) => (
-            <Pressable key={t.id} accessibilityRole="checkbox" accessibilityState={{ checked: traits.includes(t.id) }}
-              onPress={() => toggle(t.id)}
-              className={`h-[44px] flex-row items-center gap-2 rounded-md border px-4 ${traits.includes(t.id) ? 'border-gold-fg bg-accent-muted' : 'border-border-default'}`}>
-              <Text className="w-[52px] font-sans-semibold text-body text-fg-default">{t.name}</Text>
-              <Text className="min-w-0 flex-1 font-sans text-panel text-fg-muted">{t.text}</Text>
             </Pressable>
-          ))}
-        </View>
+          );
+        })}
       </View>
-      <Pressable accessibilityRole="button" accessibilityState={{ disabled: !ready }} disabled={!ready}
-        onPress={() => onCreate(story.id, { name: name.trim() || ko.hero, approaches: placed, traits })}
-        className={`mt-auto items-center rounded-md bg-gold-fg py-3 ${ready ? '' : 'opacity-40'}`}>
-        <Text className="font-sans-semibold text-body text-fg-on-emphasis">{ko.create}</Text>
-      </Pressable>
+      <View className="mt-auto">
+        <Button icon="play" label={ko.create} disabled={!ready}
+          onPress={() => onCreate(story.id, { name: name.trim() || ko.hero, approaches: placed, traits })} />
+      </View>
     </View>
   );
 }

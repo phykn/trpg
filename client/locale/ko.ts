@@ -1,65 +1,63 @@
-function batchim(word: string): boolean {
+function batchim(word: string): number | null {
   const c = word.charCodeAt(word.length - 1) - 0xac00;
-  return c >= 0 && c <= 11171 && c % 28 !== 0;
+  return c >= 0 && c <= 11171 ? c % 28 : null;
 }
+const eul = (w: string) => `${w}${batchim(w) ? '을' : '를'}`;
+// ㄹ batchim (8) takes 로 like an open syllable.
+const ro = (w: string) => { const b = batchim(w); return `${w}${b && b !== 8 ? '으로' : '로'}`; };
 
 export const ko = {
   brand: '말과 주사위',
   loading: '불러오는 중입니다.',
-  stories: '이야기',
   approaches: '능력치',
   raise: '올리기',
   lower: '내리기',
   traits: '특성',
   name: '이름',
   hero: '주인공',
-  count: (label: string, n: number, of: number) => `${label} ${n}/${of}`,
   create: '시작하기',
   back: '뒤로',
+  close: '닫기',
   chapterNo: (k: number) => `${k}장`,
   health: '체력',
-  blockedExit: '(막힘)',
+  blocked: '이 판은 더 이어할 수 없습니다.',
   heroButton: (name: string, left: number, of: number) => `${name}, 체력 ${left}/${of}`,
-  row: { goal: '목표', danger: '위험', ability: '능력', state: '상태', carried: '소지', here: '장소', around: '주변', exits: '이동', record: '기록' },
-  growth: (n: number) => `성장 ${n}`,
-  spent: '(씀)',
-  blockedBy: '막힘',
-  promise: (name: string, what: string) => `약속: ${name}에게 ${what}`,
-  kindness: (name: string) => `신세: ${name}`,
-  belief: '앎',
+  row: { goal: '목표', danger: '위험', ability: '능력', state: '상태', carried: '소지', here: '장소', around: '주변', record: '기록' },
+  growth: '성장',
+  promise: (name: string, what: string) => `${name}에게 ${what}`,
+  kindness: (name: string) => `${name}에게 신세`,
   crisis: '위기',
   typing: '이야기를 쓰는 중',
   narrationFailed: '서술을 받지 못했습니다.',
   retryNarration: '다시 받기',
   placeholder: '무엇을 할까요?',
-  // Names the first thing in the scene so an empty box still shows what a sentence looks like.
-  askObject: (name: string) => `${name}${batchim(name) ? '을' : '를'} 어떻게 할까요?`,
+  // The empty box names the first thing in the scene, so it already shows what a sentence looks like.
+  askObject: (name: string) => `${eul(name)} 어떻게 할까요?`,
   askPerson: (name: string) => `${name}에게 무엇을 할까요?`,
+  // Tapping a name starts the sentence; the player finishes it.
+  draft: {
+    go: (place: string) => `${ro(place)} 간다`,
+    person: (name: string) => `${name}에게 `,
+    thing: (name: string) => `${eul(name)} `,
+  },
   send: '보내기',
-  stuck: '응답을 받지 못했습니다. 다시 보내 주세요.',
+  stuck: '응답을 받지 못했습니다.',
   resend: '다시 보내기',
   conflict: '상태가 바뀌어 다시 보였습니다',
-  blocked: '이 판은 더 이어할 수 없습니다.',
   newGame: '새 게임',
   menu: '메뉴',
   closeMenu: '메뉴 닫기',
   toTitle: '처음으로',
   resume: '이어하기',
-  korean: '한국어',
   prev: '이전 이야기',
   next: '다음 이야기',
   begin: '새로 시작',
   result: { success: '성공', fail: '실패', none: '', blocked: '막힘' } as Record<string, string>,
   highRisk: '되돌릴 수 없는 대가가 걸려 있습니다',
-  check: (approach: string) => `${approach} 판정`,
-  hold: '눌러서 굴리기',
+  hold: '주사위 굴리기',
+  skip: '건너뛰기',
   cancel: '그만두기',
   choose: '고른다',
-  later: '나중에',
-  growthTitle: '성장',
   thanks: '덕분에',
   because: '때문에',
-  endingChoices: '고른 것',
-  fork: '갈림',
-  cost: '대가',
 } as const;

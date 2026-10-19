@@ -18,7 +18,6 @@ ATTEMPTS = 3                 # one draft and two rewrites
 SENTENCES, CHARS = 4, 200
 SHORT_CHARS, RECAP_CHARS, RECAP_SENTENCES = 160, 100, 2
 TAG_CHARS = 12
-PREVIOUS = 3
 MAX_TOKENS = 500
 THETA_N = 0.5
 
@@ -58,6 +57,8 @@ def change_line(u, c: dict) -> str | None:
     if k == "fill":
         done = c["to"] >= u.boxes(c["id"])
         return ko.fill(ko.CHANGE["fill_done" if done else "fill"], name=c["name"])
+    if k == "clock" and c["to"] < c["from"]:
+        return ko.fill(ko.CHANGE["crisis"], name=c["name"])
     if k in ("clock", "crisis", "arrival", "chapter", "ending"):
         return ko.fill(ko.CHANGE[k], name=c["name"])
     if k in ("tag_add", "tag_remove"):

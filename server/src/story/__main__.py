@@ -11,7 +11,13 @@ def main() -> int:
     parser.add_argument("paths", nargs="+", type=Path)
     failed = False
     for root in parser.parse_args().paths:
-        for path in [root] if root.is_file() else story_files(root):
+        # A story folder, its story.yaml, or a folder of story folders.
+        paths = [root] if root.is_file() else [root / "story.yaml"] if (root / "story.yaml").is_file() \
+            else story_files(root) if root.is_dir() else []
+        if not paths:
+            failed = True
+            print(f"{root}: no story.yaml")
+        for path in paths:
             try:
                 u = load(path)
                 print(f"{path}: ok ({u.id})")

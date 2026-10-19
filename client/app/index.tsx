@@ -1,7 +1,8 @@
 import Head from 'expo-router/head';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
+import { Button } from '@/components/ui/Button';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import { useGame } from '@/logic/useGame';
@@ -24,10 +25,8 @@ export default function Index() {
           <Play game={game} />
         ) : game.phase === 'blocked' ? (
           <View className="flex-1 items-center justify-center gap-5 px-5">
-            <Text className="font-sans text-body text-fg-muted">{ko.blocked}</Text>
-            <Pressable accessibilityRole="button" onPress={game.newGame} className="items-center rounded-md bg-gold-fg px-6 py-3">
-              <Text className="font-sans-semibold text-body text-fg-on-emphasis">{ko.toTitle}</Text>
-            </Pressable>
+            <Text className="text-center font-sans text-body text-fg-muted">{ko.blocked}</Text>
+            <Button icon="home" label={ko.toTitle} onPress={game.newGame} />
           </View>
         ) : (
           <View className="flex-1 items-center justify-center gap-4">

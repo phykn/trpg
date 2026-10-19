@@ -125,6 +125,18 @@ async def test_chain_stops_for_a_roll_card_after_its_first_step(tmp_path):
     assert card["kind"] == "roll" and card["options"][-1]["preview"]["risk"] == "high"
 
 
+async def test_a_roll_card_from_a_sentence_keeps_the_sentence_for_the_narrator(tmp_path):
+    svc = service(tmp_path, {"문을 비집어 연다": ["try:door:finesse"]})
+    gid, view = await new(svc)
+    for i, a in enumerate(["go:village", "go:yard"]):
+        _, view = await press(svc, gid, view, a, f"r{i}")
+    out = await cmd(svc, gid, view, "t1", text="문을 비집어 연다")
+    card = out["view"]["card"]
+    await cmd(svc, gid, out["view"], "t2", card=card["id"], pick=card["selected"])
+    _, g = await svc.load(gid)
+    assert g.presentation["turns"][-1]["text"] == "문을 비집어 연다"
+
+
 async def test_a_high_step_waits_for_a_confirm_card(tmp_path):
     svc = service(tmp_path, {"올라가 고른다": ["go:lamp_room", "choose:g_oil:beacon"]})
     gid, view = await new(svc)
@@ -143,6 +155,10 @@ async def test_a_high_step_waits_for_a_confirm_card(tmp_path):
     card = out["view"]["card"]
     assert card["kind"] == "confirm" and card["options"][0]["id"] == "choose:g_oil:beacon"
     assert out["view"]["chapter"]["k"] == 2 and out["view"]["growth"]
+    growth = out["view"]["growth"]
+    assert {g["kind"] for g in growth} == {"approach", "trait"}
+    swap = next(g for g in growth if g["kind"] == "trait")
+    assert swap["label"].endswith(swap["name"]) and "→" in swap["name"] and ":" not in swap["name"]
     done = await cmd(svc, gid, out["view"], "c2", card=card["id"], pick="choose:g_oil:beacon")
     assert done["steps"][0]["action"] == "choose:g_oil:beacon"
     assert done["view"]["journal"]["choices"][-1]["kind"] == "fork"

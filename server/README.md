@@ -1,21 +1,19 @@
 # trpg-server
 
-Story-agnostic engine for a Korean TRPG: FastAPI + Pydantic v2, two required local models (Kev decides, Qwen writes), one atomic JSON snapshot per game.
+Story-agnostic engine for a Korean TRPG: FastAPI + Pydantic v2, two required local models (one decides, one writes), one atomic JSON snapshot per game. The design is in [docs/](../docs/); this file covers running it.
 
 ## Turn flow
 
 ```
-text ─► interpret (Kev: steps, then details if needed) ─► confirm card if high risk ─► resolve (pure rules) ─► save ─► respond
-button ───────────────────────────┘
-                                   narration stream (Qwen) ─► Kev check ─► rewrite ≤2 ─► cache in save
+text ─► interpret (decision model picks closed options) ─┐
+button / card answer ────────────────────────────────────┴─► roll or confirm card if needed ─► resolve (pure rules) ─► save ─► respond
+                                     narration stream (LLM) ─► claim check (decision model) ─► rewrite ≤ 2 ─► cache in the save
 ```
 
-- `scene.build` extracts only what the player knows; interpretation, narration and the view all read it.
-- `rules.candidates` lists legal actions (`move:`, `inspect:`, `talk:`, `take:`, `give:`, `act:`; button-only `solve:`, `use_tag:`, `topic:`; and `improvise`).
-- `interpret` first turns back, without a turn, sentences with the story's `impossible` phrases and requests to the game that name nothing in the scene. It sends Kev only the player's sentence; when Kev's best first step is below 0.5, Qwen picks from the same closed options (a Qwen failure keeps Kev's answer). The first call asks which actions it holds (steps 1–3); a second call asks details only for improvise or talk steps, because Kev's latency grows with the question count. Two close options of the same kind come back as a clarify list; Kev's best guess is otherwise taken; only a confident "impossible" is rejected, without using a turn.
-  Rules then correct Kev where the words are plain (`interpret.assemble`): a sentence that names an open solution's required item or clue, or nearly repeats a solution or authored action label, uses it; words to a named person (`…에게` plus a speech verb) are talk to that person, gift nothing to anyone else and walk nowhere; small talk aimed at an obstacle becomes an attempt on it; a named topic is that topic; a known place with a movement verb walks the open route (up to three moves); a gift needs a giving verb; a single approach verb (`APPROACH_CUES`) sets the approach and attitude verbs and first-person claims set the talk; a trait named by a word is used; taking what an obstacle guards attempts that obstacle; a bare look is a moment without a roll. When Kev's two best concrete readings are nearly tied and no rule settled it, the player is asked back. Only a confident "stretch" raises risk.
-- `rules.resolve` runs up to three steps on a copy of the state, stops on a miss, settles full obstacles, danger, wounds, quests, chapter goals and endings, and never mutates the input.
-- `narrate` streams Qwen text, hides `@<tag> name` lines, and asks Kev whether the text contradicts the facts or invents new things. A failed check emits `reset` and rewrites. Before the check, rules turn sentence-final plain verbs into 합니다체 (`ko.polite`) and ask for a rewrite on broken letters, the player called `너`, a sentence written twice, a held item handed over, or a reward named before its obstacle is overcome; out of attempts, the draft with the fewest such problems is kept. After a move the previous scene's last lines are not passed on; after a growth pick the new chapter opens with no player action. Lines starting with `- ` (an echoed change list) are dropped, and the scene is rewritten if `당신` handles a story item the turn never mentions or a companion appears when there is none.
+- `interpret.py` maps a sentence to legal candidate actions or `improvise`, up to three steps (engine.md 3). An unclear approach takes the player's strongest stat; only real ambiguity becomes a clarify card.
+- `rules/` are pure: candidates, the roll (2d6 + modifiers against a target of 7/8/9 by risk), costs, triggers. A step never mutates its input and dice come from the seed and turn.
+- `cards.py` builds clarify, roll and confirm cards; `view.py` builds the `GameView` and step records; `service.py` runs the turn protocol (lock, revision, request receipts).
+- `narrate.py` writes only what changed, checks claims against the facts, and rewrites up to twice; the narration and chapter recaps stream as NDJSON.
 
 ## Run
 
@@ -44,53 +42,55 @@ LLM_BASE_URL=http://127.0.0.1:8082/v1
 LLM_SAMPLING={"temperature": 0.7}   # optional; the model card's non-thinking sampling otherwise
 ```
 
-Startup validates every story folder (a broken story stops the server) and checks that the decision server runs the configured model and the LLM server has the configured model loaded; the engine never loads or switches models. The model names and their sampling live in `src/models/decision.py` and `src/models/llm.py`. The LLM always gets `enable_thinking: false` (top level for mlx-vlm, `chat_template_kwargs` for mlx-lm); there is no thinking switch.
+Startup validates every story folder (a broken story stops the server) and checks that the decision server runs the configured model and the LLM server has the configured model loaded; the engine never loads or switches models. The model names and their sampling live in `src/models/decision.py` and `src/models/llm.py`. The LLM always gets `enable_thinking: false` (top level for mlx-vlm, `chat_template_kwargs` for mlx-lm).
 
 ## Routes
 
-`/health` is public; everything else needs Basic Auth.
+`/health` is public; everything else needs Basic Auth. Bodies and responses are in [docs/api.md](../docs/api.md).
 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/health` | `{"ok": true, "mode": "engine"}` |
-| GET | `/catalog` | Stories (folders starting with `_` are hidden) and their creation options |
-| POST | `/games` | `{story, approaches?, traits?}` → `GameView` |
-| GET | `/games/{id}` | Saved `GameView` |
-| POST | `/games/{id}/act` | `{revision, request_id}` + one of `{text}`, `{action_id}`, `{confirm, accept}` → `{kind, view, turn, options, reason}`; kind is `turn`, `confirm`, `clarify`, `rejected` or `cancelled` |
-| GET | `/games/{id}/turns/{n}/narration` | NDJSON events `delta`, `reset`, `done {text, tags}`, `error {retry}`; only the latest turn is generated, older ones come from the cache |
+| GET | `/stories` | Stories and their creation options |
+| POST | `/games` | `{request_id, story, creation}` → `{game_id, view}` |
+| GET | `/games/{id}` | The saved `view` |
+| POST | `/games/{id}/commands` | `{request_id, revision}` + one of `{text}`, `{action}`, `{card, pick}`, `{card, cancel: true}` → `{kind, turn, steps, reason, view}` |
+| GET | `/games/{id}/turns/{n}/narration` | NDJSON narration of turn `n` |
+| GET | `/games/{id}/chapters/{k}/recap` | NDJSON recap of chapter `k` |
 
-Errors: 404 missing game, 409 stale revision or story version, 422 bad request, 503 model or save failure. A reused `request_id` with the same body replays the saved result.
+Errors: 404 missing game, 409 stale revision (`{view}`) or incompatible save (`{reason: "incompatible"}`), 422 bad request. A reused `request_id` with the same body replays the saved result.
 
 ## Stories
 
-A story folder holds `scenario.json` (schema in `src/content/schema.py`) and `world.md` (style notes passed to the narrator). Validate before running:
+A story folder holds `story.yaml` (format in [docs/story.md](../docs/story.md)) and optionally `evals.yaml` for interpretation evals. Validate before running:
 
 ```bash
-cd server && ../.venv/bin/python -m src.content validate ../scenarios/<name>
+cd server && ../.venv/bin/python -m src.story ../scenarios/<name>
+cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<name> --out ../qa_test/agency/<run>   # needs the models
+cd server && ../.venv/bin/python -m src.fun ../saves/engine                                           # fun.md metrics
 ```
-
-The validator checks ids, references, 3–5 senses per place, two or more solutions per obstacle, two or more free paths per topic, six traits, the +2/+1/+1/0 spread, and optimistic reachability of every chapter and ending. `scenarios/_template/` is the minimal example and the fixture every test uses.
-
 
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest -q        # from the repo root; fake Kev/Qwen, template story
+.venv/bin/python -m pytest -q          # from the repo root; fake models, the skeleton story
+.venv/bin/python -m ruff check server/
 ```
 
 ## Layout
 
 ```
 server/
-  run_api.py           app construction, --local defaults, story loading
+  run_api.py           app construction, --local defaults, model checks
   src/
-    api.py service.py store.py config.py
-    content/           schema, load, validate, CLI
-    world/             graph, query, state models
-    rules/             dsl, candidates, check, costs, talk, chapter, resolve, recommend
-    scene/             build (known facts), render (Kev/Qwen text), view (GameView)
-    interpret.py narrate.py
-    models/            decision, llm
+    onto/              atoms.py cond.py change.py log.py save.py universe.py
+                       view.py (what one observer sees: Obs, Seen; not the GameView)
+    rules/             acts.py candidates.py roll.py costs.py schemas.py triggers.py resolve.py recommend.py
+    story/             load.py (YAML), compile.py (story → Universe), validate.py (V1–V6), evals.py, __main__.py (CLI)
+    lang/              context (ρ), claims (κ), polite (합니다체)
+    models/            decision.py, llm.py
     locale/ko.py       engine-owned Korean
+    interpret.py cards.py narrate.py service.py api.py config.py fun.py
+    view.py            the GameView and step records sent to the client (docs/api.md)
   tests/
 ```

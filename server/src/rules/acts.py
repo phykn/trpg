@@ -94,6 +94,3 @@ def parse(s: str) -> Action:
 def format(a: Action) -> str:
     return ":".join((a.schema, *a.intent)) + "".join(f";{k}={v}" for k, v in a.judge)
 
-
-def canonical(s: str) -> str:
-    return format(parse(s))
