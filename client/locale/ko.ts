@@ -15,7 +15,7 @@ export const ko = {
   health: '체력',
   heroButton: (name: string, left: number, of: number) => `${name}, 체력 ${left}/${of}`,
   beats: '시간',
-  row: { danger: '위험', ability: '능력', state: '상태', carried: '소지', here: '여기', around: '주변', exits: '이동', record: '기록' },
+  row: { goal: '목표', danger: '위험', ability: '능력', state: '상태', carried: '소지', here: '여기', around: '주변', exits: '이동', record: '기록' },
   growth: (n: number) => `성장 ${n}`,
   spent: '(씀)',
   blockedBy: '막힘',

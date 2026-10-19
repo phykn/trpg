@@ -50,10 +50,15 @@ export function HeroSheet({ player, journal, onGrowth, onClose }: {
         <Text className="px-4 pb-1 font-sans-semibold text-body text-fg-default">{player.name || ko.hero}</Text>
         <Row inset label={ko.health}>
           <Health left={player.wound_boxes - player.wounds} of={player.wound_boxes} />
-          {player.tags.map((t) => (
-            <Item key={`tag${t.slot}`} tone={t.kind === 'edge' ? 'gold' : 'danger'}>{t.name}</Item>
-          ))}
+          <Item tone="muted">{player.wound_boxes - player.wounds}/{player.wound_boxes}</Item>
         </Row>
+        {player.tags.length ? (
+          <Row inset label={ko.row.state}>
+            {player.tags.map((t) => (
+              <Item key={`tag${t.slot}`} tone={t.kind === 'edge' ? 'gold' : 'danger'}>{t.name}</Item>
+            ))}
+          </Row>
+        ) : null}
         <Row inset label={ko.row.ability}>
           {player.approaches.map((a) => <Item key={a.id}>{a.name} {a.value}</Item>)}
           {onGrowth ? (
