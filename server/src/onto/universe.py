@@ -227,6 +227,17 @@ class Universe:
                 return getattr(table[x], "aliases", ())
         return ()
 
+    def rank(self, x: str) -> int:
+        """Story declaration order of any id; ties every output order to the story (ontology.md 4)."""
+        r = self.__dict__.get("_rank")
+        if r is None:
+            ids = [PLAYER, *self.places, *self.agents, *self.things, *self.obstacles, *self.props,
+                   *self.engine_complications]
+            for table in (self.places, self.agents, self.obstacles):
+                ids += [c.id for x in table.values() for c in x.complications]
+            r = self.__dict__["_rank"] = {i: n for n, i in enumerate(dict.fromkeys(ids))}
+        return r.get(x, len(r))
+
     def boxes(self, o: str) -> int:
         return self.obstacles[o].boxes
 

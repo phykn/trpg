@@ -13,7 +13,7 @@
 ### 1. 세계 `server/src/onto/` (ontology.md)
 
 - `atoms.py`: `Atom`, `State`와 색인, `conforms`(C1~C3), 한도.
-- `change.py`: `Delta`, `Work`, 연산 `move set_ reveal tag untag link unlink retire expire assert_ retract clear_spent`.
+- `change.py`: `Delta`, `Work`, 연산 `move set_ reveal tag untag link unlink retire expire insert(문서의 assert_) retract clear_spent drop_stat`.
 - `log.py`: `Event`, `matches`, 이력 요약 `h`.
 - `cond.py`: 조건 AST 컴파일과 `holds(c, facts, hist)`, 유도 원자 `blocks`.
 - `view.py`: `observe → Obs`(E, F, B, M, hᵥ), `fact_rule`, `Seen`과 기억 투영.

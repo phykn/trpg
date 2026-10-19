@@ -54,6 +54,12 @@ class Work:
         self._touch()
         index[k] = v
 
+    def drop_stat(self, g: str, s: str) -> None:
+        """Remove a sheet entry; only growth's trait swap does this (rule.md 6)."""
+        if (g, s) in self.stat:
+            self._touch()
+            del self.stat[(g, s)]
+
     def reveal(self, g: str, p: str) -> None:
         self.insert(("believes", g, p))
 
