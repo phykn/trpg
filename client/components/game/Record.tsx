@@ -2,12 +2,12 @@ import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 import { Item, Row } from './Row';
 
-export function Record({ journal }: { journal: GameView['journal'] }) {
+export function Record({ journal, inset }: { journal: GameView['journal']; inset?: boolean }) {
   const owes = journal.owes;
   const beliefs = journal.beliefs.filter((b) => b.here);
   if (!owes.length && !beliefs.length) return null;
   return (
-    <Row label={ko.row.record}>
+    <Row inset={inset} label={ko.row.record}>
       {owes.map((o) => (
         <Item key={`${o.debtor}${o.creditor}${o.kind}`} tone="gold">
           {o.kind === 'promise' ? ko.promise(o.name, o.promise) : ko.kindness(o.name)}

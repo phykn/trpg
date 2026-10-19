@@ -12,7 +12,7 @@ export const ko = {
   create: '시작하기',
   back: '뒤로',
   chapterNo: (k: number) => `${k}장`,
-  wounds: '상처',
+  health: '체력',
   beats: '시간',
   row: { danger: '위험', ability: '능력', state: '상태', carried: '소지', here: '여기', around: '주변', exits: '이동', record: '기록' },
   growth: (n: number) => `성장 ${n}`,
