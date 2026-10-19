@@ -11,7 +11,7 @@ const PIPS: Record<number, [number, number][]> = {
   5: [[0, 0], [0, 2], [1, 1], [2, 0], [2, 2]], 6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]],
 };
 
-function Face({ value, dim }: { value: number; dim?: boolean }) {
+export function Face({ value, dim }: { value: number; dim?: boolean }) {
   return (
     <View className="h-11 w-11 rounded-lg border border-border-strong bg-fg-default" style={{ opacity: dim ? 0.4 : 1 }}>
       {PIPS[value].map(([r, c]) => (

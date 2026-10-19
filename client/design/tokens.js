@@ -31,6 +31,7 @@ const radius = { none: 0, sm: 4, md: 8, lg: 12, xl: 16, full: 9999 };
 const fontFamily = {
   sans: ['NanumGothic_400Regular'],
   'sans-semibold': ['NanumGothic_700Bold'],
+  serif: ['NanumMyeongjo_800ExtraBold'],
   mono: ['GeistMono_400Regular'],
   'mono-medium': ['GeistMono_500Medium'],
 };
@@ -42,6 +43,7 @@ const fontSize = {
   title: ['17px', { lineHeight: '26px' }],
   lead: ['18px', { lineHeight: '30px' }],
   hero: ['28px', { lineHeight: '36px' }],
+  display: ['40px', { lineHeight: '48px' }],
 };
 const text = { narration: [18, 17, 16, 15, 14, 13], min: 13, chipMin: 12, lineHeight: 1.6 };
 const layout = { mobile: 412 };
