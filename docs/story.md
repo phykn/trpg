@@ -33,7 +33,7 @@ scenarios/<폴더>/   폴더 이름은 자유. 이야기 id는 story.yaml의 id
 | 태그 | `edge` 유리, `snag` 불리 |
 | 수명 | `scene` 장면, `chapter` 장 (영구 `scar`는 엔진의 흉터만) |
 | 무게 | `light` 가벼움, `heavy` 무거움 |
-| 결과 | `success` 성공, `mixed` 대가 있는 성공, `fail` 실패 |
+| 결과 | `success` 성공, `fail` 실패, `none` 굴림 없이 이룸, `blocked` 막힘. `mixed`는 결과가 아님 |
 
 ### 2.3 조건
 
@@ -163,7 +163,7 @@ scenarios/<폴더>/   폴더 이름은 자유. 이야기 id는 story.yaml의 id
 - **해법**은 `try(이 장애물, approach)`에 `label`과 조건 `when`을 붙인 인스턴스입니다. `rely`는 기댄 것(물건 또는 명제 id)을 정하고, 그것을 지니거나 믿는 것이 `when`에 암묵으로 더해집니다. 결과, 위험, 대가는 `try`와 같고, 해법이 아닌 `try(이 장애물, 방식)`도 후보입니다. 해법은 후보를 더하지 않고 이름만 붙입니다.
 - 다 찼을 때의 효과는 방아쇠 `{when: {fill: [o, "=", full]}}`로 씁니다.
 - **막힘**: `blocks`는 장애물이 놓여 있고 다 차지 않은 동안 막습니다(ontology.md 1.2). 장소면 `go`, 물건이면 `take`, 인물이면 `talk`, 장애물이면 `try`를 막습니다. 보이는 장애물이 막는 행동은 후보가 아닙니다. 숨은 장애물이 막고 있으면 시도할 때 `o.hidden`을 믿게 되어 드러나고, 그 시도는 박자를 올리며 굴림이 없습니다.
-- **복잡화** `{id: {name, weight, when, effects, wound}}`는 장소, 인물, 장애물에 붙고, 붙은 곳이 암묵 조건입니다(장소: 거기 있음, 인물: 눈앞에 있음, 장애물: 굴림의 대상). `wound: n`은 상처 +n이고, 상처를 올리는 원고 효과는 이것뿐입니다. `when`은 실패에서 세계, 고름에서 보임으로 평가합니다(rule.md 3.3).
+- **복잡화** `{id: {name, weight, when, effects, wound}}`는 장소, 인물, 장애물에 붙고, 붙은 곳이 암묵 조건입니다(장소: 거기 있음, 인물: 눈앞에 있음, 장애물: 굴림의 대상). `wound: n`은 상처 +n이고, 상처를 올리는 원고 효과는 이것뿐입니다. `when`은 실패한 굴림에서 세계로 평가합니다(rule.md 3.3).
 
 ### 3.7 장
 
@@ -227,7 +227,7 @@ scenarios/<폴더>/   폴더 이름은 자유. 이야기 id는 story.yaml의 id
 ```
 go:village   look:door   take:oil   give:letter:dohae   declare:l_baek   cut:pass   cut:rest
 talk:dohae:t_oil;tone=friendly   talk:dohae:favor   talk:dohae:chat;tone=deceive;claim=c_keeper
-try:door:finesse;rely=thing:key   try:door:force;strain=forced   choose:g_oil:beacon   pay:c_wave   pay:engine.beat   grow:finesse
+try:door:finesse;rely=thing:key   try:door:force;strain=forced   choose:g_oil:beacon   grow:finesse
 ```
 
 ## 4. 검증

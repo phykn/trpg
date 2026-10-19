@@ -11,10 +11,9 @@ TONES = {"polite": "정중하게", "friendly": "친근하게", "plead": "간청�
 STRAINS = {"natural": "자연스럽게", "forced": "무리해서"}
 RISKS = {"low": "낮음", "normal": "보통", "high": "높음"}
 WEIGHTS = {"light": "가벼운 대가", "heavy": "무거운 대가"}
-RESULTS = {"success": "성공", "mixed": "대가 있는 성공", "fail": "실패", "none": "", "blocked": "막힘"}
+RESULTS = {"success": "성공", "fail": "실패", "none": "", "blocked": "막힘"}
 SHEET = {"beats": "박자", "wounds": "상처", "growth": "성장"}
 
-COMPLICATIONS = {"engine.snag": "꼬임", "engine.beat": "지체", "engine.wound": "다침", "engine.end": "끊긴 장면"}
 # Default tag names: by kind, and the "@" keys the rules give to the tags they place.
 TAG_DEFAULT = {"edge": "유리함", "snag": "불리함"}
 TAG_KEYS = {"@suspicion": "의심", "@broken_promise": "약속을 어김", "@scar": "흉터"}
@@ -39,7 +38,6 @@ ACTION = {
     "pass": "장면을 넘긴다",
     "rest": "쉬어 간다",
     "choose": "{name}",
-    "pay": "{name}",
     "grow": "{approach} {before}→{after}",
     "grow_trait": "특성 바꾸기: {old} → {new}",
     "grow_scar": "흉터 지우기: {name}",
@@ -67,7 +65,6 @@ REFUSED = {
     "candidate": "지금은 할 수 없는 행동입니다.",
     "card": "이 카드의 선택지가 아닙니다.",
     "ended": "이야기가 끝났습니다.",
-    "due": "먼저 대가를 고르세요.",
     "text": "아직 문장을 읽을 수 없습니다. 버튼을 눌러 주세요.",
 }
 ERRORS = {
@@ -236,7 +233,7 @@ NARRATOR = """당신은 한국어 TRPG의 서술자입니다. [일어난 일]을
 - 숫자, 주사위, 규칙 용어를 쓰지 않습니다.
 - [일어난 일]의 행동과 변화만 일어납니다. 당신은 그 밖의 행동을 하지 않고, 아직 얻지 않은 것을 얻거나 지닌 것을 넘기지 않습니다.
 - [문맥]에 없는 사람, 물건, 길을 만들지 않습니다. 냄새, 날씨, 소리, 표정은 자유롭게 씁니다.
-- 실패는 일이 틀어지는 모습으로, 대가 있는 성공은 나아가되 무언가를 치르는 모습으로 씁니다.
+- [일어난 일]에 성공이나 실패가 있으면 첫 문장에서 그 결과가 분명히 드러나게 씁니다. 실패는 일이 틀어지는 모습으로 씁니다.
 - [플레이어 문장]은 뜻을 헤아려 읽습니다. 줄임말, 오타, 말투를 그대로 옮기지 않고 당신의 자연스러운 행동과 말로 보여 줍니다.
 - 플레이어가 묻거나 알고 싶어 하는 것은 [문맥]으로 답할 수 있는 만큼 장면 속에서 답합니다. [문맥]에 없는 것은 당신이 아직 알아낼 수 없는 모습으로 씁니다."""
 STYLE = "[문체]"

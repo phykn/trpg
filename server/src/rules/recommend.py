@@ -8,10 +8,6 @@ from .candidates import active_threats, admits, solution_action, solution_holds
 
 
 def recommend(u, o: Obs) -> list[Action]:
-    f = o.facts
-    due = sorted((c for g, c in f.rows("due") if g == PLAYER), key=u.rank)
-    if due:
-        return [make("pay", (c,)) for c in due][:3]
     picks: list[Action] = []
     for pick in (_tag(u, o), _talk(u, o), _forward(u, o)):
         if pick is not None and pick not in picks and admits(u, o, pick):

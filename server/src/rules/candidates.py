@@ -102,10 +102,7 @@ def space(u, o: Obs) -> list[Slot]:
     f, hist = o.facts, o.hist
     here = f.where(PLAYER)
     seen = sorted(o.seen, key=u.rank)
-    due = sorted((c for g, c in f.rows("due") if g == PLAYER), key=u.rank)
     tries = [Slot("try", (PLAYER, ap)) for ap in APPROACHES]
-    if due:
-        return [Slot("pay", (c,)) for c in due] + tries
 
     def open_(x):
         return not blockers(u, f, x)

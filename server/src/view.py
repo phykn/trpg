@@ -6,9 +6,8 @@ from .onto.view import Obs, Seen, observe
 from .rules.acts import Action, parse
 from .rules.candidates import active_threats, candidates, held_clock, solution_label
 from .rules.recommend import recommend
-from .rules.roll import BANDS, band, risk, rolls
+from .rules.roll import DC, band, risk, rolls
 
-BANDS_VIEW = {"mixed": BANDS[0], "success": BANDS[1], "min": 1, "max": 16}
 ACTIVE = ("clock", "deadline", "threat", "fork")
 
 
@@ -134,8 +133,6 @@ def action_label(u, o: Obs, p: dict, a: Action) -> str:
         return ko.ACTION[i[0]]
     if s == "choose":
         return next(n for c, n, _ in u.obstacles[i[0]].choices if c == i[1])
-    if s == "pay":
-        return complication_name(u, i[0])
     if s == "grow":
         if i[0] == "trait":
             return ko.fill(ko.ACTION["grow_trait"], old=u.traits[i[1]][0], new=u.traits[i[2]][0])
@@ -149,10 +146,6 @@ def action_label(u, o: Obs, p: dict, a: Action) -> str:
 def _relying(u, o: Obs, p: dict, a: Action) -> str:
     rely = a.get("rely")
     return ko.fill(ko.RELYING, rely=rely_label(u, p, o.facts, rely)) if rely else ""
-
-
-def complication_name(u, c: str) -> str:
-    return ko.COMPLICATIONS.get(c) or u.complication(c).name
 
 
 def effect_names(u, effects) -> list[str]:
@@ -186,11 +179,12 @@ def step_record(u, p: dict, seen: Seen, label: str, ending: str | None) -> dict:
     mods = chips_of_atoms(u, p, seen.mods)
     roll = {"d1": seen.roll[0], "d2": seen.roll[1]} if seen.roll else None
     total = decisive = None
+    dc = DC[risk(u, a)]
     if roll:
         total = roll["d1"] + roll["d2"] + sum(c["value"] for c in mods)
-        decisive = [i for i, c in enumerate(mods) if c["value"] and band(total - c["value"]) != seen.result]
+        decisive = [i for i, c in enumerate(mods) if c["value"] and band(total - c["value"], dc) != seen.result]
     return {"t": seen.t, "action": seen.action, "label": label, "result": seen.result,
-            "risk": risk(u, a), "roll": roll, "mods": mods if roll else [], "total": total,
+            "risk": risk(u, a), "dc": dc if roll else None, "roll": roll, "mods": mods if roll else [], "total": total,
             "decisive": decisive or [], "changes": changes(u, p, seen, a, ending)}
 
 
@@ -300,7 +294,6 @@ def game_view(u, g) -> dict:
     k = chapter_k(u, f)
     ending = p.get("ending")
     last = p["turns"][-1] if p.get("turns") else None
-    due = sorted((c for gg, c in f.rows("due") if gg == PLAYER), key=u.rank)
     view = {
         "revision": p.get("revision", 0),
         "story": {"id": u.id, "title": u.title, "premise": u.premise},
@@ -311,18 +304,15 @@ def game_view(u, g) -> dict:
                    for c in sorted(filter(None, [held_clock(u, f), *active_threats(u, f)]),
                                    key=lambda c: ACTIVE.index(u.obstacles[c].sub))],
         "journal": _journal(u, g, o, p, here),
-        "buttons": [] if ending or due else [
+        "buttons": [] if ending else [
             {"action": str(a), "label": action_label(u, o, p, a), "rolls": rolls(u, f, o.hist, a)}
             for a in recommend(u, o)],
-        "due": [{"action": f"pay:{c}", "name": complication_name(u, c), "weight": u.complication(c).weight}
-                for c in due],
-        "growth": [] if ending or due or (f.stat(PLAYER, "growth") or 0) < 1 else [
+        "growth": [] if ending or (f.stat(PLAYER, "growth") or 0) < 1 else [
             {"action": str(a), "label": action_label(u, o, p, a)} for a in candidates(u, o) if a.schema == "grow"],
         "card": (p.get("card") or {}).get("public"),
         "last": None if last is None else {
             "turn": last["n"], "steps": last["steps"], "narrated": str(last["n"]) in p.get("narration", {})},
         "recaps": sorted(int(x) for x in p.get("recap", {})),
-        "bands": BANDS_VIEW,
         "ending": {"id": ending, "title": u.endings[ending].title} if ending else None,
     }
     return view

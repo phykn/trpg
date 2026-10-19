@@ -9,8 +9,8 @@ from .acts import Action
 from .candidates import held_clock, rely_atom, talk_rolls
 from .costs import TABLE
 
-BANDS = (7, 10)                       # mixed from 7, success from 10
 RISKS = ("low", "normal", "high")
+DC = {"low": 7, "normal": 8, "high": 9}   # the total to reach, by risk
 
 
 def roll(seed: int, t: int) -> tuple[int, int, int]:
@@ -88,21 +88,17 @@ def modifiers(u, facts: State, a: Action) -> Mods:
     return Mods(stat, help_, tuple(hinder))
 
 
-def band(total: int) -> str:
-    return "success" if total >= BANDS[1] else "mixed" if total >= BANDS[0] else "fail"
+def band(total: int, dc: int) -> str:
+    return "success" if total >= dc else "fail"
 
 
-def outcome(r: tuple[int, int, int], mods: Mods) -> str:
-    return band(r[0] + r[1] + mods.z)
+def outcome(r: tuple[int, int, int], mods: Mods, risk_: str) -> str:
+    return band(r[0] + r[1] + mods.z, DC[risk_])
 
 
-def odds(z: int) -> tuple[float, float, float]:
-    """(fail, mixed, success) of 2d6 + z by BANDS."""
-    count = {"fail": 0, "mixed": 0, "success": 0}
-    for d1 in range(1, 7):
-        for d2 in range(1, 7):
-            count[band(d1 + d2 + z)] += 1
-    return count["fail"] / 36, count["mixed"] / 36, count["success"] / 36
+def chance(z: int, dc: int) -> float:
+    """P(2d6 + z >= dc)."""
+    return sum(d1 + d2 + z >= dc for d1 in range(1, 7) for d2 in range(1, 7)) / 36
 
 
 @dataclass(frozen=True)
@@ -110,9 +106,9 @@ class Preview:
     risk: str
     mods: Mods
     z: int
-    odds: tuple[float, float, float]
-    stakes: dict                      # result → {clock, weight, mode}
-    clock: dict | None                # {id, boxes, fill, mixed, fail}
+    dc: int
+    stakes: dict                      # what a fail costs: {clock, weight}
+    clock: dict | None                # {id, boxes, fill, fail}
     gain: dict
 
 
@@ -128,14 +124,13 @@ def rolls(u, facts: State, hist: frozenset, a: Action) -> bool:
 def preview(u, o: Obs, a: Action) -> Preview:
     r = risk(u, a)
     mods = modifiers(u, o.facts, a)
-    stakes = {res: {"clock": n, "weight": w, "mode": mode} for (rk, res), (n, w, mode) in TABLE.items() if rk == r}
+    n, weight = TABLE[r]
     c = held_clock(u, o.facts)
     clock = None
     if c is not None:
         fill, boxes = o.facts.fill(c), u.boxes(c)
-        clock = {"id": c, "boxes": boxes, "fill": fill,
-                 **{res: min(stakes[res]["clock"], boxes - fill) for res in ("mixed", "fail")}}
-    return Preview(r, mods, mods.z, odds(mods.z), stakes, clock, gain(u, o, a))
+        clock = {"id": c, "boxes": boxes, "fill": fill, "fail": min(n, boxes - fill)}
+    return Preview(r, mods, mods.z, DC[r], {"clock": n, "weight": weight}, clock, gain(u, o, a))
 
 
 def gain(u, o: Obs, a: Action) -> dict:

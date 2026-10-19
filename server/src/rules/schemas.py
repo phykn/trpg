@@ -57,7 +57,7 @@ def hidden_block(ctx: Ctx, x: str) -> bool:
 
 def roll_now(ctx: Ctx) -> None:
     ctx.mods = modifiers(ctx.u, ctx.s, ctx.a)
-    ctx.result = outcome(ctx.r, ctx.mods)
+    ctx.result = outcome(ctx.r, ctx.mods, ctx.risk)
 
 
 def pay_costs(ctx: Ctx, target: str) -> None:
@@ -68,8 +68,7 @@ def pay_costs(ctx: Ctx, target: str) -> None:
         ctx.work.untag(x, int(slot))
     elif rely and rely.startswith("trait:"):
         ctx.work.insert(("spent", PLAYER, rely[6:]))
-    visible = (facts_of(ctx.u, ctx.s, PLAYER), ctx.h)
-    comp = settle(ctx.u, ctx.work, ctx.result, ctx.risk, ctx.r[2], target, visible, ctx.h)
+    comp = settle(ctx.u, ctx.work, ctx.result, ctx.risk, ctx.r[2], target, ctx.h)
     if comp is not None:
         run(ctx, comp.effects)
 
@@ -77,7 +76,7 @@ def pay_costs(ctx: Ctx, target: str) -> None:
 def delta0(ctx: Ctx) -> None:
     a, w, u = ctx.a, ctx.work, ctx.u
     ctx.risk = risk(u, a)
-    quiet = a.schema in ("pay", "cut") or (a.schema == "try" and a.intent[0] == PLAYER)
+    quiet = a.schema == "cut" or (a.schema == "try" and a.intent[0] == PLAYER)
     if not quiet:
         w.set_("stat", (PLAYER, "beats"), "+1")
     globals()[f"_{a.schema}"](ctx, *a.intent)
@@ -118,7 +117,7 @@ def _talk(ctx, h, topic):
         return
     if talk_rolls(u, facts_of(u, ctx.s, PLAYER), ctx.h, h, topic):
         roll_now(ctx)
-    won = not ctx.rolled or ctx.result in ("success", "mixed")
+    won = not ctx.rolled or ctx.result == "success"
     if topic == "favor":
         favor = u.agents[h].favor
         if not ctx.rolled:
@@ -149,7 +148,7 @@ def _try(ctx, x, approach):
         ctx.result = "blocked"
         return
     roll_now(ctx)
-    if ctx.result in ("success", "mixed"):
+    if ctx.result == "success":
         ob = ctx.u.obstacles.get(x)
         if ob is not None:
             w.set_("fill", (x,), f"+{1 + (approach in ob.fits)}")
@@ -184,14 +183,6 @@ def _choose(ctx, g, c):
         if cid == c:
             run(ctx, effects)
     ctx.work.retire(g)
-
-
-def _pay(ctx, c):
-    w = ctx.work
-    for g, d in w.state().rows("due"):
-        if g == PLAYER:
-            w.retract(("due", PLAYER, d))
-    run(ctx, ctx.u.complication(c).effects)
 
 
 def _grow(ctx, *item):

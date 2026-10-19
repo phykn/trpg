@@ -16,7 +16,7 @@ from .rules.acts import parse
 from .story.validate import load_all
 
 QUIT_DAYS = 7
-ROLLED = ("success", "mixed", "fail")
+ROLLED = ("success", "mixed", "fail")    # mixed only in saves from before the two-result rule
 FORCED = ("pay", "grow")          # steps a card forces; neither a sentence nor a button chose them
 
 # fun.md 4: the first hypotheses, as (low, high); None is open.

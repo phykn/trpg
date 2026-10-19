@@ -3,13 +3,13 @@ import type { StepRecord } from '@/services/types';
 import { duration, frame, timeline } from '../reveal';
 
 const rolledStep: StepRecord = {
-  t: 2, action: 'try:door:finesse', label: '녹슨 등대 문에 솜씨로 맞선다', result: 'success', risk: 'normal',
+  t: 2, action: 'try:door:finesse', label: '녹슨 등대 문에 솜씨로 맞선다', result: 'success', risk: 'normal', dc: 8,
   roll: { d1: 3, d2: 6 }, total: 10, decisive: [0],
   mods: [{ kind: 'stat', label: 'finesse', value: 2 }, { kind: 'hinder', label: 'spray', value: -1 }],
   changes: [{ kind: 'fill', id: 'door', name: 'door', from: 0, to: 2, fit: 1 }, { kind: 'tag_add', owner: 'player', slot: 1 }],
 };
 const walk: StepRecord = {
-  t: 0, action: 'go:village', label: 'go', result: 'none', risk: 'low', roll: null, total: null, decisive: [], mods: [],
+  t: 0, action: 'go:village', label: 'go', result: 'none', risk: 'low', dc: null, roll: null, total: null, decisive: [], mods: [],
   changes: [{ kind: 'clock', id: 'clock.1', name: 'storm', from: 0, to: 1 }],
 };
 

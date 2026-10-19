@@ -338,7 +338,7 @@ def v6(u: Universe, runs: int = FUZZ_RUNS, steps: int = FUZZ_STEPS) -> None:
             if problems:
                 fail("V6", where, f"{a} breaks C: {problems[0]}")
             if step.rolled and (pv is None or (pv.risk, pv.mods.atoms()) != (step.risk, step.mods)
-                                or step.result != outcome(r, pv.mods)):
+                                or step.result != outcome(r, pv.mods, pv.risk)):
                 fail("V6", where, f"{a}: the preview differs from the execution")
 
 

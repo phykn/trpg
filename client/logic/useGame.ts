@@ -30,7 +30,7 @@ export function requestId(): string {
 
 export function destination(view: GameView, growthLater: boolean): Phase {
   if (view.ending) return 'ending';
-  if (view.due.length || view.card) return 'card';
+  if (view.card) return 'card';
   if (view.growth.length && !growthLater) return 'card';
   return 'idle';
 }

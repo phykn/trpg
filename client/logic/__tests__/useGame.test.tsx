@@ -22,11 +22,11 @@ const base: GameView = {
   scene: { place: { id: 'dock', name: 'Dock', senses: ['wind'] }, people: [], things: [], obstacles: [], exits: [], tags: [] },
   player: { name: "N", approaches: [], traits: [], tags: [], things: [], wounds: 0, wound_boxes: 2, beats: 0, beats_max: 6, growth: 0 },
   clocks: [], journal: { beliefs: [], owes: [], relations: [], choices: [] },
-  buttons: [{ action: 'go:village', label: 'Go', rolls: false }], due: [], growth: [], card: null, last: null,
-  recaps: [], bands: { mixed: 7, success: 10, min: 1, max: 16 }, ending: null,
+  buttons: [{ action: 'go:village', label: 'Go', rolls: false }], growth: [], card: null, last: null,
+  recaps: [], ending: null,
 };
 const walk: StepRecord = {
-  t: 0, action: 'go:village', label: 'Go', result: 'none', risk: 'low', roll: null, mods: [], total: null, decisive: [], changes: [],
+  t: 0, action: 'go:village', label: 'Go', result: 'none', risk: 'low', dc: null, roll: null, mods: [], total: null, decisive: [], changes: [],
 };
 const rollCard = {
   id: 'c1', kind: 'roll' as const, echo: { text: 'x', slots: [] }, selected: 'try:door:finesse',
@@ -116,15 +116,6 @@ test('releasing the dice rolls, and the reveal waits for the cloud', async () =>
   await run(() => jest.advanceTimersByTime(650));
   expect(game.phase).toBe('revealing');
   expect(game.reveal?.card?.id).toBe('c1');
-});
-
-test('a cost due opens the cost card', async () => {
-  (sendCommand as jest.Mock).mockResolvedValue(turn(after({ due: [{ action: 'pay:engine.snag', name: 'snag', weight: 'light' }] })));
-  await mount();
-  await run(() => game.command({ action: 'go:village' }));
-  await run(() => game.skip());
-  await run(() => game.typed());
-  expect(game.phase).toBe('card');
 });
 
 test('409 with a view adopts it; 409 incompatible blocks', async () => {

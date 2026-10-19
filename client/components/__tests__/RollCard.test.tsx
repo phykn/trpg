@@ -10,9 +10,9 @@ import type { Card, Preview } from '@/services/types';
 jest.mock('react-native-reanimated', () => ({ ...require('react-native-reanimated/mock'), useReducedMotion: () => true }));
 
 const preview = (z: number, risk: Preview['risk'] = 'normal', help = 0): Preview => ({
-  risk, z, odds: { fail: 0.2 - z / 100, mixed: 0.4, success: 0.4 + z / 100 },
+  risk, z, dc: risk === 'high' ? 9 : 8,
   mods: [{ kind: 'stat', label: 'finesse', value: 2 }, ...(help ? [{ kind: 'help' as const, label: 'key', value: help }] : [])],
-  stakes: { mixed: { clock: 1, weight: 'light' }, fail: { clock: 1, weight: 'heavy' } },
+  stakes: { clock: 1, weight: 'light' },
   clock: { id: 'clock.1', name: 'storm', boxes: 4, fill: 1 }, gain: { kind: 'fill', boxes: 2, fit: 1 },
 });
 const card = (risk: Preview['risk'] = 'normal'): Card => ({
@@ -20,7 +20,7 @@ const card = (risk: Preview['risk'] = 'normal'): Card => ({
   plan: { step: { action: 'try:door:finesse', label: 'door', target: { id: 'door', name: 'Door', fill: 0, boxes: 3 } }, rest: [] },
   options: [
     { id: 'try:door:finesse;rely=thing:key', label: 'key', consumed: false, note: null, preview: preview(3, risk, 1) },
-    { id: 'try:door:finesse', label: ko.result.none || 'none', consumed: false, note: null, preview: preview(2, risk) },
+    { id: 'try:door:finesse', label: 'none', consumed: false, note: null, preview: preview(2, risk) },
   ],
   selected: 'try:door:finesse;rely=thing:key',
 });
@@ -29,22 +29,28 @@ function texts(tree: { root: { findAllByType: (t: unknown) => { props: { childre
   return tree.root.findAllByType(Text).map((t) => [t.props.children].flat(3).join('')).join('|');
 }
 
-test('the selected reliance is drawn first, and picking another draws its preview', async () => {
+test('the card shows the target number and toggles reliance chips', async () => {
   let tree: ReturnType<typeof renderer.create>;
-  await flush(async () => { tree = renderer.create(<RollCard card={card()} bands={{ mixed: 7, success: 10, min: 1, max: 16 }} onRoll={jest.fn()} onCancel={jest.fn()} />); });
-  expect(texts(tree!)).toContain(ko.odds(ko.result.success, 0.43));
-  const radios = tree!.root.findAll((n: { props: { accessibilityRole?: string; onPress?: unknown } }) =>
-    n.props.accessibilityRole === 'radio' && typeof n.props.onPress === 'function', { deep: false });
-  expect(radios[0].props.accessibilityState.selected).toBe(true);
-  await flush(async () => { radios[1].props.onPress(); });
-  expect(texts(tree!)).toContain(ko.odds(ko.result.success, 0.42));
+  await flush(async () => { tree = renderer.create(<RollCard card={card()} onRoll={jest.fn()} onCancel={jest.fn()} />); });
+  expect(texts(tree!)).toContain(ko.target);
+  expect(texts(tree!)).toContain('8');
+  expect(texts(tree!)).not.toContain('none');
+  const chips = tree!.root.findAll((n: { props: { accessibilityRole?: string; onPress?: unknown } }) =>
+    n.props.accessibilityRole === 'checkbox' && typeof n.props.onPress === 'function', { deep: false });
+  expect(chips).toHaveLength(1);
+  expect(chips[0].props.accessibilityState.checked).toBe(true);
+  await flush(async () => { chips[0].props.onPress(); });
+  const again = tree!.root.findAll((n: { props: { accessibilityRole?: string; onPress?: unknown } }) =>
+    n.props.accessibilityRole === 'checkbox' && typeof n.props.onPress === 'function', { deep: false });
+  expect(again[0].props.accessibilityState.checked).toBe(false);
   expect(texts(tree!)).not.toContain(ko.highRisk);
   await flush(async () => { tree!.unmount(); });
 });
 
 test('a high risk card warns', async () => {
   let tree: ReturnType<typeof renderer.create>;
-  await flush(async () => { tree = renderer.create(<RollCard card={card('high')} bands={{ mixed: 7, success: 10, min: 1, max: 16 }} onRoll={jest.fn()} onCancel={jest.fn()} />); });
+  await flush(async () => { tree = renderer.create(<RollCard card={card('high')} onRoll={jest.fn()} onCancel={jest.fn()} />); });
   expect(texts(tree!)).toContain(ko.highRisk);
+  expect(texts(tree!)).toContain('9');
   await flush(async () => { tree!.unmount(); });
 });

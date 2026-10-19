@@ -3,10 +3,6 @@ from test_service import STORIES, cmd, new, service
 
 
 async def settle(svc, gid, view, rid):
-    """Pays any cost due, so the next command is free."""
-    while view["due"]:
-        out = await cmd(svc, gid, view, f"{rid}-pay", action=view["due"][0]["action"])
-        view = out["view"]
     return view
 
 

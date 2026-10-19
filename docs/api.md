@@ -31,7 +31,7 @@
 | 본문 | 뜻 |
 |---|---|
 | `text` | 플레이어의 문장 |
-| `action` | 버튼의 행동 id(`view.buttons`, `view.due`, `view.growth`) |
+| `action` | 버튼의 행동 id(`view.buttons`, `view.growth`) |
 | `card, pick` | 카드의 답. `pick`은 그 카드 `options`의 id |
 | `card, cancel: true` | 카드를 버림 |
 
@@ -55,21 +55,20 @@ CommandResult
 ```json
 {
   "t": 7, "action": "try:door:finesse;rely=thing:key", "label": "열쇠로 자물쇠를 연다",
-  "result": "mixed", "risk": "normal",
+  "result": "success", "risk": "normal", "dc": 8,
   "roll": {"d1": 4, "d2": 3},
   "mods": [{"kind": "stat", "label": "솜씨", "value": 2},
            {"kind": "help", "label": "등대 열쇠", "value": 1},
            {"kind": "hinder", "label": "흩날리는 물보라", "value": -1}],
-  "total": 9, "decisive": [2],
-  "changes": [{"kind": "fill", "id": "door", "name": "녹슨 등대 문", "from": 0, "to": 2, "fit": 1},
-              {"kind": "clock", "id": "clock.1", "name": "몰려오는 폭풍", "from": 1, "to": 2}]
+  "total": 9, "decisive": [0],
+  "changes": [{"kind": "fill", "id": "door", "name": "녹슨 등대 문", "from": 0, "to": 2, "fit": 1}]
 }
 ```
 
 - `mods`는 칩의 목록입니다. `stat`, 도움, 방해 차례이고, 방해의 원자가 여럿이어도 방해 하나(값 −1, 이름을 `·`로 이어 씀)입니다. `stat` 칩은 값이 0이어도 있고, 도움과 방해는 0이면 칩이 없습니다. 카드의 `preview.mods`와 같은 모양, 같은 차례라 화면은 번호로 짝지어 칩을 옮깁니다.
-- `total`과 `decisive`는 서버(`view.py`)만 계산합니다. `decisive`는 빼면 결과가 바뀌는 칩의 `mods` 안 번호(0부터)들입니다. 위 예에서 물보라의 −1이 없었다면 10으로 성공이었습니다.
+- `total`과 `decisive`는 서버(`view.py`)만 계산합니다. 결과는 `total ≥ dc`면 `success`, 아니면 `fail`이고, `decisive`는 빼면 `dc`에 대한 결과가 바뀌는 칩의 `mods` 안 번호(0부터)들입니다. 위 예에서 솜씨의 2가 없었다면 7로 목표 8에 못 미쳐 실패였습니다.
 - `changes`는 `δ`의 원자를 화면의 종류로 묶은 것이고 `from`, `to`는 보이는 값입니다. 종류: `fill`(장애물 칸, `fit`은 어울리는 방식으로 더 찬 칸 수), `clock`, `crisis`(`name`은 시계 이름), `tag_add`, `tag_remove`, `wound`, `scar`, `move`, `reveal`, `link`, `regards`, `promise`, `arrival`(`name`은 위협 이름), `chapter`(`from: k, to: k+1`), `ending`(`id`). 박자는 `view.player`로만 갑니다.
-- 굴리지 않은 단계는 `roll: null`, `mods: []`, `total: null`, `decisive: []`이고 `result`는 `none`입니다. 숨은 막힘은 `result: "blocked"`에 `changes`가 `[{kind: "reveal", id: <장애물 id>, name}]`입니다.
+- 굴리지 않은 단계는 `dc: null`, `roll: null`, `mods: []`, `total: null`, `decisive: []`이고 `result`는 `none`입니다. 숨은 막힘은 `result: "blocked"`에 `changes`가 `[{kind: "reveal", id: <장애물 id>, name}]`입니다.
 - 주사위의 `u`와 `seed`는 보내지 않습니다. `u`는 복잡화를 고르는 수일 뿐 플레이어의 경험에 쓰이지 않습니다.
 
 ## 4. 서술 스트림
@@ -99,14 +98,12 @@ CommandResult
 | `scene` | 장소 이름, 감각 단서, 보이는 인물(이름, 태도 낱말), 물건, 장애물(이름, 칸, 막는 것), 갈 곳 |
 | `player` | 이름(`creation.name`, 옛 저장은 빈 글), 방식 넷, 특성(이름, 이번 장에 썼는지), 태그(슬롯, 종류, 수명, 이름), 상처/칸, 박자/`B`, 성장 |
 | `clocks` | 지닌 위험 시계, 마감, 활성 위협과 갈림(이름, `fill`, 칸 수, 종류) |
-| `journal` | 믿는 것(`B`의 문장, 믿게 된 차례, 지금 장면의 개체를 말하는지), 약속과 신세(`owes`), 인물별 관계, 고른 대가와 갈림의 선택(이름, 장) |
+| `journal` | 믿는 것(`B`의 문장, 믿게 된 차례, 지금 장면의 개체를 말하는지), 약속과 신세(`owes`), 인물별 관계, 갈림의 선택(이름, 장) |
 | `buttons` | 추천(rule.md 9절): 행동 id, 이름, 굴리는지 |
-| `due` | 고를 대가 `[{action, name, weight}]`, `pool`의 차례 |
 | `growth` | 성장 행동 `[{action, label}]`(성장이 1 이상일 때) |
 | `card` | 기다리는 카드(아래) 또는 없음 |
 | `last` | 마지막 턴의 번호, 단계 기록, 서술이 캐시되었는지 |
 | `recaps` | 되돌아보기가 있는 장 번호들 |
-| `bands` | `{"mixed": 7, "success": 10, "min": 1, "max": 16}` 결과 경계와 눈금. 화면은 그리기에만 씀 |
 | `ending` | 결말 id와 제목, 또는 없음 |
 
 카드(engine.md 4절):
@@ -126,8 +123,8 @@ CommandResult
 ```
 { "risk": "normal",
   "mods": [{"kind": "stat", "label": "솜씨", "value": 2}, {"kind": "help", "label": "등대 열쇠", "value": 1}, {"kind": "hinder", "label": "흩날리는 물보라", "value": -1}],
-  "z": 2, "odds": {"fail": 0.167, "mixed": 0.417, "success": 0.417},
-  "stakes": {"mixed": {"clock": 1, "weight": "light"}, "fail": {"clock": 1, "weight": "heavy"}},
+  "z": 2, "dc": 8,
+  "stakes": {"clock": 1, "weight": "light" | "heavy" | null},
   "clock": {"id": "clock.1", "name": "몰려오는 폭풍", "boxes": 4, "fill": 1},
   "gain": {"kind": "fill", "boxes": 2, "fit": 1} | {"kind": "tag", "remove": "젖은 발" | null}
         | {"kind": "topic"} | {"kind": "favor", "effects": ["등대 열쇠를 받음"]} }

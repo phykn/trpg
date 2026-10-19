@@ -5,14 +5,11 @@ from ..onto.change import Work
 from ..onto.cond import holds
 from .candidates import held_clock
 
-# (risk, result) → (clock increase, weight, apply | choose | None)
+# risk → (clock increase, complication weight) on a fail; a success costs nothing
 TABLE = {
-    ("low", "mixed"): (1, None, None),
-    ("low", "fail"): (1, "light", "apply"),
-    ("normal", "mixed"): (1, "light", "choose"),
-    ("normal", "fail"): (1, "heavy", "apply"),
-    ("high", "mixed"): (1, "heavy", "choose"),
-    ("high", "fail"): (2, "heavy", "apply"),
+    "low": (1, None),
+    "normal": (1, "light"),
+    "high": (2, "heavy"),
 }
 
 
@@ -28,25 +25,15 @@ def pool(u, weight: str, target: str | None, facts: State, hist: frozenset) -> l
     return out + [c for c in story if c.weight == weight and holds(c.when, facts, hist)]
 
 
-def settle(u, work: Work, result: str, risk: str, roll_u: int, target: str | None,
-           visible: tuple[State, frozenset], world_hist: frozenset):
-    """The caller applies the returned complication on a fail.
-
-    `visible` is (F, hᵥ) at the start of the step, where chosen costs are evaluated.
-    """
-    if result not in ("mixed", "fail"):
+def settle(u, work: Work, result: str, risk: str, roll_u: int, target: str | None, world_hist: frozenset):
+    """The caller applies the returned complication."""
+    if result != "fail":
         return None
-    n, weight, mode = TABLE[(risk, result)]
-    s = work.state()
-    clock = held_clock(u, s)
+    n, weight = TABLE[risk]
+    clock = held_clock(u, work.state())
     if clock is not None:
         work.set_("fill", (clock,), f"+{n}")
-    if mode == "apply":
-        p = pool(u, weight, target, work.state(), world_hist)
-        return p[roll_u % len(p)]
-    if mode == "choose":
-        p = pool(u, weight, target, *visible)
-        start = roll_u % len(p)
-        for i in range(min(3, len(p))):
-            work.insert(("due", PLAYER, p[(start + i) % len(p)].id))
-    return None
+    if weight is None:
+        return None
+    p = pool(u, weight, target, work.state(), world_hist)
+    return p[roll_u % len(p)]

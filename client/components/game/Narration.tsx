@@ -10,7 +10,7 @@ import type { Entry } from '@/logic/useLog';
 const FACE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 const STORY = { fontSize: 16, lineHeight: 26 };
 
-export type Roll = { d1: number; d2: number; total: number; result: string };
+export type Roll = { d1: number; d2: number; total: number; result: string; dc?: number; approach?: string };
 
 function Dot({ delay }: { delay: number }) {
   const t = useSharedValue(0);
@@ -35,8 +35,13 @@ export function Typing() {
 
 export function RollLine({ roll }: { roll: Roll }) {
   return (
-    <Text className="font-mono-medium text-panel text-fg-muted">
-      {FACE[roll.d1]}{FACE[roll.d2]} {roll.total} <Text className="font-sans-semibold text-gold-fg">{ko.result[roll.result as keyof typeof ko.result]}</Text>
+    <Text className="font-sans text-panel text-fg-muted">
+      <Text className="font-mono-medium">{FACE[roll.d1]}{FACE[roll.d2]}</Text>
+      {roll.approach ? ` ${ko.check(roll.approach)} ` : ' '}
+      <Text className={`font-sans-semibold ${roll.result === 'success' ? 'text-gold-fg' : 'text-danger-fg'}`}>
+        {ko.result[roll.result as keyof typeof ko.result]}
+      </Text>
+      <Text className="font-mono-medium text-fg-subtle"> {roll.total}{roll.dc ? `/${roll.dc}` : ''}</Text>
     </Text>
   );
 }
@@ -82,7 +87,7 @@ export function Chat({ entries, live, roll, waiting, narration, hold, failed, on
   const end = (animated: boolean) => scroll.current?.scrollToEnd({ animated });
   const typing = live && !hold && full && shown < full.length;
   return (
-    <ScrollView ref={scroll} className="min-h-0 flex-1" contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}
+    <ScrollView ref={scroll} showsVerticalScrollIndicator={false} className="min-h-0 flex-1" contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}
       onLayout={() => end(false)} onContentSizeChange={() => end(true)}>
       {entries.map((e) => <Line key={e.id} entry={e} />)}
       {live && roll && !hold ? <RollLine roll={roll} /> : null}

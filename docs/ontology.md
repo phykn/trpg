@@ -13,7 +13,7 @@ server/src/onto/
   save.py     스냅숏 쓰기, 기록에서 다시 만들기
 ```
 
-이 패키지는 모델도 규칙도 모릅니다. 규칙이 더한 술어(`owes`, `due`, `spent`)와 연산(`assert_`, `expire` 등)도 여기 둡니다.
+이 패키지는 모델도 규칙도 모릅니다. 규칙이 더한 술어(`owes`, `spent`)와 연산(`assert_`, `expire` 등)도 여기 둡니다.
 
 ## 1. 세계
 
@@ -60,7 +60,7 @@ Atom = tuple[str, ...]          # ("at", "key", "dohae"), ("fill", "door", 2)
 | `stat(g, s, n)` | `("stat", g, s, n)` | 시트 항목. `s`는 방식 넷(`force`, `finesse`, `wits`, `charm`), `beats`, `wounds`, `growth`, 특성 id(값 1) |
 | `flag(f, v)` | `("flag", f, v)` | `chapter`, `ending`, 원고 플래그, 발동 플래그 `fired_*` |
 | `owes(g, h, k)` | `("owes", g, h, k)` | `g`가 `h`에게 진 것. `k`는 `promise`(`h`의 부탁에 걸린 약속) 또는 `kindness`(호의) |
-| `due(g, c)` | `("due", g, c)` | `g`가 골라야 할 대가 `c` |
+| `due(g, c)` | `("due", g, c)` | 옛 규칙의 고를 대가. 이 규칙 전의 저장을 읽도록 색인에만 남았고 아무것도 만들지 않음 |
 | `spent(g, s)` | `("spent", g, s)` | 이 장에서 이미 기댄 특성 `s` |
 
 `blocks(o, x)`("o가 x를 막는다")는 저장하지 않는 유도 원자입니다. 원고의 `blocks` 목록에서 `at(o, ·)`이 있고 `fill(o) < 칸 수`인 동안 참이며, 조건 평가와 관찰이 받은 원자 집합 위에서 계산합니다.
@@ -122,7 +122,7 @@ class Event:
     t: int
     action: str                  # canonical action id (story.md 3.12)
     roll: tuple[int, int, int] | None   # (d1, d2, u) only when the step rolled
-    result: str                  # success, mixed, fail, none, blocked
+    result: str                  # success, fail, none, blocked
     delta: Delta                 # minimal difference
     witnesses: tuple[str, ...]   # sorted
     mods: tuple[Atom, ...]       # atoms that adjusted the roll, in rule order
@@ -208,7 +208,7 @@ class Seen:
 | `link(p, q)`, `unlink(p, q)` | `link`를 더하거나 뺌 |
 | `retire(o)` | `at[o]`를 뺌. 위협·갈림이면 등장 방아쇠의 발동 플래그도 놓음 |
 | `expire(life)` | 그 수명의 `mark`를 모두 뺌 |
-| `assert_(atom)`, `retract(atom)` | `owes`, `due`, `spent` 원자 |
+| `assert_(atom)`, `retract(atom)` | `owes`, `spent` 원자 |
 | `clear_spent(g)` | `g`의 `spent`를 모두 뺌 |
 
 원고의 효과(story.md 2.4)는 이 연산으로 그대로 번역됩니다. `{set: [regards, g, h, axis, v]}`는 `set_("regards", (g, h, axis), v)`, `{tag: [x, kind, life, 이름]}`은 `tag(x, kind, life)`와 함께 기본 이름을 표현층에 둡니다.

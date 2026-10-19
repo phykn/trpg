@@ -8,15 +8,14 @@ export type Creation = { name: string; approaches: Record<string, number>; trait
 export type Chip = { kind: 'stat' | 'help' | 'hinder'; label: string; value: number };
 export type Change = { kind: string; [key: string]: unknown };
 export type StepRecord = {
-  t: number; action: string; label: string; result: 'success' | 'mixed' | 'fail' | 'none' | 'blocked';
-  risk: 'low' | 'normal' | 'high'; roll: { d1: number; d2: number } | null; mods: Chip[];
+  t: number; action: string; label: string; result: 'success' | 'fail' | 'none' | 'blocked';
+  risk: 'low' | 'normal' | 'high'; dc: number | null; roll: { d1: number; d2: number } | null; mods: Chip[];
   total: number | null; decisive: number[]; changes: Change[];
 };
 
 export type Preview = {
-  risk: 'low' | 'normal' | 'high'; mods: Chip[]; z: number;
-  odds: { fail: number; mixed: number; success: number };
-  stakes: { mixed: { clock: number; weight: string | null }; fail: { clock: number; weight: string | null } };
+  risk: 'low' | 'normal' | 'high'; mods: Chip[]; z: number; dc: number;
+  stakes: { clock: number; weight: string | null };
   clock: { id: string; name: string; boxes: number; fill: number } | null;
   gain: { kind: 'fill'; boxes: number; fit: number } | { kind: 'tag'; remove: string | null }
     | { kind: 'topic' } | { kind: 'favor'; effects: string[] };
@@ -62,12 +61,10 @@ export type GameView = {
     choices: { kind: 'cost' | 'fork'; name: string; chapter: number }[];
   };
   buttons: { action: string; label: string; rolls: boolean }[];
-  due: { action: string; name: string; weight: string }[];
   growth: { action: string; label: string }[];
   card: Card | null;
   last: { turn: number; steps: StepRecord[]; narrated: boolean } | null;
   recaps: number[];
-  bands: { mixed: number; success: number; min: number; max: number };
   ending: { id: string; title: string } | null;
 };
 

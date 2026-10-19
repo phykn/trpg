@@ -5,7 +5,6 @@ import { ClarifyCard } from '@/components/game/ClarifyCard';
 import { Clocks } from '@/components/game/Clocks';
 import { CommandBar } from '@/components/game/CommandBar';
 import { ConfirmCard } from '@/components/game/ConfirmCard';
-import { CostCard } from '@/components/game/CostCard';
 import { Ending } from '@/components/game/Ending';
 import { GrowthCard } from '@/components/game/GrowthCard';
 import { Header } from '@/components/game/Header';
@@ -13,6 +12,7 @@ import { Menu } from '@/components/game/Menu';
 import { Chat } from '@/components/game/Narration';
 import { RollCard } from '@/components/game/RollCard';
 import { Scene } from '@/components/game/Scene';
+import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import { frame as frameAt } from '@/logic/reveal';
 import type { Game } from '@/logic/useGame';
@@ -41,7 +41,10 @@ export function Play({ game }: { game: Game }) {
   const turnNo = view.last?.turn ?? null;
   const live = turnNo !== null && !log.has(`story:${turnNo}`);
   const rolled = lastRolled(view.last?.steps);
-  const roll = rolled?.roll ? { d1: rolled.roll.d1, d2: rolled.roll.d2, total: rolled.total ?? rolled.roll.d1 + rolled.roll.d2, result: rolled.result } : null;
+  const roll = rolled?.roll ? {
+    d1: rolled.roll.d1, d2: rolled.roll.d2, total: rolled.total ?? rolled.roll.d1 + rolled.roll.d2, result: rolled.result,
+    dc: rolled.dc ?? 0, approach: rolled.mods.find((m) => m.kind === 'stat')?.label ?? '',
+  } : null;
   const onTyped = () => {
     if (turnNo !== null) {
       const text = [game.narration.text, game.narration.recap].filter(Boolean).join('\n\n');
@@ -73,20 +76,20 @@ export function Play({ game }: { game: Game }) {
   const sheetOpen = sheet && phase === 'idle';
   const growthLater = view.growth.length > 0 && game.growthLater;
   let card = null;
+  let roller = null;
   if (rollOpen) {
     const c = phase === 'rolling' ? view.card : reveal?.card;
     if (c) {
-      card = (
-        <RollCard card={c} bands={view.bands} rolling={phase === 'rolling'} step={revealing ? step : undefined}
+      roller = (
+        <RollCard card={c} rolling={phase === 'rolling'} step={revealing ? step : undefined}
           frame={revealing ? frame ?? undefined : undefined}
           onRoll={(pick) => game.command({ card: c.id, pick })} onCancel={() => game.command({ card: c.id, cancel: true })} />
       );
     }
   } else if (phase === 'card') {
     const c = view.card;
-    if (view.due.length) card = <CostCard due={view.due} onPick={(action) => game.command({ action })} />;
-    else if (c?.kind === 'roll') {
-      card = <RollCard key={c.id} card={c} bands={view.bands} onRoll={(pick) => game.command({ card: c.id, pick })}
+    if (c?.kind === 'roll') {
+      roller = <RollCard key={c.id} card={c} onRoll={(pick) => game.command({ card: c.id, pick })}
         onCancel={() => game.command({ card: c.id, cancel: true })} />;
     } else if (c?.kind === 'clarify') {
       card = <ClarifyCard card={c} onPick={(pick) => game.command({ card: c.id, pick })}
@@ -120,11 +123,17 @@ export function Play({ game }: { game: Game }) {
             ) : null}
           </View>
           <CommandBar mode={mode} sent={game.sent} notice={game.notice}
-            placeholder={view.due.length ? ko.payFirst : hint(view.scene)}
+            placeholder={hint(view.scene)}
             onSend={(text) => { log.add({ id: `you:${Date.now()}`, kind: 'you', text }); game.command({ text }); }} onResend={game.resend} onNew={game.newGame} />
           {card ? <View className="absolute bottom-0 left-0 right-0 max-h-full">{card}</View> : null}
         </View>
       )}
+      {roller ? (
+        <Pressable accessible={false} disabled={!revealing} onPress={game.skip}
+          className="absolute bottom-0 left-0 right-0 top-0 z-30 justify-center px-4" style={{ backgroundColor: colors.overlay }}>
+          {roller}
+        </Pressable>
+      ) : null}
       {sheetOpen ? (
         <Pressable accessibilityLabel={ko.closeMenu} className="absolute bottom-0 left-0 right-0 top-0 z-10" onPress={() => setSheet(false)} />
       ) : null}

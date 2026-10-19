@@ -18,7 +18,6 @@ const colors = {
   success: { fg: '#9fcabd', muted: '#1f3530' },
   gold: { fg: '#e5bd76' },
   chip: { stat: '#8fb3d9', help: '#9fcabd', hinder: '#f19a8d' },
-  band: { fail: '#5a2f2b', mixed: '#5a4a2b', success: '#2b5a4a' },
   // What kind a scene entry is, told apart by hue alone (ui.md 2.1).
   kind: { person: '#8fb3d9', thing: '#9fcabd', obstacle: '#c9a8e8' },
   // Full boxes say whose side the fill is on: gold is the player's progress, red is trouble, grey is time spent.
@@ -52,7 +51,7 @@ const text = { narration: [18, 17, 16, 15, 14, 13], min: 13, chipMin: 12, lineHe
 const layout = { mobile: 412 };
 // `reduced` replaces every beat under prefers-reduced-motion (ui.md 4.5).
 const motion = {
-  cloud: 600, die: 250, dieGap: 120, line: 200, chip: 180, settle: 300, decisive: 150,
+  cloud: 600, die: 250, dieGap: 120, line: 200, chip: 180, settle: 900, decisive: 150,
   box: 150, fold: 200, change: 150, blockedFade: 300, odds: 250, reduced: 100,
   typeRate: 60, shakeMax: 1500, stuck: 30000,
 };

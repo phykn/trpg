@@ -155,9 +155,6 @@ async def test_a_finished_chapter_has_a_recap(tmp_path):
         card = out["view"]["card"]
         view = (await svc.command(gid, {"request_id": f"p{i}", "revision": out["view"]["revision"],
                                         "card": card["id"], "pick": "try:door:finesse"}))["view"]
-        while view["due"]:
-            view = (await svc.command(gid, {"request_id": f"d{i}{view['revision']}", "revision": view["revision"],
-                                            "action": view["due"][0]["action"]}))["view"]
         if view["scene"]["obstacles"][0]["fill"] == 3:
             break
     out = await svc.command(gid, {"request_id": "up", "revision": view["revision"], "action": "go:lamp_room"})

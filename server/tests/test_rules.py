@@ -9,7 +9,7 @@ from src.rules.acts import format, parse
 from src.rules.candidates import admits, candidates, space
 from src.rules.recommend import recommend
 from src.rules.resolve import event_of, resolve
-from src.rules.roll import odds, outcome, preview, risk, roll, rolls
+from src.rules.roll import DC, chance, outcome, preview, risk, roll, rolls
 from src.rules.triggers import ended
 
 
@@ -65,25 +65,24 @@ def test_roll_is_a_function_of_seed_and_turn():
     assert len({roll(5, t) for t in range(30)}) > 20
 
 
-def test_bands_at_their_edges(u, s0):
+def test_the_target_number_splits_success_from_fail(u, s0):
     a = parse("try:door:wits")
     from src.rules.roll import modifiers
     m = modifiers(u, s0, a)          # wits 1
     assert m.z == 1
-    assert [outcome((d, 0, 0), m) for d in (5, 6, 8, 9)] == ["fail", "mixed", "mixed", "success"]
+    for r, dc in DC.items():
+        assert [outcome((d, 0, 0), m, r) for d in (dc - 2, dc - 1)] == ["fail", "success"]
 
 
 @pytest.mark.parametrize("z", range(-2, 6))
-def test_odds_count_2d6(z):
-    f, m, s = odds(z)
+def test_chance_counts_2d6(z):
     totals = [d1 + d2 + z for d1 in range(1, 7) for d2 in range(1, 7)]
-    assert (f, m, s) == (sum(t <= 6 for t in totals) / 36, sum(7 <= t <= 9 for t in totals) / 36,
-                         sum(t >= 10 for t in totals) / 36)
-    assert abs(f + m + s - 1) < 1e-12
+    for dc in DC.values():
+        assert chance(z, dc) == sum(t >= dc for t in totals) / 36
 
 
-def test_odds_at_zero():
-    assert odds(0) == (15 / 36, 15 / 36, 6 / 36)
+def test_chance_at_zero():
+    assert [chance(0, DC[r]) for r in ("low", "normal", "high")] == [21 / 36, 15 / 36, 10 / 36]
 
 
 def test_oracle_path(play):
@@ -95,16 +94,20 @@ def test_oracle_path(play):
     assert pv.risk == "normal" and [c[2] for c in pv.mods.chips()] == [2, 1, -1] and pv.z == 2
     step = play.do(format(a), (4, 3, 0))
     s = play.s
-    assert step.result == "mixed" and step.risk == "normal" and step.mods == pv.mods.atoms()
-    assert s.stat(PLAYER, "beats") == 3 and s.fill("door") == 2 and s.fill("clock.1") == 1
+    assert pv.dc == 8 and step.result == "success" and step.risk == "normal" and step.mods == pv.mods.atoms()
+    assert s.stat(PLAYER, "beats") == 3 and s.fill("door") == 2 and s.fill("clock.1") == 0
     assert s.has("spent", PLAYER, "tinker")
-    assert sorted(c for _, c in s.rows("due")) == ["engine.beat", "engine.snag"]
-    assert [format(x) for x in candidates(play.u, play.obs)] == [
-        "pay:engine.snag", "pay:engine.beat", "try:player:force", "try:player:finesse", "try:player:wits",
-        "try:player:charm"]
-    assert [format(x) for x in recommend(play.u, play.obs)] == ["pay:engine.snag", "pay:engine.beat"]
-    play.do("pay:engine.beat")
-    assert not play.s.rows("due") and play.s.stat(PLAYER, "beats") == 4
+
+
+def test_a_fail_applies_its_cost_at_once(play):
+    play.do("go:village")
+    play.do("go:yard")
+    snags = len(play.s.marks(PLAYER))
+    step = play.do("try:door:finesse", (1, 1, 0))
+    s = play.s
+    assert step.result == "fail" and s.fill("door") == 0 and s.fill("clock.1") == 1
+    assert len(s.marks(PLAYER)) == snags + 1          # normal risk applies a light cost; u = 0 picks engine.snag
+    assert "pay" not in {a.schema for a in candidates(play.u, play.obs)}
 
 
 def path_steps(u, i):
@@ -144,10 +147,7 @@ def test_out_of_candidate_ids_are_refused(play, aid):
 def test_progress_and_neutral_self_try(play):
     play.do("go:village")
     play.do("go:yard")
-    play.do("try:door:finesse", (4, 3, 0))
-    assert play.s.rows("due")
-    kinds = {a.schema for a in candidates(play.u, play.obs)}
-    assert kinds == {"pay", "try"}
+    play.do("try:door:finesse", (1, 1, 0))
     step = play.do("try:player:wits")
     assert step.delta.add == step.delta.remove == frozenset() and step.result == "none"
 
@@ -282,10 +282,10 @@ def test_random_play_keeps_the_properties(u, creation, seed):
         before = visible(u, play.s)
         step = play.do(format(a), r)
         assert conforms(u, play.s) == []
-        assert play.s.stat(PLAYER, "beats") < u.beats
+        assert ended(play.s) or play.s.stat(PLAYER, "beats") < u.beats
         if step.rolled:
             assert pv is not None and pv.risk == step.risk and pv.mods.atoms() == step.mods
-            assert step.result == outcome(r, pv.mods)
+            assert step.result == outcome(r, pv.mods, pv.risk)
             assert visible(u, play.s) != before
         elif pv is not None:
             assert step.result == "blocked"

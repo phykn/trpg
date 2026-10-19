@@ -135,8 +135,6 @@ async def test_a_high_step_waits_for_a_confirm_card(tmp_path):
         card = out["view"]["card"]
         res = await cmd(svc, gid, out["view"], f"p{i}", card=card["id"], pick="try:door:finesse")
         view = res["view"]
-        while view["due"]:
-            view = (await cmd(svc, gid, view, f"d{i}{view['revision']}", action=view["due"][0]["action"]))["view"]
         if view["scene"]["obstacles"][0]["fill"] == 3:
             break
     out = await cmd(svc, gid, view, "c1", text="올라가 고른다")

@@ -30,7 +30,6 @@ from .story.load import StoryError
 from .view import (
     action_label,
     chapter_k,
-    complication_name,
     default_tag_name,
     game_view,
     step_record,
@@ -314,7 +313,7 @@ class GameService:
                     break
             records.append(self._step(u, g, a))
             s = g.state
-            if ended(s) or records[-1]["result"] in ("fail", "blocked") or any(r[0] == PLAYER for r in s.rows("due")):
+            if ended(s) or records[-1]["result"] in ("fail", "blocked"):
                 break
         turn = None
         if records:
@@ -357,9 +356,7 @@ class GameService:
             atom = ("mark", x, *mark, slot) if mark else None
             if atom and atom in step.delta.add:
                 p["tags"].append([list(atom), t, default_tag_name(u, name, mark[0])])
-        if a.schema == "pay":
-            p["choices"].append({"kind": "cost", "name": complication_name(u, a.intent[0]), "chapter": k})
-        elif a.schema == "choose":
+        if a.schema == "choose":
             p["choices"].append({"kind": "fork", "name": label, "chapter": k})
         ending = step.after.flag("ending") if ended(step.after) and not ended(s) else None
         if ending:

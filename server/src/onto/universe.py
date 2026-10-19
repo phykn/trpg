@@ -694,7 +694,7 @@ class _Builder:
         for aid, ag in u.agents.items():
             if ag.favor is not None:
                 u.favor_patterns[aid] = len(u.patterns)
-                u.patterns.append(compile_pattern(f"talk:{aid}:favor", None, ("success", "mixed", "none")))
+                u.patterns.append(compile_pattern(f"talk:{aid}:favor", None, ("success", "none")))
 
         # Triggers, in weaving order (story.md 3.11).
         woven = []

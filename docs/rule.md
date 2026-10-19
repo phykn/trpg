@@ -1,12 +1,12 @@
 # 규칙
 
-규칙은 후보 `K`와 전이 `R`의 내용입니다. 여섯 면 주사위 둘, 위험, 고르는 대가, 복잡화로 판정하고(3절), 박자와 장면과 위협으로 시간을 움직이며(4절), 대화가 관계와 약속을 남기고(5절), 주인공에게 선언·흉터·성장이 있습니다(6절). 상태와 연산은 [ontology.md](ontology.md), 원고 매개변수는 [story.md](story.md)의 것입니다.
+규칙은 후보 `K`와 전이 `R`의 내용입니다. 여섯 면 주사위 둘, 위험에 따른 목표 수, 실패의 대가와 복잡화로 판정하고(3절), 박자와 장면과 위협으로 시간을 움직이며(4절), 대화가 관계와 약속을 남기고(5절), 주인공에게 선언·흉터·성장이 있습니다(6절). 상태와 연산은 [ontology.md](ontology.md), 원고 매개변수는 [story.md](story.md)의 것입니다.
 
 ```
 server/src/rules/
   acts.py        행동 id: parse, format, SCHEMAS
   candidates.py  K: candidates, space, admits
-  roll.py        roll(H), risk, modifiers, outcome, odds, preview
+  roll.py        roll(H), risk, DC, modifiers, outcome, chance, preview
   costs.py       대가 표, pool, settle
   schemas.py     스키마마다의 Δ₀, scene_end
   triggers.py    scan, 엔진 방아쇠, chapter_to, end
@@ -23,7 +23,7 @@ server/src/rules/
 ```python
 @dataclass(frozen=True)
 class Action:
-    schema: str                     # go, look, take, give, talk, try, declare, cut, choose, pay, grow
+    schema: str                     # go, look, take, give, talk, try, declare, cut, choose, grow
     intent: tuple[str, ...]         # intent arguments in schema order
     judge: tuple[tuple[str, str], ...]  # non-neutral judgment arguments, sorted by key
 ```
@@ -41,8 +41,9 @@ class Action:
 | `declare` | 잠재를 선언(6절) | 잠재 | - |
 | `cut` | 장면을 넘김(4절) | `pass` 또는 `rest` | - |
 | `choose` | 갈림에서 하나를 고름(4절) | 갈림, 선택지 | - |
-| `pay` | 고를 대가 하나를 치름(3.3) | 대가 | - |
 | `grow` | 성장(6절) | `grow:<방식>`, `grow:trait:<뺄>:<얻을>`, `grow:scar:<슬롯>` | - |
+
+옛 스키마 `pay`는 이 규칙 전의 저장을 읽도록 행동 id의 문법(`acts.py`)에만 남았고, 후보도 `Δ₀`도 없습니다.
 
 **의도 인자**는 무엇을 하려는지, **판단 인자**는 행동하는 모양입니다. `ν₀`는 도움도 위험 증가도 `spent`도 만들지 않습니다. 인자가 모두 유한한 종류 위를 돌므로 행동의 집합은 유한합니다. 스키마 표 `SCHEMAS`가 스키마마다 의도 인자의 종류, 판단 인자의 키, 굴림 여부를 정하는 함수, 행동 이름 틀의 키를 둡니다.
 
@@ -83,7 +84,7 @@ class Action:
 | `prop:<id>` | `id ∈ B` | `believes(player, id)` | 없음 |
 | `bond:<h>` | `regards(h, player, trust, 3) ∈ F`(유대) | 그 `regards` | 없음 |
 
-**`due`가 있으면** 후보는 `pay(c)`(`due(player, c) ∈ F`)와 `try(player, ·)`뿐입니다. **결말이 놓이면** 후보는 비고 게임이 끝납니다. `try(player, ·)`는 늘 후보이므로 결말 전에는 `K ≠ ∅`입니다(진행성).
+**결말이 놓이면** 후보는 비고 게임이 끝납니다. `try(player, ·)`는 늘 후보이므로 결말 전에는 `K ≠ ∅`입니다(진행성).
 
 `K`의 크기는 판단 인자의 곱 때문에 커지므로 엔진은 `K`를 통째로 펼치지 않습니다. `space(U, O)`는 스키마별로 의도 인자만 펼친 목록과 판단 인자마다 허용되는 값을 돌려주고, `admits(U, O, a)`가 `a ∈ K(O)`를 판정하며, 둘은 같은 조건 함수를 씁니다. 해석의 질문과 굴림 카드(engine.md 3~4절)가 `space`를, 실행 직전의 허용 검사가 `admits`를 씁니다.
 
@@ -104,17 +105,18 @@ def roll(seed: int, t: int) -> tuple[int, int, int]:
 
 ```
 합 = d₁ + d₂ + stat(player, 방식) + 도움 − 방해        talk의 방식은 charm
-결과 = success (합 ≥ 10) | mixed (7~9) | fail (≤ 6)
+결과 = success (합 ≥ DC(위험)) | fail (합 < DC(위험))
 ```
 
 ### 3.2 위험, 보정, 결과
 
 ```python
-BANDS = (7, 10)                          # mixed from 7, success from 10
+DC = {low: 7, normal: 8, high: 9}       # the total to reach, by risk
 def risk(U, a) -> Risk                   # reads only U and a
 def modifiers(U, facts, a) -> Mods       # stat, help, hinder and the atoms behind them
-def outcome(r, mods) -> Result           # by BANDS
-def odds(z) -> tuple[float, float, float]  # (fail, mixed, success) of 2d6 + z by BANDS
+def band(total, dc) -> Result            # success if total >= dc, else fail
+def outcome(r, mods, risk) -> Result     # band(d1 + d2 + z, DC[risk])
+def chance(z, dc) -> float               # P(2d6 + z >= dc)
 ```
 
 **위험**은 원고 매개변수와 `a`의 인자만 읽습니다. 그래서 숨은 원자만 다른 두 상태에서 같고, `rely` 선택지마다 같으며, 숨은 경비 같은 `S`의 숨은 부분은 위험에 들지 않고 행동해서 겪습니다. 판단 인자는 위험을 올릴 수만 있습니다.
@@ -141,7 +143,7 @@ risk(그 밖)                      = low
 
 `modifiers`는 `facts`에 넘긴 원자만 읽습니다. `R`은 `S`를, 미리보기는 `F`를 넘깁니다. 보정이 읽는 원자는 모두 `E` 안의 개체(대상, `here`, 플레이어, 눈앞의 상대)에 대한 `mark`, `stat`, `regards`이거나 `rely`가 가리키는 `F`와 `B`의 원자라서, 굴리는 행동 `a ∈ K(O)`에 대해 `modifiers(U, S, a) = modifiers(U, F, a)`입니다.
 
-`outcome`, `odds`, api.md의 `view.bands`는 모두 `BANDS` 하나에서 나옵니다.
+`outcome`, `chance`, 단계 기록의 `dc`(api.md 3절)는 모두 `DC` 하나에서 나옵니다. 결과는 `success`와 `fail` 둘뿐입니다.
 
 ### 3.3 대가와 복잡화
 
@@ -154,20 +156,19 @@ risk(그 밖)                      = low
 | `heavy` | `engine.wound` | 다침 | `wounds +1` |
 | | `engine.end` | 끊긴 장면 | 장면 끝(4.1) |
 
-원고 복잡화의 효과는 `effects`에 `wound: n`이 있으면 `wounds +n`을 더한 것입니다. 대가는 굴림 결과와 위험으로 정합니다.
+원고 복잡화의 효과는 `effects`에 `wound: n`이 있으면 `wounds +n`을 더한 것입니다. **대가는 `fail`에만** 있고 위험으로 정하며, 엔진이 바로 적용합니다. 플레이어는 고르지 않습니다.
 
-| 위험 \ 결과 | `mixed` | `fail` |
-|---|---|---|
-| `low` | 시계 +1 | 시계 +1, 가벼움 적용 |
-| `normal` | 시계 +1, 가벼움 **고름** | 시계 +1, 무거움 적용 |
-| `high` | 시계 +1, 무거움 **고름** | 시계 +2, 무거움 적용 |
+| 위험 | `fail`의 대가 |
+|---|---|
+| `low` | 시계 +1 |
+| `normal` | 시계 +1, 가벼움 |
+| `high` | 시계 +2, 무거움 |
 
 **후보 목록** `pool(무게, 대상)`: 엔진의 것 둘(위 표의 차례), 그 뒤에 원고의 것을 장소(`here`), 인물(`here`에 있는 인물들, 원고 차례), 장애물(굴림의 대상) 차례로. 원고 복잡화는 붙은 곳의 암묵 조건과 `when`을 거칩니다. 엔진의 것이 조건이 없어 목록은 늘 둘 이상입니다.
 
-- **적용**(`fail`): `when`을 세계 `(S, h)`에서 평가한 목록에서 `u mod 개수`번째의 효과를 `Δ₀`에 넣습니다. 겪어서 드러나는 것이므로 숨은 것을 써도 되고, 그래서 미리보기는 무게만 말합니다.
-- **고름**(`mixed`): `when`을 단계 시작의 `(F, hᵥ)`에서 평가한 목록에서 `u mod 개수`번째부터 원형으로 셋까지(목록이 짧으면 전부) `assert(due(player, c))`. 그 차례가 `view.due`의 차례입니다. `due`가 있는 동안 후보는 `pay(c)`와 `try(player, ·)`뿐이고, `pay(c)`는 `c`의 효과를 적용하고 `due`를 모두 지웁니다.
+**적용**: 무게가 있으면 `when`을 세계 `(S, h)`에서 평가한 목록에서 `u mod 개수`번째의 효과를 `Δ₀`에 넣습니다. 겪어서 드러나는 것이므로 숨은 것을 써도 되고, 그래서 미리보기는 무게만 말합니다.
 
-`settle(U, O, work, a, result, risk, u)`가 대가 표의 한 칸(시계, 적용 또는 고름)을 `Δ₀`에 넣습니다.
+`settle(U, work, result, risk, u, target, h)`가 `fail`이면 대가 표의 한 줄(지닌 시계의 증가)을 `work`에 넣고 고른 복잡화를 돌려주며, 호출하는 쪽이 그 효과를 적용합니다. `success`면 아무것도 하지 않습니다.
 
 ### 3.4 미리보기
 
@@ -182,9 +183,9 @@ def preview(U, O, a) -> Preview
 | `risk` | `risk(U, a)` |
 | `mods` | `modifiers(U, O.facts, a)`를 api.md 3절의 칩 목록(`kind`, `label`, `value`)으로. 단계 기록의 `mods`와 같은 모양, 같은 차례 |
 | `z` | `stat + 도움 − 방해` |
-| `odds` | `odds(z)` |
-| `stakes` | 그 위험의 대가 표 한 줄과, 고름이면 무게 |
-| `clock` | 지닌 위험 시계의 이름, 칸 수, `fill`, 그리고 `mixed`·`fail`일 때의 증가(`min(n, 남은 칸)`) |
+| `dc` | `DC[risk]` |
+| `stakes` | 실패의 대가: `clock`은 지닌 시계에 찰 칸(`min(n, 남은 칸)`, 시계가 없으면 0), `weight`는 복잡화의 무게(없으면 null) |
+| `clock` | 지닌 위험 시계의 id, 이름, 칸 수, `fill` |
 | `gain` | 성공했을 때 대상에 생길 일: 장애물이면 칸 `min(1 + [방식 ∈ fits], 남은 칸)`, 그 밖의 `try`면 가장 낮은 슬롯의 `snag`을 뗌(그 이름) 또는 `edge` 장면 태그, `talk`면 화제의 공개 또는 부탁의 효과(이름들) |
 
 **미리보기는 실행과 같습니다.** 위험은 원고와 `a`의 함수이고 보정은 3.2의 끝에서 `S`와 `F`에서 같으므로, 굴림이 일어나면 그때의 `z`, `mods`, 위험은 미리보기의 값과 같습니다. 다른 것은 두 가지뿐입니다. 숨은 막힘이 있으면 굴림이 일어나지 않고(`blocked`, 기댄 것도 소모하지 않음), 실패의 복잡화는 숨은 것에서도 고를 수 있어 미리보기는 무게만 말합니다.
@@ -193,7 +194,7 @@ def preview(U, O, a) -> Preview
 
 ### 4.1 박자와 장면
 
-**박자** `stat(player, beats, n)`, `0 ≤ n ≤ B`. `try(player, ·)`, `pay`, `cut`을 뺀 모든 단계가 `Δ₀`에서 `beats +1`합니다.
+**박자** `stat(player, beats, n)`, `0 ≤ n ≤ B`. `try(player, ·)`와 `cut`을 뺀 모든 단계가 `Δ₀`에서 `beats +1`합니다.
 
 **장면 끝** `scene_end`: `expire(scene)`, `beats = 0`, 활성 위협(`at(w, player)`인 위협, 갈림, 마감)마다 `fill +1`. 위험 시계는 들지 않습니다. `go`는 장면 태그를 만료하지 않습니다.
 
@@ -229,9 +230,9 @@ def preview(U, O, a) -> Preview
 
 1. **숨은 막힘**: `h`가 숨은 장애물에 막혔으면 드러내고 끝냅니다.
 2. **굴림 여부**(보임으로 판정하며, `R` 안에서는 `fact_rule`로 `S`에서 `F`를 만들어 같은 판정을 함): 화제가 이미 믿는 명제이거나, `free_when`이 참이거나, `chat`이거나, `owes(h, player, kindness)`가 있는 부탁이면 굴리지 않습니다. 그 밖의 화제와 부탁은 굴립니다.
-3. **결과**: 굴리지 않는 화제는 공개(`reveals: x`면 `x.hidden`, 아니면 화제 id), 호의로 들어주는 부탁은 부탁의 효과와 `retract(owes(h, player, kindness))`. 굴리면 `success`·`mixed`에서 공개, 또는 부탁의 효과와 `assert(owes(player, h, promise))`. 대가는 3.3입니다.
+3. **결과**: 굴리지 않는 화제는 공개(`reveals: x`면 `x.hidden`, 아니면 화제 id), 호의로 들어주는 부탁은 부탁의 효과와 `retract(owes(h, player, kindness))`. 굴리면 `success`에서 공개, 또는 부탁의 효과와 `assert(owes(player, h, promise))`. 대가는 3.3입니다.
 4. **태도**: `threaten`은 결과와 무관하게 `regards(h, player, fear) +1`, `trust −1`. `deceive`이고 `claim`의 `against`를 `h`가 믿으면 들통: `trust −2`, 플레이어에게 `snag` 장 태그(기본 이름 "의심"). 원고 명제에 맞지 않는 주장은 문장으로만 남습니다.
-5. **부탁의 횟수**: 엔진은 인물마다 패턴 `favor:h`(행동 `talk:h:favor`, 결과 `success`·`mixed`·`none`)를 `Pat`에 더합니다. 들어준 단계가 이 패턴에 맞고, 후보는 `favor:h ∈ hᵥ`이면 부탁을 내지 않습니다. 후보는 `F`와 `hᵥ`만 읽으므로 원고 플래그 대신 보이는 이력을 씁니다.
+5. **부탁의 횟수**: 엔진은 인물마다 패턴 `favor:h`(행동 `talk:h:favor`, 결과 `success`·`none`)를 `Pat`에 더합니다. 들어준 단계가 이 패턴에 맞고, 후보는 `favor:h ∈ hᵥ`이면 부탁을 내지 않습니다. 후보는 `F`와 `hᵥ`만 읽으므로 원고 플래그 대신 보이는 이력을 씁니다.
 
 `give(x, h)`는 `move(x, h)`이고, `x ∈ wants(h)`면 `regards(h, player, trust) +1`, `assert(owes(h, player, kindness))`.
 
@@ -256,22 +257,21 @@ def preview(U, O, a) -> Preview
 
 | 스키마 | `Δ₀` |
 |---|---|
-| (공통) | `try(player, ·)`, `pay`, `cut`을 뺀 모든 단계가 `beats +1` |
+| (공통) | `try(player, ·)`와 `cut`을 뺀 모든 단계가 `beats +1` |
 | `go(q)` | 숨은 장애물이 `q`를 막으면 `reveal(player, o.hidden)`(`blocked`). 아니면 `move(player, q)` |
 | `look(x)` | `x ∈ about(p)`인 원고 명제 `p`를 원고 차례로 `reveal` |
 | `take(x)` | 숨은 막힘이면 드러냄. 아니면 `move(x, player)` |
 | `give(x, h)` | 5.1 |
 | `talk(h, 화제)` | 5.1 |
 | `try(player, ·)` | 아무것도 없음. 방아쇠도 훑지 않음 |
-| `try(o, 방식)` | 숨은 막힘이면 드러냄(굴림 없음). 아니면 굴림. `success`·`mixed`면 장애물은 `fill +(1 + [방식 ∈ fits(o)])`, 그 밖은 가장 낮은 슬롯의 `snag`을 `untag`하고 없으면 `tag(o, edge, scene)`. 대가는 3.3 |
+| `try(o, 방식)` | 숨은 막힘이면 드러냄(굴림 없음). 아니면 굴림. `success`면 장애물은 `fill +(1 + [방식 ∈ fits(o)])`, 그 밖은 가장 낮은 슬롯의 `snag`을 `untag`하고 없으면 `tag(o, edge, scene)`. 대가는 3.3 |
 | `declare(ℓ)` | 6절 |
 | `cut(pass)` | 장면 끝 |
 | `cut(rest)` | 장면 끝, `wounds −1`, 활성 위협 `fill +1` |
 | `choose(g, c)` | `c.effects`, `retire(g)` |
-| `pay(c)` | `c`의 효과, `due(player, ·)`를 모두 `retract` |
 | `grow(항목)` | 6절 |
 
-굴린 뒤의 **기대기 소모**는 2절 표대로입니다. 굴림이 있는 단계는 늘 `beats`를 올리고 `mixed`·`fail`은 시계를 바꾸므로, "아무 일도 없었습니다"로 끝나는 굴림은 없습니다.
+굴린 뒤의 **기대기 소모**는 2절 표대로입니다. 굴림이 있는 단계는 늘 `beats`를 올리고 `success`는 대상을, `fail`은 시계를 바꾸므로, "아무 일도 없었습니다"로 끝나는 굴림은 없습니다.
 
 ## 8. 방아쇠와 `R`
 
@@ -298,17 +298,15 @@ def resolve(U, S, h, a, r) -> Step:
 
 훑기는 많아야 `m + 3 + w + q`번(원고 방아쇠 수, 엔진 셋, 위협·갈림·마감 수, 부탁 수) 뒤에 끝나고 결정적입니다. `Δ₀` 뒤의 효과는 시계·박자·상처를 올리지 않고, 도착은 위협을 물리고, 약속 결말은 `owes`를 지우기 때문입니다. 코드는 그 값을 넘으면 예외를 내며, 이는 퍼징(story.md V6)이 잡아야 할 버그입니다. 끝에서 엔진 방아쇠의 조건은 모두 거짓이므로 모든 단계는 시계가 다 차지 않은 채 시작합니다.
 
-`Step.result`는 `success`, `mixed`, `fail`(굴림), `none`(굴림 없이 이룸), `blocked`(숨은 막힘이 드러남) 중 하나이고 사건에 저장합니다. `risk`는 `a`에서 다시 계산되므로 저장하지 않습니다.
+`Step.result`는 `success`, `fail`(굴림), `none`(굴림 없이 이룸), `blocked`(숨은 막힘이 드러남) 중 하나이고 사건에 저장합니다. `risk`는 `a`에서 다시 계산되므로 저장하지 않습니다.
 
 ## 9. 추천 버튼
 
-`recommend(U, O) → list[Action]`, 많아야 셋.
+`recommend(U, O) → list[Action]`, 많아야 셋. 차례로 하나씩 고릅니다.
 
-1. `due`가 있으면 `pay` 행동들(`view.due`의 차례).
-2. 아니면 차례로 하나씩 고릅니다.
-   - **태그**: 플레이어나 `here`의 `edge` 태그에 기대는 `try`가 있으면 그것. 대상은 활성 장애물 중 원고 차례로 처음 것, 방식은 해법이 있으면 해법의 방식, 없으면 플레이어의 가장 높은 방식
-   - **대화**: 눈앞 인물의 아직 믿지 않는 화제 중 원고 차례로 처음 것
-   - **나아감**: 활성 갈림이 있으면 그 첫 선택지의 `choose`. 아니면 보임에서 `when`이 참인 해법 중 처음 것, 없으면 장 목표의 조건에 나오는 장소로 가는 `go`
+- **태그**: 플레이어나 `here`의 `edge` 태그에 기대는 `try`가 있으면 그것. 대상은 활성 장애물 중 원고 차례로 처음 것, 방식은 해법이 있으면 해법의 방식, 없으면 플레이어의 가장 높은 방식
+- **대화**: 눈앞 인물의 아직 믿지 않는 화제 중 원고 차례로 처음 것
+- **나아감**: 활성 갈림이 있으면 그 첫 선택지의 `choose`. 아니면 보임에서 `when`이 참인 해법 중 처음 것, 없으면 장 목표의 조건에 나오는 장소로 가는 `go`
 
 버튼의 판단 인자는 버튼을 정의하는 `rely`(해법의 `rely`, 태그)를 빼고 모두 `ν₀`입니다. 기댈 것은 굴림 카드에서 누구나 고르므로(engine.md 4.2) 버튼과 문장의 차이는 방식, 대상, 태도를 자유롭게 고를 수 있는지에 있습니다.
 
@@ -317,14 +315,14 @@ def resolve(U, S, h, a, r) -> Step:
 | 성질 | 내용과 이유 | 지키는 곳 | 검사 |
 |---|---|---|---|
 | 허용 검사 | 상태에 적용하기 전에 `a ∈ K(Vₜ)`. 버튼, 카드, API 포함 | 서비스가 단계마다 `admits` 뒤에 `resolve`(engine.md 7절) | 후보 밖 id, 낡은 카드의 id → 거절 |
-| 진행성 | `try(player, ·)`는 `due`가 있어도 후보 | `candidates` | 퍼징의 모든 단계(결말 전)에서 `space`가 비지 않음 |
+| 진행성 | `try(player, ·)`는 결말 전에 늘 후보 | `candidates` | 퍼징의 모든 단계(결말 전)에서 `space`가 비지 않음 |
 | 중립값 | `ν₀`는 도움, 위험 증가, `spent`를 만들지 않고 `try(player)`의 `Δ = ∅` | 1절, 7절 | 판단 인자를 모두 `ν₀`로 둔 행동의 결과 |
 | 이득 한정 | 도움·방해는 `F`나 `B`의 원자에 기대고 각각 0 또는 1. `try`의 성공이 바꾸는 것은 `fill`과 `mark`뿐이고 물건·명제·길은 원고 효과와 `take`·`give`·`look`·`talk`로만 움직임 | `modifiers`, 7절 | 태그를 여럿 건 대상 → 방해 1 |
 | 위험의 독립 | `risk`는 `(U, a)`만 읽음 | `risk`의 서명 | 숨은 원자만 다른 두 상태 → 같은 위험 |
-| 미리보기 = 실행 | 3.4 | `preview`, `modifiers` | 퍼징에서 굴린 단계마다 `preview`의 `z`, `mods`, `risk` = `Step`의 값, `result = outcome(total)`; `odds(z)`가 `BANDS`로 센 2d6 분포와 같음(경계 6·7·9·10 단위 테스트) |
+| 미리보기 = 실행 | 3.4 | `preview`, `modifiers` | 퍼징에서 굴린 단계마다 `preview`의 `z`, `mods`, `risk` = `Step`의 값, `result = band(total, dc)`; `chance(z, dc)`가 센 2d6 분포와 같음(위험마다 경계 단위 테스트) |
 | 인자의 종류 | `take`, `give`, `rely=thing:`의 인자는 물건. 시계는 인자가 아님 | `candidates` | 시계를 건네거나 기대는 id → 거절 |
 | 방아쇠의 끝 | 8절의 상한 | `scan` | 퍼징에서 예외 없음 |
-| 굴림의 전진 | 굴린 단계는 보이는 것을 바꾸고 `mixed`·`fail`은 시계를 바꿈(7절) | `schemas.py` | 퍼징에서 굴린 단계마다 플레이어의 보이는 원자가 바뀜 |
-| 시간의 전진 | `try(player)`·`pay`를 뺀 단계 `B`번 안에 장면이 끝나고, 칸 수 `n`인 활성 위협은 `fill`을 내리는 효과가 없는 한 그런 단계 `n·B`번 안에 도착하거나 물러남 | 4절 | 퍼징 |
-| 결말의 보장 | 어느 구성에서든 `pay`와 `cut(pass)`만으로 많아야 `1 + Σₖ nₖ`(남은 장들의 마감 칸 수) 단계 안에 결말에 닿음. 주사위를 쓰지 않음 | story.md의 구조(장마다 마감, 마지막 장은 결말) | 시작 시 검증은 구조만 봄 |
+| 굴림의 전진 | 굴린 단계는 보이는 것을 바꾸고 `fail`은 시계를 바꿈(7절) | `schemas.py` | 퍼징에서 굴린 단계마다 플레이어의 보이는 원자가 바뀜 |
+| 시간의 전진 | `try(player)`를 뺀 단계 `B`번 안에 장면이 끝나고, 칸 수 `n`인 활성 위협은 `fill`을 내리는 효과가 없는 한 그런 단계 `n·B`번 안에 도착하거나 물러남 | 4절 | 퍼징 |
+| 결말의 보장 | 어느 구성에서든 `cut(pass)`만으로 많아야 `1 + Σₖ nₖ`(남은 장들의 마감 칸 수) 단계 안에 결말에 닿음. 주사위를 쓰지 않음 | story.md의 구조(장마다 마감, 마지막 장은 결말) | 시작 시 검증은 구조만 봄 |
 | 원고 성질 | 시계와 방아쇠의 문법, 잠재의 격리, 증인 | story.md 4절 | 시작 시 검증 |

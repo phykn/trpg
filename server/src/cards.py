@@ -20,16 +20,14 @@ def rely_options(u, o: Obs, a: Action) -> list[str]:
 
 def preview_json(u, o: Obs, p: dict, a: Action) -> dict:
     pv = preview(u, o, a)
-    f, m, s = pv.odds
     clock = None
     if pv.clock:
         clock = {"id": pv.clock["id"], "name": u.name(pv.clock["id"]), "boxes": pv.clock["boxes"],
                  "fill": pv.clock["fill"]}
     return {
         "risk": pv.risk, "mods": chips(u, p, pv.mods.chips()), "z": pv.z,
-        "odds": {"fail": round(f, 3), "mixed": round(m, 3), "success": round(s, 3)},
-        "stakes": {res: {"clock": pv.clock[res] if pv.clock else 0, "weight": pv.stakes[res]["weight"]}
-                   for res in ("mixed", "fail")},
+        "dc": pv.dc,
+        "stakes": {"clock": pv.clock["fail"] if pv.clock else 0, "weight": pv.stakes["weight"]},
         "clock": clock, "gain": _gain(u, p, pv.gain),
     }
 
