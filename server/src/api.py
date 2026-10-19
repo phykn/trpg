@@ -32,6 +32,7 @@ class Strict(BaseModel):
 
 
 class Creation(Strict):
+    name: str = Field(min_length=1, max_length=10)
     approaches: dict[str, int]
     traits: list[str] = Field(default_factory=list, max_length=8)
 
@@ -40,6 +41,13 @@ class CreateBody(Strict):
     request_id: str = Field(pattern=REQUEST_ID)
     story: str = Field(min_length=1, max_length=60)
     creation: Creation
+
+    @model_validator(mode="after")
+    def named(self):
+        self.creation.name = self.creation.name.strip()
+        if not self.creation.name:
+            raise ValueError("creation.name is blank")
+        return self
 
 
 class CommandBody(Strict):

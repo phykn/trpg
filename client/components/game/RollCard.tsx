@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { colors } from '@/design/tokens';
@@ -20,13 +20,20 @@ function gainLine(target: string, p: Preview): string {
   return ko.gainTopic;
 }
 
-// A fail applies one cost, so its row names only the weight; a mixed result picks its cost in a later card (rule.md 3.3).
-function StakeRow({ label, clock, weight, pick, preview }: {
-  label: string; clock: number; weight: string | null; pick: boolean; preview: Preview;
-}) {
+function Outcome({ kind, odds, children }: { kind: 'success' | 'mixed' | 'fail'; odds: number; children: ReactNode }) {
   return (
-    <View className="flex-row flex-wrap items-center gap-2">
-      <Text className="w-14 font-sans-semibold text-panel text-fg-muted">{label}</Text>
+    <View className="flex-row items-start gap-2">
+      <View className="mt-[5px] h-[10px] w-[10px] rounded-sm" style={{ backgroundColor: colors.band[kind] }} />
+      <Text className="w-[112px] font-sans-semibold text-panel text-fg-default">{ko.odds(ko.result[kind], odds)}</Text>
+      <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-x-2">{children}</View>
+    </View>
+  );
+}
+
+// A fail applies one cost, so its row names only the weight; a mixed result picks its cost in a later card (rule.md 3.3).
+function Stake({ clock, weight, pick, preview }: { clock: number; weight: string | null; pick: boolean; preview: Preview }) {
+  return (
+    <>
       {preview.clock && clock ? (
         <View className="flex-row items-center gap-1">
           <Text className="font-sans text-panel text-fg-default">{preview.clock.name}</Text>
@@ -34,9 +41,9 @@ function StakeRow({ label, clock, weight, pick, preview }: {
         </View>
       ) : null}
       {weight ? (
-        <Text className="font-sans text-panel text-fg-default">{pick ? ko.pickWeight(ko.weight[weight]) : ko.weight[weight]}</Text>
+        <Text className="font-sans text-panel text-fg-muted">{pick ? ko.pickWeight(ko.weight[weight]) : ko.weight[weight]}</Text>
       ) : null}
-    </View>
+    </>
   );
 }
 
@@ -52,7 +59,7 @@ export function RollCard({ card, bands, onRoll, onCancel, step, frame, rolling }
   const high = p.risk === 'high';
   const locked = rolling || !!step;
   const relyChip = (o: CardOption) => o.preview?.mods.find((m) => m.kind === 'help' && m.label === o.label);
-  const fixed = p.mods.filter((m) => !(m.kind === 'help' && m.label === chosen.label));
+  const fixed = p.mods.filter((m) => m.value !== 0 && !(m.kind === 'help' && m.label === chosen.label));
   const fill = target?.fill ?? 0;
   const own = step ? step.changes.findIndex((c) => c.kind === 'fill' && c.id === target?.id) : -1;
   const gained = frame && own >= 0 ? frame.boxes[own] ?? 0 : 0;
@@ -68,23 +75,24 @@ export function RollCard({ card, bands, onRoll, onCancel, step, frame, rolling }
           {target.boxes ? <Boxes fill={fill + gained} boxes={target.boxes} fit={0} size={10} /> : null}
         </View>
       ) : null}
-      <Text className="font-sans text-body text-fg-default">“{card.echo.text}”</Text>
-      {card.echo.slots.length ? (
-        <View className="flex-row flex-wrap gap-1">
-          {card.echo.slots.map((s) => (
-            <Text key={s.slot} className="rounded-sm border border-border-default px-2 font-sans text-chip text-fg-muted">{s.label}</Text>
-          ))}
-        </View>
-      ) : null}
+      <View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">
+        <Text className="font-sans text-body text-fg-default">“{card.echo.text}”</Text>
+        {card.echo.slots.filter((s) => s.label !== target?.name).map((s) => (
+          <Text key={s.slot} className="rounded-sm border border-border-default px-2 font-sans text-chip text-fg-muted">{s.label}</Text>
+        ))}
+      </View>
       <View className="gap-1 border-t border-border-default pt-2">
         {high ? <Text className="font-sans-semibold text-panel text-danger-fg">{ko.highRisk}</Text> : null}
-        <Text className="font-sans text-panel text-fg-muted">{ko.riskLine(ko.risk[p.risk])}</Text>
-        <View className="flex-row gap-2">
-          <Text className="w-14 font-sans-semibold text-panel text-fg-muted">{ko.result.success}</Text>
-          <Text className="flex-1 font-sans text-panel text-fg-default">{gainLine(target?.name ?? '', p)}</Text>
-        </View>
-        <StakeRow label={ko.cost} pick clock={p.stakes.mixed.clock} weight={p.stakes.mixed.weight} preview={p} />
-        <StakeRow label={ko.result.fail} pick={false} clock={p.stakes.fail.clock} weight={p.stakes.fail.weight} preview={p} />
+        <Outcome kind="success" odds={p.odds.success}>
+          <Text className="font-sans text-panel text-fg-muted">{gainLine(target?.name ?? '', p)}</Text>
+        </Outcome>
+        <Outcome kind="mixed" odds={p.odds.mixed}>
+          <Stake pick clock={p.stakes.mixed.clock} weight={p.stakes.mixed.weight} preview={p} />
+        </Outcome>
+        <Outcome kind="fail" odds={p.odds.fail}>
+          <Stake pick={false} clock={p.stakes.fail.clock} weight={p.stakes.fail.weight} preview={p} />
+        </Outcome>
+        {step && frame ? null : <OddsBar odds={p.odds} />}
       </View>
       <View className="gap-2 border-t border-border-default pt-2">
         {step && frame ? (
@@ -110,7 +118,7 @@ export function RollCard({ card, bands, onRoll, onCancel, step, frame, rolling }
             </View>
           </>
         )}
-        {step && frame ? <NumberLine bands={bands} point={frame.point} settled={frame.settled} /> : <OddsBar odds={p.odds} />}
+        {step && frame ? <NumberLine bands={bands} point={frame.point} settled={frame.settled} /> : null}
         {frame?.settled ? (
           <Text className="font-sans-semibold text-title text-gold-fg">{ko.result[frame.settled]}</Text>
         ) : null}

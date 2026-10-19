@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-A story-agnostic Korean web TRPG engine. The player types a Korean sentence (or presses a recommended button); rules decide the outcome; local models only interpret and narrate.
+A story-agnostic Korean web TRPG engine. The player types a Korean sentence; rules decide the outcome; local models only interpret and narrate.
 
 ## Current state
 

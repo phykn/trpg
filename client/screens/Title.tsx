@@ -69,7 +69,7 @@ export function Title({ stories, saved, onResume, onPick }: {
         <>
           <Shelf stories={stories} at={stories.indexOf(s)} onStep={(d) => setAt((stories.indexOf(s) + d + stories.length) % stories.length)} />
           <View className="gap-2">
-            {here ? <Action primary label={ko.resume} sub={`${ko.chapterNo(here.chapter.k)} · ${here.scene.place.name}`} onPress={onResume} /> : null}
+            {here ? <Action primary label={ko.resume} sub={[here.player.name, ko.chapterNo(here.chapter.k), here.scene.place.name].filter(Boolean).join(' · ')} onPress={onResume} /> : null}
             <Action primary={!here} label={ko.begin} onPress={() => onPick(s.id)} />
           </View>
         </>

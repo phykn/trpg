@@ -1,8 +1,7 @@
 import Head from 'expo-router/head';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
-import { CommandBar } from '@/components/game/CommandBar';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import { useGame } from '@/logic/useGame';
@@ -24,9 +23,11 @@ export default function Index() {
         ) : game.view ? (
           <Play game={game} />
         ) : game.phase === 'blocked' ? (
-          <View className="flex-1 justify-end">
-            <CommandBar mode="blocked" sent={null} notice={null} placeholder="" onSend={() => undefined}
-              onResend={() => undefined} onNew={game.newGame} />
+          <View className="flex-1 items-center justify-center gap-5 px-5">
+            <Text className="font-sans text-body text-fg-muted">{ko.blocked}</Text>
+            <Pressable accessibilityRole="button" onPress={game.newGame} className="items-center rounded-md bg-gold-fg px-6 py-3">
+              <Text className="font-sans-semibold text-body text-fg-on-emphasis">{ko.toTitle}</Text>
+            </Pressable>
           </View>
         ) : (
           <View className="flex-1 items-center justify-center gap-4">

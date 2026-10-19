@@ -19,6 +19,8 @@ const colors = {
   gold: { fg: '#e5bd76' },
   chip: { stat: '#8fb3d9', help: '#9fcabd', hinder: '#f19a8d' },
   band: { fail: '#5a2f2b', mixed: '#5a4a2b', success: '#2b5a4a' },
+  // What kind a scene entry is, told apart by hue alone (ui.md 2.1).
+  kind: { person: '#8fb3d9', thing: '#9fcabd', obstacle: '#c9a8e8' },
   box: { empty: '#2a3c43', full: '#e5bd76', fit: '#9fcabd', next: '#f19a8d' },
   overlay: 'rgba(3,9,12,0.82)',
 };

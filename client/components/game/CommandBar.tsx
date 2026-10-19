@@ -31,7 +31,7 @@ export function CommandBar({ mode, sent, notice, placeholder, onSend, onResend, 
         <View className="flex-row items-center gap-2">
           <Text className="flex-1 font-sans text-chip text-danger-fg">{ko.blocked}</Text>
           <Pressable accessibilityRole="button" onPress={onNew} className="rounded-md border border-border-default px-3 py-2">
-            <Text className="font-sans text-panel text-fg-default">{ko.newGame}</Text>
+            <Text className="font-sans text-panel text-fg-default">{ko.toTitle}</Text>
           </Pressable>
         </View>
       ) : (

@@ -52,7 +52,7 @@ async def test_create_is_idempotent_by_request_id(svc):
     assert again == gid
     with pytest.raises(Conflict):
         await svc.create("r-new", "lighthouse", {**CREATION, "traits": ["sailor", "islander"]})
-    assert view["revision"] == 0 and view["chapter"] == {"k": 1, "title": "등대에 오르다"}
+    assert view["revision"] == 0 and view["chapter"]["title"] == "등대에 오르다"
     assert view["scene"]["place"]["name"] == "선착장" and view["ending"] is None
 
 
@@ -192,7 +192,11 @@ async def test_http_routes(client):
         stories = (await client.get("/stories")).json()
         assert stories[0]["id"] == "lighthouse" and stories[0]["pick"] == 2
         r = await client.post("/games", json={"request_id": "abc", "story": "lighthouse", "creation": CREATION})
+        assert r.status_code == 422
+        r = await client.post("/games", json={"request_id": "abc", "story": "lighthouse",
+                                              "creation": {**CREATION, "name": " 해원 "}})
         gid, view = r.json()["game_id"], r.json()["view"]
+        assert view["player"]["name"] == "해원"
         assert (await client.get(f"/games/{gid}")).json() == view
         body = {"request_id": "c1", "revision": 0, "action": "go:village"}
         r = await client.post(f"/games/{gid}/commands", json=body)
@@ -204,5 +208,5 @@ async def test_http_routes(client):
         r = await client.post(f"/games/{gid}/commands", json={"request_id": "c3", "revision": 1, "card": "c1"})
         assert r.status_code == 422
         assert (await client.get("/games/g_" + "1" * 32)).status_code == 404
-        r = await client.post("/games", json={"request_id": "x", "story": "nope", "creation": CREATION})
+        r = await client.post("/games", json={"request_id": "x", "story": "nope", "creation": {**CREATION, "name": "a"}})
         assert r.status_code == 422

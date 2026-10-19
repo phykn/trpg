@@ -184,6 +184,7 @@ obstacles:
 
 chapters:
   - title: 등대에 오르다
+    aim: 해가 지기 전에 등대 꼭대기 등불실에 오르세요.
     goal: {at: [player, lamp_room]}
     clock:
       name: 몰려오는 폭풍
@@ -192,6 +193,7 @@ chapters:
         - {tag: [player, snag, chapter, 흠뻑 젖은 몸]}
     deadline: {name: 해가 진다, boxes: 3}
   - title: 불을 켜다
+    aim: 배가 암초에 닿기 전에 등불을 밝히세요.
     clock:
       name: 폭풍의 한가운데
       boxes: 4

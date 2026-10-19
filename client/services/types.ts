@@ -3,7 +3,7 @@ export type Story = {
   approach_names: { id: string; name: string; hint: string }[];
   traits: { id: string; name: string; text: string }[];
 };
-export type Creation = { approaches: Record<string, number>; traits: string[] };
+export type Creation = { name: string; approaches: Record<string, number>; traits: string[] };
 
 export type Chip = { kind: 'stat' | 'help' | 'hinder'; label: string; value: number };
 export type Change = { kind: string; [key: string]: unknown };
@@ -37,8 +37,8 @@ export type Box = { id: string; name: string; fill: number; boxes: number };
 export type Tag = { owner?: string; slot: number; kind: 'edge' | 'snag'; life: string; name: string };
 export type GameView = {
   revision: number;
-  story: { id: string; title: string };
-  chapter: { k: number; title: string };
+  story: { id: string; title: string; premise: string };
+  chapter: { k: number; title: string; aim: string };
   scene: {
     place: { id: string; name: string; senses: string[] };
     people: { id: string; name: string; attitude: string }[];
@@ -48,6 +48,7 @@ export type GameView = {
     tags: Tag[];
   };
   player: {
+    name: string;
     approaches: { id: string; name: string; value: number }[];
     traits: { id: string; name: string; spent: boolean }[];
     tags: Tag[]; things: { id: string; name: string }[];

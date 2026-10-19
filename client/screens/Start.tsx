@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { Creation, GameView, Story } from '@/services/types';
 import { Title } from './Title';
@@ -25,6 +26,7 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
   const story = stories.find((s) => s.id === id);
   const [placed, setPlaced] = useState<Record<string, number>>({});
   const [traits, setTraits] = useState<string[]>([]);
+  const [name, setName] = useState('');
   const pick = (s: string) => {
     const next = stories.find((x) => x.id === s);
     setId(s); setPlaced(next ? zero(next) : {}); setTraits([]);
@@ -48,6 +50,12 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
             className="border-fg-muted" />
         </Pressable>
         <Text accessibilityRole="header" className="min-w-0 flex-1 font-serif text-title text-fg-default">{story.title}</Text>
+      </View>
+      <View className="gap-1.5">
+        <Text className="font-sans-semibold text-chip text-gold-fg">{ko.name}</Text>
+        <TextInput accessibilityLabel={ko.name} value={name} onChangeText={setName} maxLength={10}
+          placeholder={ko.hero} placeholderTextColor={colors.fg.subtle}
+          className="h-[44px] rounded-md border border-border-default px-4 font-sans text-body text-fg-default" />
       </View>
       <View className="gap-1.5">
         <Text className="font-sans-semibold text-chip text-gold-fg">{ko.count(ko.approaches, spent, total)}</Text>
@@ -80,7 +88,7 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
         </View>
       </View>
       <Pressable accessibilityRole="button" accessibilityState={{ disabled: !ready }} disabled={!ready}
-        onPress={() => onCreate(story.id, { approaches: placed, traits })}
+        onPress={() => onCreate(story.id, { name: name.trim() || ko.hero, approaches: placed, traits })}
         className={`mt-auto items-center rounded-md bg-gold-fg py-3 ${ready ? '' : 'opacity-40'}`}>
         <Text className="font-sans-semibold text-body text-fg-on-emphasis">{ko.create}</Text>
       </Pressable>

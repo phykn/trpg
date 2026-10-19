@@ -139,6 +139,7 @@ class Latent:
 class Chapter:
     k: int
     title: str
+    aim: str
     goal: Cond | None
     goal_effects: tuple[Effect, ...]
     clock: str
@@ -540,7 +541,8 @@ class _Builder:
                                             boxes=self.int(ov.get("boxes"), f"{sec}.{oid}.boxes", 1, 6))
         for k, cv in enumerate(chapters, 1):
             w = f"chapters[{k}]"
-            cv = self.map(cv, w, {"title", "goal", "goal_effects", "clock", "deadline"}, ("title", "clock", "deadline"))
+            cv = self.map(cv, w, {"title", "aim", "goal", "goal_effects", "clock", "deadline"},
+                         ("title", "aim", "clock", "deadline"))
             ck = self.map(cv["clock"], f"{w}.clock", {"name", "boxes", "crisis"}, ("name", "boxes", "crisis"))
             dl = self.map(cv["deadline"], f"{w}.deadline", {"name", "boxes", "effects", "ending"}, ("name", "boxes"))
             u.obstacles[f"clock.{k}"] = Obstacle(id=f"clock.{k}", sub="clock", name=self.text(ck["name"], w),
@@ -651,7 +653,7 @@ class _Builder:
             if not crisis:
                 self.fail(f"{w}.clock.crisis: needs at least one effect")
             u.obstacles[f"deadline.{k}"] = _replace(u.obstacles[f"deadline.{k}"], arrival=arrival)
-            u.chapters.append(Chapter(k, self.text(cv["title"], w), self.opt_cond(cv.get("goal"), f"{w}.goal"),
+            u.chapters.append(Chapter(k, self.text(cv["title"], w), self.text(cv["aim"], f"{w}.aim"), self.opt_cond(cv.get("goal"), f"{w}.goal"),
                                       self.effects(cv.get("goal_effects"), f"{w}.goal_effects"),
                                       f"clock.{k}", f"deadline.{k}", crisis))
         for oid, ov in sections["threats"].items():

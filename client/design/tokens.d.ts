@@ -9,6 +9,7 @@ export const colors: {
   gold: { fg: string };
   chip: { stat: string; help: string; hinder: string };
   band: { fail: string; mixed: string; success: string };
+  kind: { person: string; thing: string; obstacle: string };
   box: { empty: string; full: string; fit: string; next: string };
   overlay: string;
 };

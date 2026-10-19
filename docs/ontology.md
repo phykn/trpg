@@ -247,7 +247,7 @@ class Seen:
 
 ### 5.2 시작 상태
 
-`initial(universe, creation) → State`. `creation`은 플레이어가 고른 방식 배분과 특성입니다(story.md 3.2). 같은 원고와 `creation`은 같은 `S₀`를 냅니다.
+`initial(universe, creation) → State`. `creation`은 플레이어가 고른 방식 배분과 특성, 그리고 이름입니다(story.md 3.2). 이름은 화면에만 쓰고 `S₀`에 들어가지 않습니다. 같은 원고와 `creation`은 같은 `S₀`를 냅니다.
 
 1. 원고의 `at`, `exits`(→ `link`), 인물의 `beliefs`, `regards`를 원자로.
 2. 모든 장애물(시계, 마감, 위협, 갈림 포함)에 `fill 0`. 첫 장의 시계와 마감에 `at(·, player)`.

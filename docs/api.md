@@ -7,7 +7,7 @@
 | 경로 | 본문 | 응답 |
 |---|---|---|
 | `GET /stories` | | 이야기 목록: `id`, 제목, 전제, 방식 값들, 특성 후보와 `pick` |
-| `POST /games` | `{request_id, story, creation}` | `{game_id, view}`. `game_id`는 `request_id`의 해시라서 같은 요청을 다시 보내면 이미 만든 게임의 같은 응답을 줌(본문이 다르면 409) |
+| `POST /games` | `{request_id, story, creation}`. `creation`은 `{name, approaches, traits}`이고 `name`은 앞뒤 공백을 뺀 1~10자 | `{game_id, view}`. `game_id`는 `request_id`의 해시라서 같은 요청을 다시 보내면 이미 만든 게임의 같은 응답을 줌(본문이 다르면 409) |
 | `GET /games/{id}` | | `view` |
 | `POST /games/{id}/commands` | 2절 | `CommandResult` |
 | `GET /games/{id}/turns/{n}/narration` | | NDJSON(4절) |
@@ -94,10 +94,10 @@ CommandResult
 | 필드 | 내용 |
 |---|---|
 | `revision` | 다음 명령에 넣을 값 |
-| `story` | `{id, title}` 이 판의 이야기 |
-| `chapter` | `{k, title}` 장 번호와 제목 |
+| `story` | `{id, title, premise}` 이 판의 이야기. 첫 턴의 서술 자리에는 `premise`를 보임 |
+| `chapter` | `{k, title, aim}` 장 번호, 제목, 목표 문장 |
 | `scene` | 장소 이름, 감각 단서, 보이는 인물(이름, 태도 낱말), 물건, 장애물(이름, 칸, 막는 것), 갈 곳 |
-| `player` | 방식 넷, 특성(이름, 이번 장에 썼는지), 태그(슬롯, 종류, 수명, 이름), 상처/칸, 박자/`B`, 성장 |
+| `player` | 이름(`creation.name`, 옛 저장은 빈 글), 방식 넷, 특성(이름, 이번 장에 썼는지), 태그(슬롯, 종류, 수명, 이름), 상처/칸, 박자/`B`, 성장 |
 | `clocks` | 지닌 위험 시계, 마감, 활성 위협과 갈림(이름, `fill`, 칸 수, 종류) |
 | `journal` | 믿는 것(`B`의 문장, 믿게 된 차례, 지금 장면의 개체를 말하는지), 약속과 신세(`owes`), 인물별 관계, 고른 대가와 갈림의 선택(이름, 장) |
 | `buttons` | 추천(rule.md 9절): 행동 id, 이름, 굴리는지 |

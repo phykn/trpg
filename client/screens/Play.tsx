@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { Buttons } from '@/components/game/Buttons';
 import { ClarifyCard } from '@/components/game/ClarifyCard';
 import { Clocks } from '@/components/game/Clocks';
 import { CommandBar } from '@/components/game/CommandBar';
@@ -87,14 +86,12 @@ export function Play({ game }: { game: Game }) {
         <View className="min-h-0 flex-1">
           <View className="min-h-0 flex-1">
             <Self player={rows.player} onGrowth={view.growth.length && game.growthLater ? game.openGrowth : undefined} />
-            <Scene scene={rows.scene} />
+            <Scene scene={rows.scene} beats={rows.player.beats} beatsMax={rows.player.beats_max} />
             <Record journal={rows.journal} />
             <Narration narration={game.narration} hold={revealing} failed={phase === 'narration_error'}
-              fallback={view.last ? '' : view.scene.place.senses.join(', ')}
+              fallback={view.last ? '' : view.story.premise}
               onTyped={game.typed} onRetry={game.retryNarration} />
             <LastRoll step={lastRolled(shownSteps)} />
-            <Buttons buttons={view.buttons} disabled={phase !== 'idle'} onPress={(action) => game.command({ action })} />
-            {card ? <View className="absolute bottom-0 left-0 right-0 top-0">{card}</View> : null}
             {revealing ? (
               <Pressable accessibilityLabel="skip" className="absolute bottom-0 left-0 right-0 top-0" onPress={game.skip} />
             ) : null}
@@ -102,6 +99,7 @@ export function Play({ game }: { game: Game }) {
           <CommandBar mode={mode} sent={game.sent} notice={game.notice}
             placeholder={view.due.length ? ko.payFirst : ko.placeholder}
             onSend={(text) => game.command({ text })} onResend={game.resend} onNew={game.newGame} />
+          {card ? <View className="absolute bottom-0 left-0 right-0 top-0">{card}</View> : null}
         </View>
       )}
       {menuOpen ? <Menu onClose={() => setMenu(false)} onTitle={() => { setMenu(false); game.toTitle(); }} /> : null}

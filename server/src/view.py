@@ -303,10 +303,10 @@ def game_view(u, g) -> dict:
     due = sorted((c for gg, c in f.rows("due") if gg == PLAYER), key=u.rank)
     view = {
         "revision": p.get("revision", 0),
-        "story": {"id": u.id, "title": u.title},
-        "chapter": {"k": k, "title": u.chapter_of(k).title},
+        "story": {"id": u.id, "title": u.title, "premise": u.premise},
+        "chapter": {"k": k, "title": u.chapter_of(k).title, "aim": u.chapter_of(k).aim},
         "scene": _scene(u, o, p, here),
-        "player": _player(u, o, p),
+        "player": {"name": g.creation.get("name", ""), **_player(u, o, p)},
         "clocks": [{"id": c, "name": u.name(c), "fill": f.fill(c), "boxes": u.boxes(c), "kind": u.obstacles[c].sub}
                    for c in sorted(filter(None, [held_clock(u, f), *active_threats(u, f)]),
                                    key=lambda c: ACTIVE.index(u.obstacles[c].sub))],
