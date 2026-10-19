@@ -28,12 +28,13 @@ class Settings:
     cors_origins: list[str]
     scenario_dir: Path
     save_dir: Path
-    kev_base_url: str
-    kev_min_confidence: float
-    kev_api_key: str
-    qwen_base_url: str
-    qwen_model: str
-    qwen_sampling: dict | None
+    decision_model: str           # kev or malkuth (models/decision.py)
+    decision_base_url: str
+    decision_min_confidence: float | None
+    decision_api_key: str
+    llm_model: str                # qwen, gemma4 or minicpm (models/llm.py)
+    llm_base_url: str
+    llm_sampling: dict | None
 
 
 def _path(server_dir: Path, value: str) -> Path:
@@ -43,7 +44,8 @@ def _path(server_dir: Path, value: str) -> Path:
 
 def settings(server_dir: Path) -> Settings:
     env = os.environ
-    sampling = env.get("QWEN_SAMPLING", "")
+    sampling = env.get("LLM_SAMPLING", "")
+    confidence = env.get("DECISION_MIN_CONFIDENCE", "")
     return Settings(
         host=env["HOST"],
         port=int(env["PORT"]),
@@ -52,10 +54,11 @@ def settings(server_dir: Path) -> Settings:
         cors_origins=[o.strip() for o in env["CORS_ORIGINS"].split(",") if o.strip()],
         scenario_dir=_path(server_dir, env["SCENARIO_DIR"]),
         save_dir=_path(server_dir, env["SAVE_DIR"]),
-        kev_base_url=env["KEV_BASE_URL"],
-        kev_min_confidence=float(env.get("KEV_MIN_CONFIDENCE") or 0.5),
-        kev_api_key=env.get("KEV_API_KEY", ""),
-        qwen_base_url=env["QWEN_BASE_URL"],
-        qwen_model=env.get("QWEN_MODEL") or "auto",
-        qwen_sampling=json.loads(sampling) if sampling else None,
+        decision_model=env["DECISION_MODEL"],
+        decision_base_url=env["DECISION_BASE_URL"],
+        decision_min_confidence=float(confidence) if confidence else None,
+        decision_api_key=env.get("DECISION_API_KEY", ""),
+        llm_model=env["LLM_MODEL"],
+        llm_base_url=env["LLM_BASE_URL"],
+        llm_sampling=json.loads(sampling) if sampling else None,
     )

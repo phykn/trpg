@@ -1,6 +1,10 @@
-"""Kev decision model: calibrated answers to closed questions over one state text."""
+"""Decision models: calibrated answers to closed questions over one state text, over Kev's /v1/systemone.
+
+The server runs one model; the config names which (`DECISION_MODEL`), and startup checks it is that one.
+"""
 
 import time
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -9,6 +13,19 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class ModelUnavailable(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class Decision:
+    run: str                      # the prefix of the `run` the server reports for this model
+    min_confidence: float
+
+
+# local-models kev.toml: every model serves the same API under the name kev-latest.
+DECISION_MODELS = {
+    "kev": Decision(run="jaredpalmer/kev-", min_confidence=0.5),
+    "malkuth": Decision(run="dhtocks/malkuth-", min_confidence=0.5),
+}
 
 
 class Answer(BaseModel):
@@ -34,13 +51,16 @@ def normalize(raw: dict[str, Any], min_confidence: float) -> Answer:
     return answer
 
 
-class KevClient:
-    def __init__(self, base_url: str, *, model: str = "kev-latest", min_confidence: float = 0.5,
+class DecisionClient:
+    def __init__(self, base_url: str, *, model: str = "kev", min_confidence: float | None = None,
                  timeout_s: float = 30.0, api_key: str = "", transport: httpx.AsyncBaseTransport | None = None):
+        if model not in DECISION_MODELS:
+            raise ValueError(f"unknown decision model {model!r}; one of {sorted(DECISION_MODELS)}")
         self.base_url = base_url.rstrip("/")
         self.headers = {"authorization": f"Bearer {api_key}"} if api_key else {}
-        self.model = model
-        self.min_confidence = min_confidence
+        self.name = model
+        self.model = "kev-latest"
+        self.min_confidence = DECISION_MODELS[model].min_confidence if min_confidence is None else min_confidence
         self.timeout_s = timeout_s
         self.transport = transport
         self.last_ms = 0
@@ -54,12 +74,23 @@ class KevClient:
             response.raise_for_status()
             answers = {qid: normalize(raw, self.min_confidence) for qid, raw in response.json()["answers"].items()}
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
-            raise ModelUnavailable(f"kev: {type(exc).__name__}: {exc}") from exc
+            raise ModelUnavailable(f"decision: {type(exc).__name__}: {exc}") from exc
         self.last_ms = round((time.perf_counter() - started) * 1000)
         missing = set(questions) - set(answers)
         if missing:
-            raise ModelUnavailable(f"kev: no answer for {sorted(missing)}")
+            raise ModelUnavailable(f"decision: no answer for {sorted(missing)}")
         return answers
 
-    async def ping(self) -> None:
+    async def check(self) -> None:
+        """The server must run the configured model and answer a question."""
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_s, transport=self.transport) as client:
+                response = await client.get(f"{self.base_url}/v1/models", headers=self.headers)
+            response.raise_for_status()
+            runs = [m.get("run", "") for m in response.json()["models"] if m.get("name") == self.model]
+        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+            raise ModelUnavailable(f"decision: {type(exc).__name__}: {exc}") from exc
+        want = DECISION_MODELS[self.name].run
+        if not any(r.startswith(want) for r in runs):
+            raise ModelUnavailable(f"decision: {self.name} is configured but the server runs {runs or 'nothing'}")
         await self.decide("ping", {"ok": {"type": "noul", "instructions": "ok?", "criteria": {"true": "yes", "false": "no"}}})

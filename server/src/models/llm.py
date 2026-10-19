@@ -1,23 +1,42 @@
-"""Qwen narration model over an OpenAI-compatible server, always non-thinking."""
+"""The narration LLM over an OpenAI-compatible server, always non-thinking.
+
+The config names the model (`LLM_MODEL`); startup finds its id among the server's loaded models.
+"""
 
 import json
 from collections.abc import AsyncIterator
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
 
-from .kev import ModelUnavailable
-
-AUTO = "auto"
-NON_THINKING = {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "presence_penalty": 1.5}
+from .decision import ModelUnavailable
 
 
-class QwenClient:
-    def __init__(self, base_url: str, *, model: str = AUTO, sampling: dict[str, Any] | None = None,
+@dataclass(frozen=True)
+class LLM:
+    ids: tuple[str, ...]          # substrings of the server's model id, any of which is this model
+    sampling: dict[str, Any] = field(default_factory=dict)
+
+
+# local-models llm.toml: the non-thinking sampling from each model card.
+LLM_MODELS = {
+    "qwen": LLM(("Qwen3.8-27B", "Qwen3.6-35B-A3B"),
+                {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "presence_penalty": 1.5}),
+    "gemma4": LLM(("gemma-4-26B-A4B",), {"temperature": 1.0, "top_p": 0.95, "top_k": 64}),
+    "minicpm": LLM(("MiniCPM-V-4.7",), {"temperature": 0.7, "top_p": 0.95, "top_k": 100, "repetition_penalty": 1.03}),
+}
+
+
+class LLMClient:
+    def __init__(self, base_url: str, *, model: str = "qwen", sampling: dict[str, Any] | None = None,
                  timeout_s: float = 120.0, transport: httpx.AsyncBaseTransport | None = None):
+        if model not in LLM_MODELS:
+            raise ValueError(f"unknown llm {model!r}; one of {sorted(LLM_MODELS)}")
         self.base_url = base_url.rstrip("/")
-        self.model = model
-        self.sampling = sampling or dict(NON_THINKING)
+        self.name = model
+        self.model: str | None = None            # the server's id, found by resolve_model
+        self.sampling = sampling or dict(LLM_MODELS[model].sampling)
         self.timeout_s = timeout_s
         self.transport = transport
 
@@ -25,8 +44,9 @@ class QwenClient:
         return httpx.AsyncClient(timeout=self.timeout_s, transport=self.transport)
 
     async def resolve_model(self) -> str:
-        """Replace `auto` with the id the server marks loaded; mlx-vlm wants its snapshot path."""
-        if self.model != AUTO:
+        """The configured model's id among those the server has loaded; mlx-vlm wants its snapshot path.
+        A model that is not loaded is an error: the server never loads one for us."""
+        if self.model is not None:
             return self.model
         try:
             async with self._client() as client:
@@ -34,10 +54,13 @@ class QwenClient:
             response.raise_for_status()
             models = response.json()["data"]
         except (httpx.HTTPError, ValueError, KeyError) as exc:
-            raise ModelUnavailable(f"qwen: {type(exc).__name__}: {exc}") from exc
-        loaded = [m for m in models if m.get("loaded")] or (models if len(models) == 1 else [])
+            raise ModelUnavailable(f"llm: {type(exc).__name__}: {exc}") from exc
+        ids = LLM_MODELS[self.name].ids
+        mine = [m for m in models if any(i.lower() in m["id"].lower() for i in ids)]
+        loaded = [m for m in mine if m.get("loaded", len(models) == 1)]
         if not loaded:
-            raise ModelUnavailable(f"qwen: no loaded model among {len(models)}")
+            others = [m["id"] for m in models if m.get("loaded")]
+            raise ModelUnavailable(f"llm: {self.name} is configured but not loaded (loaded: {others or 'nothing'})")
         self.model = loaded[0]["id"]
         return self.model
 
@@ -61,7 +84,7 @@ class QwenClient:
 
     async def stream(self, messages: list[dict[str, str]], max_tokens: int = 500,
                      seed: int | None = None) -> AsyncIterator[str]:
-        if self.model == AUTO:
+        if self.model is None:
             await self.resolve_model()
         try:
             url, body = f"{self.base_url}/chat/completions", self.body(messages, max_tokens, seed)
@@ -77,4 +100,4 @@ class QwenClient:
                     if delta:
                         yield delta
         except (httpx.HTTPError, ValueError, KeyError, IndexError) as exc:
-            raise ModelUnavailable(f"qwen: {type(exc).__name__}: {exc}") from exc
+            raise ModelUnavailable(f"llm: {type(exc).__name__}: {exc}") from exc

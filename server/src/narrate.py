@@ -17,7 +17,7 @@ from .lang.claims import accepts, claims, mentioned, subjects
 from .lang.context import context, render
 from .lang.polite import QUOTED, plain, polite
 from .locale import ko
-from .models.kev import ModelUnavailable
+from .models.decision import ModelUnavailable
 from .onto.atoms import PLAYER
 from .onto.view import Obs
 
@@ -164,14 +164,14 @@ def split(raw: str) -> tuple[str, list[str]]:
 
 
 class Narrator:
-    def __init__(self, qwen, kev, theta: float = THETA_N, timeout: float = 60.0, check_timeout: float = 10.0):
-        self.qwen, self.kev, self.theta = qwen, kev, theta
+    def __init__(self, llm, decision, theta: float = THETA_N, timeout: float = 60.0, check_timeout: float = 10.0):
+        self.llm, self.decision, self.theta = llm, decision, theta
         self.timeout, self.check_timeout = timeout, check_timeout
 
     async def write(self, job: Job, draft=None, problems=None) -> str:
         async def run():
             out = ""
-            async for chunk in self.qwen.stream(messages(job, draft, problems), MAX_TOKENS,
+            async for chunk in self.llm.stream(messages(job, draft, problems), MAX_TOKENS,
                                                 seed=random.randrange(2**31)):
                 out += chunk
             return out
@@ -242,7 +242,7 @@ class Narrator:
         if not qs:
             return {}
         try:
-            answers = await asyncio.wait_for(self.kev.decide(state, qs), self.check_timeout)
+            answers = await asyncio.wait_for(self.decision.decide(state, qs), self.check_timeout)
         except (ModelUnavailable, TimeoutError):
             answers = {}
         out: dict[int, list[str]] = {}

@@ -14,8 +14,10 @@ The engine is rebuilt from the theory in [plan.md](plan.md) (stages 1–8 done).
 
 ## Models
 
-- **Kev** (`:8081`, decision model) maps the sentence to closed options: legal candidate actions or `improvise`. It never invents anything.
-- **Qwen** (`:8082`) narrates only what changed. Kev checks the text, with up to 2 rewrites. Qwen is always non-thinking (`enable_thinking: false` on every request).
+The server names both models in its config at startup (`DECISION_MODEL`, `LLM_MODEL`; see `server/README.md`) and stops if the servers run something else.
+
+- **Decision model** (`:8081`, `kev` or `malkuth`, `server/src/models/decision.py`) maps the sentence to closed options: legal candidate actions or `improvise`. It never invents anything.
+- **LLM** (`:8082`, `qwen`, `gemma4` or `minicpm`, `server/src/models/llm.py`) narrates only what changed. The decision model checks the text, with up to 2 rewrites. The LLM is always non-thinking (`enable_thinking: false` on every request).
 
 Both models are required and run outside this repo. Never start or stop them (no `kevctl`/`llmctl`); assume they are up. Do not add a mode without models or replace narration with authored text.
 
@@ -36,7 +38,7 @@ Both models are required and run outside this repo. Never start or stop them (no
 cd client && npm run web                             # web UI on localhost:8090 (8081 is Kev)
 
 .venv/bin/python -m pytest -q
-cd server && ../.venv/bin/python -m src.story.evals ../scenarios/skeleton --out ../qa_test/agency/<run>   # needs the models
+cd server && ../.venv/bin/python -m src.story.evals ../scenarios/skeleton --out ../qa_test/agency/<run> [--decision kev --llm qwen]   # needs the models
 cd server && ../.venv/bin/python -m src.fun ../saves/engine                                             # fun.md metrics
 .venv/bin/python -m ruff check server/
 

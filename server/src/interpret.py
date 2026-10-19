@@ -17,7 +17,7 @@ import unicodedata
 from .cards import rely_options
 from .lang.context import context, render
 from .locale import ko
-from .models.kev import ModelUnavailable
+from .models.decision import ModelUnavailable
 from .onto.atoms import APPROACHES, PLAYER
 from .onto.view import observe
 from .rules.acts import JUDGE, make, parse
@@ -109,13 +109,13 @@ def ranked(answer, options) -> list[tuple[str, float]]:
 
 
 class Interpreter:
-    def __init__(self, kev, qwen=None, theta: float = THETA, timeout: float = TIMEOUT):
-        self.kev, self.qwen, self.theta, self.timeout = kev, qwen, theta, timeout
+    def __init__(self, decision, llm=None, theta: float = THETA, timeout: float = TIMEOUT):
+        self.decision, self.llm, self.theta, self.timeout = decision, llm, theta, timeout
         self.calls: list[dict] = []          # the last sentence's questions and answers, for evals
 
     async def ask(self, state: str, questions: dict[str, dict]) -> dict:
         try:
-            out = await asyncio.wait_for(self.kev.decide(state, questions), self.timeout)
+            out = await asyncio.wait_for(self.decision.decide(state, questions), self.timeout)
         except (ModelUnavailable, TimeoutError):
             out = {}
         self.calls.append({"questions": questions, "answers": {
@@ -124,14 +124,14 @@ class Interpreter:
 
     async def second(self, text: str, options: dict[str, str]) -> str | None:
         """The narration model's pick over the same numbered options at temperature 0."""
-        if self.qwen is None:
+        if self.llm is None:
             return None
         keys = list(options)
         listed = "\n".join(f"{i + 1}. {options[k]}" for i, k in enumerate(keys))
         messages = [{"role": "system", "content": ko.CHOOSER},
                     {"role": "user", "content": ko.fill(ko.CHOOSER_PROMPT, text=text, options=listed)}]
         try:
-            raw = await asyncio.wait_for(self.qwen.pick(messages), self.timeout)
+            raw = await asyncio.wait_for(self.llm.pick(messages), self.timeout)
         except (ModelUnavailable, TimeoutError, OSError):
             return None
         m = re.search(r"\d+", raw)

@@ -11,8 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api import router
 from src.config import Settings, load_server_env, settings
 from src.interpret import Interpreter
-from src.models.kev import KevClient
-from src.models.qwen import QwenClient
+from src.models.decision import DecisionClient
+from src.models.llm import LLMClient
 from src.narrate import Narrator
 from src.service import GameService
 from src.story.load import StoryError
@@ -28,14 +28,14 @@ def load_stories(root: Path):
         raise SystemExit(f"invalid story: {e}") from None
 
 
-async def check_models(kev: KevClient, qwen: QwenClient) -> None:
-    """Both models must answer before the server starts (engine.md 8). They run outside this repo."""
-    await kev.ping()
-    await qwen.resolve_model()
+async def check_models(decision: DecisionClient, llm: LLMClient) -> None:
+    """Both configured models must be up before the server starts (engine.md 8). They run outside this repo."""
+    await decision.check()
+    await llm.resolve_model()
 
 
 def build_app(*, service: GameService, basic_auth_user: str, basic_auth_pass: str,
-              cors_origins: list[str], models: tuple[KevClient, QwenClient] | None = None) -> FastAPI:
+              cors_origins: list[str], models: tuple[DecisionClient, LLMClient] | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         if models is not None:
@@ -58,15 +58,16 @@ def build_app(*, service: GameService, basic_auth_user: str, basic_auth_pass: st
 
 
 def local_settings() -> Settings:
-    """Loopback defaults for `--local`; only the model URLs may come from the process environment."""
+    """Loopback defaults for `--local`; only the models and their URLs may come from the process environment."""
     return Settings(
         host="127.0.0.1", port=8000, basic_auth_user="local", basic_auth_pass="local",
         cors_origins=["http://localhost:8090", "http://127.0.0.1:8090"],
         scenario_dir=SERVER_DIR.parent / "scenarios", save_dir=SERVER_DIR.parent / "saves" / "engine",
-        kev_base_url=os.environ.get("KEV_BASE_URL", "http://127.0.0.1:8081"), kev_min_confidence=0.5,
-        kev_api_key=os.environ.get("KEV_API_KEY", ""),
-        qwen_base_url=os.environ.get("QWEN_BASE_URL", "http://127.0.0.1:8082/v1"), qwen_model="auto",
-        qwen_sampling=None,
+        decision_model=os.environ.get("DECISION_MODEL", "kev"),
+        decision_base_url=os.environ.get("DECISION_BASE_URL", "http://127.0.0.1:8081"),
+        decision_min_confidence=None, decision_api_key=os.environ.get("DECISION_API_KEY", ""),
+        llm_model=os.environ.get("LLM_MODEL", "qwen"),
+        llm_base_url=os.environ.get("LLM_BASE_URL", "http://127.0.0.1:8082/v1"), llm_sampling=None,
     )
 
 
@@ -76,11 +77,13 @@ def create_app(local: bool = False) -> tuple[FastAPI, str, int]:
     else:
         load_server_env(SERVER_DIR)
         cfg = settings(SERVER_DIR)
-    kev = KevClient(cfg.kev_base_url, min_confidence=cfg.kev_min_confidence, api_key=cfg.kev_api_key)
-    qwen = QwenClient(cfg.qwen_base_url, model=cfg.qwen_model, sampling=cfg.qwen_sampling)
-    service = GameService(load_stories(cfg.scenario_dir), cfg.save_dir, Interpreter(kev, qwen), Narrator(qwen, kev))
+    decision = DecisionClient(cfg.decision_base_url, model=cfg.decision_model,
+                              min_confidence=cfg.decision_min_confidence, api_key=cfg.decision_api_key)
+    llm = LLMClient(cfg.llm_base_url, model=cfg.llm_model, sampling=cfg.llm_sampling)
+    service = GameService(load_stories(cfg.scenario_dir), cfg.save_dir, Interpreter(decision, llm),
+                          Narrator(llm, decision))
     app = build_app(service=service, basic_auth_user=cfg.basic_auth_user, basic_auth_pass=cfg.basic_auth_pass,
-                    cors_origins=cfg.cors_origins, models=(kev, qwen))
+                    cors_origins=cfg.cors_origins, models=(decision, llm))
     return app, cfg.host, cfg.port
 
 

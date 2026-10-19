@@ -22,10 +22,10 @@ button ────────────────────────�
 From the repository root:
 
 ```bash
-.venv/bin/python server/run_api.py --local    # 127.0.0.1:8000, local/local, Kev :8081, Qwen :8082
+.venv/bin/python server/run_api.py --local    # 127.0.0.1:8000, local/local, decision :8081, LLM :8082
 ```
 
-Without `--local`, `run_api.py` loads `server/.env.shared` then `server/.env.<APP_ENV>` (default `dev`); process env wins, missing keys fail at startup:
+`--local` reads only `DECISION_MODEL` (default `kev`), `LLM_MODEL` (default `qwen`), their `*_BASE_URL` and `DECISION_API_KEY` from the process environment. Without `--local`, `run_api.py` loads `server/.env.shared` then `server/.env.<APP_ENV>` (default `dev`); process env wins, missing keys fail at startup:
 
 ```
 HOST=127.0.0.1
@@ -35,15 +35,16 @@ BASIC_AUTH_PASS=<pass>
 CORS_ORIGINS=http://localhost:8090
 SCENARIO_DIR=../scenarios
 SAVE_DIR=../saves/engine
-KEV_BASE_URL=http://127.0.0.1:8081
-KEV_MIN_CONFIDENCE=0.5         # optional; answers below are "unsure"
-KEV_API_KEY=                   # optional
-QWEN_BASE_URL=http://127.0.0.1:8082/v1
-QWEN_MODEL=auto                # optional; auto picks the model /v1/models marks loaded
-QWEN_SAMPLING={"temperature": 0.7, "top_p": 0.8, "top_k": 20, "presence_penalty": 1.5}   # optional
+DECISION_MODEL=kev             # kev or malkuth: the model the decision server runs
+DECISION_BASE_URL=http://127.0.0.1:8081
+DECISION_MIN_CONFIDENCE=0.5    # optional; the model's own default otherwise
+DECISION_API_KEY=              # optional
+LLM_MODEL=qwen                 # qwen, gemma4 or minicpm: must be loaded on the LLM server
+LLM_BASE_URL=http://127.0.0.1:8082/v1
+LLM_SAMPLING={"temperature": 0.7}   # optional; the model card's non-thinking sampling otherwise
 ```
 
-Startup validates every story folder (a broken story stops the server) and checks both models. Qwen always gets `enable_thinking: false` (top level for mlx-vlm, `chat_template_kwargs` for mlx-lm); there is no thinking switch.
+Startup validates every story folder (a broken story stops the server) and checks that the decision server runs the configured model and the LLM server has the configured model loaded; the engine never loads or switches models. The model names and their sampling live in `src/models/decision.py` and `src/models/llm.py`. The LLM always gets `enable_thinking: false` (top level for mlx-vlm, `chat_template_kwargs` for mlx-lm); there is no thinking switch.
 
 ## Routes
 

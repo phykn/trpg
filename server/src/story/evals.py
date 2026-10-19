@@ -1,6 +1,6 @@
 """Interpretation accuracy on a story's evals.yaml against the real models (engine.md 9, story.md 6).
 
-python -m src.story.evals ../scenarios/skeleton [--out DIR] [--theta 0.5]
+python -m src.story.evals ../scenarios/skeleton [--out DIR] [--theta 0.5] [--decision kev] [--llm qwen]
 """
 
 from __future__ import annotations
@@ -16,8 +16,8 @@ from types import SimpleNamespace
 import yaml
 
 from ..interpret import Interpreter
-from ..models.kev import KevClient
-from ..models.qwen import QwenClient
+from ..models.decision import DecisionClient
+from ..models.llm import LLMClient
 from ..rules.acts import parse
 from ..service import fresh_presentation
 from .validate import Run, _creation, _path, load
@@ -71,11 +71,13 @@ def score(expect, got: dict) -> bool:
     return got["steps"][:len(want)] == want if isinstance(expect, list) else got["steps"][:1] == want
 
 
-async def main_async(story: Path, out: Path | None, theta: float) -> int:
+async def main_async(story: Path, out: Path | None, theta: float, decision: str, llm: str) -> int:
     u = load(story / "story.yaml")
     evals = yaml.safe_load((story / "evals.yaml").read_text(encoding="utf-8"))
-    it = Interpreter(KevClient("http://127.0.0.1:8081"), QwenClient("http://127.0.0.1:8082/v1"), theta=theta)
-    await it.qwen.resolve_model()
+    it = Interpreter(DecisionClient("http://127.0.0.1:8081", model=decision),
+                     LLMClient("http://127.0.0.1:8082/v1", model=llm), theta=theta)
+    await it.decision.check()
+    await it.llm.resolve_model()
     rows, tally = [], Counter()
     for i, e in enumerate(evals):
         t0 = time.perf_counter()
@@ -107,8 +109,10 @@ def main() -> int:
     parser.add_argument("story", type=Path)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--theta", type=float, default=0.5)
+    parser.add_argument("--decision", default="kev", help="the decision model the server runs: kev or malkuth")
+    parser.add_argument("--llm", default="qwen", help="the loaded LLM: qwen, gemma4 or minicpm")
     args = parser.parse_args()
-    return asyncio.run(main_async(args.story, args.out, args.theta))
+    return asyncio.run(main_async(args.story, args.out, args.theta, args.decision, args.llm))
 
 
 if __name__ == "__main__":
