@@ -37,6 +37,7 @@ export type Box = { id: string; name: string; fill: number; boxes: number };
 export type Tag = { owner?: string; slot: number; kind: 'edge' | 'snag'; life: string; name: string };
 export type GameView = {
   revision: number;
+  story: { id: string; title: string };
   chapter: { k: number; title: string };
   scene: {
     place: { id: string; name: string; senses: string[] };

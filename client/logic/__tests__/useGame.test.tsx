@@ -18,7 +18,7 @@ jest.mock('@/services/api', () => ({
 jest.mock('@/services/storage', () => ({ loadGameId: jest.fn(), storeGameId: jest.fn(() => true), clearGameId: jest.fn() }));
 
 const base: GameView = {
-  revision: 0, chapter: { k: 1, title: 'C' },
+  revision: 0, story: { id: 's', title: 'S' }, chapter: { k: 1, title: 'C' },
   scene: { place: { id: 'dock', name: 'Dock', senses: ['wind'] }, people: [], things: [], obstacles: [], exits: [], tags: [] },
   player: { approaches: [], traits: [], tags: [], things: [], wounds: 0, wound_boxes: 2, beats: 0, beats_max: 6, growth: 0 },
   clocks: [], journal: { beliefs: [], owes: [], relations: [], choices: [] },

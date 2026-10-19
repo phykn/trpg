@@ -303,6 +303,7 @@ def game_view(u, g) -> dict:
     due = sorted((c for gg, c in f.rows("due") if gg == PLAYER), key=u.rank)
     view = {
         "revision": p.get("revision", 0),
+        "story": {"id": u.id, "title": u.title},
         "chapter": {"k": k, "title": u.chapter_of(k).title},
         "scene": _scene(u, o, p, here),
         "player": _player(u, o, p),

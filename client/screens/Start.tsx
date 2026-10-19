@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { Face } from '@/components/game/Dice';
 import { ko } from '@/locale/ko';
-import type { Creation, Story } from '@/services/types';
+import type { Creation, GameView, Story } from '@/services/types';
+import { Title } from './Title';
 
 function initial(story: Story): Record<string, number> {
   const values = [...story.approaches].sort((a, b) => b - a);
@@ -32,38 +32,8 @@ function Arrow({ label, glyph, onPress }: { label: string; glyph: string; onPres
   );
 }
 
-function Title({ stories, onResume, onPick }: { stories: Story[]; onResume?: () => void; onPick: (id: string) => void }) {
-  return (
-    <View className="min-h-0 flex-1 px-6 pb-6">
-      <View className="flex-1 items-center justify-center gap-5">
-        <View className="flex-row gap-3">
-          <View style={{ transform: [{ rotate: '-14deg' }] }}><Face value={5} /></View>
-          <View style={{ transform: [{ rotate: '9deg' }, { translateY: 6 }] }}><Face value={2} /></View>
-        </View>
-        <Text accessibilityRole="header" className="font-serif text-display tracking-[2px] text-fg-default">{ko.brand}</Text>
-        <View className="h-[1px] w-10 bg-gold-fg" />
-        <Text className="font-sans text-panel tracking-[1px] text-fg-muted">{ko.tagline}</Text>
-      </View>
-      <View className="gap-2">
-        {onResume ? (
-          <Pressable accessibilityRole="button" onPress={onResume} className="items-center rounded-md bg-gold-fg py-3">
-            <Text className="font-sans-semibold text-body text-fg-on-emphasis">{ko.resume}</Text>
-          </Pressable>
-        ) : null}
-        <Text className="mt-2 font-sans text-chip text-fg-subtle">{ko.newGame}</Text>
-        {stories.map((s) => (
-          <Pressable key={s.id} accessibilityRole="button" onPress={() => onPick(s.id)}
-            className="items-center rounded-md border border-border-strong py-3">
-            <Text className="font-serif text-body text-fg-default">{s.title}</Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-export function Start({ stories, busy, onCreate, onResume }: {
-  stories: Story[]; busy: boolean; onCreate: (story: string, c: Creation) => void; onResume?: () => void;
+export function Start({ stories, busy, saved, onCreate, onResume }: {
+  stories: Story[]; busy: boolean; saved: GameView | null; onCreate: (story: string, c: Creation) => void; onResume: () => void;
 }) {
   const [id, setId] = useState<string | null>(null);
   const story = stories.find((s) => s.id === id);
@@ -73,7 +43,7 @@ export function Start({ stories, busy, onCreate, onResume }: {
     const next = stories.find((x) => x.id === s);
     setId(s); setPlaced(next ? initial(next) : {}); setTraits([]);
   };
-  if (!story) return <Title stories={stories} onResume={onResume} onPick={pick} />;
+  if (!story) return <Title stories={stories} saved={saved} onResume={onResume} onPick={pick} />;
 
   const toggle = (t: string) => setTraits(traits.includes(t) ? traits.filter((x) => x !== t)
     : traits.length < story.pick ? [...traits, t] : traits);
