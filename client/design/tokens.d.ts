@@ -4,7 +4,7 @@ export const colors: {
   fg: { default: string; muted: string; subtle: string; 'on-emphasis': string };
   border: { default: string; strong: string };
   danger: { fg: string; muted: string };
-  success: { fg: string; muted: string };
+  health: { fg: string; muted: string };
   gold: { fg: string; muted: string };
   chip: { stat: string; help: string; hinder: string };
   kind: { person: string; thing: string; obstacle: string };

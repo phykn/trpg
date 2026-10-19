@@ -45,7 +45,7 @@ ACTION = {
 SWAP = "{old} → {new}"
 RELYING = "{rely}에 기대어 "
 NO_RELY = "기대지 않음"
-CONSUMED = {"tag": "쓰면 사라짐", "trait": "장에 한 번"}
+CONSUMED = {"tag": "쓰면 사라짐", "trait": "1번 남음"}
 
 # Effect names on confirm cards and favors.
 EFFECT = {

@@ -94,7 +94,7 @@ async def test_roll_card_preview_is_the_step(svc):
     assert ids[-1] == "try:door:finesse" and "try:door:finesse;rely=trait:tinker" in ids
     pick = next(o for o in card["options"] if o["id"] == "try:door:finesse;rely=trait:tinker")
     assert [m["value"] for m in pick["preview"]["mods"]] == [2, 1, -1]
-    assert pick["note"] == "장에 한 번" and pick["preview"]["risk"] == "normal"
+    assert pick["note"] == "1번 남음" and pick["preview"]["risk"] == "normal"
     bad = await cmd(svc, gid, out["view"], "r4", card=card["id"], pick="try:door:force")
     assert bad["kind"] == "refused"
     done = await cmd(svc, gid, out["view"], "r5", card=card["id"], pick=pick["id"])

@@ -14,11 +14,11 @@ const colors = {
   },
   border: { default: '#2a3c43', strong: '#506369' },
   danger: { fg: '#f19a8d', muted: '#3a2422' },
-  success: { fg: '#9fcabd', muted: '#1f3530' },
+  health: { fg: '#9fd69a', muted: '#22351f' },
   gold: { fg: '#e5bd76', muted: '#302d24' },
-  chip: { stat: '#8fb3d9', help: '#9fcabd', hinder: '#f19a8d' },
-  // What kind a scene entry is, told apart by hue alone (ui.md 2.1).
-  kind: { person: '#8fb3d9', thing: '#9fcabd', obstacle: '#c9a8e8' },
+  // Every meaning below owns its hue (ui.md 2.1): kinds, modifiers and health never borrow gold or danger.
+  chip: { stat: '#aaacf2', help: '#bfd884', hinder: '#eb9ccd' },
+  kind: { person: '#80c1e8', thing: '#86d0c4', obstacle: '#d2a9ec' },
   // Full boxes say whose side the fill is on: gold is the player's progress, red is trouble.
   box: { empty: '#2a3c43', full: '#e5bd76', danger: '#b8574b' },
   overlay: 'rgba(3,9,12,0.82)',

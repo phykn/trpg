@@ -11,13 +11,14 @@ import type { GameView } from '@/services/types';
 import { Item, Row } from './Row';
 
 // Health counts what is left, so it must not look like a clock's boxes, which count what has gone wrong.
-function Health({ left, of }: { left: number; of: number }) {
+// The sheet's row already leads with the heart, so only the button draws its own.
+function Health({ left, of, bare }: { left: number; of: number; bare?: boolean }) {
   return (
     <View className="flex-row items-center gap-[3px]">
-      <View className="mr-0.5"><Icon name="heart" size={12} color={colors.success.fg} width={2.2} /></View>
+      {bare ? null : <View className="mr-0.5"><Icon name="heart" size={12} color={colors.health.fg} width={2.2} /></View>}
       {Array.from({ length: of }, (_, i) => (
         <View key={i} className="h-2 w-2 rounded-full border"
-          style={{ borderColor: colors.success.fg, backgroundColor: i < left ? colors.success.fg : 'transparent' }} />
+          style={{ borderColor: colors.health.fg, backgroundColor: i < left ? colors.health.fg : 'transparent' }} />
       ))}
     </View>
   );
@@ -58,8 +59,8 @@ export function HeroSheet({ player, journal, onGrowth, onClose }: {
             </Pressable>
           ) : null}
         </View>
-        <Row inset icon="heart" tone={colors.success.fg} label={ko.health}>
-          <View className="h-[22px] justify-center"><Health left={player.wound_boxes - player.wounds} of={player.wound_boxes} /></View>
+        <Row inset icon="heart" tone={colors.health.fg} label={ko.health}>
+          <View className="h-[22px] justify-center"><Health bare left={player.wound_boxes - player.wounds} of={player.wound_boxes} /></View>
         </Row>
         {player.tags.length ? (
           <Row inset icon="tag" label={ko.row.state}>
@@ -70,7 +71,7 @@ export function HeroSheet({ player, journal, onGrowth, onClose }: {
         ) : null}
         <Row inset icon="bolt" label={ko.row.ability}>
           {player.approaches.map((a) => (
-            <Item key={a.id}>{a.name} <Text className="font-mono-medium text-gold-fg">{a.value}</Text></Item>
+            <Item key={a.id}>{a.name} <Text className="font-mono-medium text-chip-stat">{a.value}</Text></Item>
           ))}
         </Row>
         <Row inset icon="star" label={ko.traits}>
