@@ -19,10 +19,9 @@ export function Menu({ onClose, onTitle }: { onClose: () => void; onTitle: () =>
     <>
       <Pressable accessibilityLabel={ko.closeMenu} className="absolute bottom-0 left-0 right-0 top-0 z-10" onPress={onClose} />
       <View ref={ref} accessibilityRole={'menu' as never}
-        className="absolute right-3 top-[34px] z-20 w-[232px] rounded-md border border-border-strong bg-canvas-floating py-1">
+        className="absolute right-3 top-[34px] z-20 w-[160px] rounded-md border border-border-strong bg-canvas-floating py-1">
         <Pressable accessibilityRole={'menuitem' as never} onPress={onTitle} className="px-3 py-2">
           <Text className="font-sans-semibold text-body text-fg-default">{ko.toTitle}</Text>
-          <Text className="font-sans text-chip text-fg-muted">{ko.toTitleSub}</Text>
         </Pressable>
       </View>
     </>
