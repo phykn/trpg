@@ -229,12 +229,12 @@ scenarios/<id>/
 
 ### 3.12 행동 id
 
-증인, 영수증, 버튼, 패턴이 쓰는 행동 id는 `스키마:의도 인자들`에 판단 인자를 `;키=값`으로 붙입니다. 적지 않은 판단 인자는 `ν₀`입니다.
+증인, 영수증, 버튼, 패턴이 쓰는 행동 id는 `스키마:의도 인자들`에 판단 인자를 `;키=값`으로 붙입니다. 적지 않은 판단 인자는 `ν₀`입니다. `rely`의 값은 가리키는 것의 종류를 붙여 `thing:<id>`, `prop:<id>`, `trait:<id>`, `bond:<id>`, `tag:<개체>:<슬롯>`으로 씁니다(rule.md 2절). 해법의 `rely` 필드는 id만 적고 종류는 원고에서 정합니다.
 
 ```
 go:village   look:door   take:oil   give:letter:dohae   declare:l_baek   cut:pass   cut:rest
 talk:dohae:t_oil;tone=friendly   talk:dohae:favor   talk:dohae:chat;tone=deceive;claim=c_keeper
-try:door:finesse;rely=key   try:door:force;strain=forced   choose:g_oil:beacon   pay:c_wave   grow:finesse
+try:door:finesse;rely=thing:key   try:door:force;strain=forced   choose:g_oil:beacon   pay:c_wave   grow:finesse
 ```
 
 ## 4. 의무를 지키는 법과 검증
@@ -292,7 +292,7 @@ witnesses:
 ```yaml
 - at: {path: 0, step: 2}
   text: 열쇠로 문을 열어 본다
-  expect: try:door:finesse;rely=key
+  expect: try:door:finesse;rely=thing:key
 ```
 
 ## 7. 이론이 열어 둔 자리를 여기서 정한 것
