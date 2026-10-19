@@ -16,10 +16,6 @@ export function Row({ label, children, inset }: { label: ReactNode; children: Re
   );
 }
 
-export function Group({ children }: { children: ReactNode }) {
-  return <View className="pt-2">{children}</View>;
-}
-
 export function Item({ children, dim, tone, color: hue }: {
   children: ReactNode; dim?: boolean; tone?: 'danger' | 'gold' | 'muted'; color?: string;
 }) {

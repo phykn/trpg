@@ -4,12 +4,12 @@ import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 import { Boxes } from './Boxes';
-import { Group, Item, Row } from './Row';
+import { Item, Row } from './Row';
 
 export function Scene({ scene, beats, beatsMax }: { scene: GameView['scene']; beats: number; beatsMax: number }) {
   const around = scene.people.length + scene.things.length + scene.obstacles.length + scene.tags.length;
   return (
-    <Group>
+    <>
       {around ? (
         <Row label={ko.row.around}>
           {scene.people.map((p) => <Item key={p.id} color={colors.kind.person}>{p.name}</Item>)}
@@ -35,6 +35,6 @@ export function Scene({ scene, beats, beatsMax }: { scene: GameView['scene']; be
           {scene.exits.map((e) => <Item key={e.id} dim={e.blocked}>{e.name}</Item>)}
         </Row>
       ) : null}
-    </Group>
+    </>
   );
 }

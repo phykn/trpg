@@ -12,9 +12,8 @@ export function Header({ view, menu, onMenu, hero, onHero, onGrowth }: {
   return (
     <View className="z-20 pt-1">
       <View className="flex-row items-center pl-4 pr-2">
-        <Text numberOfLines={1} className="min-w-0 flex-1 pr-2 font-sans-semibold text-panel text-fg-default">
-          {ko.chapterNo(view.chapter.k)} {view.chapter.title}
-        </Text>
+        <Text className="w-[52px] font-sans-semibold text-panel text-fg-default">{ko.chapterNo(view.chapter.k)}</Text>
+        <Text numberOfLines={1} className="min-w-0 flex-1 pr-2 font-sans-semibold text-panel text-fg-default">{view.chapter.title}</Text>
         <HeroIcon player={view.player} open={hero} growth={!!onGrowth} onPress={onHero} />
         <MenuIcon open={menu} onPress={onMenu} />
       </View>
