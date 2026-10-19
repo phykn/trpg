@@ -68,6 +68,8 @@ export function useGame(reduced = false) {
   const [narration, setNarration] = useState<Narration>(EMPTY);
   const [growthLater, setGrowthLater] = useState(false);
   const [recaps, setRecaps] = useState<Record<number, string>>({});
+  const recapsRef = useRef(recaps);
+  recapsRef.current = recaps;
   const [sent, setSent] = useState<string | null>(null);         // the sentence shown while sending
 
   const gameId = useRef<string | null>(null);
@@ -126,8 +128,10 @@ export function useGame(reduced = false) {
       if (e.type === 'done' && viewRef.current) accept(renameTags(viewRef.current, e.tags));
     });
     if (ok && recap !== null) {
-      const recapped = await read(recapPath(id, recap), (text) => setNarration((x) => ({ ...x, recap: text, stage: null })),
-        () => undefined);
+      const recapped = await read(recapPath(id, recap), (text) => {
+        setNarration((x) => ({ ...x, recap: text, stage: null }));
+        setRecaps((r) => ({ ...r, [recap]: text }));    // the view lists only recaps cached before it was sent
+      }, () => undefined);
       if (!recapped) { turn.current.failed = true; maybeEnd(); return; }
     }
     if (!mounted.current) return;
@@ -140,6 +144,7 @@ export function useGame(reduced = false) {
     const id = gameId.current;
     if (!id) return;
     for (const k of v.recaps) {
+      if (recapsRef.current[k]) continue;
       await read(recapPath(id, k), (text) => setRecaps((r) => ({ ...r, [k]: text })), () => undefined);
     }
   }

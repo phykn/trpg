@@ -7,7 +7,7 @@ import { Choice, Shell } from './CardShell';
 /** ui.md 5.2: at most three readings of the sentence, and cancel. */
 export function ClarifyCard({ card, onPick, onCancel }: { card: Card; onPick: (id: string) => void; onCancel: () => void }) {
   return (
-    <Shell title={card.question}>
+    <Shell title={card.question} onClose={onCancel}>
       <Text className="font-sans text-body text-fg-muted">“{card.echo.text}”</Text>
       {card.options.map((o) => <Choice key={o.id} label={o.label} onPress={() => onPick(o.id)} />)}
       <Choice label={ko.cancel} onPress={onCancel} />

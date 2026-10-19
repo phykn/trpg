@@ -174,3 +174,16 @@ test('a broken narration stream offers to fetch it again', async () => {
   await run(() => game.retryNarration());
   expect(game.narration.text).toBe('Again.');
 });
+
+test('the ending keeps the recap narrated with its turn, which the view does not list yet', async () => {
+  const end: StepRecord = { ...walk, changes: [{ kind: 'ending', id: 'wreck' }] };
+  (sendCommand as jest.Mock).mockResolvedValue(turn(after({ ending: { id: 'wreck', title: 'W' }, recaps: [] }), [end]));
+  narrates({ type: 'text', text: 'Last.' }, { type: 'done', tags: [] });
+  await mount();
+  await run(() => game.command({ action: 'go:village' }));
+  await run(() => game.skip());
+  await run(() => game.typed());
+  expect(game.phase).toBe('ending');
+  expect(stream).toHaveBeenCalledWith('/r/g_1/1', expect.any(Function));
+  expect(game.recaps[1]).toBe('Last.');
+});

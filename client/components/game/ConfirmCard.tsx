@@ -8,7 +8,7 @@ import { Choice, Shell } from './CardShell';
 export function ConfirmCard({ card, onPick, onCancel }: { card: Card; onPick: (id: string) => void; onCancel: () => void }) {
   const o = card.options[0];
   return (
-    <Shell title={o.label}>
+    <Shell title={o.label} onClose={onCancel}>
       <Text className="font-sans-semibold text-panel text-danger-fg">{ko.highRisk}</Text>
       {(o.effects ?? []).map((e) => <Text key={e} className="font-sans text-body text-fg-default">· {e}</Text>)}
       <View className="mt-auto gap-2">

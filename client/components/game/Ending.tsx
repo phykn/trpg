@@ -5,10 +5,11 @@ import type { GameView } from '@/services/types';
 
 /** ui.md 5.4: the ending's title, a recap per chapter, and the costs and forks chosen. */
 export function Ending({ view, recaps, onNew }: { view: GameView; recaps: Record<number, string>; onNew: () => void }) {
+  const chapters = [...new Set([...view.recaps, ...Object.keys(recaps).map(Number)])].sort((a, b) => a - b);
   return (
     <View className="flex-1 gap-3 px-4 py-4">
       <Text accessibilityRole="header" className="font-sans-semibold text-hero text-gold-fg">{view.ending?.title}</Text>
-      {view.recaps.map((k) => (
+      {chapters.map((k) => (
         <View key={k} className="gap-1">
           <Text className="font-sans-semibold text-panel text-fg-muted">{ko.chapterNo(k)}</Text>
           <Text className="font-sans text-body text-fg-default">{recaps[k] ?? ''}</Text>

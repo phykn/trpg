@@ -10,6 +10,7 @@ import { Chips, signed } from './Chips';
 import { Dice } from './Dice';
 import { NumberLine } from './NumberLine';
 import { OddsBar } from './OddsBar';
+import { useDialog } from './useDialog';
 
 function gainLine(target: string, p: Preview): string {
   const g = p.gain;
@@ -19,7 +20,10 @@ function gainLine(target: string, p: Preview): string {
   return ko.gainTopic;
 }
 
-function StakeRow({ label, clock, weight, preview }: { label: string; clock: number; weight: string | null; preview: Preview }) {
+/** A mixed result picks its cost (a card follows); a fail applies one, so it names the weight alone (rule.md 3.3). */
+function StakeRow({ label, clock, weight, pick, preview }: {
+  label: string; clock: number; weight: string | null; pick: boolean; preview: Preview;
+}) {
   return (
     <View className="flex-row flex-wrap items-center gap-2">
       <Text className="w-14 font-sans-semibold text-panel text-fg-muted">{label}</Text>
@@ -29,7 +33,9 @@ function StakeRow({ label, clock, weight, preview }: { label: string; clock: num
           <Boxes fill={preview.clock.fill} boxes={preview.clock.boxes} next={clock} />
         </View>
       ) : null}
-      {weight ? <Text className="font-sans text-panel text-fg-default">{ko.pickWeight(ko.weight[weight])}</Text> : null}
+      {weight ? (
+        <Text className="font-sans text-panel text-fg-default">{pick ? ko.pickWeight(ko.weight[weight]) : ko.weight[weight]}</Text>
+      ) : null}
     </View>
   );
 }
@@ -51,9 +57,11 @@ export function RollCard({ card, bands, onRoll, onCancel, step, frame, rolling }
   const fill = target?.fill ?? 0;
   const own = step ? step.changes.findIndex((c) => c.kind === 'fill' && c.id === target?.id) : -1;
   const gained = frame && own >= 0 ? frame.boxes[own] ?? 0 : 0;
+  const ref = useDialog(locked ? undefined : onCancel);
 
   return (
-    <View className="flex-1 gap-2 rounded-t-xl border bg-canvas-floating px-4 pb-3 pt-3"
+    <View ref={ref} accessibilityRole={'dialog' as never} aria-modal
+      className="flex-1 gap-2 rounded-t-xl border bg-canvas-floating px-4 pb-3 pt-3"
       style={{ borderColor: high ? colors.danger.fg : colors.border.strong }}>
       {target ? (
         <View className="flex-row items-center gap-2">
@@ -76,8 +84,8 @@ export function RollCard({ card, bands, onRoll, onCancel, step, frame, rolling }
           <Text className="w-14 font-sans-semibold text-panel text-fg-muted">{ko.result.success}</Text>
           <Text className="flex-1 font-sans text-panel text-fg-default">{gainLine(target?.name ?? '', p)}</Text>
         </View>
-        <StakeRow label={ko.cost} clock={p.stakes.mixed.clock} weight={p.stakes.mixed.weight} preview={p} />
-        <StakeRow label={ko.result.fail} clock={p.stakes.fail.clock} weight={p.stakes.fail.weight} preview={p} />
+        <StakeRow label={ko.cost} pick clock={p.stakes.mixed.clock} weight={p.stakes.mixed.weight} preview={p} />
+        <StakeRow label={ko.result.fail} pick={false} clock={p.stakes.fail.clock} weight={p.stakes.fail.weight} preview={p} />
       </View>
       <View className="gap-2 border-t border-border-default pt-2">
         {step && frame ? (
