@@ -27,12 +27,12 @@ export function Scene({ scene, beats, beatsMax }: { scene: GameView['scene']; be
         <Item>{scene.place.name}</Item>
         <View className="flex-row items-center gap-1">
           <Item tone="muted">{ko.beats}</Item>
-          <Boxes fill={beats} boxes={beatsMax} />
+          <Boxes fill={beats} boxes={beatsMax} tone="time" />
         </View>
       </Row>
       {scene.exits.length ? (
         <Row label={ko.row.exits}>
-          {scene.exits.map((e) => <Item key={e.id} dim={e.blocked}>{e.name}</Item>)}
+          {scene.exits.map((e) => <Item key={e.id} dim={e.blocked}>{e.name}{e.blocked ? ko.blockedExit : ''}</Item>)}
         </Row>
       ) : null}
     </>

@@ -36,7 +36,7 @@ export function Narration({ narration, hold, fallback, onTyped, onRetry, failed 
   const visible = hold ? '' : full.slice(0, shown);
 
   return (
-    <Pressable accessibilityRole="text" className="min-h-0 flex-1 px-4 py-2" onPress={() => setShown(full.length)}
+    <Pressable accessibilityRole="text" className="min-h-0 flex-1 justify-end px-4 py-2" onPress={() => setShown(full.length)}
       onLayout={(e) => setBox({ width: e.nativeEvent.layout.width - 32, height: e.nativeEvent.layout.height - 16 })}>
       {narration.stage && !full ? (
         <Text accessibilityLiveRegion="polite" className="font-sans text-chip text-fg-subtle">{ko.stage[narration.stage]}</Text>

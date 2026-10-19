@@ -23,6 +23,14 @@ function lastRolled(steps: StepRecord[] | undefined): StepRecord | null {
   return [...(steps ?? [])].reverse().find((s) => s.roll && s.result !== 'blocked') ?? null;
 }
 
+function hint(scene: GameView['scene']): string {
+  const open = scene.obstacles.find((o) => o.fill < o.boxes);
+  if (open) return ko.askObject(open.name);
+  if (scene.people.length) return ko.askPerson(scene.people[0].name);
+  if (scene.things.length) return ko.askObject(scene.things[0].name);
+  return ko.placeholder;
+}
+
 export function Play({ game }: { game: Game }) {
   const view = game.view as GameView;
   const { phase, reveal } = game;
@@ -98,7 +106,7 @@ export function Play({ game }: { game: Game }) {
             ) : null}
           </View>
           <CommandBar mode={mode} sent={game.sent} notice={game.notice}
-            placeholder={view.due.length ? ko.payFirst : ko.placeholder}
+            placeholder={view.due.length ? ko.payFirst : hint(view.scene)}
             onSend={(text) => game.command({ text })} onResend={game.resend} onNew={game.newGame} />
           {card ? <View className="absolute bottom-0 left-0 right-0 top-0">{card}</View> : null}
         </View>

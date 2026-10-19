@@ -38,8 +38,8 @@ export function CommandBar({ mode, sent, notice, placeholder, onSend, onResend, 
         <View className="flex-row items-center gap-2">
           <TextInput value={mode === 'sending' && sent ? sent : text} onChangeText={setText} onSubmitEditing={submit}
             editable={mode === 'open'} placeholder={placeholder} placeholderTextColor={colors.fg.subtle} maxLength={200}
-            accessibilityLabel={placeholder} returnKeyType="send"
-            className="h-10 flex-1 rounded-md border border-border-default px-3 font-sans text-body text-fg-default" />
+            accessibilityLabel={ko.placeholder} returnKeyType="send"
+            className="h-10 flex-1 rounded-md border border-border-default px-3 font-sans text-panel text-fg-default" />
           {mode === 'sending' ? <ActivityIndicator color={colors.gold.fg} /> : (
             <Pressable accessibilityRole="button" accessibilityState={{ disabled: mode !== 'open' }} disabled={mode !== 'open'}
               onPress={submit} className={`h-10 justify-center rounded-md bg-gold-fg px-3 ${mode !== 'open' ? 'opacity-50' : ''}`}>

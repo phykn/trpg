@@ -37,7 +37,7 @@ function Stake({ clock, weight, pick, preview }: { clock: number; weight: string
       {preview.clock && clock ? (
         <View className="flex-row items-center gap-1">
           <Text className="font-sans text-panel text-fg-default">{preview.clock.name}</Text>
-          <Boxes fill={preview.clock.fill} boxes={preview.clock.boxes} next={clock} />
+          <Boxes fill={preview.clock.fill} boxes={preview.clock.boxes} next={clock} tone="danger" />
         </View>
       ) : null}
       {weight ? (

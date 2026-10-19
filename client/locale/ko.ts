@@ -1,3 +1,8 @@
+function batchim(word: string): boolean {
+  const c = word.charCodeAt(word.length - 1) - 0xac00;
+  return c >= 0 && c <= 11171 && c % 28 !== 0;
+}
+
 export const ko = {
   brand: '말과 주사위',
   loading: '불러오는 중입니다.',
@@ -13,6 +18,7 @@ export const ko = {
   back: '뒤로',
   chapterNo: (k: number) => `${k}장`,
   health: '체력',
+  blockedExit: '(막힘)',
   heroButton: (name: string, left: number, of: number) => `${name}, 체력 ${left}/${of}`,
   beats: '시간',
   row: { goal: '목표', danger: '위험', ability: '능력', state: '상태', carried: '소지', here: '장소', around: '주변', exits: '이동', record: '기록' },
@@ -27,6 +33,9 @@ export const ko = {
   narrationFailed: '서술을 받지 못했습니다.',
   retryNarration: '다시 받기',
   placeholder: '무엇을 할까요?',
+  // Names the first thing in the scene so an empty box still shows what a sentence looks like.
+  askObject: (name: string) => `${name}${batchim(name) ? '을' : '를'} 어떻게 할까요?`,
+  askPerson: (name: string) => `${name}에게 무엇을 할까요?`,
   send: '보내기',
   stuck: '응답을 받지 못했습니다. 다시 보내 주세요.',
   resend: '다시 보내기',

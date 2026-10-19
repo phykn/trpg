@@ -10,7 +10,7 @@ export const colors: {
   chip: { stat: string; help: string; hinder: string };
   band: { fail: string; mixed: string; success: string };
   kind: { person: string; thing: string; obstacle: string };
-  box: { empty: string; full: string; fit: string; next: string };
+  box: { empty: string; full: string; fit: string; next: string; danger: string; time: string };
   overlay: string;
 };
 export const spacing: Record<string, number>;

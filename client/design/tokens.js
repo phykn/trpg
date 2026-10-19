@@ -21,7 +21,8 @@ const colors = {
   band: { fail: '#5a2f2b', mixed: '#5a4a2b', success: '#2b5a4a' },
   // What kind a scene entry is, told apart by hue alone (ui.md 2.1).
   kind: { person: '#8fb3d9', thing: '#9fcabd', obstacle: '#c9a8e8' },
-  box: { empty: '#2a3c43', full: '#e5bd76', fit: '#9fcabd', next: '#f19a8d' },
+  // Full boxes say whose side the fill is on: gold is the player's progress, red is trouble, grey is time spent.
+  box: { empty: '#2a3c43', full: '#e5bd76', fit: '#9fcabd', next: '#f19a8d', danger: '#b8574b', time: '#84989e' },
   overlay: 'rgba(3,9,12,0.82)',
 };
 const spacing = {
