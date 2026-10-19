@@ -1,17 +1,65 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 
-import { motion, text as sizes } from '@/design/tokens';
+import { colors, motion } from '@/design/tokens';
 import { ko } from '@/locale/ko';
-import { fitSize } from '@/logic/fit';
 import type { Narration as N } from '@/logic/useGame';
+import type { Entry } from '@/logic/useLog';
 
-export function Narration({ narration, hold, fallback, onTyped, onRetry, failed }: {
-  narration: N; hold: boolean; fallback: string; onTyped: () => void; onRetry: () => void; failed: boolean;
+const FACE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+const STORY = { fontSize: 16, lineHeight: 26 };
+
+export type Roll = { d1: number; d2: number; total: number; result: string };
+
+function Dot({ delay }: { delay: number }) {
+  const t = useSharedValue(0);
+  useEffect(() => {
+    const ease = Easing.inOut(Easing.sin);
+    t.value = withDelay(delay, withRepeat(withSequence(withTiming(1, { duration: 520, easing: ease }),
+      withTiming(0, { duration: 520, easing: ease })), -1));
+  }, [delay, t]);
+  const style = useAnimatedStyle(() => ({ opacity: 0.25 + 0.75 * t.value, transform: [{ scale: 0.75 + 0.25 * t.value }] }));
+  // Animated views take no className, so the dot is styled directly.
+  return <Animated.View style={[{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.gold.fg }, style]} />;
+}
+
+// The only waiting signal: no words, just a chat partner typing.
+export function Typing() {
+  return (
+    <View accessibilityLabel={ko.typing} className="h-[26px] flex-row items-center gap-[5px]">
+      {[0, 180, 360].map((d) => <Dot key={d} delay={d} />)}
+    </View>
+  );
+}
+
+export function RollLine({ roll }: { roll: Roll }) {
+  return (
+    <Text className="font-mono-medium text-panel text-fg-muted">
+      {FACE[roll.d1]}{FACE[roll.d2]} {roll.total} <Text className="font-sans-semibold text-gold-fg">{ko.result[roll.result as keyof typeof ko.result]}</Text>
+    </Text>
+  );
+}
+
+function Line({ entry }: { entry: Entry }) {
+  if (entry.kind === 'you') {
+    return (
+      <View className="max-w-[85%] self-end rounded-lg bg-accent-muted px-3 py-1.5">
+        <Text className="font-sans text-panel text-fg-default">{entry.text}</Text>
+      </View>
+    );
+  }
+  if (entry.kind === 'roll') return <RollLine roll={entry} />;
+  return <Text className="font-sans text-fg-default" style={STORY}>{entry.text}</Text>;
+}
+
+export function Chat({ entries, live, roll, waiting, narration, hold, failed, onTyped, onRetry }: {
+  entries: Entry[]; live: boolean; roll: Roll | null; waiting: boolean;
+  narration: N; hold: boolean; failed: boolean; onTyped: () => void; onRetry: () => void;
 }) {
-  const [box, setBox] = useState({ width: 0, height: 0 });
+  const scroll = useRef<ScrollView>(null);
   const [shown, setShown] = useState(0);
-  const full = narration.text ?? '';
+  const full = live ? [narration.text, narration.recap].filter(Boolean).join('\n\n') : '';
   const typedFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -31,26 +79,21 @@ export function Narration({ narration, hold, fallback, onTyped, onRetry, failed 
     }
   }, [shown, full, hold, onTyped]);
 
-  const body = [full, narration.recap].filter(Boolean).join('\n\n') || (narration.text === null && !narration.stage ? fallback : '');
-  const size = box.width ? fitSize(body, box.width, box.height, sizes.narration, sizes.lineHeight) : sizes.narration[0];
-  const visible = hold ? '' : full.slice(0, shown);
-
+  const end = (animated: boolean) => scroll.current?.scrollToEnd({ animated });
+  const typing = live && !hold && full && shown < full.length;
   return (
-    <Pressable accessibilityRole="text" className="min-h-0 flex-1 justify-end px-4 py-2" onPress={() => setShown(full.length)}
-      onLayout={(e) => setBox({ width: e.nativeEvent.layout.width - 32, height: e.nativeEvent.layout.height - 16 })}>
-      {narration.stage && !full ? (
-        <Text accessibilityLiveRegion="polite" className="font-sans text-chip text-fg-subtle">{ko.stage[narration.stage]}</Text>
+    <ScrollView ref={scroll} className="min-h-0 flex-1" contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}
+      onLayout={() => end(false)} onContentSizeChange={() => end(true)}>
+      {entries.map((e) => <Line key={e.id} entry={e} />)}
+      {live && roll && !hold ? <RollLine roll={roll} /> : null}
+      {live && full && !hold ? (
+        <Pressable accessibilityRole="text" onPress={() => setShown(full.length)}>
+          <Text className="font-sans text-fg-default" style={STORY}>{full.slice(0, shown)}</Text>
+        </Pressable>
       ) : null}
-      <Text className="font-sans text-fg-default" style={{ fontSize: size, lineHeight: size * sizes.lineHeight }}>
-        {full ? visible : narration.text === null && !narration.stage && !failed ? fallback : ''}
-      </Text>
-      {narration.recap && !hold && shown >= full.length ? (
-        <Text className="mt-3 font-sans text-fg-muted" style={{ fontSize: size, lineHeight: size * sizes.lineHeight }}>
-          {narration.recap}
-        </Text>
-      ) : null}
+      {waiting && !failed && !typing && (hold || !full) ? <Typing /> : null}
       {failed ? (
-        <View className="mt-2 gap-2">
+        <View className="gap-2">
           <Text accessibilityRole="alert" className="font-sans-semibold text-body text-danger-fg">{ko.narrationFailed}</Text>
           {narration.error ? <Text className="font-sans text-chip text-fg-subtle">{narration.error}</Text> : null}
           <Pressable accessibilityRole="button" onPress={onRetry} className="self-start rounded-md border border-border-default px-3 py-1">
@@ -58,6 +101,6 @@ export function Narration({ narration, hold, fallback, onTyped, onRetry, failed 
           </Pressable>
         </View>
       ) : null}
-    </Pressable>
+    </ScrollView>
   );
 }

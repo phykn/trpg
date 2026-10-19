@@ -152,7 +152,7 @@ scenarios/<폴더>/   폴더 이름은 자유. 이야기 id는 story.yaml의 id
 
 | 필드 | 뜻 | 평가 |
 |---|---|---|
-| `name`, `aliases`, `look`, `at` | 공개 이름, 생김새, 놓인 장소 | |
+| `name`, `aliases`, `look`, `at` | 공개 이름, 생김새(글이 적힌 물건은 그 글도), 놓인 장소 | |
 | `boxes` | 칸 수 `1…6` | |
 | `risk` | `low` 또는 `normal`. 위험 식의 기본값(rule.md 3.2) | |
 | `fits`, `clashes` | 어울리는 방식(`fill` +1 더), 어긋나는 방식(위험 +1) | |

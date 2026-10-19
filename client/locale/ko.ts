@@ -28,7 +28,7 @@ export const ko = {
   kindness: (name: string) => `신세: ${name}`,
   belief: '앎',
   crisis: '위기',
-  stage: { writing: '쓰는 중', checking: '확인하는 중', rewriting: '다시 쓰는 중' } as Record<string, string>,
+  typing: '이야기를 쓰는 중',
   narrationFailed: '서술을 받지 못했습니다.',
   retryNarration: '다시 받기',
   placeholder: '무엇을 할까요?',

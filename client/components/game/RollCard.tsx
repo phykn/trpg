@@ -67,7 +67,7 @@ export function RollCard({ card, bands, onRoll, onCancel, step, frame, rolling }
 
   return (
     <View ref={ref} accessibilityRole={'dialog' as never} aria-modal
-      className="flex-1 gap-2 rounded-t-xl border bg-canvas-floating px-4 pb-3 pt-3"
+      className="gap-2 rounded-t-xl border bg-canvas-floating px-4 pb-3 pt-3"
       style={{ borderColor: high ? colors.danger.fg : colors.border.strong }}>
       {target ? (
         <View className="flex-row items-center gap-2">
@@ -123,7 +123,7 @@ export function RollCard({ card, bands, onRoll, onCancel, step, frame, rolling }
           <Text className="font-sans-semibold text-title text-gold-fg">{ko.result[frame.settled]}</Text>
         ) : null}
       </View>
-      <View className="mt-auto flex-row items-center justify-between border-t border-border-default pt-3">
+      <View className="flex-row items-center justify-between border-t border-border-default pt-3">
         <Dice state={frame?.blocked ? 'gone' : step ? 'stopped' : rolling ? 'rolling' : 'ready'}
           values={frame ? frame.dice : [null, null]} label={ko.hold} onRelease={() => onRoll(pick)} />
         {!locked ? (

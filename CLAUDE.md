@@ -28,7 +28,7 @@ Both models are required and run outside this repo. Never start or stop them (no
 - The client adopts server responses as state and never duplicates game rules.
 - Keep the public `/games/*` routes, snapshot `schema_version`, request receipts and `trpg.game_id` compatible unless a migration is requested.
 - Player-facing Korean uses `당신`, polite `합니다체`, and `기술` for skill. Server-composed strings render verbatim in the client. Client strings go in `client/locale/ko.ts`, server common text in `server/src/locale/ko.py`. Comments and validation errors are English.
-- Client UI: a fixed viewport-height mobile frame with no scrolling and no illustrations (the same narrow frame on desktop), using NativeWind classes and the tokens in `client/design/`. Commands stay locked while narration streams. A missing response freezes commands until the identical command is retried. Never clear the saved pointer on a failed restore. Dialogs close with Escape, trap focus and return it to the opener.
+- Client UI: a fixed viewport-height mobile frame with no illustrations and no scrolling outside the chat log (the same narrow frame on desktop), using NativeWind classes and the tokens in `client/design/`. Commands stay locked while narration streams. A missing response freezes commands until the identical command is retried. Never clear the saved pointer on a failed restore. Dialogs close with Escape, trap focus and return it to the opener.
 - Preserve personal env files (`server/.env.*`, `client/.env.*`).
 
 ## Commands (Unix; use the root `.venv`, never `server/.venv`)

@@ -6,7 +6,7 @@ import { useDialog } from './useDialog';
 export function Shell({ title, children, onClose }: { title?: string; children: ReactNode; onClose?: () => void }) {
   const ref = useDialog(onClose);
   return (
-    <View ref={ref} accessibilityRole={'dialog' as never} aria-modal className="flex-1 gap-3 rounded-t-xl border border-border-strong bg-canvas-floating px-4 pb-4 pt-4">
+    <View ref={ref} accessibilityRole={'dialog' as never} aria-modal className="gap-3 rounded-t-xl border border-border-strong bg-canvas-floating px-4 pb-4 pt-4">
       {title ? <Text accessibilityRole="header" className="font-sans-semibold text-title text-fg-default">{title}</Text> : null}
       {children}
     </View>

@@ -18,7 +18,7 @@ export function CommandBar({ mode, sent, notice, placeholder, onSend, onResend, 
     setText('');
   };
   return (
-    <View className="gap-1 border-t border-border-default px-4 pb-2 pt-1">
+    <View className="gap-1 px-4 pb-2 pt-1">
       {notice ? <Text accessibilityRole="alert" className="font-sans text-chip text-danger-fg">{notice}</Text> : null}
       {mode === 'stuck' ? (
         <View className="flex-row items-center gap-2">

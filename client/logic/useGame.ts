@@ -294,7 +294,7 @@ export function useGame(reduced = false) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
-    phase, stories, view, before, notice, reveal, narration, recaps, sent, growthLater,
+    phase, stories, view, before, notice, reveal, narration, recaps, sent, growthLater, gameId: gameId.current,
     command, resend, create,
     skip: () => { if (phase === 'revealing') finishReveal(); },
     typed: () => { turn.current.typed = true; maybeEnd(); },

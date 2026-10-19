@@ -15,6 +15,10 @@
 - {at: {path: 0, step: 0}, text: 휴대전화로 구조대를 부른다, expect: refused}
 - {at: {path: 0, step: 0}, text: 마을로 가서 노인을 찾아 말을 건다, expect: [go:village, talk:dohae:chat]}
 - {at: {path: 0, step: 0}, text: 잠시 숨을 고르며 바다를 바라본다, expect: look:dock}
+- {at: {path: 0, step: 0}, text: "편지에 뭐라고 쓰여 있어?", expect: look:letter}
+- {at: {path: 0, step: 0}, text: 아들의 편지를 확인한다, expect: look:letter}
+- {at: {path: 0, step: 0}, text: "여기 뭐가 있지?", expect: look:dock}
+- {at: {path: 0, step: 0}, text: 윤슬에게 말을 건다 ㅎㅇ, expect: "talk:yunseul:chat;tone=friendly"}
 
 # 바닷가 마을: 도해
 - {at: {path: 0, step: 1}, text: 도해에게 등대 기름이 어디 있는지 묻는다, expect: talk:dohae:t_oil}
@@ -36,6 +40,7 @@
 - {at: {path: 0, step: 2}, text: 문을 온몸으로 무리해서 밀어붙인다, expect: "try:door:force;strain=forced"}
 - {at: {path: 0, step: 2}, text: 문을 마법으로 연다, expect: refused}
 - {at: {path: 0, step: 2}, text: 녹슨 문을 자세히 살펴본다, expect: look:door}
+- {at: {path: 0, step: 2}, text: "문이 왜 안 열려?", expect: look:door}
 - {at: {path: 0, step: 2}, text: 마을로 다시 내려간다, expect: go:village}
 
 # 등대 앞, 문이 열림

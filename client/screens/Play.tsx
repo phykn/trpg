@@ -9,14 +9,14 @@ import { CostCard } from '@/components/game/CostCard';
 import { Ending } from '@/components/game/Ending';
 import { GrowthCard } from '@/components/game/GrowthCard';
 import { Header } from '@/components/game/Header';
-import { LastRoll } from '@/components/game/LastRoll';
 import { Menu } from '@/components/game/Menu';
-import { Narration } from '@/components/game/Narration';
+import { Chat } from '@/components/game/Narration';
 import { RollCard } from '@/components/game/RollCard';
 import { Scene } from '@/components/game/Scene';
 import { ko } from '@/locale/ko';
 import { frame as frameAt } from '@/logic/reveal';
 import type { Game } from '@/logic/useGame';
+import { useLog } from '@/logic/useLog';
 import type { GameView, StepRecord } from '@/services/types';
 
 function lastRolled(steps: StepRecord[] | undefined): StepRecord | null {
@@ -37,6 +37,21 @@ export function Play({ game }: { game: Game }) {
   const [now, setNow] = useState(Date.now());
   const [menu, setMenu] = useState(false);
   const [sheet, setSheet] = useState(false);
+  const log = useLog(game.gameId, view.story.premise);
+  const turnNo = view.last?.turn ?? null;
+  const live = turnNo !== null && !log.has(`story:${turnNo}`);
+  const rolled = lastRolled(view.last?.steps);
+  const roll = rolled?.roll ? { d1: rolled.roll.d1, d2: rolled.roll.d2, total: rolled.total ?? rolled.roll.d1 + rolled.roll.d2, result: rolled.result } : null;
+  const onTyped = () => {
+    if (turnNo !== null) {
+      const text = [game.narration.text, game.narration.recap].filter(Boolean).join('\n\n');
+      log.add(...(roll ? [{ id: `roll:${turnNo}`, kind: 'roll' as const, ...roll }] : []),
+        { id: `story:${turnNo}`, kind: 'story', text });
+    }
+    game.typed();
+  };
+  // A restored turn already in the log is not typed again, so it counts as typed once its text arrives.
+  useEffect(() => { if (phase === 'narrating' && !live && game.narration.text) game.typed(); }, [phase, live, game.narration.text]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (phase !== 'idle' && phase !== 'card') { setMenu(false); setSheet(false); } }, [phase]);
   const revealing = phase === 'revealing' && reveal !== null && !reveal.skipped;
   useEffect(() => {
@@ -97,18 +112,17 @@ export function Play({ game }: { game: Game }) {
           <View className="min-h-0 flex-1">
             <Scene scene={rows.scene} />
             <Clocks clocks={rows.clocks} crisis={revealing ? [] : crisis} />
-            <Narration narration={game.narration} hold={revealing} failed={phase === 'narration_error'}
-              fallback={view.last ? '' : view.story.premise}
-              onTyped={game.typed} onRetry={game.retryNarration} />
-            <LastRoll step={lastRolled(shownSteps)} />
+            <Chat entries={log.entries} live={live} roll={roll} waiting={phase === 'sending' || phase === 'revealing' || (phase === 'narrating' && live)}
+              narration={game.narration} hold={revealing} failed={phase === 'narration_error'}
+              onTyped={onTyped} onRetry={game.retryNarration} />
             {revealing ? (
               <Pressable accessibilityLabel="skip" className="absolute bottom-0 left-0 right-0 top-0" onPress={game.skip} />
             ) : null}
           </View>
           <CommandBar mode={mode} sent={game.sent} notice={game.notice}
             placeholder={view.due.length ? ko.payFirst : hint(view.scene)}
-            onSend={(text) => game.command({ text })} onResend={game.resend} onNew={game.newGame} />
-          {card ? <View className="absolute bottom-0 left-0 right-0 top-0">{card}</View> : null}
+            onSend={(text) => { log.add({ id: `you:${Date.now()}`, kind: 'you', text }); game.command({ text }); }} onResend={game.resend} onNew={game.newGame} />
+          {card ? <View className="absolute bottom-0 left-0 right-0 max-h-full">{card}</View> : null}
         </View>
       )}
       {sheetOpen ? (

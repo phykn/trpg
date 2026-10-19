@@ -107,7 +107,7 @@ things:
   letter:
     name: 아들의 편지
     aliases: [편지]
-    look: 젖지 않게 기름종이로 싼 편지
+    look: '젖지 않게 기름종이로 싼 편지. "아버지, 폭풍이 오면 등대 불만 보고 돌아가겠습니다."라고 적혀 있다'
     at: player
   key:
     name: 등대 열쇠
