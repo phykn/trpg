@@ -115,7 +115,7 @@ scenarios/<폴더>/   폴더 이름은 자유. 이야기 id는 story.yaml의 id
 |---|---|
 | `start` | 시작 장소 |
 | `approaches` | 네 값, 예 `[2, 1, 1, 0]`. 값은 `0…3`. 플레이어는 그 합을 네 방식에 나눠 주고, 한 방식은 그 가장 큰 값을 넘지 못함 |
-| `traits` | `{pick: n ≥ 1, options: {id: {name, text}}}`, 후보는 `pick`보다 많게 |
+| `traits` | `{pick: n ≥ 1, options: {id: {name, text}}}`, 후보는 `pick`보다 많게. 특성은 능력치(방식)와 겹치지 않게 주인공의 내력(직업, 인연, 아는 것)으로 씀 |
 
 시작 소지품은 `things`의 `at: player`입니다. 박자, 상처, 성장은 0에서 시작합니다.
 

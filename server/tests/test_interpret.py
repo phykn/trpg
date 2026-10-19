@@ -118,7 +118,7 @@ async def test_unsure_intent_makes_a_clarify_card_and_a_pick_resumes(tmp_path):
 async def test_try_reads_cues_and_refuses_the_impossible(tmp_path):
     decision = FakeDecision({"s1": {"try": 0.9}, "s2": {"end": 0.9}, "strain": {"natural": 0.9}})
     svc, gid, view = await game(tmp_path, decision, moves=["go:village", "go:yard"])
-    out = await say(svc, gid, view, "손재주로 문의 자물쇠를 살살 따 본다")
+    out = await say(svc, gid, view, "기계공의 손으로 문의 자물쇠를 살살 따 본다")
     card = out["view"]["card"]
     assert card["kind"] == "roll" and card["selected"] == "try:door:finesse;rely=trait:tinker"
     assert [s["label"] for s in card["echo"]["slots"]] == ["녹슨 등대 문", "솜씨"]

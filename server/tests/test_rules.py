@@ -43,7 +43,7 @@ def play(u, creation):
     "go:village", "look:door", "take:oil", "give:letter:dohae", "declare:l_baek", "cut:pass", "cut:rest",
     "talk:dohae:t_oil;tone=friendly", "talk:dohae:favor", "talk:dohae:chat;claim=c_keeper;tone=deceive",
     "try:door:finesse;rely=thing:key", "try:door:force;strain=forced", "choose:g_oil:beacon",
-    "pay:c_wave", "pay:engine.beat", "grow:finesse", "grow:trait:sailor:climber", "grow:scar:2",
+    "pay:c_wave", "pay:engine.beat", "grow:finesse", "grow:trait:sailor:islander", "grow:scar:2",
     "try:door:finesse;rely=tag:door:1",
 ])
 def test_canonical_ids_round_trip(aid):
@@ -134,7 +134,7 @@ def test_witness_paths_reach_their_goal(u, creation, i):
 @pytest.mark.parametrize("aid", [
     "give:clock.1:dohae", "try:door:finesse;rely=thing:clock.1", "try:clock.1:force", "try:deadline.1:wits",
     "try:player:force;strain=forced", "take:key", "go:lamp_room", "talk:dohae:t_oil", "pay:engine.beat",
-    "try:door:force;rely=trait:climber", "talk:yunseul:chat;claim=c_keeper",
+    "try:door:force;rely=trait:islander", "talk:yunseul:chat;claim=c_keeper",
 ])
 def test_out_of_candidate_ids_are_refused(play, aid):
     play.do("go:yard") if aid.startswith(("try:door", "give")) else None
@@ -246,10 +246,10 @@ def test_chapter_change_opens_growth(u, creation):
     assert s.where("clock.2") == PLAYER and s.where("clock.1") is None and s.stat(PLAYER, "growth") == 1
     assert s.where("g_oil") == PLAYER
     grows = [format(a) for a in candidates(u, play.obs) if a.schema == "grow"]
-    assert "grow:finesse" in grows and "grow:trait:sailor:climber" in grows
-    play.do("grow:trait:sailor:climber")
+    assert "grow:finesse" in grows and "grow:trait:sailor:islander" in grows
+    play.do("grow:trait:sailor:islander")
     assert s.stat(PLAYER, "sailor") == 1 and play.s.stat(PLAYER, "sailor") is None
-    assert play.s.stat(PLAYER, "climber") == 1 and play.s.stat(PLAYER, "growth") == 0
+    assert play.s.stat(PLAYER, "islander") == 1 and play.s.stat(PLAYER, "growth") == 0
 
 
 def pick(rng, k):

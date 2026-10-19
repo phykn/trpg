@@ -22,7 +22,7 @@ def test_start_state_conforms_and_holds_defaults(u, s0):
     assert s0.where("clock.1") == PLAYER and s0.where("clock.2") is None
     assert s0.regards("dohae", PLAYER, "trust") == 0
     assert s0.flag("chapter") == 1 and s0.flag("gale") == 0
-    assert s0.stat(PLAYER, "tinker") == 1 and s0.stat(PLAYER, "climber") is None
+    assert s0.stat(PLAYER, "tinker") == 1 and s0.stat(PLAYER, "islander") is None
 
 
 def test_creation_spends_the_story_total_within_its_highest_value(u):

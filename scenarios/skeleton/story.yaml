@@ -2,7 +2,7 @@
 id: lighthouse
 version: 1
 title: 꺼진 등대
-premise: 폭풍이 오는 저녁, 당신은 작은 섬의 선착장에 내립니다. 등대의 불이 꺼져 있고, 밤에 고깃배들이 돌아옵니다.
+premise: 등대의 불이 꺼졌습니다. 폭풍이 몰려오는 바다에는 아직 돌아오지 못한 고깃배들이 있습니다. 해가 지기 전에, 불을 다시 밝혀야 합니다.
 beats: 6
 wound_boxes: 2
 impossible: [총을, 마법, 헬리콥터, 휴대전화]
@@ -23,10 +23,10 @@ player:
   traits:
     pick: 2
     options:
-      sailor: {name: 뱃사람, text: "바다와 배, 날씨를 읽습니다."}
-      climber: {name: 날렵함, text: 높고 좁은 곳을 탑니다.}
-      talker: {name: 넉살, text: 낯선 사람과 쉽게 말을 틉니다.}
-      tinker: {name: 손재주, text: 낡은 기계를 고칩니다.}
+      sailor: {name: 뱃사람, text: 바다와 날씨를 압니다.}
+      islander: {name: 섬 토박이, text: 섬사람과 골목을 압니다.}
+      herbalist: {name: 약초꾼, text: 약초와 상처를 압니다.}
+      tinker: {name: 기계공, text: 낡은 기계를 다뤄 봤습니다.}
 
 places:
   dock:

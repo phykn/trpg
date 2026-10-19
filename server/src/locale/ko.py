@@ -2,10 +2,10 @@ from __future__ import annotations
 
 APPROACHES = {"force": "완력", "finesse": "솜씨", "wits": "재치", "charm": "매력"}
 APPROACH_HINT = {
-    "force": "힘으로 밀어붙이거나 버팁니다",
-    "finesse": "손재주, 몸놀림, 몰래 움직임",
-    "wits": "관찰, 계획, 꾀와 속임수",
-    "charm": "말로 설득하거나 마음을 움직입니다",
+    "force": "힘으로 밀고 버팁니다",
+    "finesse": "손과 몸을 섬세히 씁니다",
+    "wits": "살피고 꾀를 냅니다",
+    "charm": "말로 마음을 얻습니다",
 }
 TONES = {"polite": "정중하게", "friendly": "친근하게", "plead": "간청하며", "threaten": "위협하며", "deceive": "속여서"}
 STRAINS = {"natural": "자연스럽게", "forced": "무리해서"}

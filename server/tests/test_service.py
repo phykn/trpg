@@ -51,7 +51,7 @@ async def test_create_is_idempotent_by_request_id(svc):
     again, _ = await new(svc)
     assert again == gid
     with pytest.raises(Conflict):
-        await svc.create("r-new", "lighthouse", {**CREATION, "traits": ["sailor", "climber"]})
+        await svc.create("r-new", "lighthouse", {**CREATION, "traits": ["sailor", "islander"]})
     assert view["revision"] == 0 and view["chapter"] == {"k": 1, "title": "등대에 오르다"}
     assert view["scene"]["place"]["name"] == "선착장" and view["ending"] is None
 

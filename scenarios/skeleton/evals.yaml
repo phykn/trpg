@@ -29,7 +29,7 @@
 
 # 등대 앞: 녹슨 문, 흔들리는 다리
 - {at: {path: 0, step: 2}, text: 어깨로 문을 들이받는다, expect: try:door:force}
-- {at: {path: 0, step: 2}, text: 손재주를 살려 녹슨 자물쇠를 살살 딴다, expect: "try:door:finesse;rely=trait:tinker"}
+- {at: {path: 0, step: 2}, text: 기계공 경험을 살려 녹슨 자물쇠를 살살 딴다, expect: "try:door:finesse;rely=trait:tinker"}
 - {at: {path: 0, step: 2}, text: 문틈을 살펴 녹이 덜 슨 곳을 찾아 꾀를 낸다, expect: try:door:wits}
 - {at: {path: 0, step: 2}, text: 밧줄로 다리를 동여맨다, expect: try:bridge:force}
 - {at: {path: 0, step: 2}, text: 쐐기를 박아 다리 기둥을 세운다, expect: try:bridge:wits}
