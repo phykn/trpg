@@ -25,7 +25,11 @@ def test_start_state_conforms_and_holds_defaults(u, s0):
     assert s0.stat(PLAYER, "tinker") == 1 and s0.stat(PLAYER, "climber") is None
 
 
-def test_creation_must_place_the_story_values(u):
+def test_creation_spends_the_story_total_within_its_highest_value(u):
+    initial(u, {"approaches": {"force": 1, "finesse": 1, "wits": 1, "charm": 1}, "traits": ["sailor", "tinker"]})
+    initial(u, {"approaches": {"force": 2, "finesse": 2, "wits": 0, "charm": 0}, "traits": ["sailor", "tinker"]})
+    with pytest.raises(StoryError):
+        initial(u, {"approaches": {"force": 1, "finesse": 1, "wits": 1, "charm": 0}, "traits": ["sailor", "tinker"]})
     with pytest.raises(StoryError):
         initial(u, {"approaches": {"force": 3, "finesse": 1, "wits": 1, "charm": 0}, "traits": ["sailor", "tinker"]})
     with pytest.raises(StoryError):

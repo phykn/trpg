@@ -834,8 +834,10 @@ def creation_of(raw) -> dict:
 
 def check_creation(u: Universe, creation: dict) -> None:
     ap = creation.get("approaches") or {}
-    if sorted(ap) != sorted(APPROACHES) or sorted(ap.values()) != sorted(u.approaches):
-        raise StoryError("creation: approaches must place the story's values on the four approaches")
+    values = list(ap.values())
+    if (sorted(ap) != sorted(APPROACHES) or any(type(v) is not int or not 0 <= v <= max(u.approaches) for v in values)
+            or sum(values) != sum(u.approaches)):
+        raise StoryError("creation: approaches must spend the story's total, each at most its highest value")
     traits = creation.get("traits") or []
     if len(traits) != u.pick or len(set(traits)) != len(traits) or any(t not in u.traits for t in traits):
         raise StoryError(f"creation: pick {u.pick} distinct traits from the story")

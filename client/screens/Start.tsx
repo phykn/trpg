@@ -5,22 +5,8 @@ import { ko } from '@/locale/ko';
 import type { Creation, GameView, Story } from '@/services/types';
 import { Title } from './Title';
 
-function initial(story: Story): Record<string, number> {
-  const values = [...story.approaches].sort((a, b) => b - a);
-  return Object.fromEntries(story.approach_names.map((a, i) => [a.id, values[i]]));
-}
-
-// Values only trade places, so the spread always stays the story's (ontology.md 5).
-function swapTarget(placed: Record<string, number>, id: string, dir: 1 | -1): string | null {
-  const v = placed[id];
-  const others = Object.entries(placed).filter(([k, x]) => k !== id && (dir > 0 ? x > v : x < v));
-  if (!others.length) return null;
-  const best = dir > 0 ? Math.min(...others.map(([, x]) => x)) : Math.max(...others.map(([, x]) => x));
-  return others.find(([, x]) => x === best)![0];
-}
-
-function swap(placed: Record<string, number>, a: string, b: string): Record<string, number> {
-  return { ...placed, [a]: placed[b], [b]: placed[a] };
+function zero(story: Story): Record<string, number> {
+  return Object.fromEntries(story.approach_names.map((a) => [a.id, 0]));
 }
 
 function Arrow({ label, glyph, onPress }: { label: string; glyph: string; onPress?: () => void }) {
@@ -41,16 +27,20 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
   const [traits, setTraits] = useState<string[]>([]);
   const pick = (s: string) => {
     const next = stories.find((x) => x.id === s);
-    setId(s); setPlaced(next ? initial(next) : {}); setTraits([]);
+    setId(s); setPlaced(next ? zero(next) : {}); setTraits([]);
   };
   if (!story) return <Title stories={stories} saved={saved} onResume={onResume} onPick={pick} />;
 
   const toggle = (t: string) => setTraits(traits.includes(t) ? traits.filter((x) => x !== t)
     : traits.length < story.pick ? [...traits, t] : traits);
-  const ready = traits.length === story.pick && !busy;
+  const total = story.approaches.reduce((a, b) => a + b, 0);
+  const cap = Math.max(...story.approaches);
+  const spent = Object.values(placed).reduce((a, b) => a + b, 0);
+  const add = (ap: string, d: number) => setPlaced({ ...placed, [ap]: placed[ap] + d });
+  const ready = spent === total && traits.length === story.pick && !busy;
 
   return (
-    <View className="min-h-0 flex-1 gap-5 px-5 pb-5 pt-3">
+    <View className="min-h-0 flex-1 gap-4 px-5 pb-4 pt-2">
       <View className="flex-row items-center gap-2">
         <Pressable accessibilityRole="button" accessibilityLabel={ko.back} onPress={() => setId(null)} className="py-1 pr-2">
           <Text className="font-sans text-title text-fg-muted">‹</Text>
@@ -58,26 +48,23 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
         <Text accessibilityRole="header" className="min-w-0 flex-1 font-serif text-title text-fg-default">{story.title}</Text>
       </View>
       <View className="gap-2">
-        <Text className="font-sans-semibold text-chip text-gold-fg">{ko.approaches}</Text>
-        <View className="flex-row flex-wrap gap-2">
-          {story.approach_names.map((a) => {
-            const up = swapTarget(placed, a.id, 1);
-            const down = swapTarget(placed, a.id, -1);
-            return (
-              <View key={a.id} className="w-[48%] flex-row items-center justify-between rounded-md border border-border-default px-3 py-2">
-                <Text className="font-sans-semibold text-body text-fg-default">{a.name}</Text>
-                <View className="flex-row items-center">
-                  <Arrow label={`${a.name} ${ko.lower}`} glyph="◀" onPress={down ? () => setPlaced(swap(placed, a.id, down)) : undefined} />
-                  <Text className="w-[20px] text-center font-mono-medium text-body text-gold-fg">{placed[a.id]}</Text>
-                  <Arrow label={`${a.name} ${ko.raise}`} glyph="▶" onPress={up ? () => setPlaced(swap(placed, a.id, up)) : undefined} />
-                </View>
+        <Text className="font-sans-semibold text-chip text-gold-fg">{ko.count(ko.approaches, spent, total)}</Text>
+        <View className="gap-1.5">
+          {story.approach_names.map((a) => (
+            <View key={a.id} className="flex-row items-center justify-between rounded-md border border-border-default px-4 py-1">
+              <Text className="font-sans-semibold text-body text-fg-default">{a.name}</Text>
+              <View className="flex-row items-center gap-2">
+                <Arrow label={`${a.name} ${ko.lower}`} glyph="◀" onPress={placed[a.id] > 0 ? () => add(a.id, -1) : undefined} />
+                <Text className="w-[24px] text-center font-mono-medium text-body text-gold-fg">{placed[a.id]}</Text>
+                <Arrow label={`${a.name} ${ko.raise}`} glyph="▶"
+                  onPress={placed[a.id] < cap && spent < total ? () => add(a.id, 1) : undefined} />
               </View>
-            );
-          })}
+            </View>
+          ))}
         </View>
       </View>
       <View className="gap-2">
-        <Text className="font-sans-semibold text-chip text-gold-fg">{ko.pickTraits(traits.length, story.pick)}</Text>
+        <Text className="font-sans-semibold text-chip text-gold-fg">{ko.count(ko.traits, traits.length, story.pick)}</Text>
         <View className="flex-row flex-wrap gap-2">
           {story.traits.map((t) => (
             <Pressable key={t.id} accessibilityRole="checkbox" accessibilityState={{ checked: traits.includes(t.id) }}
