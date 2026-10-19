@@ -6,6 +6,8 @@ premise: 폭풍이 오는 저녁, 당신은 작은 섬의 선착장에 내립니
 beats: 6
 wound_boxes: 2
 impossible: [총을, 마법, 헬리콥터, 휴대전화]
+flags:
+  gale: [0, 1]
 
 style: |
   - 폭풍이 오는 저녁의 작은 섬입니다. 바람, 빗방울, 파도 소리, 어두워지는 하늘로 시간이 흐르는 것을 보여 줍니다.
@@ -166,6 +168,19 @@ obstacles:
         weight: heavy
         effects:
           - {set: [fill, lamp, "-1"]}
+  # 숨은 장애물: 도해와의 대화를 막고, 처음 말을 걸 때 굴림 없이 드러납니다.
+  hound:
+    name: 사나운 누렁이
+    aliases: [누렁이]
+    look: 목줄을 팽팽히 당기며 이빨을 드러낸 짐승
+    at: village
+    hidden: 도해의 오두막 앞에 사나운 누렁이가 묶여 있어 낯선 사람이 다가가지 못한다.
+    boxes: 2
+    risk: low
+    blocks: [dohae]
+    solutions:
+      s_soothe: {label: 낮은 목소리로 달래며 다가간다, approach: charm}
+      s_bait: {label: 말린 생선을 던져 시선을 돌린다, approach: wits}
 
 chapters:
   - title: 등대에 오르다
@@ -182,6 +197,7 @@ chapters:
       boxes: 4
       crisis:
         - {set: [fill, lamp, "-1"]}
+        - {set: [flag, gale, 1]}
     deadline: {name: 배가 암초에 닿는다, boxes: 3, ending: wreck}
 
 threats:
@@ -242,6 +258,11 @@ triggers:
     when: {at: [player, yard]}
     effects:
       - {tag: [player, snag, scene, 흩날리는 물보라]}
+  # 2장 위험 시계가 차면 돌풍 플래그가 서고, 이 방아쇠가 그것을 읽습니다.
+  tr_gale:
+    when: {flag: [gale, 1]}
+    effects:
+      - {tag: [lamp, snag, chapter, 흔들리는 불꽃]}
 
 endings:
   two_lights:
@@ -264,7 +285,7 @@ witnesses:
   paths:
     - reach: {goal: 1}
       steps:
-        - go:village
+        - go:village                                  # 숨은 누렁이는 도해와의 대화만 막음
         - go:yard                                     # 다리 위협 등장, 물보라(방해 1)
         - {do: "try:door:finesse", roll: [6, 6, 0]}   # 13, 어울림 → 2칸
         - {do: "try:door:finesse", roll: [6, 6, 0]}   # 3칸, 문이 다 참
