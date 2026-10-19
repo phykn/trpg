@@ -232,7 +232,7 @@ class Interpreter:
             claim = fixed.get("claim") if fixed.get("claim") in slot.values("claim") else None
             judge_args = {"tone": "deceive" if claim else tone, "claim": claim}
         a = make(st["schema"], intent, judge_args)
-        echo = [{"slot": "tone", "name": ko.SLOT_LABEL["tone"], "value": ko.TONES[a.get("tone")]}] \
+        echo = [{"slot": "tone", "label": ko.TONES[a.get("tone")]}] \
             if st["schema"] == "talk" and a.get("tone") != "polite" else []
         return self.done(u, o, p, a, text, echo)
 
@@ -277,11 +277,11 @@ class Interpreter:
         slot = next(s for s in slots if s.intent == (x, ap))
         strain = fixed["strain"] if fixed["strain"] in slot.values("strain") else None
         a = make("try", (x, ap), {"strain": strain})
-        echo = [{"slot": "approach", "name": ko.SLOT_LABEL["approach"], "value": ko.APPROACHES[ap]}]
+        echo = [{"slot": "approach", "label": ko.APPROACHES[ap]}]
         if x != PLAYER:
-            echo.insert(0, {"slot": "target", "name": ko.SLOT_LABEL["target"], "value": u.name(x)})
+            echo.insert(0, {"slot": "target", "label": u.name(x)})
         if a.get("strain") == "forced":
-            echo.append({"slot": "strain", "name": ko.SLOT_LABEL["strain"], "value": ko.STRAINS["forced"]})
+            echo.append({"slot": "strain", "label": ko.STRAINS["forced"]})
         return self.done(u, o, p, a, text, echo)
 
     def narrow(self, u, o, text, intents, fixed, key="intent") -> list[tuple]:

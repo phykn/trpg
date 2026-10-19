@@ -124,7 +124,7 @@ async def test_try_reads_cues_and_refuses_the_impossible(tmp_path):
     out = await say(svc, gid, view, "손재주로 문의 자물쇠를 살살 따 본다")
     card = out["view"]["card"]
     assert card["kind"] == "roll" and card["selected"] == "try:door:finesse;rely=trait:tinker"
-    assert [s["value"] for s in card["echo"]["slots"]] == ["녹슨 등대 문", "솜씨"]
+    assert [s["label"] for s in card["echo"]["slots"]] == ["녹슨 등대 문", "솜씨"]
     assert "approach" not in kev.asked[-1][1]
     kev.answers["strain"] = {"impossible": 0.8}
     out = await say(svc, gid, out["view"], "문을 단숨에 날려 버린다", "t2")
