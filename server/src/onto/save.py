@@ -67,18 +67,23 @@ def rebuild(u: Universe, data: dict) -> Game:
         raise SaveError("incompatible schema_version")
     if data.get("story", {}).get("digest") != u.digest:
         raise SaveError("incompatible story")
-    s = initial(u, data["creation"])
-    g = Game(data["game_id"], u.id, data["seed"], data["creation"], s, presentation=data.get("presentation", {}))
-    for raw in data["log"]:
-        e = Event.from_json(raw)
+    g = Game(data["game_id"], u.id, data["seed"], data["creation"], initial(u, data["creation"]),
+             presentation=data.get("presentation", {}))
+    g.state, g.log = replay(u, data["creation"], [Event.from_json(raw) for raw in data["log"]])
+    return g
+
+
+def replay(u: Universe, creation: dict, events: list[Event]) -> tuple[State, Log]:
+    """The state and log after the given events, checking C after every step."""
+    s, log = initial(u, creation), Log()
+    for e in events:
         after = apply(s, e.delta.add, e.delta.remove)
         problems = conforms(u, after)
         if problems:
             raise SaveError(f"event {e.t} breaks C: {problems[0]}")
-        record(u, g.log, s, after, e)
+        record(u, log, s, after, e)
         s = after
-    g.state = s
-    return g
+    return s, log
 
 
 def load(u: Universe, path: Path) -> Game:

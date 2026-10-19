@@ -11,8 +11,16 @@ from pathlib import Path
 
 from .cards import clarify_card, confirm_card, roll_card
 from .locale import ko
+from .narrate import (
+    RECAP_CHARS,
+    RECAP_SENTENCES,
+    SHORT_CHARS,
+    Job,
+    change_ids,
+    step_lines,
+)
 from .onto.atoms import PLAYER
-from .onto.save import Game, SaveError, new_game, rebuild, save
+from .onto.save import Game, SaveError, new_game, rebuild, replay, save
 from .onto.universe import Universe, check_creation
 from .onto.view import observe, record
 from .rules.acts import parse
@@ -54,6 +62,38 @@ class Invalid(ValueError):
     """A malformed request (422)."""
 
 
+class Stream:
+    """One narration being made; every request for it reads the same events (api.md 4)."""
+
+    def __init__(self):
+        self.events: list[dict] = []
+        self.done = False
+        self.cond = asyncio.Condition()
+
+    async def push(self, *events: dict, done: bool = False) -> None:
+        async with self.cond:
+            self.events += events
+            self.done = self.done or done
+            self.cond.notify_all()
+
+    async def read(self):
+        i = 0
+        while True:
+            async with self.cond:
+                await self.cond.wait_for(lambda i=i: len(self.events) > i or self.done)
+                batch, done = self.events[i:], self.done
+            for e in batch:
+                yield e
+            i += len(batch)
+            if done and i >= len(self.events):
+                return
+
+
+async def _cached(entry: dict):
+    yield {"type": "text", "text": entry["text"]}
+    yield {"type": "done", "tags": [{k: t[k] for k in ("slot", "owner", "name")} for t in entry.get("tags", [])]}
+
+
 def body_hash(body: dict) -> str:
     rest = {k: v for k, v in body.items() if k != "request_id"}
     return hashlib.sha256(json.dumps(rest, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
@@ -65,12 +105,14 @@ def fresh_presentation(created: str) -> dict:
 
 
 class GameService:
-    def __init__(self, stories: dict[str, Universe], save_dir: Path, interpreter=None,
+    def __init__(self, stories: dict[str, Universe], save_dir: Path, interpreter=None, narrator=None,
                  seeds=lambda: secrets.randbits(63)):
         self.stories = stories
         self.seeds = seeds                      # a game's dice seed (rule.md 3.1); tests pin it
         self.save_dir = save_dir
         self.interpreter = interpreter          # engine.md 3; text is refused without it
+        self.narrator = narrator                # engine.md 5
+        self.streams: dict[tuple, Stream] = {}
         self.games: dict[str, tuple[Universe, Game]] = {}
         self.locks: dict[str, asyncio.Lock] = {}
 
@@ -310,3 +352,110 @@ class GameService:
         if ending:
             p["ending"] = ending
         return step_record(u, p, g.log.seen[PLAYER][-1], label, ending)
+
+    # -- narration (engine.md 5, api.md 4) --
+
+    async def narration(self, game_id: str, n: int):
+        return await self._narration(game_id, ("turn", n))
+
+    async def recap(self, game_id: str, k: int):
+        return await self._narration(game_id, ("recap", k))
+
+    async def _narration(self, game_id: str, what: tuple):
+        async with self.lock(game_id):
+            u, g = await self.load(game_id)
+            store, key = ("narration", str(what[1])) if what[0] == "turn" else ("recap", str(what[1]))
+            entry = g.presentation.get(store, {}).get(key)
+            if entry is not None:
+                return _cached(entry)
+            job = self._turn_job(u, g, what[1]) if what[0] == "turn" else self._recap_job(u, g, what[1])
+            if job is None:
+                raise Missing(f"{what[0]} {what[1]}")
+            sid = (game_id, *what)
+            if sid not in self.streams:
+                self.streams[sid] = Stream()
+                asyncio.create_task(self._make(game_id, sid, store, key, job))
+            return self.streams[sid].read()
+
+    async def _make(self, game_id: str, sid: tuple, store: str, key: str, job: Job) -> None:
+        stream = self.streams[sid]
+        try:
+            async for e in self.narrator.narrate(job):
+                if e["type"] != "result":
+                    await stream.push(e, done=e["type"] == "error")
+                    continue
+                entry = {k: e[k] for k in ("text", "attempts", "dropped", "tags")}
+                async with self.lock(game_id):
+                    u, g = await self.load(game_id)
+                    p = g.presentation
+                    p.setdefault(store, {})[key] = entry
+                    for t in entry["tags"]:
+                        p["tags"][t["index"]][2] = t["name"]
+                    await self.store(u, g)
+                await stream.push(*[x async for x in _cached(entry)], done=True)
+        except Exception as exc:  # noqa: BLE001 -- a stream must end; the next request starts over
+            await stream.push({"type": "error", "message": f"{type(exc).__name__}"}, done=True)
+        finally:
+            self.streams.pop(sid, None)
+
+    def _at(self, u: Universe, g: Game, t1: int):
+        s, log = replay(u, g.creation, g.log.events[:t1 + 1])
+        return observe(u, s, log)
+
+    def _turn_job(self, u: Universe, g: Game, n: int) -> Job | None:
+        p = g.presentation
+        turn = next((x for x in p["turns"] if x["n"] == n), None)
+        if turn is None:
+            return None
+        o = self._at(u, g, turn["t1"])
+        happened, delta, ids = [], [], set()
+        for r in turn["steps"]:
+            lines, changes = step_lines(u, r)
+            happened += lines
+            delta += changes
+            ids |= change_ids(r)
+        here = o.facts.where(PLAYER)
+        people = {x for x in o.seen if x in u.agents and o.facts.where(x) == here}
+        tags = [{"index": i, "slot": atom[4], "owner": atom[1], "name": name}
+                for i, (atom, t, name) in enumerate(p["tags"])
+                if turn["t0"] <= t <= turn["t1"] and o.facts.mark_.get((atom[1], atom[4])) == tuple(atom[2:4])]
+        kinds = {c["kind"] for r in turn["steps"] for c in r["changes"]}
+        ending = next((c["id"] for r in turn["steps"] for c in r["changes"] if c["kind"] == "ending"), None)
+        previous = [p["narration"][str(m)]["text"] for m in range(max(1, n - PREVIOUS_TURNS), n)
+                    if str(m) in p["narration"]]
+        return Job(u, o, p, happened, delta, {PLAYER, here, *people, *ids}, text=turn["text"], tags=tags,
+                   previous=previous, ending=u.endings[ending].frame if ending else None,
+                   chars=SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars)
+
+    def _recap_job(self, u: Universe, g: Game, k: int) -> Job | None:
+        p = g.presentation
+        chapter, notable, closing = 1, [], None
+        for turn in p["turns"]:
+            for r in turn["steps"]:
+                if chapter == k and notable_step(r):
+                    notable.append(r)
+                kinds = {c["kind"]: c for c in r["changes"]}
+                if chapter == k and ("chapter" in kinds or "ending" in kinds):
+                    closing = turn
+                if "chapter" in kinds:
+                    chapter = kinds["chapter"]["to"]
+        if closing is None:
+            return None
+        o = self._at(u, g, closing["t1"])
+        lines = [x for r in notable[-RECAP_NOTABLE:] for x in step_lines(u, r)[0]]
+        task = ko.fill(ko.RECAP_TASK, title=u.chapter_of(k).title, sentences=RECAP_SENTENCES, chars=RECAP_CHARS)
+        return Job(u, o, p, lines, lines, {PLAYER, o.facts.where(PLAYER)}, chars=RECAP_CHARS,
+                   sentences=RECAP_SENTENCES, task=task)
+
+
+PREVIOUS_TURNS = 3
+RECAP_NOTABLE = 5
+
+
+def notable_step(r: dict) -> bool:
+    """engine.md 5.5: big fills, claims, promises, declarations, fork picks, chosen costs, scars, arrivals."""
+    schema = r["action"].split(":")[0]
+    if schema in ("declare", "choose", "pay") or ";claim=" in r["action"]:
+        return True
+    return any(c["kind"] in ("promise", "scar", "arrival") or (c["kind"] == "fill" and c["to"] - c["from"] >= 2)
+               for c in r["changes"])

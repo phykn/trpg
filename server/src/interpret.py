@@ -153,6 +153,8 @@ class Interpreter:
         if not first:
             return {"plan": [self.idle()]}
         qs = {f"s{i}": choice(ko.STEP_QUESTION[i], first if i == 1 else later) for i in (1, 2, 3)}
+        # Layer 1 options are scene-free, so Kev reads the sentence alone: on the skeleton evals the context
+        # ρ({player, here}) lowered accuracy from 80% to 71% (qa_test/agency/interp-2-ctx).
         answers = await self.ask(self.sentence(text), qs)
         top, pr = ranked(answers.get("s1"), first)[0]
         if pr < self.theta and await self.second(text, first) != top:

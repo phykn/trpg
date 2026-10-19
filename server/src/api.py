@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import secrets
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -110,5 +111,28 @@ async def get(game_id: str, game: Service):
 async def command(game_id: str, body: CommandBody, game: Service):
     try:
         return await game.command(game_id, body.payload())
+    except HANDLED as e:
+        return _error(e)
+
+
+def _ndjson(events) -> StreamingResponse:
+    async def lines():
+        async for e in events:
+            yield json.dumps(e, ensure_ascii=False) + "\n"
+    return StreamingResponse(lines(), media_type="application/x-ndjson")
+
+
+@router.get("/games/{game_id}/turns/{n}/narration")
+async def narration(game_id: str, n: int, game: Service):
+    try:
+        return _ndjson(await game.narration(game_id, n))
+    except HANDLED as e:
+        return _error(e)
+
+
+@router.get("/games/{game_id}/chapters/{k}/recap")
+async def recap(game_id: str, k: int, game: Service):
+    try:
+        return _ndjson(await game.recap(game_id, k))
     except HANDLED as e:
         return _error(e)

@@ -13,6 +13,7 @@ from src.config import Settings, load_server_env, settings
 from src.interpret import Interpreter
 from src.models.kev import KevClient
 from src.models.qwen import QwenClient
+from src.narrate import Narrator
 from src.service import GameService
 from src.story.load import StoryError
 from src.story.validate import load_all
@@ -77,7 +78,7 @@ def create_app(local: bool = False) -> tuple[FastAPI, str, int]:
         cfg = settings(SERVER_DIR)
     kev = KevClient(cfg.kev_base_url, min_confidence=cfg.kev_min_confidence, api_key=cfg.kev_api_key)
     qwen = QwenClient(cfg.qwen_base_url, model=cfg.qwen_model, sampling=cfg.qwen_sampling)
-    service = GameService(load_stories(cfg.scenario_dir), cfg.save_dir, Interpreter(kev, qwen))
+    service = GameService(load_stories(cfg.scenario_dir), cfg.save_dir, Interpreter(kev, qwen), Narrator(qwen, kev))
     app = build_app(service=service, basic_auth_user=cfg.basic_auth_user, basic_auth_pass=cfg.basic_auth_pass,
                     cors_origins=cfg.cors_origins, models=(kev, qwen))
     return app, cfg.host, cfg.port
