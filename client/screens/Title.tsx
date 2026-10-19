@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { Face } from '@/components/game/Dice';
 import { ko } from '@/locale/ko';
 import type { GameView, Story } from '@/services/types';
+import { version } from '../package.json';
 
 function Language() {
   return (
@@ -18,46 +19,47 @@ function Language() {
   );
 }
 
-function Resume({ view, onPress }: { view: GameView; onPress: () => void }) {
+function Card({ label, title, sub, onPress, children }: {
+  label: string; title: ReactNode; sub: string; onPress: () => void; children?: ReactNode;
+}) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}
-      className="flex-row items-center rounded-lg border border-gold-fg bg-accent-muted px-4 py-3">
-      <View className="min-w-0 flex-1">
-        <Text className="font-sans-semibold text-chip text-gold-fg">{ko.resume}</Text>
-        <Text className="font-serif text-title text-fg-default">{view.story.title}</Text>
-        <Text className="font-sans text-chip text-fg-muted">{ko.chapter(view.chapter.k, view.chapter.title)} · {view.scene.place.name}</Text>
-      </View>
-      <Text className="font-sans text-title text-gold-fg">›</Text>
+    <Pressable accessibilityRole="button" onPress={onPress} className="gap-1 rounded-lg border border-border-default bg-canvas-subtle px-4 py-3">
+      <Text className="font-sans-semibold text-chip text-gold-fg">{label}</Text>
+      {title}
+      <Text className="font-sans text-panel text-fg-muted">{sub}</Text>
+      {children}
     </Pressable>
   );
 }
 
-function Shelf({ stories, onPick, primary }: { stories: Story[]; onPick: (id: string) => void; primary: boolean }) {
+function Resume({ view, onPress }: { view: GameView; onPress: () => void }) {
+  return (
+    <Card label={ko.resume} onPress={onPress} sub={`${ko.chapter(view.chapter.k, view.chapter.title)} · ${view.scene.place.name}`}
+      title={<Text className="font-serif text-title text-fg-default">{view.story.title}</Text>} />
+  );
+}
+
+function Shelf({ stories, onPick }: { stories: Story[]; onPick: (id: string) => void }) {
   const [at, setAt] = useState(0);
   const s = stories[Math.min(at, stories.length - 1)];
   if (!s) return null;
   const many = stories.length > 1;
   const step = (d: number) => setAt((at + d + stories.length) % stories.length);
-  return (
-    <View className="gap-2">
-      <View className="gap-2 rounded-lg border border-border-default bg-canvas-subtle px-4 py-3">
-        <View className="flex-row items-center">
-          {many ? <Nav glyph="‹" label={ko.prev} onPress={() => step(-1)} /> : null}
-          <Text accessibilityRole="header" className="flex-1 text-center font-serif text-title text-fg-default">{s.title}</Text>
-          {many ? <Nav glyph="›" label={ko.next} onPress={() => step(1)} /> : null}
-        </View>
-        <Text className="min-h-[60px] font-sans text-panel text-fg-muted">{s.premise}</Text>
-        {many ? (
-          <View className="flex-row justify-center gap-1.5">
-            {stories.map((x, i) => <View key={x.id} className={`h-1.5 w-1.5 rounded-full ${i === at ? 'bg-gold-fg' : 'bg-border-strong'}`} />)}
-          </View>
-        ) : null}
-      </View>
-      <Pressable accessibilityRole="button" onPress={() => onPick(s.id)}
-        className={`items-center rounded-md py-3 ${primary ? 'bg-gold-fg' : 'border border-border-strong'}`}>
-        <Text className={`font-sans-semibold text-body ${primary ? 'text-fg-on-emphasis' : 'text-fg-default'}`}>{ko.begin}</Text>
-      </Pressable>
+  const title = (
+    <View className="flex-row items-center">
+      <Text className="min-w-0 flex-1 font-serif text-title text-fg-default">{s.title}</Text>
+      {many ? <Nav glyph="‹" label={ko.prev} onPress={() => step(-1)} /> : null}
+      {many ? <Nav glyph="›" label={ko.next} onPress={() => step(1)} /> : null}
     </View>
+  );
+  return (
+    <Card label={ko.begin} title={title} sub={s.premise} onPress={() => onPick(s.id)}>
+      {many ? (
+        <View className="flex-row gap-1.5 pt-1">
+          {stories.map((x, i) => <View key={x.id} className={`h-1.5 w-1.5 rounded-full ${i === at ? 'bg-gold-fg' : 'bg-border-strong'}`} />)}
+        </View>
+      ) : null}
+    </Card>
   );
 }
 
@@ -73,7 +75,7 @@ export function Title({ stories, saved, onResume, onPick }: {
   stories: Story[]; saved: GameView | null; onResume: () => void; onPick: (id: string) => void;
 }) {
   return (
-    <View className="min-h-0 flex-1 gap-3 px-5 pb-5 pt-3">
+    <View className="min-h-0 flex-1 gap-3 px-5 pb-3 pt-3">
       <Language />
       <View className="min-h-0 flex-1 items-center justify-center gap-4">
         <View className="flex-row gap-3">
@@ -82,10 +84,10 @@ export function Title({ stories, saved, onResume, onPick }: {
         </View>
         <Text accessibilityRole="header" className="font-serif text-display tracking-[2px] text-fg-default">{ko.brand}</Text>
         <View className="h-[1px] w-10 bg-gold-fg" />
-        <Text className="font-sans text-panel tracking-[1px] text-fg-muted">{ko.tagline}</Text>
       </View>
       {saved ? <Resume view={saved} onPress={onResume} /> : null}
-      <Shelf stories={stories} onPick={onPick} primary={!saved} />
+      <Shelf stories={stories} onPick={onPick} />
+      <Text className="text-center font-sans text-caption text-fg-subtle">v{version} · © 2026 {ko.brand}. All rights reserved.</Text>
     </View>
   );
 }

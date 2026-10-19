@@ -1,6 +1,5 @@
 export const ko = {
   brand: '말과 주사위',
-  tagline: '문장을 쓰고, 주사위를 굴립니다',
   loading: '불러오는 중입니다.',
   stories: '이야기',
   approaches: '방식',
