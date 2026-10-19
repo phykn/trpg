@@ -9,7 +9,7 @@ import re
 import secrets
 from pathlib import Path
 
-from .cards import confirm_card, roll_card
+from .cards import clarify_card, confirm_card, roll_card
 from .locale import ko
 from .onto.atoms import PLAYER
 from .onto.save import Game, SaveError, new_game, rebuild, save
@@ -200,8 +200,12 @@ class GameService:
                 return self._result(u, g, "turn")
             if body.get("pick") not in card["options"]:
                 return self._refused(u, g, "card")
-            plan = [{"action": body["pick"], "accepted": True}, *card["rest"]]
-            return await self._run(u, g, plan, card["public"]["echo"], "card", None)
+            if card["kind"] == "clarify":
+                plan = [card["resume"][body["pick"]], *card["rest"]]
+            else:
+                plan = [{"action": body["pick"], "accepted": True}, *card["rest"]]
+            echo = card["public"]["echo"]
+            return await self._run(u, g, plan, echo, "card", echo["text"] if card["kind"] == "clarify" else None)
         if "action" in body:
             try:
                 a = parse(body["action"])
@@ -227,28 +231,38 @@ class GameService:
         records, t0 = [], len(g.log)
         for i, st in enumerate(plan):
             o = observe(u, g.state, g.log)
+            rest = plan[i + 1:]
+            labels = [self._label(u, o, p, s) for s in rest]
             if "action" not in st:
                 st = await self.interpreter.fill(u, g, st)
-                if st.get("card"):
-                    p["card"] = st["card"]
+                if st.get("refused"):
+                    if not records:
+                        p["requests"].append({"kind": "refused", "text": text})
+                        p["revision"] += had_card       # the waiting card is gone either way
+                        return self._refused(u, g, st["refused"])
+                    break
+                if st.get("clarify"):
+                    p["card_seq"] += 1
+                    p["card"] = clarify_card(rest, labels, echo, f"c{p['card_seq']}", st["clarify"])
                     break
                 if "action" not in st:
                     break
+            if kind == "text" and records and records[-1]["action"] == st["action"]:
+                break                       # a sentence's later step that repeats the one before is the same act
             a = parse(st["action"])
             if not admits(u, o, a):
                 if i == 0 and not had_card and kind != "text":
                     return self._refused(u, g, "candidate")
                 break
-            rest = plan[i + 1:]
-            labels = [self._label(u, o, p, s) for s in rest]
+            step_echo = {**echo, "slots": st.get("slots", echo.get("slots", []))}
             if not st.get("accepted"):
                 rolling = rolls(u, o.facts, o.hist, a)
                 if rolling or risk(u, a) == "high":
                     p["card_seq"] += 1
                     cid = f"c{p['card_seq']}"
                     make = roll_card if rolling else confirm_card
-                    extra = {"selected": a.get("rely")} if rolling else {}
-                    p["card"] = make(u, o, p, a, rest, labels, echo, cid, **extra)
+                    extra = {"selected": a.get("rely") or st.get("rely")} if rolling else {}
+                    p["card"] = make(u, o, p, a, rest, labels, step_echo, cid, **extra)
                     break
             records.append(self._step(u, g, a))
             s = g.state
@@ -271,7 +285,7 @@ class GameService:
                 return action_label(u, o, p, parse(st["action"]))
             except (ValueError, KeyError, StopIteration):
                 return st["action"]
-        return st.get("label", "")
+        return ko.SCHEMA_DESC.get(st.get("schema"), "")
 
     def _step(self, u: Universe, g: Game, a) -> dict:
         p = g.presentation

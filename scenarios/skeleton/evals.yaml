@@ -1,0 +1,49 @@
+# 해석 평가 문장(story.md 6절). 원고가 아니라 시험 자료이고 시작 시 검증에 들지 않습니다.
+# at: 증인 길 path의 걸음 step개를 실행한 뒤의 상태.
+# expect: 행동 id 하나(첫 단계), 행동 id의 목록(이어지는 단계들), refused, clarify 중 하나.
+# 굴리는 행동의 기댈 것은 0층의 이름 맞추기가 정한 굴림 카드의 기본값으로 비교합니다.
+
+# 선착장: 윤슬, 아들의 편지
+- {at: {path: 0, step: 0}, text: 마을로 내려간다, expect: go:village}
+- {at: {path: 0, step: 0}, text: 등대 쪽으로 서둘러 걸어간다, expect: go:yard}
+- {at: {path: 0, step: 0}, text: 윤슬에게 등대 뒤 담장에 대해 물어본다, expect: talk:yunseul:t_wall}
+- {at: {path: 0, step: 0}, text: 윤슬에게 편지를 보여 주며 건넨다, expect: give:letter:yunseul}
+- {at: {path: 0, step: 0}, text: 어부의 딸에게 반갑게 말을 건다, expect: "talk:yunseul:chat;tone=friendly"}
+- {at: {path: 0, step: 0}, text: 품속의 편지를 꺼내 다시 읽어 본다, expect: look:letter}
+- {at: {path: 0, step: 0}, text: 부두 주변을 천천히 둘러본다, expect: look:dock}
+- {at: {path: 0, step: 0}, text: 하늘의 구름이 얼마나 몰려오는지 살핀다, expect: look:clock.1}
+- {at: {path: 0, step: 0}, text: 휴대전화로 구조대를 부른다, expect: refused}
+- {at: {path: 0, step: 0}, text: 마을로 가서 노인을 찾아 말을 건다, expect: [go:village, talk:dohae:chat]}
+- {at: {path: 0, step: 0}, text: 잠시 숨을 고르며 바다를 바라본다, expect: look:dock}
+
+# 바닷가 마을: 도해
+- {at: {path: 0, step: 1}, text: 도해에게 등대 기름이 어디 있는지 묻는다, expect: talk:dohae:t_oil}
+- {at: {path: 0, step: 1}, text: 등대지기에게 열쇠를 빌려 달라고 부탁한다, expect: talk:dohae:favor}
+- {at: {path: 0, step: 1}, text: 노인에게 아들의 편지를 건넨다, expect: give:letter:dohae}
+- {at: {path: 0, step: 1}, text: 도해에게 아드님 편지를 가져왔다고 간청하며 이야기한다, expect: "talk:dohae:chat;tone=plead"}
+- {at: {path: 0, step: 1}, text: 도해에게 내가 새로 온 등대지기라고 속인다, expect: "talk:dohae:chat;claim=c_keeper;tone=deceive"}
+- {at: {path: 0, step: 1}, text: 도해의 멱살을 잡고 열쇠를 내놓으라고 윽박지른다, expect: "talk:dohae:favor;tone=threaten"}
+- {at: {path: 0, step: 1}, text: 이 마을에 예전에 같이 배를 탄 동료가 있다고 떠올린다, expect: declare:l_baek}
+- {at: {path: 0, step: 1}, text: 마을 우물가에 앉아 잠깐 쉰다, expect: cut:rest}
+- {at: {path: 0, step: 1}, text: 등대 앞으로 올라간다, expect: go:yard}
+
+# 등대 앞: 녹슨 문, 흔들리는 다리
+- {at: {path: 0, step: 2}, text: 어깨로 문을 들이받는다, expect: try:door:force}
+- {at: {path: 0, step: 2}, text: 손재주를 살려 녹슨 자물쇠를 살살 딴다, expect: "try:door:finesse;rely=trait:tinker"}
+- {at: {path: 0, step: 2}, text: 문틈을 살펴 녹이 덜 슨 곳을 찾아 꾀를 낸다, expect: try:door:wits}
+- {at: {path: 0, step: 2}, text: 밧줄로 다리를 동여맨다, expect: try:bridge:force}
+- {at: {path: 0, step: 2}, text: 쐐기를 박아 다리 기둥을 세운다, expect: try:bridge:wits}
+- {at: {path: 0, step: 2}, text: 문을 온몸으로 무리해서 밀어붙인다, expect: "try:door:force;strain=forced"}
+- {at: {path: 0, step: 2}, text: 문을 마법으로 연다, expect: refused}
+- {at: {path: 0, step: 2}, text: 녹슨 문을 자세히 살펴본다, expect: look:door}
+- {at: {path: 0, step: 2}, text: 마을로 다시 내려간다, expect: go:village}
+
+# 등대 앞, 문이 열림
+- {at: {path: 0, step: 4}, text: 열린 문으로 들어가 꼭대기까지 오른다, expect: go:lamp_room}
+
+# 등불 방: 꺼진 등불, 남은 기름
+- {at: {path: 0, step: 5}, text: 렌즈를 닦고 불씨를 살린다, expect: try:lamp:finesse}
+- {at: {path: 0, step: 5}, text: 남은 기름을 몽땅 등불에 붓는다, expect: choose:g_oil:all_in}
+- {at: {path: 0, step: 5}, text: 기름 절반은 마을 봉화를 위해 남겨 둔다, expect: choose:g_oil:beacon}
+- {at: {path: 0, step: 5}, text: 꺼진 등불의 구조를 꼼꼼히 살핀다, expect: look:lamp}
+- {at: {path: 0, step: 5}, text: 등불 심지를 꾀를 내어 고쳐 본다, expect: try:lamp:wits}

@@ -91,3 +91,12 @@ def confirm_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[st
     public = {"id": card_id, "kind": "confirm", "echo": echo, "plan": _plan(u, o, p, a, rest_labels),
               "options": [option], "selected": None}
     return {"id": card_id, "kind": "confirm", "options": [str(a)], "rest": rest, "public": public}
+
+
+def clarify_card(rest: list, rest_labels: list[str], echo: dict, card_id: str, ask: dict) -> dict:
+    """The options {ω₁, ω₂, ω₃} of an unsure intent slot (engine.md 4.1); a pick resumes the plan."""
+    options = [{"id": w["id"], "label": w["label"]} for w in ask["options"]]
+    public = {"id": card_id, "kind": "clarify", "echo": echo, "question": ask["question"],
+              "plan": {"step": None, "rest": rest_labels}, "options": options, "selected": None}
+    return {"id": card_id, "kind": "clarify", "options": [w["id"] for w in options], "resume": ask["resume"],
+            "rest": rest, "public": public}

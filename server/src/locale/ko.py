@@ -120,3 +120,84 @@ def fill(template: str, **values) -> str:
 
 def attitude(trust: int, fear: int) -> str:
     return FEAR_WORD if fear >= FEARFUL else TRUST_WORDS[trust]
+
+
+# -- the frame table 𝔗 (engine.md 1): one present frame per predicate --
+
+FRAME = {
+    "at_place": "{x}{은} {y}에 있습니다",
+    "at_agent": "{y}{이} {x}{을} 지니고 있습니다",
+    "link": "{p}에서 {q}{으로} 갈 수 있습니다",
+    "mark": "{x}에 {name}{이} 있습니다",
+    "fill": "{o}: {n}/{boxes}",
+    "trust": "{g}{은} 당신을 {word}",
+    "fear": "{g}{은} 당신을 {word}",
+    "stat": "당신의 {item}: {n}",
+    "trait": "당신의 특성: {name}",
+    "promise": "당신은 {h}에게 {name}{을} 약속했습니다",
+    "kindness": "{g}{은} 당신에게 신세를 졌습니다",
+    "belief": "당신이 믿는 것: {text}",
+    "memory": "지난 일: {label}",
+    "senses": "{x}: {text}",
+    "voice": "{x}의 말투: {text}",
+    "desire": "{x}{이} 바라는 것: {text}",
+    "fear_of": "{x}{이} 두려워하는 것: {text}",
+    "look": "{x}의 생김새: {text}",
+    "topics": "{x}에게 물을 수 있는 것: {text}",
+    "wants": "{x}{이} 반길 물건: {text}",
+}
+TRUST_VERBS = {-3: "적대합니다", -2: "믿지 않습니다", -1: "경계합니다", 0: "덤덤하게 대합니다",
+               1: "호의적으로 대합니다", 2: "신뢰합니다", 3: "깊이 신뢰합니다"}
+FEAR_VERBS = {-3: "업신여깁니다", -2: "얕봅니다", -1: "만만하게 봅니다", 1: "조금 두려워합니다",
+              2: "두려워합니다", 3: "몹시 두려워합니다"}
+SECTIONS = {"fact": "[사실]", "belief": "[믿음]", "memory": "[기억]", "public": "[알려진 것]"}
+
+# -- interpretation (engine.md 3) --
+
+# Layer 1 option descriptions, one per schema a sentence can choose.
+SCHEMA_DESC = {
+    "go": "어딘가로 간다",
+    "look": "무언가를 살핀다",
+    "take": "무언가를 집는다",
+    "give": "누군가에게 무언가를 건넨다",
+    "talk": "누군가와 말한다",
+    "try": "무언가에 맞서거나 해 본다",
+    "declare": "자신에 대한 사실을 밝힌다",
+    "cut": "기다리거나 쉬며 시간을 보낸다",
+    "choose": "갈림길에서 하나를 고른다",
+}
+END = "더 하는 것이 없다"
+STEP_QUESTION = {1: "플레이어 문장이 맨 처음 하려는 일은 무엇입니까?",
+                 2: "그 다음에 이어서 하는 일은 무엇입니까?",
+                 3: "그 다음에 또 이어서 하는 일은 무엇입니까?"}
+SLOT_QUESTION = {
+    "intent": "플레이어 문장에서 이 행동이 가리키는 것은 무엇입니까?",
+    "target": "플레이어가 맞서거나 해 보려는 대상은 무엇입니까?",
+    "approach": "플레이어는 어떤 방식으로 합니까?",
+    "strain": "이 장면에서 그 행동은 어떻습니까?",
+    "tone": "플레이어는 어떤 태도로 말합니까?",
+    "claim": "플레이어는 어떤 거짓 주장을 합니까?",
+}
+STRAIN_DESC = {"natural": "자연스럽게 할 수 있음", "forced": "할 수는 있지만 무리함", "impossible": "이 장면에서 할 수 없음"}
+TONE_DESC = {"polite": "정중하게 묻거나 부탁함", "friendly": "친근하게 말함", "plead": "간청하거나 호소함",
+             "threaten": "겁을 주거나 위협함", "deceive": "거짓말을 하거나 속임"}
+APPROACH_DESC = {"force": "힘으로 밀어붙이거나 부수거나 버팀", "finesse": "손재주, 몸놀림, 몰래 움직임",
+                 "wits": "관찰, 계획, 꾀, 시선 돌리기", "charm": "말이나 태도로 마음을 움직임"}
+NO_CLAIM = "거짓 주장이 없음"
+SLOT_LABEL = {"target": "대상", "approach": "방식", "strain": "무리함", "tone": "태도"}
+NOT_IN_WORLD = "이 세계에는 없는 것입니다."
+NOT_POSSIBLE = "이 장면에서는 할 수 없는 일입니다."
+META_REPLY = "이야기 속에서 당신이 하는 일을 적어 주세요. 저장은 저절로 됩니다."
+META = ("저장", "다시 시작", "처음부터", "규칙", "도움말", "게임", "인공지능", "치트")
+# Layer 0 cues for try's approach (engine.md 3.1). One matching approach fills the slot.
+APPROACH_WORDS = {
+    "force": ("밀어", "밀치", "부수", "부숴", "때려", "힘껏", "들이받", "걷어차", "비틀", "버텨", "당겨"),
+    "finesse": ("몰래", "살금", "슬쩍", "조심스레", "살살", "재빨리", "기어", "타고", "넘어", "따고", "따서"),
+    "wits": ("살펴", "꾀", "속여", "유인", "시선을 돌", "던져", "계획", "궁리", "고쳐", "다듬"),
+    "charm": ("달래", "설득", "부탁", "어르", "다독", "호소", "구슬"),
+}
+TO_PERSON = ("에게", "한테", "께")
+CLARIFY_SLOT = {"intent": "무엇을 말씀하신 건가요?", "target": "무엇에 맞서나요?", "approach": "어떤 방식인가요?"}
+CHOOSER = """당신은 한국어 TRPG의 입력 분류기입니다. 플레이어 문장이 맨 처음 하려는 일을 선택지에서 번호 하나로 고릅니다. 번호만 답합니다."""
+CHOOSER_PROMPT = "플레이어 문장: {text}\n선택지:\n{options}\n번호:"
+NO_TARGET = "특정한 대상 없이"
