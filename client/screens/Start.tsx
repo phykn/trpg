@@ -32,7 +32,7 @@ function Arrow({ label, glyph, onPress }: { label: string; glyph: string; onPres
   );
 }
 
-function Title({ onResume, onNew }: { onResume?: () => void; onNew: () => void }) {
+function Title({ stories, onResume, onPick }: { stories: Story[]; onResume?: () => void; onPick: (id: string) => void }) {
   return (
     <View className="min-h-0 flex-1 px-6 pb-6">
       <View className="flex-1 items-center justify-center gap-5">
@@ -50,10 +50,13 @@ function Title({ onResume, onNew }: { onResume?: () => void; onNew: () => void }
             <Text className="font-sans-semibold text-body text-fg-on-emphasis">{ko.resume}</Text>
           </Pressable>
         ) : null}
-        <Pressable accessibilityRole="button" onPress={onNew}
-          className={`items-center rounded-md py-3 ${onResume ? 'border border-border-strong' : 'bg-gold-fg'}`}>
-          <Text className={`font-sans-semibold text-body ${onResume ? 'text-fg-default' : 'text-fg-on-emphasis'}`}>{ko.newGame}</Text>
-        </Pressable>
+        <Text className="mt-2 font-sans text-chip text-fg-subtle">{ko.newGame}</Text>
+        {stories.map((s) => (
+          <Pressable key={s.id} accessibilityRole="button" onPress={() => onPick(s.id)}
+            className="items-center rounded-md border border-border-strong py-3">
+            <Text className="font-serif text-body text-fg-default">{s.title}</Text>
+          </Pressable>
+        ))}
       </View>
     </View>
   );
@@ -62,34 +65,27 @@ function Title({ onResume, onNew }: { onResume?: () => void; onNew: () => void }
 export function Start({ stories, busy, onCreate, onResume }: {
   stories: Story[]; busy: boolean; onCreate: (story: string, c: Creation) => void; onResume?: () => void;
 }) {
-  const [creating, setCreating] = useState(false);
-  const [id, setId] = useState(stories[0]?.id ?? '');
+  const [id, setId] = useState<string | null>(null);
   const story = stories.find((s) => s.id === id);
-  const [placed, setPlaced] = useState<Record<string, number>>(() => (story ? initial(story) : {}));
+  const [placed, setPlaced] = useState<Record<string, number>>({});
   const [traits, setTraits] = useState<string[]>([]);
-  if (!creating && !busy) return <Title onResume={onResume} onNew={() => setCreating(true)} />;
-  if (!story) return null;
+  const pick = (s: string) => {
+    const next = stories.find((x) => x.id === s);
+    setId(s); setPlaced(next ? initial(next) : {}); setTraits([]);
+  };
+  if (!story) return <Title stories={stories} onResume={onResume} onPick={pick} />;
 
   const toggle = (t: string) => setTraits(traits.includes(t) ? traits.filter((x) => x !== t)
     : traits.length < story.pick ? [...traits, t] : traits);
   const ready = traits.length === story.pick && !busy;
-  const choose = (s: string) => {
-    const next = stories.find((x) => x.id === s);
-    setId(s); setPlaced(next ? initial(next) : {}); setTraits([]);
-  };
 
   return (
     <View className="min-h-0 flex-1 gap-2 px-4 py-3">
       <View className="flex-row flex-wrap items-center gap-2">
-        <Pressable accessibilityRole="button" accessibilityLabel={ko.back} onPress={() => setCreating(false)} className="px-1 py-1">
+        <Pressable accessibilityRole="button" accessibilityLabel={ko.back} onPress={() => setId(null)} className="px-1 py-1">
           <Text className="font-sans-semibold text-title text-fg-muted">‹</Text>
         </Pressable>
-        {stories.map((s) => (
-          <Pressable key={s.id} accessibilityRole="radio" accessibilityState={{ selected: s.id === id }} onPress={() => choose(s.id)}
-            className={`rounded-md border px-3 py-1 ${s.id === id ? 'border-gold-fg bg-accent-muted' : 'border-border-default'}`}>
-            <Text className="font-serif text-body text-fg-default">{s.title}</Text>
-          </Pressable>
-        ))}
+        <Text accessibilityRole="header" className="font-serif text-title text-fg-default">{story.title}</Text>
       </View>
       <Text className="font-sans text-panel text-fg-default">{story.premise}</Text>
       <Text className="font-sans text-chip text-fg-muted">{ko.approaches}</Text>
