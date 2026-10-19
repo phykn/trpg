@@ -1,5 +1,3 @@
-"""Costs and complications (rule.md 3.3)."""
-
 from __future__ import annotations
 
 from ..onto.atoms import PLAYER, State
@@ -19,7 +17,6 @@ TABLE = {
 
 
 def pool(u, weight: str, target: str | None, facts: State, hist: frozenset) -> list:
-    """The engine's two, then the story's by place (here), people here, and the rolled obstacle."""
     here = facts.where(PLAYER)
     story = list(u.places[here].complications) if here in u.places else []
     for h, ag in u.agents.items():
@@ -33,9 +30,8 @@ def pool(u, weight: str, target: str | None, facts: State, hist: frozenset) -> l
 
 def settle(u, work: Work, result: str, risk: str, roll_u: int, target: str | None,
            visible: tuple[State, frozenset], world_hist: frozenset):
-    """Put one cell of the cost table into Δ₀: the clock, and `due` for choosing.
+    """The caller applies the returned complication on a fail.
 
-    Returns the complication to apply on a fail (the caller applies it), else None.
     `visible` is (F, hᵥ) at the start of the step, where chosen costs are evaluated.
     """
     if result not in ("mixed", "fail"):

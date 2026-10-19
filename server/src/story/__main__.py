@@ -1,5 +1,3 @@
-"""Validate stories from the command line: python -m src.story ../scenarios [more roots or story.yaml files]."""
-
 import argparse
 import sys
 from pathlib import Path
@@ -9,7 +7,7 @@ from .validate import load
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description="Validate story.yaml files or roots of them.")
     parser.add_argument("paths", nargs="+", type=Path)
     failed = False
     for root in parser.parse_args().paths:

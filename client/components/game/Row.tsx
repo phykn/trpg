@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
-/** A wrapping row of chips: names are never shortened (ui.md 2.1). */
+// Wrap, never truncate: names are never shortened (ui.md 2.1).
 export function Row({ children, border = true }: { children: ReactNode; border?: boolean }) {
   return (
     <View className={`flex-row flex-wrap items-center px-4 py-1 ${border ? 'border-t border-border-default' : ''}`}

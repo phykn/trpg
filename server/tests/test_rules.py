@@ -1,5 +1,3 @@
-"""Rules: actions, candidates, rolls, costs, triggers and R (rule.md 10)."""
-
 import random
 
 import pytest
@@ -41,8 +39,6 @@ def play(u, creation):
     return Play(u, creation)
 
 
-# -- actions --
-
 @pytest.mark.parametrize("aid", [
     "go:village", "look:door", "take:oil", "give:letter:dohae", "declare:l_baek", "cut:pass", "cut:rest",
     "talk:dohae:t_oil;tone=friendly", "talk:dohae:favor", "talk:dohae:chat;claim=c_keeper;tone=deceive",
@@ -61,8 +57,6 @@ def test_neutral_and_order_are_normalized():
         with pytest.raises(ValueError):
             parse(bad)
 
-
-# -- dice --
 
 def test_roll_is_a_function_of_seed_and_turn():
     assert roll(5, 3) == roll(5, 3)
@@ -92,8 +86,6 @@ def test_odds_at_zero():
     assert odds(0) == (15 / 36, 15 / 36, 6 / 36)
 
 
-# -- the fixed oracle path (plan.md stage 2) --
-
 def test_oracle_path(play):
     play.do("go:village")
     play.do("go:yard")
@@ -114,8 +106,6 @@ def test_oracle_path(play):
     play.do("pay:engine.beat")
     assert not play.s.rows("due") and play.s.stat(PLAYER, "beats") == 4
 
-
-# -- witnesses (the story's own paths) --
 
 def path_steps(u, i):
     p = u.witnesses["paths"][i]
@@ -140,8 +130,6 @@ def test_witness_paths_reach_their_goal(u, creation, i):
         assert play.s.flag("ending") == reach["ending"]
         assert candidates(u, play.obs) is not None
 
-
-# -- admission and argument kinds --
 
 @pytest.mark.parametrize("aid", [
     "give:clock.1:dohae", "try:door:finesse;rely=thing:clock.1", "try:clock.1:force", "try:deadline.1:wits",
@@ -184,8 +172,6 @@ def test_risk_reads_only_the_action(u):
     assert risk(u, parse("go:yard")) == "low"
 
 
-# -- hidden blocking --
-
 def test_hidden_blocker_is_revealed_without_a_roll(play):
     play.do("go:village")
     assert admits(play.u, play.obs, parse("talk:dohae:t_oil"))
@@ -196,8 +182,6 @@ def test_hidden_blocker_is_revealed_without_a_roll(play):
     assert not admits(play.u, play.obs, parse("talk:dohae:t_oil"))
     assert admits(play.u, play.obs, parse("try:hound:charm"))
 
-
-# -- people --
 
 def test_favor_promise_is_kept_by_giving_back(play):
     play.do("go:village")
@@ -267,8 +251,6 @@ def test_chapter_change_opens_growth(u, creation):
     assert s.stat(PLAYER, "sailor") == 1 and play.s.stat(PLAYER, "sailor") is None
     assert play.s.stat(PLAYER, "climber") == 1 and play.s.stat(PLAYER, "growth") == 0
 
-
-# -- fuzzing: conformance, progress, preview = execution, scan bound, rolled steps move --
 
 def pick(rng, k):
     """Schema first, then an action: a uniform pick over K is nearly all rely variants of try."""

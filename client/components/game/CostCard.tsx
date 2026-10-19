@@ -2,7 +2,6 @@ import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 import { Choice, Shell } from './CardShell';
 
-/** ui.md 4.6: the costs in pool order; no cancel. */
 export function CostCard({ due, onPick }: { due: GameView['due']; onPick: (action: string) => void }) {
   return (
     <Shell title={ko.costTitle}>

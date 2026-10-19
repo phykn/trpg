@@ -38,7 +38,7 @@ Both models are required and run outside this repo. Never start or stop them (no
 cd client && npm run web                             # web UI on localhost:8090 (8081 is Kev)
 
 .venv/bin/python -m pytest -q
-cd server && ../.venv/bin/python -m src.story.evals ../scenarios/skeleton --out ../qa_test/agency/<run> [--decision kev --llm qwen]   # needs the models
+cd server && ../.venv/bin/python -m src.story.evals ../scenarios/skeleton --out ../qa_test/agency/<run> [--decision malkuth --llm gemma4]   # needs the models
 cd server && ../.venv/bin/python -m src.fun ../saves/engine                                             # fun.md metrics
 .venv/bin/python -m ruff check server/
 

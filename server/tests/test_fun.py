@@ -1,5 +1,3 @@
-"""Fun metrics read what the service records (fun.md 4)."""
-
 from src.fun import measure
 from test_service import STORIES, cmd, new, service
 

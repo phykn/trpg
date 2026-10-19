@@ -1,5 +1,3 @@
-"""Atoms and the immutable State (ontology.md 1)."""
-
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
@@ -21,8 +19,6 @@ class ConformError(ValueError):
 
 
 class State:
-    """An immutable set of atoms, indexed by predicate (ontology.md 1.1)."""
-
     __slots__ = ("_atoms", "_hash", "at_", "fill_", "flag_", "mark_", "regards_", "sets_", "stat_")
 
     def __init__(self, at=None, mark=None, regards=None, fill=None, stat=None, flag=None, sets=None):
@@ -38,7 +34,7 @@ class State:
 
     @classmethod
     def of(cls, atoms: Iterable[Atom]) -> State:
-        """Index atoms; a second value for a functional key breaks C1 or C2."""
+        """A second value for a functional key breaks C1 or C2."""
         at, mark, regards, fill, stat, flag = {}, {}, {}, {}, {}, {}
         sets: dict[str, set] = {p: set() for p in SET_PREDS}
 
@@ -110,7 +106,6 @@ class State:
     def __len__(self) -> int:
         return len(self.atoms())
 
-    # Lookups used by rules and views.
     def where(self, x: str) -> str | None:
         return self.at_.get(x)
 
@@ -144,5 +139,4 @@ class State:
 
 
 def apply(s: State, add: Iterable[Atom], remove: Iterable[Atom]) -> State:
-    """S ⊕ Δ = (S ∖ Δ⁻) ∪ Δ⁺."""
     return State.of((s.atoms() - frozenset(remove)) | frozenset(add))

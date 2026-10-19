@@ -6,7 +6,6 @@ import { Chip } from './Chips';
 
 const FACE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
-/** The last roll's total, result and decisive chips, until the next roll (ui.md 4.5 beat 7). */
 export function LastRoll({ step }: { step: StepRecord | null }) {
   if (!step?.roll) return <View className="h-5" />;
   return (

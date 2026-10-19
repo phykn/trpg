@@ -1,5 +1,3 @@
-"""R = Δ₀ → triggers → Step (rule.md 8). Never mutates its input."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

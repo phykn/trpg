@@ -3,7 +3,6 @@ import { Text, View } from 'react-native';
 import { colors } from '@/design/tokens';
 import type { GameView } from '@/services/types';
 
-/** The scale 1–16 with the result bands, and the dot at the running total (ui.md 4.5 beats 2–4). */
 export function NumberLine({ bands, point, settled }: { bands: GameView['bands']; point: number | null; settled: string | null }) {
   const span = bands.max - bands.min + 1;
   const left = (v: number) => `${((Math.min(Math.max(v, bands.min), bands.max) - bands.min + 0.5) / span) * 100}%` as const;

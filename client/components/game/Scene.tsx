@@ -4,7 +4,6 @@ import type { GameView } from '@/services/types';
 import { Boxes } from './Boxes';
 import { Item, Row } from './Row';
 
-/** People (attitude), things, obstacles (boxes), place tags and the ways out. */
 export function Scene({ scene }: { scene: GameView['scene'] }) {
   return (
     <Row>

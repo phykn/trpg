@@ -1,6 +1,4 @@
-// The narration font size that fits a box (ui.md 2.1). Pure: Korean glyphs are about one em wide.
-
-/** Lines a text takes at a size: wrapped by characters, a full-width glyph per em, spaces half. */
+// Estimated without measuring: a Korean glyph is about one em wide, Latin about half.
 export function linesAt(text: string, size: number, width: number): number {
   const perLine = width / size;
   let lines = 0;
@@ -16,7 +14,6 @@ export function linesAt(text: string, size: number, width: number): number {
   return lines;
 }
 
-/** The largest size from `sizes` (descending) whose lines fit `height`; the last size when none does. */
 export function fitSize(text: string, width: number, height: number, sizes: number[], lineHeight: number): number {
   for (const size of sizes) {
     if (linesAt(text, size, width) * size * lineHeight <= height) return size;

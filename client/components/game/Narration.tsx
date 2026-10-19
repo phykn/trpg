@@ -6,7 +6,6 @@ import { ko } from '@/locale/ko';
 import { fitSize } from '@/logic/fit';
 import type { Narration as N } from '@/logic/useGame';
 
-/** The narration area: the stage while writing, the accepted text appearing at 60 chars/s, then the recap. */
 export function Narration({ narration, hold, fallback, onTyped, onRetry, failed }: {
   narration: N; hold: boolean; fallback: string; onTyped: () => void; onRetry: () => void; failed: boolean;
 }) {

@@ -1,5 +1,3 @@
-"""Create the API and run the server. Both models must answer before it starts."""
-
 import argparse
 import os
 from contextlib import asynccontextmanager
@@ -29,7 +27,7 @@ def load_stories(root: Path):
 
 
 async def check_models(decision: DecisionClient, llm: LLMClient) -> None:
-    """Both configured models must be up before the server starts (engine.md 8). They run outside this repo."""
+    """The models run outside this repo, so startup only checks them (engine.md 8)."""
     await decision.check()
     await llm.resolve_model()
 
@@ -58,15 +56,15 @@ def build_app(*, service: GameService, basic_auth_user: str, basic_auth_pass: st
 
 
 def local_settings() -> Settings:
-    """Loopback defaults for `--local`; only the models and their URLs may come from the process environment."""
+    """Under `--local` only the models and their URLs may come from the process environment."""
     return Settings(
         host="127.0.0.1", port=8000, basic_auth_user="local", basic_auth_pass="local",
         cors_origins=["http://localhost:8090", "http://127.0.0.1:8090"],
         scenario_dir=SERVER_DIR.parent / "scenarios", save_dir=SERVER_DIR.parent / "saves" / "engine",
-        decision_model=os.environ.get("DECISION_MODEL", "kev"),
+        decision_model=os.environ.get("DECISION_MODEL", "malkuth"),
         decision_base_url=os.environ.get("DECISION_BASE_URL", "http://127.0.0.1:8081"),
         decision_min_confidence=None, decision_api_key=os.environ.get("DECISION_API_KEY", ""),
-        llm_model=os.environ.get("LLM_MODEL", "qwen"),
+        llm_model=os.environ.get("LLM_MODEL", "gemma4"),
         llm_base_url=os.environ.get("LLM_BASE_URL", "http://127.0.0.1:8082/v1"), llm_sampling=None,
     )
 
@@ -88,7 +86,7 @@ def create_app(local: bool = False) -> tuple[FastAPI, str, int]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description="Run the TRPG engine API. Both models must answer before it starts.")
     parser.add_argument("--local", action="store_true", help="loopback defaults on 127.0.0.1:8000, no dotenv")
     app, host, port = create_app(local=parser.parse_args().local)
     uvicorn.run(app, host=host, port=port)

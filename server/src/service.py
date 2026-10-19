@@ -1,5 +1,3 @@
-"""The turn protocol (engine.md 7): one lock per game, receipts, revision, plan, steps, one save."""
-
 from __future__ import annotations
 
 import asyncio
@@ -43,15 +41,15 @@ RECEIPTS = 50
 
 
 class Missing(LookupError):
-    """No such game."""
+    pass
 
 
 class Incompatible(RuntimeError):
-    """A save of another schema or story digest (api.md 1: 409 incompatible)."""
+    """A save of another schema or story digest."""
 
 
 class Conflict(RuntimeError):
-    """A stale revision or a request id reused with another body; carries the current view."""
+    """A stale revision or a request id reused with another body."""
 
     def __init__(self, view: dict):
         super().__init__("conflict")
@@ -59,11 +57,11 @@ class Conflict(RuntimeError):
 
 
 class Invalid(ValueError):
-    """A malformed request (422)."""
+    pass
 
 
 class Stream:
-    """One narration being made; every request for it reads the same events (api.md 4)."""
+    """Every request for one narration reads the same events (api.md 4)."""
 
     def __init__(self):
         self.events: list[dict] = []
@@ -111,12 +109,10 @@ class GameService:
         self.seeds = seeds                      # a game's dice seed (rule.md 3.1); tests pin it
         self.save_dir = save_dir
         self.interpreter = interpreter          # engine.md 3; text is refused without it
-        self.narrator = narrator                # engine.md 5
+        self.narrator = narrator
         self.streams: dict[tuple, Stream] = {}
         self.games: dict[str, tuple[Universe, Game]] = {}
         self.locks: dict[str, asyncio.Lock] = {}
-
-    # -- storage --
 
     def path(self, game_id: str) -> Path:
         if not isinstance(game_id, str) or not GAME_ID.fullmatch(game_id):
@@ -157,8 +153,6 @@ class GameService:
         write.result()
         if cancelled:
             raise asyncio.CancelledError
-
-    # -- routes --
 
     def catalog(self) -> list[dict]:
         return [{"id": u.id, "title": u.title, "premise": u.premise, "approaches": list(u.approaches),
@@ -218,8 +212,6 @@ class GameService:
                 self.games.pop(game_id, None)       # the copy on disk is the truth
                 raise
             return response
-
-    # -- one command --
 
     def _result(self, u, g, kind, turn=None, steps=(), reason=None) -> dict:
         return {"kind": kind, "turn": turn, "steps": list(steps), "reason": reason, "view": game_view(u, g)}
@@ -374,8 +366,6 @@ class GameService:
             p["ending"] = ending
         return step_record(u, p, g.log.seen[PLAYER][-1], label, ending)
 
-    # -- narration (engine.md 5, api.md 4) --
-
     async def narration(self, game_id: str, n: int):
         return await self._narration(game_id, ("turn", n))
 
@@ -474,7 +464,6 @@ RECAP_NOTABLE = 5
 
 
 def notable_step(r: dict) -> bool:
-    """engine.md 5.5: big fills, claims, promises, declarations, fork picks, chosen costs, scars, arrivals."""
     schema = r["action"].split(":")[0]
     if schema in ("declare", "choose", "pay") or ";claim=" in r["action"]:
         return True

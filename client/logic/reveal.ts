@@ -1,4 +1,3 @@
-// The reveal timeline (ui.md 4.5): step records to beats, and the frame at a given time. Pure.
 import type { Change, StepRecord } from '@/services/types';
 
 export type Motion = {
@@ -21,7 +20,6 @@ export type Beat = Base & (
 
 const ROW_KINDS = new Set(['fill', 'clock', 'crisis', 'arrival']);
 
-/** Boxes one row change fills one by one: a fill or clock box per beat, a crisis or arrival at once. */
 export function boxBeats(c: Change): number {
   if (c.kind === 'fill' || c.kind === 'clock') return Math.max(1, Math.abs((c.to as number) - (c.from as number)));
   return 1;
@@ -80,17 +78,16 @@ export function duration(beats: Beat[]): number {
   return beats.reduce((end, b) => Math.max(end, b.at + b.dur), 0);
 }
 
-/** What one step shows at `elapsed` ms; a beat counts once it has started. */
 export type Frame = {
   step: number;
   dice: [number | null, number | null];
-  point: number | null;            // the dot on the number line
-  chips: number;                   // chips that have flown
-  settled: string | null;          // the result name once the dot rests
+  point: number | null;
+  chips: number;
+  settled: string | null;
   decisive: number[];
   boxes: Record<number, number>;   // change index → boxes shown so far
   folded: boolean;
-  changes: number[];               // other changes applied so far
+  changes: number[];
   blocked: string[] | null;
   done: boolean;
 };

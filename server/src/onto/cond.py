@@ -1,9 +1,3 @@
-"""Conditions (story.md 2.3): compile once, evaluate on any atom set (ontology.md 3.3).
-
-World evaluation is holds(c, S, h); visible evaluation is holds(c, F, hᵥ). One evaluator, so
-the two differ only by the atoms they receive.
-"""
-
 from __future__ import annotations
 
 import operator
@@ -89,6 +83,7 @@ def _int(ctx, v, where):
 
 
 def holds(c: Cond, facts: State, hist: frozenset) -> bool:
+    """World (S, h) and visible (F, hᵥ) evaluation share this evaluator, so they differ only by the atoms passed."""
     k = c[0]
     if k == "all":
         return all(holds(x, facts, hist) for x in c[1])
@@ -118,7 +113,7 @@ def holds(c: Cond, facts: State, hist: frozenset) -> bool:
 
 
 def atoms_of(c: Cond) -> list[Cond]:
-    """The leaf conditions of c (V3 checks which atoms a visible condition reads)."""
+    """The leaf conditions of c; V3 uses them to check which atoms a visible condition reads."""
     if c[0] in ("all", "any"):
         return [leaf for x in c[1] for leaf in atoms_of(x)]
     if c[0] == "not":

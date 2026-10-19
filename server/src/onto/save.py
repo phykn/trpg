@@ -1,5 +1,3 @@
-"""Snapshots and rebuilding from the log (ontology.md 6). The log is the source; state is a cache."""
-
 from __future__ import annotations
 
 import json
@@ -17,7 +15,7 @@ SCHEMA_VERSION = 2
 
 
 class SaveError(RuntimeError):
-    """A save that cannot be loaded: missing, another schema or story digest, or broken."""
+    pass
 
 
 @dataclass
@@ -43,7 +41,7 @@ def to_json(u: Universe, g: Game) -> dict:
 
 
 def write(path: Path, data: dict) -> None:
-    """Write to a temporary file, fsync, then rename: one atomic change per request."""
+    """Temp file, fsync, rename, so each request makes one atomic change."""
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name, suffix=".tmp")
     try:
@@ -62,7 +60,7 @@ def save(u: Universe, g: Game, path: Path) -> None:
 
 
 def rebuild(u: Universe, data: dict) -> Game:
-    """S₀ = initial(U, creation), then apply each event's delta, checking C after every step."""
+    """The log is the source; the state is a cache rebuilt from it, checking C after every step."""
     if data.get("schema_version") != SCHEMA_VERSION:
         raise SaveError("incompatible schema_version")
     if data.get("story", {}).get("digest") != u.digest:
@@ -74,7 +72,6 @@ def rebuild(u: Universe, data: dict) -> Game:
 
 
 def replay(u: Universe, creation: dict, events: list[Event]) -> tuple[State, Log]:
-    """The state and log after the given events, checking C after every step."""
     s, log = initial(u, creation), Log()
     for e in events:
         after = apply(s, e.delta.add, e.delta.remove)

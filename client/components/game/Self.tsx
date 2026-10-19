@@ -5,7 +5,6 @@ import type { GameView } from '@/services/types';
 import { Boxes } from './Boxes';
 import { Item, Row } from './Row';
 
-/** Approaches, wounds, beats, traits (spent ones dim), tags and scars, growth waiting. */
 export function Self({ player, onGrowth }: { player: GameView['player']; onGrowth?: () => void }) {
   return (
     <Row>

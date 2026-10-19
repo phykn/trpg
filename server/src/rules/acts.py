@@ -1,5 +1,3 @@
-"""Actions and their canonical ids (rule.md 1, story.md 3.12)."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -9,9 +7,8 @@ SCHEMAS: dict[str, int | None] = {
     "go": 1, "look": 1, "take": 1, "give": 2, "talk": 2, "try": 2,
     "declare": 1, "cut": 1, "choose": 2, "pay": 1, "grow": None,
 }
-# Schema → judgment argument keys.
 JUDGE = {"talk": ("claim", "rely", "tone"), "try": ("rely", "strain")}
-# The neutral value ν₀ of each judgment key; None means the argument is absent.
+# ν₀ per judgment key; None means the argument is absent.
 NEUTRAL = {"tone": "polite", "strain": "natural", "claim": None, "rely": None}
 TONES = ("polite", "friendly", "plead", "threaten", "deceive")
 STRAINS = ("natural", "forced")
@@ -24,14 +21,13 @@ class Action:
     judge: tuple[tuple[str, str], ...] = ()   # non-neutral judgment arguments, sorted by key
 
     def get(self, key: str):
-        """A judgment argument, or its neutral value."""
         for k, v in self.judge:
             if k == key:
                 return v
         return NEUTRAL[key]
 
     def with_(self, **judge) -> Action:
-        """The same action with some judgment arguments replaced (None or ν₀ removes them)."""
+        """None or ν₀ removes a judgment argument."""
         d = dict(self.judge)
         d.update(judge)
         return make(self.schema, self.intent, d)
@@ -45,7 +41,7 @@ class Action:
 
 
 def make(schema: str, intent, judge: dict | None = None) -> Action:
-    """An action in canonical form: neutral judgment values dropped, keys sorted."""
+    """Canonical form: neutral judgment values dropped, keys sorted (story.md 3.12)."""
     if schema not in SCHEMAS:
         raise ValueError(f"unknown schema {schema}")
     intent = tuple(str(x) for x in intent)

@@ -6,7 +6,6 @@ import type { Chip as ChipT } from '@/services/types';
 
 export const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0');
 
-/** One modifier with its source (ui.md 4.3); `mark` names a decisive chip. */
 export function Chip({ chip, small, mark, dim }: { chip: ChipT; small?: boolean; mark?: boolean; dim?: boolean }) {
   const color = colors.chip[chip.kind];
   return (

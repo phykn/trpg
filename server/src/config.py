@@ -1,5 +1,3 @@
-"""Server settings from dotenv files and the process environment. Missing keys fail at startup."""
-
 import json
 import os
 from dataclasses import dataclass
@@ -9,7 +7,7 @@ from dotenv import dotenv_values
 
 
 def load_server_env(server_dir: Path, app_env: str | None = None) -> None:
-    """Load shared then environment-specific dotenv files; process values keep priority."""
+    """Process environment values win over the dotenv files."""
     existing = set(os.environ)
     env_name = app_env or os.environ.get("APP_ENV", "dev")
     for path in (server_dir / ".env.shared", server_dir / f".env.{env_name}"):

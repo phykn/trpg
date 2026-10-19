@@ -22,7 +22,6 @@ function Face({ value, dim }: { value: number; dim?: boolean }) {
   );
 }
 
-/** Two dice: shake while held, tumble while the answer is on its way, stop on the server's values. */
 export function Dice({ state, values, onRelease, label }: {
   state: 'ready' | 'rolling' | 'stopped' | 'gone' | 'locked';
   values: [number | null, number | null];

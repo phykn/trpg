@@ -1,5 +1,3 @@
-"""Narration: stages, checks, rewrites, drops, cache and the NDJSON routes (engine.md 5, api.md 4)."""
-
 import asyncio
 import json
 from dataclasses import replace
@@ -20,7 +18,7 @@ GOOD = "젖은 길을 따라 마을로 내려갑니다. 낮은 지붕들 위로 
 
 
 class FakeLLM:
-    """Yields the drafts in order (the last one repeats); an exception draft raises."""
+    """The last draft repeats; an exception draft raises."""
 
     def __init__(self, *drafts, delay=0.0):
         self.drafts, self.calls, self.delay = list(drafts), [], delay

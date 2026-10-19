@@ -1,13 +1,3 @@
-"""A sentence to a plan, a clarify card or a refusal (engine.md 3).
-
-Every question is closed and its options are computed from the observation before the model is called.
-Layer 0 is rules, layer 1 asks the schemas of up to three steps in one Kev call, and layer 2 asks one
-step's slots right before that step runs. `δ_θ` accepts an answer only when its probability is ≥ θ.
-
-A partial plan step is {"schema", "text", "fixed": {slot: value}}; `fill` turns it into
-{"action", "rely", "slots"}, {"card"} or {"refused"}, or returns it without "action" to stop the plan.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -31,8 +21,6 @@ END = "end"
 FALLBACK_APPROACH = "wits"         # try(player) when layer 1 is unsure: no roll, no change, narration only
 
 
-# -- layer 0: rules --
-
 def squeeze(text: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFC", text)
                    if not c.isspace() and unicodedata.category(c)[0] not in "PS")
@@ -43,13 +31,12 @@ SHORT = r"(?:을|를|이|가|에|의|은|는|으로|로|과|와|에게|한테)"
 
 
 def mentions(word: str, text: str) -> int:
-    """Where the word stands on its own in the sentence (a one-syllable word only with a particle), or -1."""
+    """A one-syllable word counts only with a particle; -1 when it is absent."""
     m = re.search(re.escape(word) + (TAIL if len(word) >= 2 else SHORT), text)
     return m.start() if m else -1
 
 
 def named(u, o, text: str) -> list[str]:
-    """Entities of E whose name or alias the sentence mentions, in sentence order."""
     found = []
     for x in o.seen:
         if x == PLAYER or u.kind(x) is None:
@@ -75,7 +62,7 @@ def approach_cue(text: str) -> str | None:
 
 
 def rely_hint(u, o, p: dict, a, text: str) -> str | None:
-    """The rely value whose name the sentence mentions; a roll card's default (engine.md 4.2)."""
+    """The hint becomes the roll card's default (engine.md 4.2)."""
     if "rely" not in JUDGE.get(a.schema, ()):
         return None
     hits = [v for v in rely_options(u, o, a.with_(rely=None)) if mentions(rely_label(u, p, o.facts, v), text) >= 0]
@@ -96,14 +83,12 @@ def rules(u, o, p: dict, text: str) -> dict | None:
     return None
 
 
-# -- model calls --
-
 def choice(question: str, criteria: dict[str, str]) -> dict:
     return {"type": "choice", "instructions": question, "criteria": criteria}
 
 
 def ranked(answer, options) -> list[tuple[str, float]]:
-    """Options by probability; answers outside the options count 0 (engine.md 3)."""
+    """Answers outside the options count 0 (engine.md 3)."""
     probs = getattr(answer, "probabilities", None) or {}
     return sorted(((w, float(probs.get(w, 0.0))) for w in options), key=lambda x: -x[1])
 
@@ -123,7 +108,7 @@ class Interpreter:
         return out
 
     async def second(self, text: str, options: dict[str, str]) -> str | None:
-        """The narration model's pick over the same numbered options at temperature 0."""
+        """A second opinion from the narration model over the same numbered options."""
         if self.llm is None:
             return None
         keys = list(options)
@@ -137,8 +122,6 @@ class Interpreter:
         m = re.search(r"\d+", raw)
         i = int(m.group()) - 1 if m else -1
         return keys[i] if 0 <= i < len(keys) else None
-
-    # -- layer 1 --
 
     async def plan(self, u, g, text: str) -> dict:
         self.calls = []
@@ -179,9 +162,8 @@ class Interpreter:
     def partial(schema: str, text: str) -> dict:
         return {"schema": schema, "text": text, "fixed": {}}
 
-    # -- layer 2 --
-
     async def fill(self, u, g, st: dict) -> dict:
+        """Returning the step without "action" stops the plan."""
         o = observe(u, g.state, g.log)
         p = g.presentation
         text, fixed = st["text"], dict(st.get("fixed", {}))
@@ -285,7 +267,6 @@ class Interpreter:
         return self.done(u, o, p, a, text, echo)
 
     def narrow(self, u, o, text, intents, fixed, key="intent") -> list[tuple]:
-        """Layer 0 on one step's intent options: the addressee and the named entities pick among them."""
         if key in fixed:
             want = tuple(fixed[key].split(":"))
             return [i for i in intents if i == want]
@@ -311,7 +292,6 @@ class Interpreter:
         return {"action": str(a), "rely": rely_hint(u, o, p, a, text), "slots": echo}
 
     def clarify(self, u, o, p, st, fixed, slot, top, labels) -> dict:
-        """A clarify card over {ω₁, ω₂, ω₃} (engine.md 4.1); a pick fills the slot and the plan goes on."""
         resume = {w: {**st, "fixed": {**fixed, slot: w}} for w in top}
         return {"clarify": {"slot": slot, "question": ko.CLARIFY_SLOT[slot],
                             "options": [{"id": w, "label": labels[w]} for w in top], "resume": resume}}

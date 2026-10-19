@@ -1,12 +1,3 @@
-"""Fun metrics F1–F11, F13, F14 from saved games, offline (fun.md 4). F12 is a survey and is not here.
-
-python -m src.fun ../saves/engine [--stories ../scenarios] [--now 2026-10-19] [--json OUT]
-
-Every metric reads the log (each event's action, roll, result, delta) and the presentation layer's
-turn and request records. Saves written before request records existed have no sentence outcomes,
-card origins or card openings, so F1, F2, F13 and F14 count only what was recorded.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -46,7 +37,6 @@ def mean(xs: list[float]) -> float | None:
 
 
 class Play:
-    """One saved game: its universe, events, turn records and where each event's chapter is."""
 
     def __init__(self, u, data: dict, mtime: float):
         self.u, self.data, self.mtime = u, data, mtime
@@ -304,7 +294,10 @@ def table(m: dict) -> str:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap = argparse.ArgumentParser(
+        description="Fun metrics F1-F11, F13, F14 from saved games (fun.md 4). F12 is a survey and is not here.",
+        epilog="Saves written before request records existed have no sentence outcomes, card origins or card "
+               "openings, so F1, F2, F13 and F14 count only what was recorded.")
     ap.add_argument("saves", type=Path, help="a save directory or file")
     ap.add_argument("--stories", type=Path, default=Path(__file__).resolve().parents[2] / "scenarios")
     ap.add_argument("--now", help="ISO date for F11 (default: now)")

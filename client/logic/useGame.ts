@@ -1,4 +1,3 @@
-// Every server state and the life of each command (ui.md 3). The screen draws this machine's state.
 import { useEffect, useRef, useState } from 'react';
 
 import { motion } from '@/design/tokens';
@@ -29,7 +28,6 @@ export function requestId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
 }
 
-/** Where an accepted view leads (ui.md 3): ending, cost, card, growth, idle. */
 export function destination(view: GameView, growthLater: boolean): Phase {
   if (view.ending) return 'ending';
   if (view.due.length || view.card) return 'card';
@@ -37,7 +35,6 @@ export function destination(view: GameView, growthLater: boolean): Phase {
   return 'idle';
 }
 
-/** The chapter whose recap follows this turn (api.md 4), or null. */
 export function recapChapter(steps: StepRecord[], view: GameView): number | null {
   for (const s of steps) {
     for (const c of s.changes) {
@@ -70,7 +67,7 @@ export function useGame(reduced = false) {
   const [recaps, setRecaps] = useState<Record<number, string>>({});
   const recapsRef = useRef(recaps);
   recapsRef.current = recaps;
-  const [sent, setSent] = useState<string | null>(null);         // the sentence shown while sending
+  const [sent, setSent] = useState<string | null>(null);
 
   const gameId = useRef<string | null>(null);
   const viewRef = useRef<GameView | null>(null);
@@ -95,7 +92,6 @@ export function useGame(reduced = false) {
     if (v?.ending) void loadRecaps(v);
   }
 
-  /** The turn ends when the reveal is over, the narration is in and typed, and any recap has come. */
   function maybeEnd() {
     const s = turn.current;
     if (!s.revealed) return;
@@ -300,9 +296,7 @@ export function useGame(reduced = false) {
   return {
     phase, stories, view, before, notice, reveal, narration, recaps, sent, growthLater,
     command, resend, create,
-    /** A press during the reveal jumps to its end state. */
     skip: () => { if (phase === 'revealing') finishReveal(); },
-    /** The narration finished appearing. */
     typed: () => { turn.current.typed = true; maybeEnd(); },
     retryNarration: () => {
       const last = viewRef.current?.last;

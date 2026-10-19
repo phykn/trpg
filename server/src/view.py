@@ -1,5 +1,3 @@
-"""GameView and step records (api.md 3, 5), built from the observation and the presentation layer P."""
-
 from __future__ import annotations
 
 from .locale import ko
@@ -14,10 +12,7 @@ BANDS_VIEW = {"mixed": BANDS[0], "success": BANDS[1], "min": 1, "max": 16}
 ACTIVE = ("clock", "deadline", "threat", "fork")
 
 
-# -- names --
-
 def tag_name(u, p: dict, atom) -> str:
-    """The latest name given to this mark atom (engine.md 5.5), else the default of its kind."""
     key = list(atom)
     for a, _, name in reversed(p.get("tags", [])):
         if a == key:
@@ -77,7 +72,6 @@ def atom_label(u, p: dict, atom) -> str:
 
 
 def chips(u, p: dict, mods) -> list[dict]:
-    """api.md 3: stat, help, hinder; hindrances become one chip."""
     out = []
     for kind, atoms, value in mods:
         label = "·".join(atom_label(u, p, a) for a in atoms)
@@ -187,8 +181,6 @@ def effect_names(u, effects) -> list[str]:
     return out
 
 
-# -- step records (api.md 3) --
-
 def step_record(u, p: dict, seen: Seen, label: str, ending: str | None) -> dict:
     a = parse(seen.action)
     mods = chips_of_atoms(u, p, seen.mods)
@@ -294,8 +286,6 @@ def _closing(seen: Seen, h: str) -> str:
             return "kept" if at[4] > before else "broken"
     return "closed"
 
-
-# -- GameView (api.md 5) --
 
 def chapter_k(u, facts: State) -> int:
     c = held_clock(u, facts)

@@ -1,8 +1,3 @@
-"""The context ρ(U, O, X): the observation as lines of text (engine.md 2).
-
-Every fact line carries the one atom of F it states, so checks (engine.md 5.3) read the same lines.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -23,7 +18,7 @@ class Line:
 
 
 def fact_line(u, p: dict, atom: Atom) -> str | None:
-    """The present frame of one atom (engine.md 1), or None for atoms the context leaves out."""
+    """None for atoms the context leaves out."""
     k = atom[0]
     if k == "at":
         x, y = atom[1], atom[2]
@@ -62,7 +57,7 @@ def fact_line(u, p: dict, atom: Atom) -> str | None:
 
 
 def context(u, o: Obs, focus, p: dict) -> list[Line]:
-    """ρ(U, O, X) with X = focus ∩ E."""
+    """X = focus ∩ E."""
     x = set(focus) & set(o.seen)
     out: list[Line] = []
     for atom in sorted(o.facts.atoms(), key=lambda a: (a[0], str(a[1:]))):

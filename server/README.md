@@ -25,7 +25,7 @@ From the repository root:
 .venv/bin/python server/run_api.py --local    # 127.0.0.1:8000, local/local, decision :8081, LLM :8082
 ```
 
-`--local` reads only `DECISION_MODEL` (default `kev`), `LLM_MODEL` (default `qwen`), their `*_BASE_URL` and `DECISION_API_KEY` from the process environment. Without `--local`, `run_api.py` loads `server/.env.shared` then `server/.env.<APP_ENV>` (default `dev`); process env wins, missing keys fail at startup:
+`--local` reads only `DECISION_MODEL` (default `malkuth`), `LLM_MODEL` (default `gemma4`), their `*_BASE_URL` and `DECISION_API_KEY` from the process environment. Without `--local`, `run_api.py` loads `server/.env.shared` then `server/.env.<APP_ENV>` (default `dev`); process env wins, missing keys fail at startup:
 
 ```
 HOST=127.0.0.1
@@ -35,11 +35,11 @@ BASIC_AUTH_PASS=<pass>
 CORS_ORIGINS=http://localhost:8090
 SCENARIO_DIR=../scenarios
 SAVE_DIR=../saves/engine
-DECISION_MODEL=kev             # kev or malkuth: the model the decision server runs
+DECISION_MODEL=malkuth         # kev or malkuth: the model the decision server runs
 DECISION_BASE_URL=http://127.0.0.1:8081
 DECISION_MIN_CONFIDENCE=0.5    # optional; the model's own default otherwise
 DECISION_API_KEY=              # optional
-LLM_MODEL=qwen                 # qwen, gemma4 or minicpm: must be loaded on the LLM server
+LLM_MODEL=gemma4               # qwen, gemma4 or minicpm: must be loaded on the LLM server
 LLM_BASE_URL=http://127.0.0.1:8082/v1
 LLM_SAMPLING={"temperature": 0.7}   # optional; the model card's non-thinking sampling otherwise
 ```
@@ -90,7 +90,7 @@ server/
     rules/             dsl, candidates, check, costs, talk, chapter, resolve, recommend
     scene/             build (known facts), render (Kev/Qwen text), view (GameView)
     interpret.py narrate.py
-    models/            kev, qwen
+    models/            decision, llm
     locale/ko.py       engine-owned Korean
   tests/
 ```

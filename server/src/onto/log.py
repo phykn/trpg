@@ -1,5 +1,3 @@
-"""Changes, events, the log and history patterns (ontology.md 2)."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -16,7 +14,6 @@ class Delta:
 
     @staticmethod
     def between(before: State, after: State) -> Delta:
-        """The minimal difference: add = S* ∖ S, remove = S ∖ S*."""
         a, b = before.atoms(), after.atoms()
         return Delta(b - a, a - b)
 
@@ -93,7 +90,7 @@ def hits(patterns: list[Pattern], action: str, result: str) -> frozenset:
 
 @dataclass
 class Log:
-    """The log L with the caches rebuilt on load: h, belief order and memory projections."""
+    """h, belief order and memory projections are caches, rebuilt on load."""
 
     events: list[Event] = field(default_factory=list)
     hist: frozenset = frozenset()

@@ -25,7 +25,6 @@ function lastRolled(steps: StepRecord[] | undefined): StepRecord | null {
   return [...(steps ?? [])].reverse().find((s) => s.roll && s.result !== 'blocked') ?? null;
 }
 
-/** The play screen (ui.md 2.1): fixed rows, the narration takes what is left, cards rise over the rows. */
 export function Play({ game }: { game: Game }) {
   const view = game.view as GameView;
   const { phase, reveal } = game;

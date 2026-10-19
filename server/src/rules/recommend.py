@@ -1,5 +1,3 @@
-"""Recommended buttons, at most three (rule.md 9)."""
-
 from __future__ import annotations
 
 from ..onto.atoms import APPROACHES, PLAYER

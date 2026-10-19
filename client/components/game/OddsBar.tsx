@@ -7,7 +7,6 @@ import type { Preview } from '@/services/types';
 
 const ORDER = ['fail', 'mixed', 'success'] as const;
 
-/** Three result bands whose widths are the odds; the edges move when the reliance changes. */
 export function OddsBar({ odds }: { odds: Preview['odds'] }) {
   const widths = useRef(ORDER.map((k) => new Animated.Value(odds[k]))).current;
   useEffect(() => {

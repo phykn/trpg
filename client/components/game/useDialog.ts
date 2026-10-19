@@ -3,7 +3,6 @@ import { Platform, type View } from 'react-native';
 
 const FOCUSABLE = 'button:not([disabled]), [role="button"]:not([aria-disabled="true"]), [role="radio"]:not([aria-disabled="true"]), input, textarea, [tabindex="0"]';
 
-/** A card as a dialog on web: Escape closes it, Tab stays inside, and focus returns to the opener. */
 export function useDialog(onClose?: () => void): RefObject<View | null> {
   const ref = useRef<View | null>(null);
   const close = useRef(onClose);

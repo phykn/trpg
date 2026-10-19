@@ -1,8 +1,3 @@
-"""Decision models: calibrated answers to closed questions over one state text, over Kev's /v1/systemone.
-
-The server runs one model; the config names which (`DECISION_MODEL`), and startup checks it is that one.
-"""
-
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -82,7 +77,6 @@ class DecisionClient:
         return answers
 
     async def check(self) -> None:
-        """The server must run the configured model and answer a question."""
         try:
             async with httpx.AsyncClient(timeout=self.timeout_s, transport=self.transport) as client:
                 response = await client.get(f"{self.base_url}/v1/models", headers=self.headers)

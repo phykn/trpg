@@ -1,5 +1,3 @@
-"""The world: atoms, operations, observation and saves (ontology.md 7)."""
-
 import random
 
 import pytest

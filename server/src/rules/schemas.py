@@ -1,8 +1,3 @@
-"""Each schema's result Δ₀ as operations on the working copy (rule.md 7), and the scene end (4.1).
-
-Engine-made tags carry a name key starting with "@" that locale/ko.py turns into the default name.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -18,7 +13,6 @@ from .roll import Mods, modifiers, outcome, risk
 
 @dataclass
 class Ctx:
-    """One step in progress: the start state and history, the action, the dice, the working copy."""
     u: object
     s: State
     h: frozenset
@@ -37,7 +31,6 @@ class Ctx:
 
 
 def scene_end(u, w: Work) -> None:
-    """expire(scene), beats = 0, and every active threat comes one box closer."""
     w.expire("scene")
     w.set_("stat", (PLAYER, "beats"), 0)
     for o in active_threats(u, w.state()):
@@ -45,7 +38,7 @@ def scene_end(u, w: Work) -> None:
 
 
 def run(ctx: Ctx, effects) -> None:
-    """Story effects and the scene-end macro; chapter_to and end belong to triggers.apply."""
+    """chapter_to and end belong to triggers.apply."""
     for e in effects:
         if e[0] == "scene_end":
             scene_end(ctx.u, ctx.work)

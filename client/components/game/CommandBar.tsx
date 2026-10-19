@@ -6,7 +6,6 @@ import { ko } from '@/locale/ko';
 
 type Mode = 'open' | 'locked' | 'sending' | 'stuck' | 'blocked';
 
-/** The sentence input; locked while anything plays, one resend button when an answer went missing. */
 export function CommandBar({ mode, sent, notice, placeholder, onSend, onResend, onNew }: {
   mode: Mode; sent: string | null; notice: string | null; placeholder: string;
   onSend: (text: string) => void; onResend: () => void; onNew: () => void;

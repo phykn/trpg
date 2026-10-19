@@ -1,8 +1,3 @@
-"""The narration LLM over an OpenAI-compatible server, always non-thinking.
-
-The config names the model (`LLM_MODEL`); startup finds its id among the server's loaded models.
-"""
-
 import json
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -44,8 +39,8 @@ class LLMClient:
         return httpx.AsyncClient(timeout=self.timeout_s, transport=self.transport)
 
     async def resolve_model(self) -> str:
-        """The configured model's id among those the server has loaded; mlx-vlm wants its snapshot path.
-        A model that is not loaded is an error: the server never loads one for us."""
+        """mlx-vlm wants the snapshot path as the id. A model that is not loaded is an error: the server never
+        loads one for us."""
         if self.model is not None:
             return self.model
         try:
@@ -65,7 +60,6 @@ class LLMClient:
         return self.model
 
     async def pick(self, messages: list[dict[str, str]], max_tokens: int = 6) -> str:
-        """A short deterministic answer (a number from a closed list), never sampled."""
         saved = self.sampling
         self.sampling = {"temperature": 0.0}
         try:

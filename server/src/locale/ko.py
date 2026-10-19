@@ -1,5 +1,3 @@
-"""Engine-owned Korean text (engine.md 1). Story text lives in the scenario, never here."""
-
 from __future__ import annotations
 
 APPROACHES = {"force": "힘", "finesse": "솜씨", "wits": "꾀", "charm": "매력"}
@@ -16,7 +14,6 @@ WEIGHTS = {"light": "가벼운 대가", "heavy": "무거운 대가"}
 RESULTS = {"success": "성공", "mixed": "대가 있는 성공", "fail": "실패", "none": "", "blocked": "막힘"}
 SHEET = {"beats": "박자", "wounds": "상처", "growth": "성장"}
 
-# The engine's complications (rule.md 3.3).
 COMPLICATIONS = {"engine.snag": "꼬임", "engine.beat": "지체", "engine.wound": "다침", "engine.end": "끊긴 장면"}
 # Default tag names: by kind, and the "@" keys the rules give to the tags they place.
 TAG_DEFAULT = {"edge": "유리함", "snag": "불리함"}
@@ -26,7 +23,7 @@ TAG_KEYS = {"@suspicion": "의심", "@broken_promise": "약속을 어김", "@sca
 TRUST_WORDS = {-3: "적대", -2: "불신", -1: "경계", 0: "무덤덤", 1: "호의", 2: "신뢰", 3: "유대"}
 FEARFUL, FEAR_WORD = 2, "두려움"
 
-# Action names λ (engine.md 1). {을}/{이}/{은}/{와}/{으로} follow the value before them.
+# {을}/{이}/{은}/{와}/{으로} follow the value before them.
 ACTION = {
     "go": "{q}{으로} 간다",
     "look": "{x}{을} 살핀다",
@@ -122,7 +119,7 @@ def attitude(trust: int, fear: int) -> str:
     return FEAR_WORD if fear >= FEARFUL else TRUST_WORDS[trust]
 
 
-# -- the frame table 𝔗 (engine.md 1): one present frame per predicate --
+# The frame table 𝔗 (engine.md 1): one present frame per predicate.
 
 FRAME = {
     "at_place": "{x}{은} {y}에 있습니다",
@@ -152,7 +149,6 @@ FEAR_VERBS = {-3: "업신여깁니다", -2: "얕봅니다", -1: "만만하게 �
               2: "두려워합니다", 3: "몹시 두려워합니다"}
 SECTIONS = {"fact": "[사실]", "belief": "[믿음]", "memory": "[기억]", "public": "[알려진 것]"}
 
-# -- interpretation (engine.md 3) --
 
 # Layer 1 option descriptions, one per schema a sentence can choose.
 SCHEMA_DESC = {
@@ -202,7 +198,6 @@ CHOOSER = """당신은 한국어 TRPG의 입력 분류기입니다. 플레이어
 CHOOSER_PROMPT = "플레이어 문장: {text}\n선택지:\n{options}\n번호:"
 NO_TARGET = "특정한 대상 없이"
 
-# -- narration (engine.md 5) --
 
 # Change frames of 𝔗 by step-record change kind; no numbers reach the narrator.
 CHANGE = {

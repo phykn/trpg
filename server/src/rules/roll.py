@@ -1,5 +1,3 @@
-"""Dice, risk, modifiers, outcome, odds and the preview (rule.md 3.1–3.2, 3.4)."""
-
 from __future__ import annotations
 
 import hashlib
@@ -128,7 +126,6 @@ def rolls(u, facts: State, hist: frozenset, a: Action) -> bool:
 
 
 def preview(u, o: Obs, a: Action) -> Preview:
-    """What the player sees before rolling a ∈ K(O) (rule.md 3.4)."""
     r = risk(u, a)
     mods = modifiers(u, o.facts, a)
     stakes = {res: {"clock": n, "weight": w, "mode": mode} for (rk, res), (n, w, mode) in TABLE.items() if rk == r}

@@ -3,7 +3,6 @@ import { Pressable, Text, View } from 'react-native';
 
 import { useDialog } from './useDialog';
 
-/** A card over the rows; `onClose` is what Escape does (cancel or later), none for a cost. */
 export function Shell({ title, children, onClose }: { title?: string; children: ReactNode; onClose?: () => void }) {
   const ref = useDialog(onClose);
   return (

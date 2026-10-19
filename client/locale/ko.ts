@@ -1,14 +1,11 @@
-// Sentences the screen composes (ui.md 1). Server sentences render verbatim and never come from here.
 export const ko = {
   brand: 'TRPG',
   loading: '불러오는 중입니다.',
-  // start
   stories: '이야기',
   placeApproaches: '방식에 값을 놓습니다. 칸을 누르면 남은 가장 큰 값이 놓입니다.',
   resetApproaches: '다시 놓기',
   pickTraits: (n: number, of: number) => `특성 ${of}개를 고릅니다 (${n}/${of})`,
   create: '이 인물로 시작합니다',
-  // header and rows
   chapter: (k: number, title: string) => `${k}장 ${title}`,
   chapterNo: (k: number) => `${k}장`,
   wounds: '상처',
@@ -20,11 +17,9 @@ export const ko = {
   kindness: (name: string) => `신세: ${name}`,
   belief: '앎',
   crisis: '위기',
-  // narration
   stage: { writing: '쓰는 중', checking: '확인하는 중', rewriting: '다시 쓰는 중' } as Record<string, string>,
   narrationFailed: '서술을 받지 못했습니다.',
   retryNarration: '다시 받기',
-  // command
   placeholder: '무엇을 할까요?',
   send: '보내기',
   stuck: '응답을 받지 못했습니다. 다시 보내 주세요.',
@@ -33,7 +28,6 @@ export const ko = {
   blocked: '이 저장은 지금 판과 맞지 않습니다.',
   newGame: '새 게임',
   payFirst: '먼저 대가를 고르세요',
-  // results and cards
   result: { success: '성공', mixed: '대가 있는 성공', fail: '실패', none: '', blocked: '막힘' } as Record<string, string>,
   risk: { low: '낮음', normal: '보통', high: '높음' } as Record<string, string>,
   riskLine: (name: string) => `위험 ${name}`,
@@ -53,7 +47,6 @@ export const ko = {
   growthTitle: '성장',
   thanks: '덕분에',
   because: '때문에',
-  // ending
   endingChoices: '고른 것',
   fork: '갈림',
   cost: '대가',

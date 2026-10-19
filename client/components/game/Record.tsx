@@ -2,7 +2,6 @@ import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 import { Item, Row } from './Row';
 
-/** What is pending now: open promises and kindnesses, and beliefs about this scene (ui.md 2.1). */
 export function Record({ journal }: { journal: GameView['journal'] }) {
   const owes = journal.owes;
   const beliefs = journal.beliefs.filter((b) => b.here);

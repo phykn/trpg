@@ -1,4 +1,3 @@
-// Shared by Tailwind and components that need numeric values.
 const colors = {
   transparent: 'transparent',
   canvas: {
@@ -18,7 +17,6 @@ const colors = {
   danger: { fg: '#f19a8d', muted: '#3a2422' },
   success: { fg: '#9fcabd', muted: '#1f3530' },
   gold: { fg: '#e5bd76' },
-  // Chips by modifier kind (ui.md 4.3) and result bands (ui.md 4.5).
   chip: { stat: '#8fb3d9', help: '#9fcabd', hinder: '#f19a8d' },
   band: { fail: '#5a2f2b', mixed: '#5a4a2b', success: '#2b5a4a' },
   box: { empty: '#2a3c43', full: '#e5bd76', fit: '#9fcabd', next: '#f19a8d' },
@@ -45,10 +43,9 @@ const fontSize = {
   lead: ['18px', { lineHeight: '30px' }],
   hero: ['28px', { lineHeight: '36px' }],
 };
-// Narration sizes from largest to the floor (ui.md 2.1); line height is 1.6 × size.
 const text = { narration: [18, 17, 16, 15, 14, 13], min: 13, chipMin: 12, lineHeight: 1.6 };
 const layout = { mobile: 412 };
-// Motion in ms (ui.md 4.5); `reduced` replaces every beat under prefers-reduced-motion.
+// `reduced` replaces every beat under prefers-reduced-motion (ui.md 4.5).
 const motion = {
   cloud: 600, die: 250, dieGap: 120, line: 200, chip: 180, settle: 300, decisive: 150,
   box: 150, fold: 200, change: 150, blockedFade: 300, odds: 250, reduced: 100,

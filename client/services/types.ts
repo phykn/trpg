@@ -1,5 +1,3 @@
-// The server's shapes (api.md). The client adopts them as state and computes no rule.
-
 export type Story = {
   id: string; title: string; premise: string; approaches: number[]; pick: number;
   approach_names: { id: string; name: string; hint: string }[];

@@ -1,9 +1,3 @@
-"""Roll and confirm cards (engine.md 4). A card is a function of (Vₜ, plan); it makes no event.
-
-A stored card is {"id", "kind", "options": [action ids], "rest": [plan steps], "public": api.md card}.
-Clarify cards come with interpretation (engine.md 4.1).
-"""
-
 from __future__ import annotations
 
 from .locale import ko
@@ -13,6 +7,8 @@ from .rules.acts import Action
 from .rules.candidates import space
 from .rules.roll import preview
 from .view import action_label, chips, effect_names, rely_label, tag_name
+
+# A card is a function of (Vₜ, plan) and makes no event (engine.md 4).
 
 
 def rely_options(u, o: Obs, a: Action) -> list[str]:
@@ -94,7 +90,6 @@ def confirm_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[st
 
 
 def clarify_card(rest: list, rest_labels: list[str], echo: dict, card_id: str, ask: dict) -> dict:
-    """The options {ω₁, ω₂, ω₃} of an unsure intent slot (engine.md 4.1); a pick resumes the plan."""
     options = [{"id": w["id"], "label": w["label"]} for w in ask["options"]]
     public = {"id": card_id, "kind": "clarify", "echo": echo, "question": ask["question"],
               "plan": {"step": None, "rest": rest_labels}, "options": options, "selected": None}

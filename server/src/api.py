@@ -1,5 +1,3 @@
-"""The HTTP boundary (api.md): Basic Auth, routes and the error table."""
-
 from __future__ import annotations
 
 import json

@@ -1,5 +1,3 @@
-"""Read story.yaml in the strict YAML subset of story.md 2.1."""
-
 from __future__ import annotations
 
 import hashlib
@@ -12,7 +10,7 @@ from yaml.nodes import MappingNode, ScalarNode, SequenceNode
 
 
 class StoryError(ValueError):
-    """A story that breaks the format or validation (messages in English)."""
+    pass
 
 
 INT = re.compile(r"[-+]?\d+")

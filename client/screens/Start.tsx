@@ -4,7 +4,6 @@ import { Pressable, Text, View } from 'react-native';
 import { ko } from '@/locale/ko';
 import type { Creation, Story } from '@/services/types';
 
-/** ui.md 5.5: the stories, the approach values placed by tapping, and the traits, on one screen. */
 export function Start({ stories, busy, onCreate }: { stories: Story[]; busy: boolean; onCreate: (story: string, c: Creation) => void }) {
   const [id, setId] = useState(stories[0]?.id ?? '');
   const story = stories.find((s) => s.id === id);

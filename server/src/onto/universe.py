@@ -1,9 +1,3 @@
-"""Story → Universe → S₀, and trigger weaving (ontology.md 5, story.md 2–3).
-
-The Universe never changes during play. Building it checks the format (story.md V1, the
-structural part); validate.py checks the rest.
-"""
-
 from __future__ import annotations
 
 import re
@@ -171,6 +165,8 @@ class Trigger:
 
 @dataclass
 class Universe:
+    """Never changes during play."""
+
     id: str
     version: int
     title: str
@@ -228,7 +224,7 @@ class Universe:
         return ()
 
     def rank(self, x: str) -> int:
-        """Story declaration order of any id; ties every output order to the story (ontology.md 4)."""
+        """Story declaration order; ties every output order to the story (ontology.md 4)."""
         r = self.__dict__.get("_rank")
         if r is None:
             ids = [PLAYER, *self.places, *self.agents, *self.things, *self.obstacles, *self.props,
@@ -255,7 +251,6 @@ class Universe:
         raise KeyError(c)
 
     def limit(self, pred: str, key) -> tuple[int, int] | tuple | None:
-        """The value range of a functional atom (ontology.md 1.3)."""
         if pred == "regards":
             return (-3, 3)
         if pred == "fill":
@@ -277,7 +272,7 @@ class Universe:
 
 
 class _Builder:
-    """Typed reading of the parsed story with English errors (story.md V1, the structural part)."""
+    """The structural part of story.md V1; validate.py checks the rest."""
 
     def __init__(self, raw: dict, digest: str):
         self.raw = raw
@@ -291,7 +286,6 @@ class _Builder:
     def fail(self, msg: str):
         raise StoryError(msg)
 
-    # -- typed access --
     def map(self, v, where, allowed=None, required=()) -> dict:
         if v is None:
             v = {}
@@ -347,7 +341,6 @@ class _Builder:
             self.kinds[i] = kind
         return i
 
-    # -- cond.Context --
     def ref(self, x, kinds, where) -> str:
         k = self.kinds.get(x) if isinstance(x, str) else None
         if k not in kinds:
@@ -378,7 +371,6 @@ class _Builder:
     def opt_cond(self, raw, where) -> Cond | None:
         return None if raw is None else self.cond(raw, where)
 
-    # -- effects (story.md 2.4) --
     def effects(self, raw, where) -> tuple[Effect, ...]:
         return tuple(self.effect(e, f"{where}[{i}]") for i, e in enumerate(self.list(raw, where)))
 
@@ -443,7 +435,6 @@ class _Builder:
             return v
         self.fail(f"{where}: bad value {v!r}")
 
-    # -- the build --
     def build(self) -> Universe:
         r = self.map(self.raw, "story", allowed={
             "id", "version", "title", "premise", "beats", "wound_boxes", "flags", "style", "impossible",
@@ -509,7 +500,6 @@ class _Builder:
             self.fail("endings: collapse is required")
         for i in sections["triggers"]:
             self.new_id(i, "triggers", None, f"triggers.{i}")
-        # Proposition ids that live inside items.
         for cid, cv in sections["characters"].items():
             cv = self.map(cv, f"characters.{cid}")
             for b in self.map(cv.get("beliefs"), f"characters.{cid}.beliefs"):
@@ -524,7 +514,6 @@ class _Builder:
                 if v.get("clue") is not None:
                     self.kinds[f"{i}.clue"] = "prop"
 
-        # Flags.
         u.flags["chapter"] = tuple(range(1, len(chapters) + 1))
         u.flags["ending"] = tuple(sections["endings"])
         for name, vals in self.map(r.get("flags"), "flags").items():
@@ -539,7 +528,7 @@ class _Builder:
                 self.fail(f"flags.{name}: values are all integers or all text")
             u.flags[name] = tuple(vals)
 
-        # Obstacle shells (boxes are needed by `full` before conditions compile).
+        # Obstacle shells first: `full` needs their boxes before conditions compile.
         for oid, ov in sections["obstacles"].items():
             ov = self.map(ov, f"obstacles.{oid}")
             u.obstacles[oid] = Obstacle(id=oid, sub="plain", name="",
@@ -560,7 +549,6 @@ class _Builder:
                                                     name=self.text(dl["name"], w),
                                                     boxes=self.int(dl["boxes"], f"{w}.deadline.boxes", 1, 6))
 
-        # Places.
         start = self.ref(p["start"], ("place",), "player.start")
         u.start = start
         for pid, pv in sections["places"].items():
@@ -574,16 +562,14 @@ class _Builder:
                 pid, self.text(pv["name"], w), self.texts(pv.get("aliases"), w), senses,
                 tuple(self.ref(q, ("place",), f"{w}.exits") for q in self.list(pv["exits"], f"{w}.exits")),
                 bool(pv.get("rest")), ())
-        # Things.
         for tid, tv in sections["things"].items():
             w = f"things.{tid}"
             tv = self.map(tv, w, {"name", "aliases", "look", "at", "clue", "hidden"}, ("name", "look", "at"))
             u.things[tid] = Thing(tid, self.text(tv["name"], w), self.texts(tv.get("aliases"), w),
                                   self.text(tv["look"], w), self.ref(tv["at"], ("place", "agent"), f"{w}.at"), None)
-        # Characters (complications and favors later, after all ids exist).
+        # Complications and favors come later, after all ids exist.
         for cid, cv in sections["characters"].items():
             u.agents[cid] = self.agent(cid, cv, f"characters.{cid}", None)
-        # Latents and what they bring.
         for lid, lv in sections["latents"].items():
             w = f"latents.{lid}"
             lv = self.map(lv, w, {"name", "when", "text", "brings", "effects"}, ("name", "when", "text"))
@@ -599,7 +585,6 @@ class _Builder:
             self.pending.append(("latent", lid, lv, tuple(brings)))
             u.props[lid] = Prop(lid, self.text(lv["text"], w), tuple(brings), tuple(brings), (), True, "latent")
 
-        # Propositions from items, in file order.
         for sec, table in (("places", u.places), ("characters", u.agents), ("things", u.things),
                            ("obstacles", None)):
             for i, v in sections[sec].items():
@@ -626,16 +611,13 @@ class _Builder:
             for x in prop.shows:
                 u.shows[x] = u.shows.get(x, ()) + (pid,)
 
-        # Obstacles in full.
         for oid, ov in sections["obstacles"].items():
             u.obstacles[oid] = self.obstacle(oid, ov)
-        # Engine complications (rule.md 3.3).
         for cid, weight, eff in (("engine.snag", "light", ("tag", PLAYER, "snag", "scene", None)),
                                  ("engine.beat", "light", ("set", "stat", (PLAYER, "beats"), "+1")),
                                  ("engine.wound", "heavy", ("set", "stat", (PLAYER, "wounds"), "+1")),
                                  ("engine.end", "heavy", ("scene_end",))):
             u.engine_complications[cid] = Complication(cid, cid, weight, TRUE, (eff,), None)
-        # Place and character complications, topics, favors.
         for pid, pv in sections["places"].items():
             comps = self.complications(pv.get("complications"), f"places.{pid}", pid)
             u.places[pid] = _replace(u.places[pid], complications=comps)
@@ -649,7 +631,6 @@ class _Builder:
             u.latents[lid] = Latent(lid, self.text(lv["name"], w), self.cond(lv["when"], f"{w}.when"), brings,
                                     self.effects(lv.get("effects"), f"{w}.effects"))
 
-        # Chapters.
         for k, cv in enumerate(chapters, 1):
             w = f"chapters[{k}]"
             last = k == len(chapters)
@@ -673,7 +654,6 @@ class _Builder:
             u.chapters.append(Chapter(k, self.text(cv["title"], w), self.opt_cond(cv.get("goal"), f"{w}.goal"),
                                       self.effects(cv.get("goal_effects"), f"{w}.goal_effects"),
                                       f"clock.{k}", f"deadline.{k}", crisis))
-        # Threats and forks.
         for oid, ov in sections["threats"].items():
             w = f"threats.{oid}"
             ov = self.map(ov, w, {"name", "boxes", "appears_when", "arrival"}, ("name", "boxes", "appears_when"))
@@ -696,7 +676,6 @@ class _Builder:
             u.obstacles[oid] = _replace(u.obstacles[oid], name=self.text(ov["name"], w),
                                         appears_when=self.cond(ov["appears_when"], f"{w}.appears_when"),
                                         choices=tuple(choices), default=default, arrival=default[1])
-        # Endings.
         for eid, ev in sections["endings"].items():
             w = f"endings.{eid}"
             ev = self.map(ev, w, {"title", "when", "frame"}, ("title", "frame"))
@@ -709,7 +688,7 @@ class _Builder:
             if eid != "collapse" and e.when is None and eid not in pointed:
                 self.fail(f"endings.{eid}: an ending without when must be named by a deadline")
 
-        # Engine patterns: one favor pattern per character with a favor (rule.md 5.1).
+        # One engine favor pattern per character with a favor (rule.md 5.1).
         for aid, ag in u.agents.items():
             if ag.favor is not None:
                 u.favor_patterns[aid] = len(u.patterns)
@@ -863,7 +842,6 @@ def check_creation(u: Universe, creation: dict) -> None:
 
 
 def initial(u: Universe, creation: dict) -> State:
-    """S₀ (ontology.md 5.2)."""
     check_creation(u, creation)
     atoms: list = [("at", PLAYER, u.start)]
     for a in u.agents.values():
@@ -893,7 +871,6 @@ def initial(u: Universe, creation: dict) -> State:
 
 
 def conforms(u: Universe, s: State) -> list[str]:
-    """C1–C3 checked again on the atom set (ontology.md 1.4); [] when it conforms."""
     problems = []
     try:
         State.of(s.atoms())

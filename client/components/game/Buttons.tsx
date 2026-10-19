@@ -2,7 +2,6 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { GameView } from '@/services/types';
 
-/** Up to three recommended actions (rule.md 9); a rolling one carries a die. */
 export function Buttons({ buttons, disabled, onPress }: {
   buttons: GameView['buttons']; disabled: boolean; onPress: (action: string) => void;
 }) {

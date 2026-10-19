@@ -4,7 +4,6 @@ import { ko } from '@/locale/ko';
 import type { Card } from '@/services/types';
 import { Choice, Shell } from './CardShell';
 
-/** ui.md 5.2: a high step that does not roll, with its effects. */
 export function ConfirmCard({ card, onPick, onCancel }: { card: Card; onPick: (id: string) => void; onCancel: () => void }) {
   const o = card.options[0];
   return (

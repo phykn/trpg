@@ -1,5 +1,3 @@
-"""Startup validation: the skeleton passes, and each broken copy fails at its own stage (story.md 4)."""
-
 import pytest
 import yaml
 from conftest import REPO, skeleton_raw

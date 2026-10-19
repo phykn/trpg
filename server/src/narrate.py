@@ -1,10 +1,3 @@
-"""Narration (engine.md 5): write, check, rewrite twice, then drop what still fails.
-
-A `Job` is what one narration reads: the observation at the turn's end, the visible change δ (the step
-records' changes, which are the player's memory projections), exogenous input and story constants. The
-narrator never reads S; acceptance reads only V.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -40,17 +33,17 @@ SENTENCE = re.compile(r"[^.?!…]+(?:[.?!…]+[\"'”’]?|$)")
 
 @dataclass
 class Job:
-    """One narration's inputs (engine.md 5.1)."""
+    """Everything one narration reads: the narrator never reads S, and acceptance reads only V (engine.md 5.1)."""
     u: object
     o: Obs
     p: dict                          # presentation, read only: tag names and previous narration
-    happened: list[str]              # step lines and change lines, in order
+    happened: list[str]
     delta: list[str]                 # change lines alone: the fallback when every sentence is dropped
     focus: set
-    text: str | None = None          # the player's sentence
+    text: str | None = None
     tags: list[dict] = field(default_factory=list)   # new tags: {slot, owner, name (default)}
     previous: list[str] = field(default_factory=list)
-    ending: str | None = None        # the ending's frame
+    ending: str | None = None
     chars: int = CHARS
     sentences: int = SENTENCES
     task: str | None = None          # a recap's task line instead of the turn
@@ -97,7 +90,6 @@ def change_line(u, c: dict) -> str | None:
 
 
 def step_lines(u, record: dict) -> tuple[list[str], list[str]]:
-    """(the step line and its change lines, the change lines alone)."""
     result = ko.RESULTS.get(record["result"], "")
     head = ko.fill(ko.STEP_LINE, label=record["label"], result=result) if result else record["label"]
     changes = [line for c in record["changes"] if (line := change_line(u, c))]
@@ -109,7 +101,6 @@ def change_ids(record: dict) -> set:
 
 
 def forbidden(u, o: Obs) -> dict[str, str]:
-    """Names narration may not use (engine.md 5.3): hidden entities and undeclared latents' brings not in E."""
     seen = set(o.seen)
     hidden = {x for x in u.shows if x not in seen}
     hidden |= {b for lat in u.latents.values() for b in lat.brings if b not in seen}
@@ -117,8 +108,7 @@ def forbidden(u, o: Obs) -> dict[str, str]:
 
 
 def absent(job: Job) -> set:
-    """People who may not act in this narration: not at here and not named in δ. A recap tells past
-    scenes, so everyone may act in it."""
+    """A recap tells past scenes, so everyone may act in it."""
     if job.task:
         return set()
     u, o = job.u, job.o
@@ -150,7 +140,7 @@ def messages(job: Job, draft: list[str] | None = None, problems: list[str] | Non
 
 
 def split(raw: str) -> tuple[str, list[str]]:
-    """The narration and the tag names it wrote; an echoed prompt header ends the text."""
+    """An echoed prompt header ends the text."""
     lines, names = [], []
     for line in raw.splitlines():
         if ECHO.match(line):
@@ -178,7 +168,6 @@ class Narrator:
         return await asyncio.wait_for(run(), self.timeout)
 
     def rules(self, job: Job, said: list[str], names: list[str]) -> tuple[dict[int, list[str]], list[str]]:
-        """Per-sentence problems and whole-text problems (engine.md 5.3, 1 and 2)."""
         u, facts = job.u, job.o.facts
         bad = forbidden(u, job.o)
         gone = absent(job)
@@ -228,7 +217,6 @@ class Narrator:
         return out
 
     async def judge(self, job: Job, said: list[str], skip: set[int]) -> dict[int, list[str]]:
-        """The decision model's two questions per sentence in one call (engine.md 5.3, 3)."""
         state = render(context(job.u, job.o, job.focus, job.p))
         if job.happened:
             state += "\n" + ko.HEAD["happened"] + "\n" + "\n".join(f"- {x}" for x in job.happened)
@@ -256,7 +244,7 @@ class Narrator:
         return out
 
     async def narrate(self, job: Job) -> AsyncIterator[dict]:
-        """Stream events (api.md 4); the last is {"type": "result", ...} or {"type": "error"}."""
+        """The last event is always {"type": "result", ...} or {"type": "error"} (api.md 4)."""
         draft, problems, last = None, None, None
         for attempt in range(1, ATTEMPTS + 1):
             yield {"type": "stage", "stage": "writing"} if attempt == 1 else \

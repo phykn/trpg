@@ -1,5 +1,3 @@
-"""The configured decision model and LLM are the ones the servers run (models/decision.py, models/llm.py)."""
-
 import httpx
 import pytest
 from src.models.decision import DecisionClient, ModelUnavailable

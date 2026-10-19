@@ -1,9 +1,3 @@
-"""The candidates K(O) (rule.md 2): space, admits, candidates.
-
-Candidates read only the observation and story constants. An ending empties K; flags are not
-visible, so callers stop asking once an ending is set (triggers.ended).
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -17,10 +11,7 @@ from .acts import JUDGE, NEUTRAL, STRAINS, TONES, Action, make
 ACTIVE = ("threat", "fork", "deadline")
 
 
-# -- shared readings of a fact set (F for the player, S inside R) --
-
 def blockers(u, facts: State, x: str) -> list[str]:
-    """Obstacles that block x: placed, listing x, and not full (ontology.md 1.2)."""
     return [o.id for o in u.obstacles.values()
             if x in o.blocks and facts.where(o.id) is not None and (facts.fill(o.id) or 0) < o.boxes]
 
@@ -33,7 +24,6 @@ def held_clock(u, facts: State) -> str | None:
 
 
 def active_threats(u, facts: State) -> list[str]:
-    """Threats, forks and deadlines the player carries, in story order."""
     return [o.id for o in u.obstacles.values() if o.sub in ACTIVE and facts.where(o.id) == PLAYER]
 
 
@@ -42,7 +32,6 @@ def traits_of(u, facts: State) -> list[str]:
 
 
 def rely_atom(u, facts: State, rely: str, target: str):
-    """The atom a rely value leans on when it is allowed in `facts` (rule.md 2), else None."""
     kind, _, rest = rely.partition(":")
     if kind == "tag":
         x, _, slot = rest.rpartition(":")
@@ -63,7 +52,6 @@ def rely_atom(u, facts: State, rely: str, target: str):
 
 
 def rely_values(u, facts: State, target: str) -> list[str]:
-    """Allowed rely values, in the order of the rely table rows, then story order."""
     out = []
     for x in dict.fromkeys((target, facts.where(PLAYER), PLAYER)):
         out += [f"tag:{x}:{i}" for i, kind, _ in facts.marks(x) if kind == "edge"]
@@ -98,8 +86,6 @@ def favor_open(u, facts: State, hist: frozenset, h: str) -> bool:
     return (ag.favor is not None and u.favor_patterns[h] not in hist
             and not any(g == PLAYER and k == h for g, k, _ in facts.rows("owes")))
 
-
-# -- the space of candidates --
 
 @dataclass(frozen=True)
 class Slot:
@@ -192,10 +178,11 @@ def expand(slot: Slot) -> list[Action]:
 
 
 def candidates(u, o: Obs) -> list[Action]:
+    """An ending empties K, but flags are not visible, so callers stop asking once an ending is set (triggers.ended)."""
     return [a for slot in space(u, o) for a in expand(slot)]
 
 
-# -- solutions name candidates; they never add any (rule.md 2) --
+# Solutions name candidates; they never add any (rule.md 2).
 
 def solution_action(o_id: str, sol) -> Action:
     return make("try", (o_id, sol.approach), {"rely": sol.rely})

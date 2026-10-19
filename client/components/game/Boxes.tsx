@@ -2,7 +2,6 @@ import { View } from 'react-native';
 
 import { colors } from '@/design/tokens';
 
-/** Filled and empty boxes; `fit` boxes before `fill` take the fit color, `next` boxes the warning color. */
 export function Boxes({ fill, boxes, fit = 0, next = 0, size = 8 }: {
   fill: number; boxes: number; fit?: number; next?: number; size?: number;
 }) {

@@ -1,4 +1,3 @@
-// The only boundary to HTTP and NDJSON (api.md).
 import { fetch } from 'expo/fetch';
 
 import type { CommandBody, CommandResult, Creation, GameView, NarrationEvent, Story } from './types';
@@ -14,7 +13,6 @@ const headers = {
   'Content-Type': 'application/json',
 };
 
-/** A non-2xx answer: 404 missing, 409 with a view or `incompatible`, 422 invalid. */
 export class ApiError extends Error {
   constructor(public status: number, public view: GameView | null, public reason: string | null) {
     super(`HTTP ${status}`);
@@ -45,7 +43,6 @@ export const getGame = (id: string) => request<GameView>(game(id));
 export const sendCommand = (id: string, requestId: string, revision: number, body: CommandBody, signal?: AbortSignal) =>
   request<CommandResult>(`${game(id)}/commands`, { request_id: requestId, revision, ...body }, signal);
 
-/** Splits NDJSON chunks at line boundaries, wherever the chunks were cut. */
 export class LineReader {
   private buffer = '';
 
@@ -69,7 +66,6 @@ export class LineReader {
   }
 }
 
-/** Reads a narration or recap stream; a broken stream or a non-2xx answer ends in an error event. */
 export async function stream(path: string, onEvent: (event: NarrationEvent) => void): Promise<void> {
   let ended = false;
   const emit = (e: NarrationEvent) => {

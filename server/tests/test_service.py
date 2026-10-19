@@ -1,5 +1,3 @@
-"""The turn protocol and the HTTP boundary without models (engine.md 7, api.md)."""
-
 import json
 
 import httpx
@@ -14,7 +12,6 @@ CREATION = {"approaches": {"force": 1, "finesse": 2, "wits": 1, "charm": 0}, "tr
 
 
 class FakeInterpreter:
-    """Turns a sentence into a fixed plan of action ids; stands in for engine.md 3."""
 
     def __init__(self, plans):
         self.plans = plans
@@ -182,8 +179,6 @@ async def test_text_without_an_interpreter_is_refused(svc):
     out = await cmd(svc, gid, view, "r1", text="마을로 간다")
     assert out["kind"] == "refused" and out["view"]["revision"] == 0
 
-
-# -- HTTP --
 
 @pytest.fixture
 def client(svc):

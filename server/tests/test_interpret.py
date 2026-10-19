@@ -1,5 +1,3 @@
-"""Interpretation layers and δ_θ with stand-in models (engine.md 3, 4.1)."""
-
 from types import SimpleNamespace
 
 from conftest import REPO
@@ -13,7 +11,6 @@ CREATION = {"approaches": {"force": 1, "finesse": 2, "wits": 1, "charm": 0}, "tr
 
 
 class FakeDecision:
-    """Answers each question id with fixed probabilities; records the questions it was asked."""
 
     def __init__(self, answers=None, fail=False):
         self.answers, self.fail, self.asked = answers or {}, fail, []

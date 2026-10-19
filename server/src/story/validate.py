@@ -1,9 +1,3 @@
-"""Startup validation of a story (story.md 4–5): V1 format … V6 fuzzing.
-
-Each stage raises StoryError with one English message naming the stage, the item and the field.
-The structural part of V1 lives in the universe builder; the rest is here.
-"""
-
 from __future__ import annotations
 
 import random
@@ -53,7 +47,7 @@ def fail(stage: str, where: str, msg: str):
     raise StoryError(f"{stage} {where}: {msg}")
 
 
-# -- V1, the part the builder does not do --
+# V1 here is only the part the universe builder does not do.
 
 def v1(u: Universe) -> None:
     raw = u.raw
@@ -91,8 +85,6 @@ def _story_complications(u: Universe):
             yield from x.complications
 
 
-# -- V2 --
-
 def v2(u: Universe) -> None:
     try:
         s0 = initial(u, _creation(u))
@@ -111,8 +103,6 @@ def _creation(u: Universe, path: dict | None = None) -> dict:
         fail("V2", "witnesses.creation", "missing")
     return {"approaches": dict(c.get("approaches") or {}), "traits": list(c.get("traits") or [])}
 
-
-# -- V3 --
 
 def v3(u: Universe) -> None:
     s0 = initial(u, _creation(u))
@@ -204,8 +194,6 @@ def _start_place(u: Universe, x: str) -> str | None:
     return at
 
 
-# -- V4 --
-
 def v4(u: Universe) -> None:
     hidden = [x for x, props in u.shows.items() if any(u.props[p].source == "hidden" for p in props)]
     hidden += [b for lat in u.latents.values() for b in lat.brings]
@@ -262,8 +250,6 @@ def _public(u: Universe):
     for e in u.endings.values():
         yield None, f"endings.{e.id}", f"{e.title} {e.frame}"
 
-
-# -- V5 --
 
 def v5(u: Universe) -> None:
     paths = u.witnesses.get("paths") or []
@@ -322,8 +308,6 @@ def _reached(s, what, target) -> bool:
     return s.flag("ending") == target
 
 
-# -- V6 --
-
 def v6(u: Universe, runs: int = FUZZ_RUNS, steps: int = FUZZ_STEPS) -> None:
     for n in range(runs):
         rng = random.Random(n)
@@ -357,8 +341,6 @@ def v6(u: Universe, runs: int = FUZZ_RUNS, steps: int = FUZZ_STEPS) -> None:
                                 or step.result != outcome(r, pv.mods)):
                 fail("V6", where, f"{a}: the preview differs from the execution")
 
-
-# -- entry points --
 
 STAGES = (v1, v2, v3, v4, v5, v6)
 

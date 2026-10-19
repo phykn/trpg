@@ -1,8 +1,3 @@
-"""Observation V: what an agent sees, knows and remembers (ontology.md 3.2).
-
-Reads only U, S and L, never the presentation layer.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -25,11 +20,11 @@ class Seen:
 @dataclass(frozen=True)
 class Obs:
     observer: str
-    seen: frozenset               # E
+    seen: frozenset
     facts: State                  # F, a sub-state of S
     beliefs: tuple[str, ...]      # B, in reveal order
-    memory: tuple[Seen, ...]      # M
-    hist: frozenset               # hᵥ
+    memory: tuple[Seen, ...]
+    hist: frozenset
 
     @property
     def here(self) -> str | None:
@@ -37,13 +32,11 @@ class Obs:
 
 
 def hidden(u, x: str, o: str, s: State) -> bool:
-    """x is shown by some proposition and o believes none of them."""
     props = u.shows.get(x)
     return bool(props) and not any(s.has("believes", o, p) for p in props)
 
 
 def seen_by(u, s: State, o: str) -> frozenset:
-    """E: o, what o carries, here, the unhidden things here and the unhidden places linked from here."""
     here = s.where(o)
     out = {o, *s.held_by(o)}
     if here is not None:
@@ -54,7 +47,7 @@ def seen_by(u, s: State, o: str) -> frozenset:
 
 
 def fact_rule(o: str, seen: frozenset, atom: Atom) -> bool:
-    """Whether atom is a visible fact for o who sees `seen` (the table in ontology.md 3.2)."""
+    """The table in ontology.md 3.2."""
     p = atom[0]
     if p == "at" or p == "link":
         return atom[1] in seen and atom[2] in seen
@@ -93,7 +86,6 @@ def project(u, before: State, after: State, e: Event, o: str) -> Seen:
 
 
 def witnesses(u, before: State, after: State) -> tuple[str, ...]:
-    """The agents at the player's place just before and just after the step."""
     out = set()
     for s in (before, after):
         here = s.where(PLAYER)
@@ -103,7 +95,6 @@ def witnesses(u, before: State, after: State) -> tuple[str, ...]:
 
 
 def record(u, log: Log, before: State, after: State, e: Event) -> None:
-    """Append e to the log and update its caches (h, belief order, memory projections)."""
     log.events.append(e)
     log.hist = log.hist | hits(u.patterns, e.action, e.result)
     for a in sorted(e.delta.add, key=str):

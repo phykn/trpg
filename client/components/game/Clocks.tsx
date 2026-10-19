@@ -5,7 +5,6 @@ import type { GameView } from '@/services/types';
 import { Boxes } from './Boxes';
 import { Item, Row } from './Row';
 
-/** Risk clocks, deadlines, threats and forks; a crisis empties a clock and says so. */
 export function Clocks({ clocks, crisis }: { clocks: GameView['clocks']; crisis?: string[] }) {
   if (!clocks.length) return null;
   return (

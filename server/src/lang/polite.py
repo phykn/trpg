@@ -1,5 +1,3 @@
-"""합니다체 by rule (engine.md 5.3): plain sentence-final verbs outside quotes become polite."""
-
 from __future__ import annotations
 
 import re

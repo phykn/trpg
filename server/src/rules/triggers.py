@@ -1,5 +1,3 @@
-"""Triggers: the scan, the five engine triggers, chapter change and ending (rule.md 4.3, 5.2, 6, 8)."""
-
 from __future__ import annotations
 
 from ..onto.atoms import PLAYER, State
@@ -69,7 +67,7 @@ def end(ctx: Ctx, e: str) -> None:
         close_promise(ctx, h, promise_kept(ctx, h, w.state()))
 
 
-# -- the engine triggers, level-fired, in this order --
+# Engine triggers are level-fired, in this order.
 
 def t_risk(ctx: Ctx) -> bool:
     s = ctx.work.state()

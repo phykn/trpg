@@ -1,10 +1,3 @@
-"""Claim extraction κ (engine.md 5.3): the literals of Σ a narrated sentence states.
-
-The present frames of 𝔗 (at, link) become patterns over names and aliases, so κ reads back every fact
-line ρ writes; possession verbs add the literals narration most often gets wrong (taking what is not
-held, handing over what is). Sentences that state nothing in Σ (smell, weather, faces) yield nothing.
-"""
-
 from __future__ import annotations
 
 import re
@@ -62,7 +55,7 @@ def _frames(u) -> list[tuple[str, re.Pattern]]:
 
 
 def mentioned(u, sentence: str) -> list[tuple[int, str]]:
-    """(position, entity) for each name or alias standing in the sentence, longest names first."""
+    """Longest names first."""
     out, taken = [], []
     for w, x in _names(u).items():
         for m in re.finditer(re.escape(w), sentence):
@@ -73,7 +66,9 @@ def mentioned(u, sentence: str) -> list[tuple[int, str]]:
 
 
 def claims(u, sentence: str) -> list[tuple[bool, Atom]]:
-    """κ(sentence): (positive, atom) literals."""
+    """(positive, atom) literals. Patterns mirror the present frames ρ writes, so κ reads back every
+    fact line; possession verbs are added because narration most often gets possession wrong.
+    """
     names = _names(u)
     out: list[tuple[bool, Atom]] = []
     for frame, pattern in _frames(u):

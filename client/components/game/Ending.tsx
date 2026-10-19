@@ -3,7 +3,6 @@ import { Pressable, Text, View } from 'react-native';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 
-/** ui.md 5.4: the ending's title, a recap per chapter, and the costs and forks chosen. */
 export function Ending({ view, recaps, onNew }: { view: GameView; recaps: Record<number, string>; onNew: () => void }) {
   const chapters = [...new Set([...view.recaps, ...Object.keys(recaps).map(Number)])].sort((a, b) => a - b);
   return (

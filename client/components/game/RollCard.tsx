@@ -20,7 +20,7 @@ function gainLine(target: string, p: Preview): string {
   return ko.gainTopic;
 }
 
-/** A mixed result picks its cost (a card follows); a fail applies one, so it names the weight alone (rule.md 3.3). */
+// A fail applies one cost, so its row names only the weight; a mixed result picks its cost in a later card (rule.md 3.3).
 function StakeRow({ label, clock, weight, pick, preview }: {
   label: string; clock: number; weight: string | null; pick: boolean; preview: Preview;
 }) {
@@ -40,7 +40,6 @@ function StakeRow({ label, clock, weight, pick, preview }: {
   );
 }
 
-/** The roll card (ui.md 4.2) and, once rolled, the reveal inside it (ui.md 4.5). */
 export function RollCard({ card, bands, onRoll, onCancel, step, frame, rolling }: {
   card: Card; bands: GameView['bands'];
   onRoll: (pick: string) => void; onCancel: () => void;

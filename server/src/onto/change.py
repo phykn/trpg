@@ -1,12 +1,10 @@
-"""The only code that changes the world: operations on a working copy (ontology.md 4)."""
-
 from __future__ import annotations
 
 from .atoms import PLAYER, SET_PREDS, State
 
 
 class Work:
-    """A copy-on-write working state for one step. Every operation keeps C (ontology.md 1.4)."""
+    """Every operation keeps C (ontology.md 1.4)."""
 
     def __init__(self, u, s: State):
         self.u = u
@@ -21,7 +19,6 @@ class Work:
         self._frozen: State | None = None
 
     def state(self) -> State:
-        """The current state as an immutable value (cached until the next operation)."""
         if self._frozen is None:
             self._frozen = State(dict(self.at), dict(self.mark), dict(self.regards), dict(self.fill),
                                  dict(self.stat), dict(self.flag), {p: frozenset(v) for p, v in self.sets.items()})
@@ -30,7 +27,6 @@ class Work:
     def _touch(self):
         self._frozen = None
 
-    # -- operations --
     def move(self, x: str, y: str) -> None:
         if x == PLAYER and self.u.kind(y) != "place":
             raise ValueError(f"the player can only move to a place, not {y}")
@@ -55,7 +51,7 @@ class Work:
         index[k] = v
 
     def drop_stat(self, g: str, s: str) -> None:
-        """Remove a sheet entry; only growth's trait swap does this (rule.md 6)."""
+        """Only growth's trait swap removes a sheet entry (rule.md 6)."""
         if (g, s) in self.stat:
             self._touch()
             del self.stat[(g, s)]
@@ -125,7 +121,7 @@ class Work:
             self.sets["spent"] -= gone
 
     def apply_effect(self, e: tuple) -> None:
-        """One compiled story effect (story.md 2.4). Engine macros are applied by the rules."""
+        """One compiled story effect (story.md 2.4); engine macros are applied by the rules."""
         k = e[0]
         if k == "move":
             self.move(e[1], e[2])
