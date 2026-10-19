@@ -105,6 +105,19 @@ def _subject(u, sentence: str) -> str | None:
     return None
 
 
+def subjects(u, sentence: str) -> list[str]:
+    """Every agent standing as a subject ('윤슬이', '노인은'), longest names first."""
+    out, taken = [], []
+    for w, x in _names(u).items():
+        if x not in u.agents:
+            continue
+        for m in re.finditer("(?<![가-힣])" + re.escape(w) + "(?:이|가|은|는)(?![가-힣])", sentence):
+            if not any(a <= m.start() < b for a, b in taken):
+                out.append(x)
+                taken.append((m.start(), m.start() + len(w)))
+    return list(dict.fromkeys(out))
+
+
 def accepts(facts: State, positive: bool, atom: Atom) -> bool:
     """φ only when φ ∈ F'; ¬φ only when F' and C entail it (an at elsewhere, by C1)."""
     if positive:
@@ -119,4 +132,4 @@ def accepts(facts: State, positive: bool, atom: Atom) -> bool:
     return False
 
 
-__all__ = ["accepts", "claims", "mentioned"]
+__all__ = ["accepts", "claims", "mentioned", "subjects"]

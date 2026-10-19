@@ -13,7 +13,7 @@ import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 
-from .lang.claims import accepts, claims
+from .lang.claims import accepts, claims, mentioned, subjects
 from .lang.context import context, render
 from .lang.polite import QUOTED, plain, polite
 from .locale import ko
@@ -116,6 +116,16 @@ def forbidden(u, o: Obs) -> dict[str, str]:
     return {w: x for x in hidden for w in (u.name(x), *u.aliases(x)) if len(w) >= 2}
 
 
+def absent(job: Job) -> set:
+    """People who may not act in this narration: not at here and not named in δ. A recap tells past
+    scenes, so everyone may act in it."""
+    if job.task:
+        return set()
+    u, o = job.u, job.o
+    named = {x for line in job.delta for _, x in mentioned(u, line)}
+    return {x for x in u.agents if o.facts.where(x) != o.here or o.here is None} - named
+
+
 def messages(job: Job, draft: list[str] | None = None, problems: list[str] | None = None) -> list[dict]:
     u = job.u
     system = ko.fill(ko.NARRATOR, sentences=job.sentences, chars=job.chars)
@@ -171,6 +181,7 @@ class Narrator:
         """Per-sentence problems and whole-text problems (engine.md 5.3, 1 and 2)."""
         u, facts = job.u, job.o.facts
         bad = forbidden(u, job.o)
+        gone = absent(job)
         per: dict[int, list[str]] = {}
         for i, s in enumerate(said):
             bare = QUOTED.sub(" ", s)
@@ -188,6 +199,9 @@ class Narrator:
             hidden = [w for w in bad if w in s]
             if hidden:
                 why.append(ko.fill(ko.FEEDBACK["hidden"], names=", ".join(hidden)))
+            away = [x for x in subjects(u, bare) if x in gone]
+            if away:
+                why.append(ko.fill(ko.FEEDBACK["absent"], names=", ".join(u.name(x) for x in away)))
             wrong = [(pos, atom) for pos, atom in claims(u, s) if not accepts(facts, pos, atom)]
             for pos, atom in wrong:
                 if atom[0] == "at" and atom[1] in u.things and atom[2] == PLAYER:

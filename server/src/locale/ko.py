@@ -261,6 +261,7 @@ FEEDBACK = {
     "unearned": "아직 얻지 않은 물건을 얻었다고 썼습니다: {names}",
     "handed": "당신이 지닌 물건을 넘겼다고 썼습니다: {names}",
     "claim": "사실과 다른 말을 했습니다: {facts}",
+    "absent": "이 자리에 없는 사람을 움직이게 썼습니다: {names}",
     "contradicts": "문맥의 사실과 어긋납니다.",
     "invents": "문맥에 없는 사람, 물건, 길을 지어냈습니다.",
 }

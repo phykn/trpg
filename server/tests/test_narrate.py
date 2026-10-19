@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from dataclasses import replace
 from types import SimpleNamespace
 
 import httpx
@@ -176,3 +177,22 @@ async def test_an_obstacle_said_open_before_it_is_full_is_rejected(tmp_path):
     svc, gid, _ = await game(tmp_path, qwen, moves=("go:village", "go:yard"))
     got = await events(svc, gid, 2)
     assert {"type": "stage", "stage": "rewriting", "attempt": 2} in got
+
+
+async def test_an_absent_person_acting_is_rewritten(tmp_path):
+    qwen = FakeQwen("윤슬이 당신의 젖은 소매를 가볍게 스칩니다. 바람이 붑니다.", GOOD)
+    svc, gid, _ = await game(tmp_path, qwen)        # the village; 윤슬 waits at the dock
+    got = await events(svc, gid)
+    assert {"type": "stage", "stage": "rewriting", "attempt": 2} in got and got[-2]["text"] == GOOD
+    assert "없는 사람" in qwen.calls[1][1]["content"] and "윤슬" in qwen.calls[1][1]["content"]
+
+
+async def test_a_person_named_in_delta_or_here_may_act(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeQwen(GOOD))
+    u, g = svc.games[gid]
+    job = replace(svc._turn_job(u, g, 1), delta=["윤슬이 기름통을 얻었습니다"])
+    said = ["윤슬이 당신의 젖은 소매를 가볍게 스칩니다.", "도해가 낮게 기침합니다.", "\"윤슬이 온다\"고 누가 외칩니다."]
+    per, _ = svc.narrator.rules(job, said, [])
+    assert per == {}
+    per, _ = svc.narrator.rules(replace(job, delta=[]), said, [])
+    assert list(per) == [0]
