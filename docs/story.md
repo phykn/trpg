@@ -25,7 +25,7 @@ scenarios/<폴더>/   폴더 이름은 자유. 이야기 id는 story.yaml의 id
 
 | 값 종류 | id (한국어) |
 |---|---|
-| 방식 | `force` 힘, `finesse` 솜씨, `wits` 꾀, `charm` 매력 |
+| 방식 | `force` 완력, `finesse` 솜씨, `wits` 재치, `charm` 매력 |
 | 위험 | `low` 낮음, `normal` 보통 (장애물의 기본 위험) |
 | 태도 | `polite` 정중, `friendly` 친근, `plead` 간청, `threaten` 위협, `deceive` 속임 |
 | 무리함 | `natural` 자연스러움, `forced` 무리 |
