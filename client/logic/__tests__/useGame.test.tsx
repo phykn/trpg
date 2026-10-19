@@ -187,3 +187,14 @@ test('the ending keeps the recap narrated with its turn, which the view does not
   expect(stream).toHaveBeenCalledWith('/r/g_1/1', expect.any(Function));
   expect(game.recaps[1]).toBe('Last.');
 });
+
+test('the menu goes to the start screen, which resumes the same game', async () => {
+  await mount();
+  await run(() => game.toTitle());
+  expect(game.phase).toBe('start');
+  expect(game.canResume).toBe(true);
+  expect(clearGameId).not.toHaveBeenCalled();
+  await run(() => game.resume());
+  expect(game.phase).toBe('idle');
+  expect(getGame).toHaveBeenCalledTimes(1);
+});

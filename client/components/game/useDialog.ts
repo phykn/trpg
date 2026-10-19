@@ -1,7 +1,9 @@
 import { type RefObject, useEffect, useRef } from 'react';
 import { Platform, type View } from 'react-native';
 
-const FOCUSABLE = 'button:not([disabled]), [role="button"]:not([aria-disabled="true"]), [role="radio"]:not([aria-disabled="true"]), input, textarea, [tabindex="0"]';
+const FOCUSABLE = 'button:not([disabled]), [role="button"]:not([aria-disabled="true"]), [role="menuitem"], [role="radio"]:not([aria-disabled="true"]), input, textarea, [tabindex="0"]';
+
+const open: object[] = [];
 
 export function useDialog(onClose?: () => void): RefObject<View | null> {
   const ref = useRef<View | null>(null);
@@ -13,9 +15,12 @@ export function useDialog(onClose?: () => void): RefObject<View | null> {
     const root = ref.current as unknown as HTMLElement | null;
     if (!root) return undefined;
     const opener = document.activeElement as HTMLElement | null;
+    const me = {};
+    open.push(me);
     const items = () => Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE));
     items()[0]?.focus();
     const onKey = (e: KeyboardEvent) => {
+      if (open[open.length - 1] !== me) return;     // a menu over a card takes the keys first
       if (e.key === 'Escape' && close.current) {
         e.preventDefault();
         close.current();
@@ -31,6 +36,7 @@ export function useDialog(onClose?: () => void): RefObject<View | null> {
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
+      open.splice(open.indexOf(me), 1);
       if (opener && document.contains(opener)) opener.focus();
     };
   }, []);

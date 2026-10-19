@@ -11,6 +11,7 @@ import { Ending } from '@/components/game/Ending';
 import { GrowthCard } from '@/components/game/GrowthCard';
 import { Header } from '@/components/game/Header';
 import { LastRoll } from '@/components/game/LastRoll';
+import { Menu } from '@/components/game/Menu';
 import { Narration } from '@/components/game/Narration';
 import { Record } from '@/components/game/Record';
 import { RollCard } from '@/components/game/RollCard';
@@ -29,6 +30,8 @@ export function Play({ game }: { game: Game }) {
   const view = game.view as GameView;
   const { phase, reveal } = game;
   const [now, setNow] = useState(Date.now());
+  const [menu, setMenu] = useState(false);
+  useEffect(() => { if (phase !== 'idle' && phase !== 'card') setMenu(false); }, [phase]);
   const revealing = phase === 'revealing' && reveal !== null && !reveal.skipped;
   useEffect(() => {
     if (!revealing) return undefined;
@@ -44,6 +47,8 @@ export function Play({ game }: { game: Game }) {
     || (revealing && reveal?.card && step?.roll && !frame?.folded);
   const crisis = view.last?.steps.flatMap((s) => s.changes.filter((c) => c.kind === 'crisis').map((c) => c.id as string));
 
+  const commandsOpen = phase === 'idle' || phase === 'card';
+  const menuOpen = menu && commandsOpen;
   let card = null;
   if (rollOpen) {
     const c = phase === 'rolling' ? view.card : reveal?.card;
@@ -76,7 +81,7 @@ export function Play({ game }: { game: Game }) {
 
   return (
     <View className="min-h-0 flex-1">
-      <Header view={rows} />
+      <Header view={rows} menu={menuOpen} onMenu={commandsOpen ? () => setMenu(!menu) : undefined} />
       <Clocks clocks={rows.clocks} crisis={revealing ? [] : crisis} />
       {phase === 'ending' ? <Ending view={view} recaps={game.recaps} onNew={game.newGame} /> : (
         <View className="min-h-0 flex-1">
@@ -99,6 +104,7 @@ export function Play({ game }: { game: Game }) {
             onSend={(text) => game.command({ text })} onResend={game.resend} onNew={game.newGame} />
         </View>
       )}
+      {menuOpen ? <Menu onClose={() => setMenu(false)} onTitle={() => { setMenu(false); game.toTitle(); }} /> : null}
     </View>
   );
 }

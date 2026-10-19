@@ -19,7 +19,8 @@ export default function Index() {
       <Head><title>{ko.brand}</title></Head>
       <View className="mobile-frame min-h-0 w-full max-w-mobile flex-1 border-x border-border-default bg-canvas-default">
         {starting ? (
-          <Start stories={game.stories} busy={game.phase === 'sending'} onCreate={game.create} />
+          <Start stories={game.stories} busy={game.phase === 'sending'} onCreate={game.create}
+            onResume={game.canResume ? game.resume : undefined} />
         ) : game.view ? (
           <Play game={game} />
         ) : game.phase === 'blocked' ? (

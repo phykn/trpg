@@ -5,7 +5,7 @@
 ```
 client/
   app/index.tsx              시작점, 저장된 game_id가 있으면 다시 열기
-  screens/Start.tsx          이야기 고르기, 주인공 만들기
+  screens/Start.tsx          처음 화면: 이어하기, 이야기 고르기, 주인공 만들기
   screens/Play.tsx           플레이 화면의 배치
   logic/useGame.ts           서버 상태, 명령의 생애, 복구 (3절)
   logic/reveal.ts            드러남의 시간표 (순수 함수)
@@ -15,7 +15,7 @@ client/
     Header.tsx  Clocks.tsx  Self.tsx  Scene.tsx  Record.tsx
     Narration.tsx  LastRoll.tsx  Buttons.tsx  CommandBar.tsx
     RollCard.tsx  Dice.tsx  NumberLine.tsx  Chips.tsx  OddsBar.tsx
-    CostCard.tsx  ClarifyCard.tsx  ConfirmCard.tsx  GrowthCard.tsx  Ending.tsx
+    CostCard.tsx  ClarifyCard.tsx  ConfirmCard.tsx  GrowthCard.tsx  Menu.tsx  Ending.tsx
   design/                    색, 간격, 글꼴, 움직임 시간의 토큰
   locale/ko.ts               화면이 만드는 문장
 ```
@@ -42,7 +42,7 @@ client/
 
 ```
 ┌──────────────────────────────┐
-│ 1장 등대에 오르다 · 등대 앞      │ 머리줄
+│ 1장 등대에 오르다 · 등대 앞    ≡ │ 머리줄
 │ 몰려오는 폭풍 ■■□□ 해가 진다 ■□□│ 시계 줄: 위험 시계, 마감, 위협, 갈림
 │ 무너지는 다리 ■□□               │
 │ 힘1 솜씨2 꾀1 말0 · 상처 ■□□ · 박자2│ 나 줄: 방식, 상처, 박자,
@@ -67,6 +67,7 @@ client/
 - **서술은 영역에 맞춥니다.** 서버가 서술을 200자 이하로 받으므로 넘칠 일이 드물고, 넘치면 `fit.ts`가 글자 크기를 한 단계씩(최소 `design`의 `text.min`, 13px) 줄입니다. 지난 턴의 서술은 남기지 않습니다. 지난 일은 직전 굴림 줄, 장면 줄, 기록 줄에 결과로 남아 있습니다.
 - **기록 줄**은 `journal` 가운데 지금 걸린 것을 보입니다: 지키지 않은 약속과 신세 전부, 그리고 믿는 것 중 지금 장면의 개체를 말하는 것. 고른 대가와 갈림의 선택은 결말 판(5.4)에 모입니다.
 - **카드**(굴림, 되묻기, 확인, 대가, 성장)는 나 줄부터 입력줄까지를 덮고 아래에서 올라옵니다. 머리줄과 시계 줄은 덮지 않습니다. 카드가 떠 있어도 걸린 시계가 보여야 하기 때문입니다. 카드 안도 같은 원칙으로 모두가 한 번에 보입니다.
+- **메뉴**는 머리줄 오른쪽 아이콘(≡, 도형으로 그림)으로 엽니다. 명령이 열린 상태(`idle`, `card`)에서만 누를 수 있고, 아이콘 아래로 작은 드롭다운이 내려와 화면의 나머지는 그대로 보입니다. 항목은 처음 화면으로 가기 하나이고, Escape나 바깥을 누르면 닫힙니다. 카드 위에 열리면 Escape는 메뉴만 닫습니다. 처음 화면으로 가도 `trpg.game_id`와 받은 `view`는 그대로라서 처음 화면 맨 위의 이어하기가 같은 판의 갈 곳으로 돌아옵니다. 서버에는 아무것도 보내지 않습니다.
 - 데스크톱에서도 같은 폭(412px)의 틀을 가운데 둡니다.
 
 ### 2.2 크기 예산
@@ -105,6 +106,7 @@ sending | rolling ─ 응답 없음(30초) ─► stuck ─ 같은 명령 다시
 sending | rolling ─ 409(view) ─► 갈 곳                409(incompatible) ─► blocked
 sending | rolling ─ 404 ─► start                      422 ─► 갈 곳 (refused와 같게. 화면의 버그)
 narrating ─ 스트림 오류 ─► narration_error ─ 다시 ─► narrating
+idle | card ─ 메뉴: 처음 화면 ─► start ─ 이어하기 ─► 갈 곳   (view가 있고 결말이 아닐 때)
 ```
 
 **갈 곳**은 받아들인 `view`로 늘 같은 차례로 정합니다: `ending`이 있으면 `ending`, `due`가 있으면 `card(cost)`, `card`가 있으면 `card`, `growth`가 있으면 `card(growth)`, 아니면 `idle`. 409의 `view`와 다시 열기도 같습니다.
@@ -249,7 +251,7 @@ narrating ─ 스트림 오류 ─► narration_error ─ 다시 ─► narratin
 
 ### 5.5 시작
 
-`Start.tsx`는 한 화면에 이야기 목록, 방식 배치, 특성 고르기를 둡니다. 이야기를 고르면 그 전제와 방식 값, 특성 후보가 같은 화면에 나옵니다. 방식 값은 네 방식 칸에 눌러서 차례로 놓고, 특성은 `pick`개를 고릅니다. 만들기를 누르면 `POST /games`를 보내고 플레이 화면으로 갑니다.
+`Start.tsx`는 한 화면에 이야기 목록, 방식 배치, 특성 고르기를 둡니다. 메뉴로 온 것이면 맨 위에 이어하기가 있습니다(2.1). 이야기를 고르면 그 전제와 방식 값, 특성 후보가 같은 화면에 나옵니다. 방식 값은 네 방식 칸에 눌러서 차례로 놓고, 특성은 `pick`개를 고릅니다. 만들기를 누르면 `POST /games`를 보내고 플레이 화면으로 갑니다.
 
 ## 6. 검사
 

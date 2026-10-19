@@ -307,6 +307,9 @@ export function useGame(reduced = false) {
     laterGrowth: () => { growthRef.current = true; setGrowthLater(true); settle(); },
     openGrowth: () => { growthRef.current = false; setGrowthLater(false); if (phase === 'idle') setPhase('card'); },
     newGame: () => { if (!pending.current) { setNotice(null); setPhase('start'); } },
+    toTitle: () => { if (!pending.current && ['idle', 'card'].includes(phase)) { setNotice(null); setPhase('start'); } },
+    canResume: phase === 'start' && !!view && !view.ending,
+    resume: () => { const v = viewRef.current; if (phase === 'start' && v && !v.ending) setPhase(destination(v, growthRef.current)); },
     dismissNotice: () => setNotice(null),
   };
 }

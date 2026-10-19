@@ -4,7 +4,9 @@ import { Pressable, Text, View } from 'react-native';
 import { ko } from '@/locale/ko';
 import type { Creation, Story } from '@/services/types';
 
-export function Start({ stories, busy, onCreate }: { stories: Story[]; busy: boolean; onCreate: (story: string, c: Creation) => void }) {
+export function Start({ stories, busy, onCreate, onResume }: {
+  stories: Story[]; busy: boolean; onCreate: (story: string, c: Creation) => void; onResume?: () => void;
+}) {
   const [id, setId] = useState(stories[0]?.id ?? '');
   const story = stories.find((s) => s.id === id);
   const [placed, setPlaced] = useState<Record<string, number>>({});
@@ -24,6 +26,11 @@ export function Start({ stories, busy, onCreate }: { stories: Story[]; busy: boo
 
   return (
     <View className="min-h-0 flex-1 gap-3 px-4 py-3">
+      {onResume ? (
+        <Pressable accessibilityRole="button" onPress={onResume} className="items-center rounded-md border border-gold-fg bg-accent-muted py-3">
+          <Text className="font-sans-semibold text-body text-gold-fg">{ko.resume}</Text>
+        </Pressable>
+      ) : null}
       <Text accessibilityRole="header" className="font-sans-semibold text-panel text-fg-muted">{ko.stories}</Text>
       <View className="flex-row flex-wrap gap-2">
         {stories.map((s) => (
