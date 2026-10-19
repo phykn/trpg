@@ -6,7 +6,7 @@
 - **규칙**이 2d6 판정, 진행도, 위험, 태그, 대가를 계산하고 저장합니다.
 - **Qwen**(서술 모델, `:8082`, non-thinking)이 바뀐 것만 장면으로 쓰고, Kev가 사실과 어긋나지 않는지 검사합니다.
 
-설계는 [plan.md](plan.md), 구현 계획은 [code.md](code.md)에 있습니다.
+이론은 [docs/theory/](docs/theory/), 구현 설계는 [docs/implement/](docs/implement/)에 있습니다.
 
 ## 준비
 
@@ -32,7 +32,6 @@ cd client && npm run web
 
 브라우저에서 **http://localhost:8090**을 엽니다. `--local`은 개인 환경 파일 없이 `127.0.0.1:8000`, 인증 `local/local`, Kev `:8081`, Qwen `:8082`를 씁니다. 웹 포트가 8090인 이유는 8081을 Kev가 쓰기 때문입니다.
 
-터미널에서 바로 해 보려면 `server/`에서 `../.venv/bin/python scripts/play.py --story harbor`를 실행합니다. 턴마다 지연과 서술이 `qa_test/agency/<run>/transcript.jsonl`에 남습니다.
 
 ## 플레이
 
@@ -67,11 +66,10 @@ cd server && ../.venv/bin/python -m src.content validate ../scenarios/<name>
 ```bash
 .venv/bin/python -m pytest -q
 .venv/bin/ruff check server/
-bash server/scripts/check_relational_ssot.sh
 cd client && npm test -- --runInBand && npx tsc --noEmit && npm run lint
 ```
 
-실제 모델 확인은 `server/scripts/`의 `bench_kev.py`(질문 수별 지연), `eval_interpret.py`(해석 정확도), `play.py`(플레이 기록)로 합니다. 자동 테스트 통과를 재미의 증거로 삼지 않습니다.
+자동 테스트 통과를 재미의 증거로 삼지 않습니다.
 
 ## 저장
 

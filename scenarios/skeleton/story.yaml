@@ -1,0 +1,294 @@
+# 뼈대 이야기. 형식은 docs/implement/story.md. 모든 장치를 한 번 이상, 가장 작게 씁니다.
+id: lighthouse
+version: 1
+title: 꺼진 등대
+premise: 폭풍이 오는 저녁, 당신은 작은 섬의 선착장에 내립니다. 등대의 불이 꺼져 있고, 밤에 고깃배들이 돌아옵니다.
+beats: 6
+wound_boxes: 2
+impossible: [총을, 마법, 헬리콥터, 휴대전화]
+
+style: |
+  - 폭풍이 오는 저녁의 작은 섬입니다. 바람, 빗방울, 파도 소리, 어두워지는 하늘로 시간이 흐르는 것을 보여 줍니다.
+  - 문장은 짧고 낮게 씁니다. 과장하거나 교훈을 말하지 않습니다.
+  - 감정은 손, 시선, 멈춘 말, 젖은 옷 같은 몸과 물건으로 보여 줍니다.
+  - 도해는 적이 아니라 지친 사람입니다. 윤슬은 겁이 나도 할 말은 합니다.
+  - 마감이 다가올수록 하늘의 빛이 줄고 파도가 높아지는 것으로 보여 줍니다.
+  - 전기, 엔진, 총, 마법은 이 섬에 없습니다. 불빛은 기름 등불과 횃불뿐입니다.
+
+player:
+  start: dock
+  approaches: [2, 1, 1, 0]
+  traits:
+    pick: 2
+    options:
+      sailor: {name: 뱃사람, text: 바다와 배, 날씨를 읽습니다.}
+      climber: {name: 날렵함, text: 높고 좁은 곳을 탑니다.}
+      talker: {name: 넉살, text: 낯선 사람과 쉽게 말을 틉니다.}
+      tinker: {name: 손재주, text: 낡은 기계를 고칩니다.}
+
+places:
+  dock:
+    name: 선착장
+    aliases: [부두, 나루]
+    senses: [젖은 밧줄 냄새, 말뚝에 부딪는 파도, 낮게 깔린 회색 구름]
+    exits: [village, yard]
+    complications:
+      c_wave:
+        name: 발목을 잡아채는 파도
+        weight: light
+        effects:
+          - {tag: [player, snag, scene, 젖은 발]}
+  village:
+    name: 바닷가 마을
+    aliases: [마을]
+    senses: [덧문을 닫는 소리, 굴뚝 연기, 그물 말리는 장대]
+    exits: [dock, yard]
+    rest: true
+  yard:
+    name: 등대 앞
+    aliases: [등대 마당]
+    senses: [바람에 우는 쇠난간, 흰 칠이 벗겨진 벽, 절벽 아래 물보라]
+    exits: [village, dock, lamp_room]
+  lamp_room:
+    name: 등불 방
+    aliases: [등대 꼭대기]
+    senses: [먼지 앉은 렌즈, 식은 기름 냄새, 유리창을 때리는 빗방울]
+    exits: [yard]
+
+characters:
+  dohae:
+    name: 도해
+    aliases: [등대지기, 노인]
+    pronoun: 그
+    at: village
+    voice: 말이 짧고, 기침이 섞입니다.
+    desire: 떠난 아들의 소식을 기다립니다.
+    fear: 등대에 다시 오르는 것을 두려워합니다.
+    beliefs:
+      b_no_keeper: 이 섬에 새 등대지기는 오지 않는다.
+    wants: [letter]
+    topics:
+      t_oil:
+        title: 등대 기름
+        reveals: oil
+        free_when: {regards: [dohae, player, trust, ">=", 1]}
+    favor:
+      label: 등대 열쇠를 빌려 달라고 한다
+      effects:
+        - {move: [key, player]}
+      promise:
+        name: 열쇠를 돌려준다
+        keep: {at: [key, dohae]}
+    complications:
+      c_dohae_cold:
+        name: 굳게 닫힌 입
+        weight: light
+        when: {regards: [dohae, player, trust, "<=", 0]}
+        effects:
+          - {tag: [dohae, snag, scene, 굳은 입]}
+  yunseul:
+    name: 윤슬
+    aliases: [어부의 딸]
+    pronoun: 그녀
+    at: dock
+    voice: 빠르고 또렷하게, 바닷말을 섞어 말합니다.
+    desire: 아버지의 배가 무사히 돌아오기를 바랍니다.
+    fear: 꺼진 등대를 무서워합니다.
+    wants: [oil]
+    topics:
+      t_wall:
+        title: 등대 뒤 담장
+        text: 등대 뒤 담장이 무너져 아래층 창문까지 오를 수 있다.
+        free_when: {regards: [yunseul, player, trust, ">=", 1]}
+
+things:
+  letter:
+    name: 아들의 편지
+    aliases: [편지]
+    look: 젖지 않게 기름종이로 싼 편지
+    at: player
+  key:
+    name: 등대 열쇠
+    aliases: [열쇠]
+    look: 손잡이가 닳은 무거운 쇠열쇠
+    at: dohae
+  oil:
+    name: 기름통
+    aliases: [밀랍 통]
+    look: 뚜껑을 밀랍으로 막은 작은 통
+    at: village
+    hidden: 도해가 등대 기름통을 마을 창고 궤짝에 넣어 두었다.
+
+obstacles:
+  door:
+    name: 녹슨 등대 문
+    aliases: [문, 자물쇠]
+    look: 붉게 녹슨 경첩과 큰 자물쇠
+    clue: 자물쇠는 굳었지만 열쇠 구멍은 깨끗하다.
+    at: yard
+    boxes: 3
+    risk: normal
+    fits: [finesse]
+    clashes: [force]
+    blocks: [lamp_room]
+    solutions:
+      s_key: {label: 열쇠로 자물쇠를 연다, approach: finesse, rely: key}
+      s_shoulder: {label: 어깨로 문을 들이받는다, approach: force}
+      s_wall: {label: 무너진 담장을 타고 창문으로 들어간다, approach: wits, rely: t_wall}
+    complications:
+      c_door_cut: {name: 녹슨 쇠에 벤 손, weight: heavy, wound: 1}
+  bridge:
+    name: 흔들리는 나무다리
+    aliases: [다리]
+    look: 밧줄 하나가 끊어진 좁은 다리
+    at: yard
+    boxes: 2
+    risk: low
+    fits: [force]
+    solutions:
+      s_rope: {label: 밧줄로 다리를 동여맨다, approach: force}
+      s_wedge: {label: 쐐기를 박아 기둥을 세운다, approach: wits}
+  lamp:
+    name: 꺼진 등불
+    aliases: [등불, 렌즈]
+    look: 검댕이 앉은 커다란 렌즈와 마른 심지
+    at: lamp_room
+    boxes: 4
+    risk: normal
+    fits: [wits]
+    clashes: [charm]
+    solutions:
+      s_oil: {label: 기름을 붓고 심지를 다듬는다, approach: wits, rely: oil}
+      s_lens: {label: 렌즈를 닦고 불씨를 살린다, approach: finesse}
+    complications:
+      c_lens_crack:
+        name: 렌즈에 간 금
+        weight: heavy
+        effects:
+          - {set: [fill, lamp, "-1"]}
+
+chapters:
+  - title: 등대에 오르다
+    goal: {at: [player, lamp_room]}
+    clock:
+      name: 몰려오는 폭풍
+      boxes: 4
+      crisis:
+        - {tag: [player, snag, chapter, 흠뻑 젖은 몸]}
+    deadline: {name: 해가 진다, boxes: 3}
+  - title: 불을 켜다
+    clock:
+      name: 폭풍의 한가운데
+      boxes: 4
+      crisis:
+        - {set: [fill, lamp, "-1"]}
+    deadline: {name: 배가 암초에 닿는다, boxes: 3, ending: wreck}
+
+threats:
+  t_bridge_fall:
+    name: 무너지는 다리
+    boxes: 3
+    appears_when: {at: [player, yard]}
+    arrival:
+      - {unlink: [village, yard]}
+      - {unlink: [yard, village]}
+
+forks:
+  g_oil:
+    name: 남은 기름
+    boxes: 2
+    appears_when: {all: [{flag: [chapter, 2]}, {at: [player, lamp_room]}]}
+    choices:
+      all_in:
+        name: 기름을 모두 등불에 붓는다
+        effects:
+          - {set: [fill, lamp, "+2"]}
+      beacon:
+        name: 절반을 마을 봉화에 남긴다
+        effects:
+          - {tag: [village, edge, chapter, 마을 봉화]}
+          - {set: [regards, yunseul, player, trust, "+1"]}
+    default:
+      name: 망설이는 사이 기름을 흘린다
+      effects:
+        - {tag: [lamp, snag, chapter, 흘린 기름]}
+
+claims:
+  c_keeper: {text: 새로 온 등대지기라고 말한다, against: b_no_keeper}
+
+latents:
+  l_baek:
+    name: "인맥: 이 마을에 옛 동료가 있다"
+    when: {at: [player, village]}
+    text: 마을의 백은 당신과 한배를 탔던 옛 동료다.
+    brings:
+      baek:
+        name: 백
+        aliases: [선술집 주인]
+        pronoun: 그
+        voice: 느릿하고, 웃음이 섞입니다.
+        desire: 옛 빚을 갚고 싶어 합니다.
+        fear: 다시 배를 타는 것을 두려워합니다.
+    effects:
+      - {move: [baek, village]}
+      - {set: [regards, baek, player, trust, 3]}
+
+triggers:
+  tr_bridge_hold:
+    when: {fill: [bridge, "=", full]}
+    effects:
+      - {retire: t_bridge_fall}
+  tr_spray:
+    when: {at: [player, yard]}
+    effects:
+      - {tag: [player, snag, scene, 흩날리는 물보라]}
+
+endings:
+  two_lights:
+    title: 두 개의 불
+    when: {all: [{fill: [lamp, "=", full]}, {did: ["choose:g_oil:beacon"]}]}
+    frame: 등대와 마을 봉화가 함께 타올라 배들이 두 불 사이로 돌아옵니다.
+  lone_light:
+    title: 등대의 불
+    when: {all: [{fill: [lamp, "=", full]}, {not: {did: ["choose:g_oil:beacon"]}}]}
+    frame: 등대의 불빛이 바다를 가르고, 배들이 그 빛을 따라 돌아옵니다.
+  wreck:
+    title: 암초
+    frame: 불이 오르기 전에 배 한 척이 암초에 걸립니다.
+  collapse:
+    title: 쓰러짐
+    frame: 당신은 더 버티지 못하고 쓰러집니다. 폭풍은 당신 없이 지나갑니다.
+
+witnesses:
+  creation: {approaches: {force: 1, finesse: 2, wits: 1, charm: 0}, traits: [sailor, tinker]}
+  paths:
+    - reach: {goal: 1}
+      steps:
+        - go:village
+        - go:yard                                     # 다리 위협 등장, 물보라(방해 1)
+        - {do: "try:door:finesse", roll: [6, 6, 0]}   # 13, 어울림 → 2칸
+        - {do: "try:door:finesse", roll: [6, 6, 0]}   # 3칸, 문이 다 참
+        - go:lamp_room                                # 목표 → 2장, 남은 기름 등장
+    - reach: {ending: two_lights}
+      after: 0
+      steps:
+        - choose:g_oil:beacon                         # 박자 6 → 장면 끝
+        - {do: "try:lamp:wits", roll: [6, 6, 0]}      # 13, 어울림 → 2칸
+        - {do: "try:lamp:wits", roll: [6, 6, 0]}      # 4칸, 봉화를 고름 → 두 개의 불
+    - reach: {ending: lone_light}
+      after: 0
+      steps:
+        - choose:g_oil:all_in                         # 등불 +2 → 2칸
+        - {do: "try:lamp:wits", roll: [6, 6, 0]}      # 4칸 → 등대의 불
+    # 높음(보통 + 어긋남 + 무리)의 실패: 위험 시계 +2, 무거운 복잡화를 u로 고름.
+    # 후보는 엔진의 [상처 +1, 장면 끝], 원고의 [c_door_cut] 차례이고 u = 0이 상처 +1.
+    - reach: {ending: collapse}
+      steps:
+        - go:village
+        - go:yard
+        - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}
+        - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}   # 상처 2 → 흉터 1
+        - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}
+        - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}   # 흉터 2
+        - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}
+        - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}   # 흉터 3, 슬롯이 모두 흉터 → 쓰러짐

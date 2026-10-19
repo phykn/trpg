@@ -22,7 +22,7 @@ MAX_STEPS = 3
 NONE = "none"
 IMPROVISE = "improvise"
 CLARIFY_FLOOR = 0.1
-# Tuned for Kev 4B on scenarios/harbor/evals (see code.md 8.2). Kev spreads probability over many options,
+# Tuned for Kev 4B on scenarios/harbor/evals. Kev spreads probability over many options,
 # so absolute confidence is low even when its first choice is right; these compare options instead.
 SAME_VERB_MARGIN = 1.6   # ask back when the top two share a verb and the first is not this much ahead
 NEXT_STEP_FLOOR = 0.2    # a later step must reach this probability and differ from the step before

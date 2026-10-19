@@ -26,11 +26,9 @@ scenarios/*/.decomp/
 
 # Local-only (not part of the repo)
 agency/
-docs/
 release/
 scenarios/*
-!scenarios/_template/
-!scenarios/harbor/
+!scenarios/skeleton/
 tools/
 notebooks/
 .notebooks/

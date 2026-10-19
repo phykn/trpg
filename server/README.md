@@ -1,6 +1,6 @@
 # trpg-server
 
-Story-agnostic engine for a Korean TRPG: FastAPI + Pydantic v2, two required local models (Kev decides, Qwen writes), one atomic JSON snapshot per game. The server agent guide is [AGENTS.md](./AGENTS.md).
+Story-agnostic engine for a Korean TRPG: FastAPI + Pydantic v2, two required local models (Kev decides, Qwen writes), one atomic JSON snapshot per game.
 
 ## Turn flow
 
@@ -70,13 +70,6 @@ cd server && ../.venv/bin/python -m src.content validate ../scenarios/<name>
 
 The validator checks ids, references, 3–5 senses per place, two or more solutions per obstacle, two or more free paths per topic, six traits, the +2/+1/+1/0 spread, and optimistic reachability of every chapter and ending. `scenarios/_template/` is the minimal example and the fixture every test uses.
 
-## Scripts
-
-From `server/`, with both models running:
-
-- `scripts/bench_kev.py --story harbor --state prison`: Kev latency at 10, 20 and all questions.
-- `scripts/eval_interpret.py --story harbor [--file interpret_holdout.jsonl]`: accuracy, clarify, wrong-commit and improvise rates over `scenarios/<story>/evals/interpret.jsonl`; writes `qa_test/agency/<run>/interpret.json`.
-- `scripts/play.py --story harbor`: terminal play with timings in `qa_test/agency/<run>/transcript.jsonl`.
 
 ## Tests
 
@@ -98,5 +91,5 @@ server/
     interpret.py narrate.py
     models/            kev, qwen
     locale/ko.py       engine-owned Korean
-  scripts/ tests/
+  tests/
 ```
