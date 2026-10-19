@@ -24,7 +24,7 @@ player:
     pick: 2
     options:
       sailor: {name: 뱃사람, text: 바다와 날씨를 압니다.}
-      islander: {name: 섬 토박이, text: 섬사람과 골목을 압니다.}
+      islander: {name: 토박이, text: 섬사람과 골목을 압니다.}
       herbalist: {name: 약초꾼, text: 약초와 상처를 압니다.}
       tinker: {name: 기계공, text: 낡은 기계를 다뤄 봤습니다.}
 

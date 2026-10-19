@@ -53,11 +53,9 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
         <Text className="font-sans-semibold text-chip text-gold-fg">{ko.count(ko.approaches, spent, total)}</Text>
         <View className="gap-1">
           {story.approach_names.map((a) => (
-            <View key={a.id} className="flex-row items-center gap-3 rounded-md border border-border-default px-4 py-1">
-              <View className="min-w-0 flex-1">
-                <Text className="font-sans-semibold text-body text-fg-default">{a.name}</Text>
-                <Text className="font-sans text-chip text-fg-muted">{a.hint}</Text>
-              </View>
+            <View key={a.id} className="h-[44px] flex-row items-center gap-2 rounded-md border border-border-default px-4">
+              <Text className="w-[52px] font-sans-semibold text-body text-fg-default">{a.name}</Text>
+              <Text className="min-w-0 flex-1 font-sans text-panel text-fg-muted">{a.hint}</Text>
               <View className="flex-row items-center gap-1">
                 <Arrow label={`${a.name} ${ko.lower}`} glyph="◀" onPress={placed[a.id] > 0 ? () => add(a.id, -1) : undefined} />
                 <Text className="w-[24px] text-center font-mono-medium text-body text-gold-fg">{placed[a.id]}</Text>
@@ -74,8 +72,8 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
           {story.traits.map((t) => (
             <Pressable key={t.id} accessibilityRole="checkbox" accessibilityState={{ checked: traits.includes(t.id) }}
               onPress={() => toggle(t.id)}
-              className={`flex-row items-center gap-3 rounded-md border px-4 py-1 ${traits.includes(t.id) ? 'border-gold-fg bg-accent-muted' : 'border-border-default'}`}>
-              <Text className="w-[72px] font-sans-semibold text-body text-fg-default">{t.name}</Text>
+              className={`h-[44px] flex-row items-center gap-2 rounded-md border px-4 ${traits.includes(t.id) ? 'border-gold-fg bg-accent-muted' : 'border-border-default'}`}>
+              <Text className="w-[52px] font-sans-semibold text-body text-fg-default">{t.name}</Text>
               <Text className="min-w-0 flex-1 font-sans text-panel text-fg-muted">{t.text}</Text>
             </Pressable>
           ))}
