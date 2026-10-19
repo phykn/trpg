@@ -12,7 +12,6 @@ import { Header } from '@/components/game/Header';
 import { LastRoll } from '@/components/game/LastRoll';
 import { Menu } from '@/components/game/Menu';
 import { Narration } from '@/components/game/Narration';
-import { Record } from '@/components/game/Record';
 import { RollCard } from '@/components/game/RollCard';
 import { Scene } from '@/components/game/Scene';
 import { Self } from '@/components/game/Self';
@@ -30,7 +29,8 @@ export function Play({ game }: { game: Game }) {
   const { phase, reveal } = game;
   const [now, setNow] = useState(Date.now());
   const [menu, setMenu] = useState(false);
-  useEffect(() => { if (phase !== 'idle' && phase !== 'card') setMenu(false); }, [phase]);
+  const [sheet, setSheet] = useState(false);
+  useEffect(() => { if (phase !== 'idle' && phase !== 'card') { setMenu(false); setSheet(false); } }, [phase]);
   const revealing = phase === 'revealing' && reveal !== null && !reveal.skipped;
   useEffect(() => {
     if (!revealing) return undefined;
@@ -80,18 +80,22 @@ export function Play({ game }: { game: Game }) {
 
   return (
     <View className="min-h-0 flex-1">
-      <Header view={rows} menu={menuOpen} onMenu={commandsOpen ? () => setMenu(!menu) : undefined} />
+      <Header view={rows} menu={menuOpen} onMenu={commandsOpen ? () => { setSheet(false); setMenu(!menu); } : undefined} />
       <Clocks clocks={rows.clocks} crisis={revealing ? [] : crisis} />
       {phase === 'ending' ? <Ending view={view} recaps={game.recaps} onNew={game.newGame} /> : (
         <View className="min-h-0 flex-1">
           <View className="min-h-0 flex-1">
-            <Self player={rows.player} onGrowth={view.growth.length && game.growthLater ? game.openGrowth : undefined} />
+            <Self player={rows.player} journal={rows.journal} open={sheet && phase === 'idle'}
+              onToggle={phase === 'idle' ? () => { setMenu(false); setSheet(!sheet); } : undefined}
+              onGrowth={view.growth.length && game.growthLater ? () => { setSheet(false); game.openGrowth(); } : undefined} />
             <Scene scene={rows.scene} beats={rows.player.beats} beatsMax={rows.player.beats_max} />
-            <Record journal={rows.journal} />
             <Narration narration={game.narration} hold={revealing} failed={phase === 'narration_error'}
               fallback={view.last ? '' : view.story.premise}
               onTyped={game.typed} onRetry={game.retryNarration} />
             <LastRoll step={lastRolled(shownSteps)} />
+            {sheet && phase === 'idle' ? (
+              <Pressable accessibilityLabel={ko.closeMenu} className="absolute bottom-0 left-0 right-0 top-0 z-10" onPress={() => setSheet(false)} />
+            ) : null}
             {revealing ? (
               <Pressable accessibilityLabel="skip" className="absolute bottom-0 left-0 right-0 top-0" onPress={game.skip} />
             ) : null}
