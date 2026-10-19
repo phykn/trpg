@@ -6,7 +6,7 @@ A story-agnostic Korean web TRPG engine. The player types a Korean sentence (or 
 
 The engine is being rebuilt from theory.
 
-- **Design (source of truth)**: [docs/theory/](docs/theory/) (ontology, rule, engine, fun) and [docs/implement/](docs/implement/) (implementation design, starting with the story format in `story.md`).
+- **Design (source of truth)**: [docs/](docs/) — `ontology.md` (world, invariants, operations, save format), `story.md` (story format and validation), `rule.md` (candidates, rolls, time, people), `engine.md` (interpretation, cards, narration, turn protocol), `api.md`, `ui.md`, `fun.md` (metrics).
 - **Story**: [scenarios/skeleton/story.yaml](scenarios/skeleton/story.yaml) is the only story, written in the new format. The current server does not read it.
 - **Old engine** (`server/src/`, `server/tests/`, `client/`): kept as a reference for the rebuild. Its story fixtures were removed, so the server tests fail and the server does not start until the new engine lands. Reuse its outer layers (model clients, locking/receipts/persistence in `service.py`, API routes and NDJSON narration, the staged Kev questioning in `interpret.py`, the Kev check and rewrites in `narrate.py`, `locale/ko.py`, the client). Rewrite the content, world, rules and scene layers from the theory. Removed files remain in git history (`git show 679e486a:<path>`).
 

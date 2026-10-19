@@ -6,7 +6,7 @@
 - **규칙**이 2d6 판정, 진행도, 위험, 태그, 대가를 계산하고 저장합니다.
 - **Qwen**(서술 모델, `:8082`, non-thinking)이 바뀐 것만 장면으로 쓰고, Kev가 사실과 어긋나지 않는지 검사합니다.
 
-이론은 [docs/theory/](docs/theory/), 구현 설계는 [docs/implement/](docs/implement/)에 있습니다.
+설계는 [docs/](docs/)에 있습니다: 세계([ontology.md](docs/ontology.md)), 원고 형식([story.md](docs/story.md)), 규칙([rule.md](docs/rule.md)), 엔진([engine.md](docs/engine.md)), [api.md](docs/api.md), 화면([ui.md](docs/ui.md)), 재미([fun.md](docs/fun.md)).
 
 ## 준비
 
@@ -44,21 +44,17 @@ cd client && npm run web
 
 ## 새 이야기 쓰기
 
-[scenarios/_template/](scenarios/_template/)을 복사하고 [README](scenarios/_template/README.md)를 따라 고칩니다. 코드는 고치지 않습니다.
-
-```bash
-cd server && ../.venv/bin/python -m src.content validate ../scenarios/<name>
-```
+[docs/story.md](docs/story.md)의 형식으로 `scenarios/<폴더>/story.yaml`을 씁니다. 가장 작은 예는 [scenarios/skeleton/story.yaml](scenarios/skeleton/story.yaml)입니다. 서버가 시작할 때 모든 이야기를 검증하고 하나라도 실패하면 서지 않습니다. 코드는 고치지 않습니다.
 
 ## 어디를 고치나요?
 
 | 목적 | 위치 |
 |---|---|
-| 이야기, 인물, 장애물, 결말 | `scenarios/<name>/scenario.json`, `world.md` |
+| 이야기, 인물, 장애물, 결말 | `scenarios/<폴더>/story.yaml` ([docs/story.md](docs/story.md)) |
 | 판정, 대가, 태그, 대화 규칙 | [server/src/rules/](server/src/rules/) |
 | 문장 해석(Kev 질문) | [server/src/interpret.py](server/src/interpret.py) |
 | 서술과 검사(Qwen, Kev) | [server/src/narrate.py](server/src/narrate.py) |
-| API, 저장, 한 턴의 순서 | [server/README.md](server/README.md) |
+| API, 저장, 한 턴의 순서 | [docs/api.md](docs/api.md), [docs/engine.md](docs/engine.md) 7절 |
 | 화면 | [client/screens/](client/screens/), [client/components/game/](client/components/game/) |
 
 ## 검증

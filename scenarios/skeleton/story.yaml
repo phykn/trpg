@@ -1,4 +1,4 @@
-# 뼈대 이야기. 형식은 docs/implement/story.md. 모든 장치를 한 번 이상, 가장 작게 씁니다.
+# 뼈대 이야기. 형식은 docs/story.md. 모든 장치를 한 번 이상, 가장 작게 씁니다.
 id: lighthouse
 version: 1
 title: 꺼진 등대
@@ -21,7 +21,7 @@ player:
   traits:
     pick: 2
     options:
-      sailor: {name: 뱃사람, text: 바다와 배, 날씨를 읽습니다.}
+      sailor: {name: 뱃사람, text: "바다와 배, 날씨를 읽습니다."}
       climber: {name: 날렵함, text: 높고 좁은 곳을 탑니다.}
       talker: {name: 넉살, text: 낯선 사람과 쉽게 말을 틉니다.}
       tinker: {name: 손재주, text: 낡은 기계를 고칩니다.}
