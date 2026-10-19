@@ -95,7 +95,7 @@ def test_oracle_path(play):
     step = play.do(format(a), (4, 3, 0))
     s = play.s
     assert pv.dc == 8 and step.result == "success" and step.risk == "normal" and step.mods == pv.mods.atoms()
-    assert s.stat(PLAYER, "beats") == 3 and s.fill("door") == 2 and s.fill("clock.1") == 0
+    assert s.stat(PLAYER, "beats") == 3 and s.fill("door") == 1 and s.fill("clock.1") == 0
     assert s.has("spent", PLAYER, "tinker")
 
 
@@ -187,8 +187,7 @@ def test_favor_promise_is_kept_by_giving_back(play):
     play.do("go:village")
     play.do("talk:dohae:chat")             # reveals the hound
     play.do("try:hound:wits", (6, 6, 0))
-    play.do("try:hound:wits", (6, 6, 0))
-    assert play.s.fill("hound") == 2
+    assert play.s.fill("hound") == 1
     play.do("talk:dohae:favor", (6, 6, 0))
     assert play.s.where("key") == PLAYER and play.s.has("owes", PLAYER, "dohae", "promise")
     assert not admits(play.u, play.obs, parse("talk:dohae:favor"))
@@ -200,7 +199,6 @@ def test_deceit_is_caught_by_a_contrary_belief(play):
     play.do("go:village")
     play.do("talk:dohae:chat")
     play.do("try:hound:wits", (6, 6, 0))
-    play.do("try:hound:wits", (6, 6, 0))
     play.do("talk:dohae:chat;claim=c_keeper;tone=deceive")
     assert play.s.regards("dohae", PLAYER, "trust") == -2
     assert any(k == "snag" and life == "chapter" for _, k, life in play.s.marks(PLAYER))
@@ -209,7 +207,6 @@ def test_deceit_is_caught_by_a_contrary_belief(play):
 def test_give_wanted_thing_earns_kindness(play):
     play.do("go:village")
     play.do("talk:dohae:chat")
-    play.do("try:hound:wits", (6, 6, 0))
     play.do("try:hound:wits", (6, 6, 0))
     play.do("give:letter:dohae")
     assert play.s.has("owes", "dohae", PLAYER, "kindness")

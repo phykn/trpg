@@ -29,10 +29,10 @@ function texts(tree: { root: { findAllByType: (t: unknown) => { props: { childre
   return tree.root.findAllByType(Text).map((t) => [t.props.children].flat(3).join('')).join('|');
 }
 
-test('the card shows the target number and toggles reliance chips', async () => {
+test('the card shows the attempt and target number and toggles reliance chips', async () => {
   let tree: ReturnType<typeof renderer.create>;
   await flush(async () => { tree = renderer.create(<RollCard card={card()} onRoll={jest.fn()} onCancel={jest.fn()} />); });
-  expect(texts(tree!)).toContain(ko.target);
+  expect(texts(tree!)).toContain('door');
   expect(texts(tree!)).toContain('8');
   expect(texts(tree!)).not.toContain('none');
   const chips = tree!.root.findAll((n: { props: { accessibilityRole?: string; onPress?: unknown } }) =>

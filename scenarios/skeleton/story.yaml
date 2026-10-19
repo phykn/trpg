@@ -128,7 +128,6 @@ obstacles:
     look: 붉게 녹슨 경첩과 큰 자물쇠
     clue: 자물쇠는 굳었지만 열쇠 구멍은 깨끗하다.
     at: yard
-    boxes: 3
     risk: normal
     fits: [finesse]
     clashes: [force]
@@ -144,7 +143,6 @@ obstacles:
     aliases: [다리]
     look: 밧줄 하나가 끊어진 좁은 다리
     at: yard
-    boxes: 2
     risk: low
     fits: [force]
     solutions:
@@ -175,7 +173,6 @@ obstacles:
     look: 목줄을 팽팽히 당기며 이빨을 드러낸 짐승
     at: village
     hidden: 도해의 오두막 앞에 사나운 누렁이가 묶여 있어 낯선 사람이 다가가지 못한다.
-    boxes: 2
     risk: low
     blocks: [dohae]
     solutions:
@@ -289,8 +286,7 @@ witnesses:
       steps:
         - go:village                                  # 숨은 누렁이는 도해와의 대화만 막음
         - go:yard                                     # 다리 위협 등장, 물보라(방해 1)
-        - {do: "try:door:finesse", roll: [6, 6, 0]}   # 13, 어울림 → 2칸
-        - {do: "try:door:finesse", roll: [6, 6, 0]}   # 3칸, 문이 다 참
+        - {do: "try:door:finesse", roll: [6, 6, 0]}   # 성공 → 문이 열림
         - go:lamp_room                                # 목표 → 2장, 남은 기름 등장
     - reach: {ending: two_lights}
       after: 0

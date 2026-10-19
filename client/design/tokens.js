@@ -51,7 +51,7 @@ const text = { narration: [18, 17, 16, 15, 14, 13], min: 13, chipMin: 12, lineHe
 const layout = { mobile: 412 };
 // `reduced` replaces every beat under prefers-reduced-motion (ui.md 4.5).
 const motion = {
-  cloud: 600, die: 250, dieGap: 120, line: 200, chip: 180, settle: 900, decisive: 150,
+  cloud: 600, die: 250, dieGap: 120, line: 200, chip: 180, settle: 2200, decisive: 150,
   box: 150, fold: 200, change: 150, blockedFade: 300, odds: 250, reduced: 100,
   typeRate: 60, shakeMax: 1500, stuck: 30000,
 };

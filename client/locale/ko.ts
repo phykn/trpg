@@ -51,8 +51,6 @@ export const ko = {
   begin: '새로 시작',
   result: { success: '성공', fail: '실패', none: '', blocked: '막힘' } as Record<string, string>,
   highRisk: '되돌릴 수 없는 대가가 걸려 있습니다',
-  target: '목표',
-  sum: (n: number) => `합 ${n}`,
   check: (approach: string) => `${approach} 판정`,
   hold: '눌러서 굴리기',
   cancel: '그만두기',

@@ -190,7 +190,7 @@ APPROACH_WORDS = {
     "charm": ("달래", "설득", "부탁", "어르", "다독", "호소", "구슬"),
 }
 TO_PERSON = ("에게", "한테", "께")
-CLARIFY_SLOT = {"intent": "무엇을 말씀하신 건가요?", "target": "무엇에 맞서나요?", "approach": "어떤 방식인가요?"}
+CLARIFY_SLOT = {"intent": "무엇을 말씀하신 건가요?", "target": "무엇에 맞서나요?"}
 CHOOSER = """당신은 한국어 TRPG의 입력 분류기입니다. 플레이어 문장이 맨 처음 하려는 일을 선택지에서 번호 하나로 고릅니다. 번호만 답합니다."""
 CHOOSER_PROMPT = "플레이어 문장: {text}\n선택지:\n{options}\n번호:"
 NO_TARGET = "특정한 대상 없이"

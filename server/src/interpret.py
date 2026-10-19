@@ -251,10 +251,9 @@ class Interpreter:
                 fixed["target"] = top[0][0]
         if "approach" not in fixed:
             top = ranked(answers.get("approach"), approaches)
-            if top[0][1] < self.theta:
-                names = {ap: ko.APPROACHES[ap] for ap in APPROACHES}
-                return self.clarify(u, o, p, st, fixed, "approach", [w for w, _ in top[:3]], names)
-            fixed["approach"] = top[0][0]
+            # An unclear approach falls to the player's strongest stat instead of a question.
+            fixed["approach"] = top[0][0] if top[0][1] >= self.theta else max(
+                APPROACHES, key=lambda ap: o.facts.stat(PLAYER, ap) or 0)
         x, ap = fixed["target"], fixed["approach"]
         slot = next(s for s in slots if s.intent == (x, ap))
         strain = fixed["strain"] if fixed["strain"] in slot.values("strain") else None

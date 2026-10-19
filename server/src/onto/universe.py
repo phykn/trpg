@@ -533,7 +533,7 @@ class _Builder:
         for oid, ov in sections["obstacles"].items():
             ov = self.map(ov, f"obstacles.{oid}")
             u.obstacles[oid] = Obstacle(id=oid, sub="plain", name="",
-                                        boxes=self.int(ov.get("boxes"), f"obstacles.{oid}.boxes", 1, 6))
+                                        boxes=self.int(ov.get("boxes", 1), f"obstacles.{oid}.boxes", 1, 6))
         for sec, sub in (("threats", "threat"), ("forks", "fork")):
             for oid, ov in sections[sec].items():
                 ov = self.map(ov, f"{sec}.{oid}")
@@ -772,7 +772,7 @@ class _Builder:
         w = f"obstacles.{oid}"
         ov = self.map(ov, w, {"name", "aliases", "look", "at", "boxes", "risk", "fits", "clashes", "blocks",
                               "solutions", "clue", "hidden", "complications"},
-                      ("name", "look", "at", "boxes", "solutions"))
+                      ("name", "look", "at", "solutions"))
         sols = []
         for sid, sv in self.map(ov["solutions"], f"{w}.solutions").items():
             sw = f"{w}.solutions.{sid}"
@@ -795,7 +795,7 @@ class _Builder:
         return Obstacle(
             id=oid, sub="plain", name=self.text(ov["name"], w), aliases=self.texts(ov.get("aliases"), w),
             look=self.text(ov["look"], w), at=self.ref(ov["at"], ("place",), f"{w}.at"),
-            boxes=self.int(ov["boxes"], f"{w}.boxes", 1, 6),
+            boxes=self.int(ov.get("boxes", 1), f"{w}.boxes", 1, 6),
             risk=self.choice(ov.get("risk", "normal"), RISKS, f"{w}.risk"),
             fits=tuple(self.choice(x, APPROACHES, f"{w}.fits") for x in self.list(ov.get("fits"), w)),
             clashes=tuple(self.choice(x, APPROACHES, f"{w}.clashes") for x in self.list(ov.get("clashes"), w)),

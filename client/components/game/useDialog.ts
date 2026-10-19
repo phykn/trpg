@@ -18,7 +18,10 @@ export function useDialog(onClose?: () => void): RefObject<View | null> {
     const me = {};
     open.push(me);
     const items = () => Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE));
-    items()[0]?.focus();
+    // Focus the panel, not its first control: an Enter that sent the command would otherwise ring that control.
+    root.tabIndex = -1;
+    root.style.outline = 'none';
+    root.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => {
       if (open[open.length - 1] !== me) return;     // a menu over a card takes the keys first
       if (e.key === 'Escape' && close.current) {

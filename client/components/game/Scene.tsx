@@ -17,7 +17,7 @@ export function Scene({ scene }: { scene: GameView['scene'] }) {
           {scene.obstacles.map((o) => (
             <View key={o.id} className="flex-row items-center gap-1">
               <Item color={colors.kind.obstacle}>{o.name}</Item>
-              <Boxes fill={o.fill} boxes={o.boxes} />
+              {o.boxes > 1 ? <Boxes fill={o.fill} boxes={o.boxes} /> : null}
             </View>
           ))}
           {scene.tags.map((t) => <Item key={`${t.owner}${t.slot}`} tone={t.kind === 'edge' ? 'gold' : 'danger'}>{t.name}</Item>)}

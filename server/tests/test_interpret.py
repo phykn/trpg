@@ -144,3 +144,12 @@ async def test_a_claim_is_asked_only_after_a_deceiving_tone(tmp_path):
     assert [set(q) for _, q in decision.asked[1:]] == [{"intent", "tone"}, {"claim"}]
     card = out["view"]["card"]
     assert card["plan"]["step"]["action"] == "talk:dohae:chat;claim=c_keeper;tone=deceive"
+
+
+async def test_an_unclear_approach_takes_the_strongest_stat_without_asking(tmp_path):
+    decision = FakeDecision({"s1": {"try": 0.9}, "s2": {"end": 0.9}, "strain": {"natural": 0.9},
+                             "approach": {"force": 0.3, "wits": 0.3}})
+    svc, gid, view = await game(tmp_path, decision, moves=["go:village", "go:yard"])
+    out = await say(svc, gid, view, "문을 열어 본다")
+    card = out["view"]["card"]
+    assert card["kind"] == "roll" and card["plan"]["step"]["action"] == "try:door:finesse"
