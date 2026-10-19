@@ -1,23 +1,20 @@
-"""Authenticated HTTP boundary: request schemas, routes, and error mapping."""
+"""The HTTP boundary (api.md): Basic Auth, routes and the error table."""
 
-import json
+from __future__ import annotations
+
 import secrets
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from src.content.schema import Approach
-from src.locale import ko
-from src.models.kev import ModelUnavailable
-from src.scene.view import Button, GameView
-from src.service import GameService, Stale
-from src.store import SaveError
-from src.world.state import IncompatibleSave
+from .locale import ko
+from .service import Conflict, GameService, Incompatible, Invalid, Missing
 
 security = HTTPBasic()
+REQUEST_ID = r"^[A-Za-z0-9_-]{1,64}$"
 
 
 def authenticate(request: Request, creds: Annotated[HTTPBasicCredentials, Depends(security)]) -> None:
@@ -35,19 +32,25 @@ class Strict(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class StartRequest(Strict):
+class Creation(Strict):
+    approaches: dict[str, int]
+    traits: list[str] = Field(default_factory=list, max_length=8)
+
+
+class CreateBody(Strict):
+    request_id: str = Field(pattern=REQUEST_ID)
     story: str = Field(min_length=1, max_length=60)
-    approaches: dict[Approach, int] | None = None
-    traits: list[str] | None = Field(default=None, max_length=2)
+    creation: Creation
 
 
-class ActRequest(Strict):
+class CommandBody(Strict):
+    request_id: str = Field(pattern=REQUEST_ID)
     revision: int = Field(ge=0)
-    request_id: str = Field(min_length=8, max_length=80, pattern=r"^[a-zA-Z0-9_-]+$")
     text: str | None = Field(default=None, max_length=200)
-    action_id: str | None = Field(default=None, min_length=1, max_length=120)
-    confirm: str | None = Field(default=None, min_length=1, max_length=60)
-    accept: bool = True
+    action: str | None = Field(default=None, min_length=1, max_length=200)
+    card: str | None = Field(default=None, min_length=1, max_length=40)
+    pick: str | None = Field(default=None, min_length=1, max_length=200)
+    cancel: bool | None = None
 
     @model_validator(mode="after")
     def one_command(self):
@@ -55,78 +58,57 @@ class ActRequest(Strict):
             self.text = self.text.strip()
             if not self.text or any(ord(c) < 32 for c in self.text):
                 raise ValueError("text must contain visible characters")
-        if sum(v is not None for v in (self.text, self.action_id, self.confirm)) != 1:
-            raise ValueError("send exactly one of text, action_id, confirm")
+        if sum(v is not None for v in (self.text, self.action, self.card)) != 1:
+            raise ValueError("send exactly one of text, action, card")
+        if self.card is not None and (self.pick is None) == (self.cancel is not True):
+            raise ValueError("a card answer is a pick or cancel: true")
+        if self.card is None and (self.pick is not None or self.cancel is not None):
+            raise ValueError("pick and cancel answer a card")
         return self
 
-
-class ActResponse(Strict):
-    kind: str
-    view: GameView
-    turn: int | None = None
-    options: list[Button] = Field(default_factory=list)
-    reason: str = ""
+    def payload(self) -> dict:
+        return {k: v for k, v in self.model_dump().items() if v is not None}
 
 
-def _error(exc: Exception) -> HTTPException:
-    if isinstance(exc, FileNotFoundError):
-        return HTTPException(404, ko.ERRORS["missing"])
-    if isinstance(exc, IncompatibleSave):
-        return HTTPException(409, ko.ERRORS["version"])
-    if isinstance(exc, Stale):
-        return HTTPException(409, ko.ERRORS["stale"])
-    if isinstance(exc, ModelUnavailable):
-        return HTTPException(503, ko.ERRORS["model"])
-    if isinstance(exc, SaveError):
-        return HTTPException(503, ko.ERRORS["save"])
-    return HTTPException(422, ko.ERRORS["invalid"])
+def _error(e: Exception) -> JSONResponse:
+    if isinstance(e, Missing):
+        return JSONResponse({"reason": ko.ERRORS["missing"]}, status_code=404)
+    if isinstance(e, Incompatible):
+        return JSONResponse({"reason": "incompatible"}, status_code=409)
+    if isinstance(e, Conflict):
+        return JSONResponse({"view": e.view}, status_code=409)
+    return JSONResponse({"reason": str(e) or ko.ERRORS["invalid"]}, status_code=422)
 
 
-HANDLED = (FileNotFoundError, ValueError, SaveError, ModelUnavailable)
+HANDLED = (Missing, Incompatible, Conflict, Invalid)
 router = APIRouter(dependencies=[Depends(authenticate)])
 Service = Annotated[GameService, Depends(service)]
 
 
-@router.get("/catalog")
-async def catalog(game: Service) -> list[dict]:
+@router.get("/stories")
+async def stories(game: Service) -> list[dict]:
     return game.catalog()
 
 
-@router.post("/games", response_model=GameView)
-async def start(body: StartRequest, game: Service):
+@router.post("/games")
+async def create(body: CreateBody, game: Service):
     try:
-        return await game.start(body.story, body.approaches, body.traits)
-    except HANDLED as exc:
-        raise _error(exc) from exc
+        return await game.create(body.request_id, body.story, body.creation.model_dump())
+    except HANDLED as e:
+        return _error(e)
 
 
-@router.get("/games/{game_id}", response_model=GameView)
-async def load(game_id: str, game: Service):
+@router.get("/games/{game_id}")
+async def get(game_id: str, game: Service):
     try:
-        return await game.load(game_id)
-    except HANDLED as exc:
-        raise _error(exc) from exc
+        return await game.view(game_id)
+    except HANDLED as e:
+        return _error(e)
 
 
-@router.post("/games/{game_id}/act", response_model=ActResponse)
-async def act(game_id: str, body: ActRequest, game: Service):
+@router.post("/games/{game_id}/commands")
+async def command(game_id: str, body: CommandBody, game: Service):
     try:
-        out = await game.act(game_id, revision=body.revision, request_id=body.request_id, text=body.text,
-                             action_id=body.action_id, confirm=body.confirm, accept=body.accept)
-    except HANDLED as exc:
-        raise _error(exc) from exc
-    return ActResponse(kind=out.kind, view=out.view, turn=out.turn, options=out.options, reason=out.reason)
-
-
-@router.get("/games/{game_id}/turns/{n}/narration")
-async def narration(game_id: str, n: int, game: Service):
-    try:
-        await game.load(game_id)
-    except HANDLED as exc:
-        raise _error(exc) from exc
-
-    async def lines():
-        async for event in game.narration(game_id, n):
-            yield json.dumps(event, ensure_ascii=False) + "\n"
-
-    return StreamingResponse(lines(), media_type="application/x-ndjson")
+        return await game.command(game_id, body.payload())
+    except HANDLED as e:
+        return _error(e)

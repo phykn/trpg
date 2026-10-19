@@ -1,198 +1,298 @@
-"""One serialized command boundary: locks, revisions, receipts, and the order of a turn."""
+"""The turn protocol (engine.md 7): one lock per game, receipts, revision, plan, steps, one save."""
+
+from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
+import re
 import secrets
-from collections.abc import AsyncIterator
-from dataclasses import dataclass, field
-from uuid import uuid4
+from pathlib import Path
 
-from src.content.load import Loaded, new_game
-from src.interpret import Clarify, Rejected, interpret
-from src.locale import ko
-from src.models.kev import KevClient, ModelUnavailable
-from src.models.qwen import QwenClient
-from src.narrate import Narrator
-from src.rules.candidates import candidates
-from src.rules.chapter import grow, growth_options
-from src.rules.resolve import Impossible, resolve
-from src.scene.build import approach_names
-from src.scene.view import Button, GameView, confirm_card, game_view
-from src.store import SaveStore
-from src.world.state import (
-    ActionStep,
-    GameState,
-    IncompatibleSave,
-    Pending,
-    Receipt,
-    Step,
-    TurnRecord,
+from .cards import confirm_card, roll_card
+from .locale import ko
+from .onto.atoms import PLAYER
+from .onto.save import Game, SaveError, new_game, rebuild, save
+from .onto.universe import Universe, check_creation
+from .onto.view import observe, record
+from .rules.acts import parse
+from .rules.candidates import admits
+from .rules.resolve import event_of, resolve
+from .rules.roll import risk, roll, rolls
+from .rules.triggers import ended
+from .story.load import StoryError
+from .view import (
+    action_label,
+    chapter_k,
+    complication_name,
+    default_tag_name,
+    game_view,
+    step_record,
 )
 
-RECEIPT_LIMIT = 50
-BUTTON_KINDS = {"move", "inspect", "talk", "take", "give", "act", "solve", "use_tag", "topic"}
+GAME_ID = re.compile(r"g_[a-f0-9]{32}")
+RECEIPTS = 50
 
 
-class Stale(ValueError):
-    pass
+class Missing(LookupError):
+    """No such game."""
 
 
-@dataclass
-class Outcome:
-    kind: str
-    view: GameView
-    turn: int | None = None
-    options: list[Button] = field(default_factory=list)
-    reason: str = ""
+class Incompatible(RuntimeError):
+    """A save of another schema or story digest (api.md 1: 409 incompatible)."""
+
+
+class Conflict(RuntimeError):
+    """A stale revision or a request id reused with another body; carries the current view."""
+
+    def __init__(self, view: dict):
+        super().__init__("conflict")
+        self.view = view
+
+
+class Invalid(ValueError):
+    """A malformed request (422)."""
+
+
+def body_hash(body: dict) -> str:
+    rest = {k: v for k, v in body.items() if k != "request_id"}
+    return hashlib.sha256(json.dumps(rest, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def fresh_presentation(created: str) -> dict:
+    return {"revision": 0, "turns": [], "requests": [], "card": None, "card_seq": 0, "narration": {},
+            "recap": {}, "tags": [], "choices": [], "receipts": {}, "created": created, "ending": None}
 
 
 class GameService:
-    def __init__(self, stories: dict[str, Loaded], store: SaveStore, kev: KevClient, qwen: QwenClient,
-                 ):
+    def __init__(self, stories: dict[str, Universe], save_dir: Path, interpreter=None,
+                 seeds=lambda: secrets.randbits(63)):
         self.stories = stories
-        self.store = store
-        self.kev = kev
-        self.qwen = qwen
-        self.narrator = Narrator(qwen, kev)
-        self._narrating: dict[str, asyncio.Lock] = {}
+        self.seeds = seeds                      # a game's dice seed (rule.md 3.1); tests pin it
+        self.save_dir = save_dir
+        self.interpreter = interpreter          # engine.md 3; text is refused without it
+        self.games: dict[str, tuple[Universe, Game]] = {}
+        self.locks: dict[str, asyncio.Lock] = {}
 
-    async def check_models(self) -> None:
-        await self.kev.ping()
-        await self.qwen.resolve_model()
+    # -- storage --
+
+    def path(self, game_id: str) -> Path:
+        if not isinstance(game_id, str) or not GAME_ID.fullmatch(game_id):
+            raise Missing(game_id)
+        return self.save_dir / f"{game_id}.json"
+
+    def lock(self, game_id: str) -> asyncio.Lock:
+        self.path(game_id)
+        return self.locks.setdefault(game_id, asyncio.Lock())
+
+    async def load(self, game_id: str) -> tuple[Universe, Game]:
+        if game_id in self.games:
+            return self.games[game_id]
+        path = self.path(game_id)
+        try:
+            text = await asyncio.to_thread(path.read_text, encoding="utf-8")
+        except FileNotFoundError:
+            raise Missing(game_id) from None
+        try:
+            data = json.loads(text)
+            u = self.stories.get(data.get("story", {}).get("id"))
+            if u is None:
+                raise SaveError("unknown story")
+            g = rebuild(u, data)
+        except (SaveError, StoryError, ValueError, KeyError, TypeError, AttributeError) as e:
+            raise Incompatible(str(e)) from None
+        self.games[game_id] = (u, g)
+        return u, g
+
+    async def store(self, u: Universe, g: Game) -> None:
+        write = asyncio.create_task(asyncio.to_thread(save, u, g, self.path(g.id)))
+        cancelled = False
+        while not write.done():
+            try:
+                await asyncio.shield(write)
+            except asyncio.CancelledError:
+                cancelled = True            # never release the lock during file I/O
+        write.result()
+        if cancelled:
+            raise asyncio.CancelledError
+
+    # -- routes --
 
     def catalog(self) -> list[dict]:
-        return [
-            {"id": sid, "title": s.story.title, "synopsis": s.story.synopsis,
-             "creation": {"choose": s.story.creation.choose,
-                          "approaches": [{"id": a, "name": n, "text": ko.APPROACH_HINT[a]}
-                                         for a, n in approach_names(s.story).items()],
-                          "traits": [t.model_dump() for t in s.story.traits]}}
-            for sid, s in self.stories.items()
-            if not s.folder.name.startswith("_")
-        ]
+        return [{"id": u.id, "title": u.title, "premise": u.premise, "approaches": list(u.approaches),
+                 "approach_names": [{"id": ap, "name": ko.APPROACHES[ap], "hint": ko.APPROACH_HINT[ap]}
+                                    for ap in ko.APPROACHES],
+                 "traits": [{"id": t, "name": n, "text": x} for t, (n, x) in u.traits.items()], "pick": u.pick}
+                for u in self.stories.values()]
 
-    def _loaded(self, state: GameState) -> Loaded:
-        loaded = self.stories.get(state.story_id)
-        if loaded is None or loaded.story.version != state.story_version:
-            raise IncompatibleSave("story version mismatch")
-        return loaded
-
-    def _view(self, state: GameState) -> GameView:
-        return game_view(self._loaded(state).story, state)
-
-    async def start(self, story_id: str, approaches: dict | None = None, traits: list[str] | None = None) -> GameView:
-        if story_id not in self.stories:
-            raise ValueError("unknown story")
-        story = self.stories[story_id].story
-        state = new_game(story, game_id=f"g_{uuid4().hex}", seed=secrets.randbits(63),
-                         approaches=approaches, traits=traits)
-        await self.store.save(state)
-        return self._view(state)
-
-    async def load(self, game_id: str) -> GameView:
-        return self._view(await self.store.load(game_id))
-
-    async def act(self, game_id: str, *, revision: int, request_id: str, text: str | None = None,
-                  action_id: str | None = None, confirm: str | None = None, accept: bool = True) -> Outcome:
-        fingerprint = json.dumps([text, action_id, confirm, accept, revision], ensure_ascii=False)
-        async with self.store.lock(game_id):
-            state = await self.store.load(game_id)
-            story = self._loaded(state).story
-            receipt = state.receipts.get(request_id)
-            if receipt is not None:
-                if receipt.fingerprint != fingerprint:
-                    raise Stale("request id reused with different content")
-                return Outcome(kind=receipt.kind, view=self._view(state), turn=receipt.turn)
-            if revision != state.revision:
-                raise Stale("revision mismatch")
-            if state.ending is not None:
-                raise ValueError("the game has ended")
-            pending = state.pending
-            if pending is not None and pending.kind == "growth":
-                return await self._grow(state, action_id or "", request_id, fingerprint)
-            if confirm is not None:
-                if pending is None or pending.id != confirm:
-                    raise Stale("no such confirmation")
-                if not accept:
-                    state.pending = None
-                    state.revision += 1
-                    return await self._commit(state, request_id, fingerprint, "cancelled", None)
-                return await self._run(story, state, pending.steps, pending.input, request_id, fingerprint)
-            if action_id is not None:
-                cand = candidates(story, state).get(action_id)
-                if cand is None or not cand.enabled or cand.kind not in BUTTON_KINDS:
-                    raise ValueError("action is not available")
-                steps: list[Step] = [ActionStep(action_id=action_id)]
-                said = cand.label
-            else:
-                said = (text or "").strip()
-                result = await interpret(self.kev, story, state, said, self.qwen)
-                if isinstance(result, Rejected):
-                    return Outcome(kind="rejected", view=self._view(state), reason=result.reason)
-                if isinstance(result, Clarify):
-                    options = [Button(id=k, label=label) for k, label in result.options]
-                    return Outcome(kind="clarify", view=self._view(state), options=options)
-                steps = list(result.steps)
-            card_id = f"c{state.turn + 1}_{uuid4().hex[:8]}"
-            if confirm_card(story, state, steps, card_id) is not None:
-                state.pending = Pending(id=card_id, kind="confirm", steps=steps, input=said)
-                state.revision += 1
-                return await self._commit(state, request_id, fingerprint, "confirm", None)
-            return await self._run(story, state, steps, said, request_id, fingerprint)
-
-    async def _run(self, story, state: GameState, steps: list[Step], said: str, request_id: str,
-                   fingerprint: str) -> Outcome:
-        try:
-            new, record = resolve(story, state, steps, said)
-        except Impossible:
-            return Outcome(kind="rejected", view=self._view(state), reason=ko.WHY_NOT["absent"])
-        new.turns.append(record)
-        return await self._commit(new, request_id, fingerprint, "turn", record.n)
-
-    async def _grow(self, state: GameState, option: str, request_id: str, fingerprint: str) -> Outcome:
-        story = self._loaded(state).story
-        label = growth_options(story, state).get(option)
-        if label is None:
-            raise ValueError("choose a growth option first")
-        new = state.model_copy(deep=True)
-        new.turn += 1
-        new.revision += 1
-        new.turns.append(TurnRecord(n=new.turn, input=label, changes=grow(story, new, option)))
-        return await self._commit(new, request_id, fingerprint, "turn", new.turn)
-
-    async def _commit(self, state: GameState, request_id: str, fingerprint: str, kind: str,
-                      turn: int | None) -> Outcome:
-        state.receipts[request_id] = Receipt(fingerprint=fingerprint, kind=kind, turn=turn)
-        state.receipts = dict(list(state.receipts.items())[-RECEIPT_LIMIT:])
-        await self.store.save(state)
-        return Outcome(kind=kind, view=self._view(state), turn=turn)
-
-    async def narration(self, game_id: str, n: int) -> AsyncIterator[dict]:
-        lock = self._narrating.setdefault(game_id, asyncio.Lock())
-        async with lock:
-            state = await self.store.load(game_id)
-            loaded = self._loaded(state)
-            record = next((r for r in state.turns if r.n == n), None)
-            if record is not None and record.narration:
-                yield {"type": "done", "text": record.narration, "tags": record.tag_names}
-                return
-            if record is None or n != state.turn:
-                yield {"type": "error", "retry": False}
-                return
+    async def create(self, request_id: str, story: str, creation: dict) -> dict:
+        game_id = "g_" + hashlib.sha256(request_id.encode()).hexdigest()[:32]
+        h = body_hash({"story": story, "creation": creation})
+        async with self.lock(game_id):
             try:
-                async for event in self.narrator.narrate(loaded.story, loaded.style, state, record):
-                    if event["type"] == "done":
-                        await self._save_narration(game_id, n, event["text"], event["tags"])
-                    yield event
-            except ModelUnavailable:
-                yield {"type": "error", "retry": True}
+                u, g = await self.load(game_id)
+            except Missing:
+                pass
+            else:
+                if g.presentation.get("created") != h:
+                    raise Conflict(game_view(u, g))
+                return {"game_id": game_id, "view": game_view(u, g)}
+            u = self.stories.get(story)
+            if u is None:
+                raise Invalid("unknown story")
+            try:
+                check_creation(u, creation)
+            except StoryError as e:
+                raise Invalid(str(e)) from None
+            g = new_game(u, game_id, self.seeds(), creation)
+            g.presentation = fresh_presentation(h)
+            await self.store(u, g)
+            self.games[game_id] = (u, g)
+            return {"game_id": game_id, "view": game_view(u, g)}
 
-    async def _save_narration(self, game_id: str, n: int, text: str, names: dict[str, str]) -> None:
-        async with self.store.lock(game_id):
-            state = await self.store.load(game_id)
-            record = next(r for r in state.turns if r.n == n)
-            record.narration, record.tag_names = text, names
-            for tag in [t for ts in state.tags.values() for t in ts] + state.traces:
-                if tag.id in names and not tag.name:
-                    tag.name = names[tag.id]
-            await self.store.save(state)
+    async def view(self, game_id: str) -> dict:
+        async with self.lock(game_id):
+            u, g = await self.load(game_id)
+            return game_view(u, g)
+
+    async def command(self, game_id: str, body: dict) -> dict:
+        async with self.lock(game_id):
+            u, g = await self.load(game_id)
+            p = g.presentation
+            h = body_hash(body)
+            receipt = p["receipts"].get(body["request_id"])
+            if receipt is not None:
+                if receipt["hash"] != h:
+                    raise Conflict(game_view(u, g))
+                return receipt["response"]
+            if body["revision"] != p["revision"]:
+                raise Conflict(game_view(u, g))
+            try:
+                response = await self._command(u, g, body)
+                p["receipts"][body["request_id"]] = {"hash": h, "response": response}
+                p["receipts"] = dict(list(p["receipts"].items())[-RECEIPTS:])
+                await self.store(u, g)
+            except BaseException:
+                self.games.pop(game_id, None)       # the copy on disk is the truth
+                raise
+            return response
+
+    # -- one command --
+
+    def _result(self, u, g, kind, turn=None, steps=(), reason=None) -> dict:
+        return {"kind": kind, "turn": turn, "steps": list(steps), "reason": reason, "view": game_view(u, g)}
+
+    def _refused(self, u, g, why: str) -> dict:
+        return self._result(u, g, "refused", reason=ko.REFUSED.get(why, why))
+
+    async def _command(self, u: Universe, g: Game, body: dict) -> dict:
+        p = g.presentation
+        if p.get("ending"):
+            return self._refused(u, g, "ended")
+        card = p.get("card")
+        if "card" in body:
+            if card is None or body["card"] != card["id"]:
+                return self._refused(u, g, "card")
+            if body.get("cancel"):
+                p["card"] = None
+                p["requests"].append({"kind": "cancel", "card": card["id"]})
+                p["revision"] += 1
+                return self._result(u, g, "turn")
+            if body.get("pick") not in card["options"]:
+                return self._refused(u, g, "card")
+            plan = [{"action": body["pick"], "accepted": True}, *card["rest"]]
+            return await self._run(u, g, plan, card["public"]["echo"], "card", None)
+        if "action" in body:
+            try:
+                a = parse(body["action"])
+            except ValueError:
+                return self._refused(u, g, "candidate")
+            if not admits(u, observe(u, g.state, g.log), a):
+                return self._refused(u, g, "candidate")
+            echo = {"text": action_label(u, observe(u, g.state, g.log), p, a), "slots": []}
+            return await self._run(u, g, [{"action": str(a)}], echo, "button", None)
+        text = body.get("text")
+        if self.interpreter is None:
+            return self._refused(u, g, "text")
+        out = await self.interpreter.plan(u, g, text)
+        if out.get("refused"):
+            p["requests"].append({"kind": "refused", "text": text})
+            return self._refused(u, g, out["refused"])
+        return await self._run(u, g, out["plan"], {"text": text, "slots": out.get("slots", [])}, "text", text)
+
+    async def _run(self, u: Universe, g: Game, plan: list, echo: dict, kind: str, text: str | None) -> dict:
+        p = g.presentation
+        had_card = p.get("card") is not None
+        p["card"] = None
+        records, t0 = [], len(g.log)
+        for i, st in enumerate(plan):
+            o = observe(u, g.state, g.log)
+            if "action" not in st:
+                st = await self.interpreter.fill(u, g, st)
+                if st.get("card"):
+                    p["card"] = st["card"]
+                    break
+                if "action" not in st:
+                    break
+            a = parse(st["action"])
+            if not admits(u, o, a):
+                if i == 0 and not had_card and kind != "text":
+                    return self._refused(u, g, "candidate")
+                break
+            rest = plan[i + 1:]
+            labels = [self._label(u, o, p, s) for s in rest]
+            if not st.get("accepted"):
+                rolling = rolls(u, o.facts, o.hist, a)
+                if rolling or risk(u, a) == "high":
+                    p["card_seq"] += 1
+                    cid = f"c{p['card_seq']}"
+                    make = roll_card if rolling else confirm_card
+                    extra = {"selected": a.get("rely")} if rolling else {}
+                    p["card"] = make(u, o, p, a, rest, labels, echo, cid, **extra)
+                    break
+            records.append(self._step(u, g, a))
+            s = g.state
+            if ended(s) or records[-1]["result"] in ("fail", "blocked") or any(r[0] == PLAYER for r in s.rows("due")):
+                break
+        turn = None
+        if records:
+            turn = len(p["turns"]) + 1
+            p["turns"].append({"n": turn, "kind": kind, "text": text, "t0": t0, "t1": len(g.log) - 1,
+                               "steps": records})
+        if records or p["card"] is not None or had_card:
+            p["revision"] += 1
+        if not records and p["card"] is None and not had_card:
+            return self._refused(u, g, "candidate")
+        return self._result(u, g, "card" if p["card"] else "turn", turn, records)
+
+    def _label(self, u, o, p, st: dict) -> str:
+        if "action" in st:
+            try:
+                return action_label(u, o, p, parse(st["action"]))
+            except (ValueError, KeyError, StopIteration):
+                return st["action"]
+        return st.get("label", "")
+
+    def _step(self, u: Universe, g: Game, a) -> dict:
+        p = g.presentation
+        s, t = g.state, len(g.log)
+        o = observe(u, s, g.log)
+        label = action_label(u, o, p, a)
+        k = chapter_k(u, o.facts)
+        step = resolve(u, s, g.log.hist, a, roll(g.seed, t))
+        e = event_of(u, s, t, a, step)
+        record(u, g.log, s, step.after, e)
+        g.state = step.after
+        for x, slot, name in step.names:
+            mark = step.after.mark_.get((x, slot))
+            atom = ("mark", x, *mark, slot) if mark else None
+            if atom and atom in step.delta.add:
+                p["tags"].append([list(atom), t, default_tag_name(u, name, mark[0])])
+        if a.schema == "pay":
+            p["choices"].append({"kind": "cost", "name": complication_name(u, a.intent[0]), "chapter": k})
+        elif a.schema == "choose":
+            p["choices"].append({"kind": "fork", "name": label, "chapter": k})
+        ending = step.after.flag("ending") if ended(step.after) and not ended(s) else None
+        if ending:
+            p["ending"] = ending
+        return step_record(u, p, g.log.seen[PLAYER][-1], label, ending)

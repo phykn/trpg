@@ -10,35 +10,34 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.api import router
 from src.config import Settings, load_server_env, settings
-from src.content.load import Loaded, load_story, story_folders
-from src.content.validate import validate
 from src.models.kev import KevClient
 from src.models.qwen import QwenClient
 from src.service import GameService
-from src.store import SaveStore
+from src.story.load import StoryError
+from src.story.validate import load_all
 
 SERVER_DIR = Path(__file__).resolve().parent
 
 
-def load_stories(root: Path) -> dict[str, Loaded]:
-    stories, problems = {}, []
-    for folder in story_folders(root):
-        loaded = load_story(folder)
-        problems += [f"{folder.name}: {e}" for e in validate(loaded.story)]
-        if loaded.story.id in stories:
-            problems.append(f"{folder.name}: duplicate story id {loaded.story.id}")
-        stories[loaded.story.id] = loaded
-    if problems:
-        raise SystemExit("invalid stories:\n" + "\n".join(problems))
-    return stories
+def load_stories(root: Path):
+    try:
+        return load_all(root)
+    except StoryError as e:
+        raise SystemExit(f"invalid story: {e}") from None
+
+
+async def check_models(kev: KevClient, qwen: QwenClient) -> None:
+    """Both models must answer before the server starts (engine.md 8). They run outside this repo."""
+    await kev.ping()
+    await qwen.resolve_model()
 
 
 def build_app(*, service: GameService, basic_auth_user: str, basic_auth_pass: str,
-              cors_origins: list[str], check_models: bool = True) -> FastAPI:
+              cors_origins: list[str], models: tuple[KevClient, QwenClient] | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        if check_models:
-            await service.check_models()
+        if models is not None:
+            await check_models(*models)
         yield
 
     app = FastAPI(title="TRPG engine", version="1.0.0", lifespan=lifespan)
@@ -75,14 +74,11 @@ def create_app(local: bool = False) -> tuple[FastAPI, str, int]:
     else:
         load_server_env(SERVER_DIR)
         cfg = settings(SERVER_DIR)
-    service = GameService(
-        load_stories(cfg.scenario_dir),
-        SaveStore(cfg.save_dir),
-        KevClient(cfg.kev_base_url, min_confidence=cfg.kev_min_confidence, api_key=cfg.kev_api_key),
-        QwenClient(cfg.qwen_base_url, model=cfg.qwen_model, sampling=cfg.qwen_sampling),
-    )
+    kev = KevClient(cfg.kev_base_url, min_confidence=cfg.kev_min_confidence, api_key=cfg.kev_api_key)
+    qwen = QwenClient(cfg.qwen_base_url, model=cfg.qwen_model, sampling=cfg.qwen_sampling)
+    service = GameService(load_stories(cfg.scenario_dir), cfg.save_dir)
     app = build_app(service=service, basic_auth_user=cfg.basic_auth_user, basic_auth_pass=cfg.basic_auth_pass,
-                    cors_origins=cfg.cors_origins)
+                    cors_origins=cfg.cors_origins, models=(kev, qwen))
     return app, cfg.host, cfg.port
 
 

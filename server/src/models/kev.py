@@ -4,16 +4,16 @@ import time
 from typing import Any
 
 import httpx
-from pydantic import Field
-
-from src.content.schema import Model
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ModelUnavailable(RuntimeError):
     pass
 
 
-class Answer(Model):
+class Answer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     type: str
     answer: str | bool
     confidence: float
