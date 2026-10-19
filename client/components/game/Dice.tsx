@@ -52,9 +52,11 @@ export function Dice({ state, values, onRelease, label }: {
     }
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.(10);
   };
+  // The roll goes on press (a click on web): press-out alone is lost when the browser reports touch support.
   const release = () => {
     if (state !== 'ready') return;
-    const strength = Math.min(Date.now() - held.current, motion.shakeMax) / motion.shakeMax;
+    const strength = held.current ? Math.min(Date.now() - held.current, motion.shakeMax) / motion.shakeMax : 0;
+    held.current = 0;
     cancelAnimation(tilt);
     tilt.value = withTiming(0, { duration: 80 + 120 * strength });
     onRelease?.();
@@ -62,7 +64,7 @@ export function Dice({ state, values, onRelease, label }: {
 
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={state !== 'ready'}
-      onPressIn={press} onPressOut={release} className="flex-row items-center gap-3">
+      onPressIn={press} onPress={release} className="flex-row items-center gap-3">
       <Animated.View style={[{ flexDirection: 'row', gap: 8, opacity: state === 'gone' ? 0 : 1 }, style]}>
         <Face value={shown[0]} dim={state === 'locked'} />
         <Face value={shown[1]} dim={state === 'locked'} />

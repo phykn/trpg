@@ -66,11 +66,26 @@ def _forward(u, o: Obs) -> Action | None:
     goal = u.chapter_of(k).goal if k else None
     if goal is None:
         return None
-    places = [leaf[2] for leaf in atoms_of(goal) if leaf[0] == "at" and leaf[1] == PLAYER]
+    places = {leaf[2] for leaf in atoms_of(goal) if leaf[0] == "at" and leaf[1] == PLAYER}
     here = f.where(PLAYER)
-    for q in places:
-        if q != here and f.has("link", here, q):
-            return make("go", (q,))
+    if here in places:
+        return None
+    # The first step of a shortest path over the story's exits toward a goal place; ties by story order.
+    # The goal names the place, so its route is known even where the observation hides a blocked link.
+    first: dict[str, str] = {}
+    frontier = [here]
+    while frontier:
+        nxt = []
+        for p in frontier:
+            for q in sorted(u.places[p].exits, key=u.rank):
+                if q == here or q in first:
+                    continue
+                first[q] = first.get(p, q)
+                if q in places:
+                    a = make("go", (first[q],))
+                    return a if admits(u, o, a) else None
+                nxt.append(q)
+        frontier = nxt
     return None
 
 

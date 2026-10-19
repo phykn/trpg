@@ -308,3 +308,9 @@ def test_random_play_keeps_the_properties(u, creation, seed):
         elif pv is not None:
             assert step.result == "blocked"
     assert space(u, play.obs) is not None
+
+
+def test_recommend_walks_toward_a_goal_place_out_of_reach(play):
+    """With nothing to talk about, the button is the first step toward the chapter goal (rule.md 9)."""
+    play.do("talk:yunseul:t_wall", (6, 6, 0))
+    assert [format(x) for x in recommend(play.u, play.obs)] == ["go:yard"]
