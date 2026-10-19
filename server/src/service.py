@@ -264,11 +264,23 @@ class GameService:
         if out.get("refused"):
             p["requests"].append({"kind": "refused", "text": text})
             return self._refused(u, g, out["refused"])
-        return await self._run(u, g, out["plan"], {"text": text, "slots": out.get("slots", [])}, "text", text)
+        result = await self._run(u, g, out["plan"], {"text": text, "slots": out.get("slots", [])}, "text", text)
+        if result["kind"] != "refused":
+            # How the sentence ended, for the interpretation metric (fun.md F1).
+            card = p.get("card")
+            outcome = ("idle" if out["plan"][0].get("idle")
+                       else "clarify" if card and card["kind"] == "clarify" else "accepted")
+            p["requests"].append({"kind": "text", "text": text, "outcome": outcome})
+        return result
 
     async def _run(self, u: Universe, g: Game, plan: list, echo: dict, kind: str, text: str | None) -> dict:
         p = g.presentation
-        had_card = p.get("card") is not None
+        prev = p.get("card")
+        had_card = prev is not None
+        # Whether a sentence or a button chose these steps; an answered card keeps its own (fun.md F2).
+        origin = (prev or {}).get("origin", "button") if kind == "card" else kind
+        if had_card and kind != "card":
+            p["requests"].append({"kind": "discard", "card": prev["id"]})
         p["card"] = None
         records, t0 = [], len(g.log)
         for i, st in enumerate(plan):
@@ -286,6 +298,7 @@ class GameService:
                 if st.get("clarify"):
                     p["card_seq"] += 1
                     p["card"] = clarify_card(rest, labels, echo, f"c{p['card_seq']}", st["clarify"])
+                    self._opened(p, origin)
                     break
                 if "action" not in st:
                     break
@@ -305,6 +318,7 @@ class GameService:
                     make = roll_card if rolling else confirm_card
                     extra = {"selected": a.get("rely") or st.get("rely")} if rolling else {}
                     p["card"] = make(u, o, p, a, rest, labels, step_echo, cid, **extra)
+                    self._opened(p, origin)
                     break
             records.append(self._step(u, g, a))
             s = g.state
@@ -314,12 +328,19 @@ class GameService:
         if records:
             turn = len(p["turns"]) + 1
             p["turns"].append({"n": turn, "kind": kind, "text": text, "t0": t0, "t1": len(g.log) - 1,
-                               "steps": records})
+                               "steps": records, "origin": origin, "card": prev["id"] if kind == "card" else None})
         if records or p["card"] is not None or had_card:
             p["revision"] += 1
         if not records and p["card"] is None and not had_card:
             return self._refused(u, g, "candidate")
         return self._result(u, g, "card" if p["card"] else "turn", turn, records)
+
+    @staticmethod
+    def _opened(p: dict, origin: str) -> None:
+        card = p["card"]
+        card["origin"] = origin
+        p["requests"].append({"kind": "card", "card": card["id"], "card_kind": card["kind"],
+                              "options": len(card["options"])})
 
     def _label(self, u, o, p, st: dict) -> str:
         if "action" in st:

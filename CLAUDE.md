@@ -4,11 +4,13 @@ A story-agnostic Korean web TRPG engine. The player types a Korean sentence (or 
 
 ## Current state
 
-The engine is being rebuilt from theory.
+The engine is rebuilt from the theory in [plan.md](plan.md) (stages 1–8 done).
 
 - **Design (source of truth)**: [docs/](docs/) — `ontology.md` (world, invariants, operations, save format), `story.md` (story format and validation), `rule.md` (candidates, rolls, time, people), `engine.md` (interpretation, cards, narration, turn protocol), `api.md`, `ui.md`, `fun.md` (metrics).
-- **Story**: [scenarios/skeleton/story.yaml](scenarios/skeleton/story.yaml) is the only story, written in the new format. The current server does not read it.
-- **Old engine** (`server/src/`, `server/tests/`, `client/`): kept as a reference for the rebuild. Its story fixtures were removed, so the server tests fail and the server does not start until the new engine lands. Reuse its outer layers (model clients, locking/receipts/persistence in `service.py`, API routes and NDJSON narration, the staged Kev questioning in `interpret.py`, the Kev check and rewrites in `narrate.py`, `locale/ko.py`, the client). Rewrite the content, world, rules and scene layers from the theory. Removed files remain in git history (`git show 679e486a:<path>`).
+- **Story**: [scenarios/skeleton/](scenarios/skeleton/) (`story.yaml` with id `lighthouse`, and `evals.yaml` for interpretation) is the only story.
+- **Server** (`server/src/`): `onto/` (world, log, saves), `rules/` (pure rules), `story/` (loading, validation, evals), `interpret.py`, `narrate.py`, `cards.py`, `view.py`, `service.py`, `api.py`, `fun.py` (offline metrics).
+- **Client** (`client/`): `logic/useGame.ts` (state machine), `logic/reveal.ts`, `components/game/`, `screens/`.
+- Real-UI QA runs and interpretation evals live in ignored `qa_test/agency/` (`ui-1/turns.md` lists the open findings).
 
 ## Models
 
@@ -34,6 +36,8 @@ Both models are required and run outside this repo. Never start or stop them (no
 cd client && npm run web                             # web UI on localhost:8090 (8081 is Kev)
 
 .venv/bin/python -m pytest -q
+cd server && ../.venv/bin/python -m src.story.evals ../scenarios/skeleton --out ../qa_test/agency/<run>   # needs the models
+cd server && ../.venv/bin/python -m src.fun ../saves/engine                                             # fun.md metrics
 .venv/bin/python -m ruff check server/
 
 cd client && npm test -- --runInBand                 # single: npx jest path/to/file.test.ts
