@@ -41,9 +41,11 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
 
   return (
     <View className="min-h-0 flex-1 gap-4 px-5 pb-4 pt-2">
-      <View className="flex-row items-center gap-2">
-        <Pressable accessibilityRole="button" accessibilityLabel={ko.back} onPress={() => setId(null)} className="py-1 pr-2">
-          <Text className="font-sans text-title text-fg-muted">‹</Text>
+      <View className="flex-row items-center gap-3">
+        <Pressable accessibilityRole="button" accessibilityLabel={ko.back} onPress={() => setId(null)}
+          className="h-[32px] w-[32px] items-center justify-center rounded-full border border-border-default">
+          <View style={{ width: 8, height: 8, marginLeft: 3, borderLeftWidth: 1.5, borderBottomWidth: 1.5, transform: [{ rotate: '45deg' }] }}
+            className="border-fg-muted" />
         </Pressable>
         <Text accessibilityRole="header" className="min-w-0 flex-1 font-serif text-title text-fg-default">{story.title}</Text>
       </View>
@@ -51,7 +53,7 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
         <Text className="font-sans-semibold text-chip text-gold-fg">{ko.count(ko.approaches, spent, total)}</Text>
         <View className="gap-1.5">
           {story.approach_names.map((a) => (
-            <View key={a.id} className="flex-row items-center justify-between rounded-md border border-border-default px-4 py-1">
+            <View key={a.id} className="flex-row items-center justify-between rounded-md border border-border-default px-4 py-1.5">
               <Text className="font-sans-semibold text-body text-fg-default">{a.name}</Text>
               <View className="flex-row items-center gap-2">
                 <Arrow label={`${a.name} ${ko.lower}`} glyph="◀" onPress={placed[a.id] > 0 ? () => add(a.id, -1) : undefined} />
@@ -65,13 +67,13 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
       </View>
       <View className="gap-2">
         <Text className="font-sans-semibold text-chip text-gold-fg">{ko.count(ko.traits, traits.length, story.pick)}</Text>
-        <View className="flex-row flex-wrap gap-2">
+        <View className="gap-1.5">
           {story.traits.map((t) => (
             <Pressable key={t.id} accessibilityRole="checkbox" accessibilityState={{ checked: traits.includes(t.id) }}
               onPress={() => toggle(t.id)}
-              className={`w-[48%] rounded-md border px-3 py-2 ${traits.includes(t.id) ? 'border-gold-fg bg-accent-muted' : 'border-border-default'}`}>
-              <Text className="font-sans-semibold text-body text-fg-default">{t.name}</Text>
-              <Text className="font-sans text-chip text-fg-muted">{t.text}</Text>
+              className={`flex-row items-center gap-3 rounded-md border px-4 py-2 ${traits.includes(t.id) ? 'border-gold-fg bg-accent-muted' : 'border-border-default'}`}>
+              <Text className="w-[56px] font-sans-semibold text-body text-fg-default">{t.name}</Text>
+              <Text className="min-w-0 flex-1 font-sans text-panel text-fg-muted">{t.text}</Text>
             </Pressable>
           ))}
         </View>
