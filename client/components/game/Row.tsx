@@ -5,7 +5,7 @@ import { Text, View } from 'react-native';
 // Wrap, never truncate: names are never shortened.
 export function Row({ label, children, inset }: { label: ReactNode; children: ReactNode; inset?: boolean }) {
   return (
-    <View className={`flex-row items-start py-0.5 ${inset ? 'pl-1 pr-3' : 'px-4'}`}>
+    <View className={`flex-row items-start py-0.5 ${inset ? 'pl-4 pr-3' : 'px-4'}`}>
       {typeof label === 'string'
         ? <Text className="w-[52px] font-sans text-chip text-fg-subtle">{label}</Text>
         : <View className="min-w-[52px]">{label}</View>}

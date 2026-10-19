@@ -14,7 +14,6 @@ import { Menu } from '@/components/game/Menu';
 import { Narration } from '@/components/game/Narration';
 import { RollCard } from '@/components/game/RollCard';
 import { Scene } from '@/components/game/Scene';
-import { Self } from '@/components/game/Self';
 import { ko } from '@/locale/ko';
 import { frame as frameAt } from '@/logic/reveal';
 import type { Game } from '@/logic/useGame';
@@ -48,6 +47,8 @@ export function Play({ game }: { game: Game }) {
 
   const commandsOpen = phase === 'idle' || phase === 'card';
   const menuOpen = menu && commandsOpen;
+  const sheetOpen = sheet && phase === 'idle';
+  const growthLater = view.growth.length > 0 && game.growthLater;
   let card = null;
   if (rollOpen) {
     const c = phase === 'rolling' ? view.card : reveal?.card;
@@ -80,10 +81,9 @@ export function Play({ game }: { game: Game }) {
 
   return (
     <View className="min-h-0 flex-1">
-      <Header view={rows} menu={menuOpen} onMenu={commandsOpen ? () => { setSheet(false); setMenu(!menu); } : undefined} />
-      {phase === 'ending' ? null : <Self player={rows.player} journal={rows.journal} open={sheet && phase === 'idle'}
-        onToggle={phase === 'idle' ? () => { setMenu(false); setSheet(!sheet); } : undefined}
-        onGrowth={view.growth.length && game.growthLater ? () => { setSheet(false); game.openGrowth(); } : undefined} />}
+      <Header view={rows} menu={menuOpen} onMenu={commandsOpen ? () => { setSheet(false); setMenu(!menu); } : undefined}
+        hero={sheetOpen}
+        onGrowth={growthLater ? () => { setSheet(false); game.openGrowth(); } : undefined} onHero={phase === 'idle' ? () => { setMenu(false); setSheet(!sheet); } : undefined} />
       <Clocks clocks={rows.clocks} crisis={revealing ? [] : crisis} />
       {phase === 'ending' ? <Ending view={view} recaps={game.recaps} onNew={game.newGame} /> : (
         <View className="min-h-0 flex-1">
@@ -103,7 +103,7 @@ export function Play({ game }: { game: Game }) {
           {card ? <View className="absolute bottom-0 left-0 right-0 top-0">{card}</View> : null}
         </View>
       )}
-      {sheet && phase === 'idle' ? (
+      {sheetOpen ? (
         <Pressable accessibilityLabel={ko.closeMenu} className="absolute bottom-0 left-0 right-0 top-0 z-10" onPress={() => setSheet(false)} />
       ) : null}
       {menuOpen ? <Menu onClose={() => setMenu(false)} onTitle={() => { setMenu(false); game.toTitle(); }} /> : null}
