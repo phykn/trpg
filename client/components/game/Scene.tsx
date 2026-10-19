@@ -10,13 +10,6 @@ export function Scene({ scene, beats, beatsMax }: { scene: GameView['scene']; be
   const around = scene.people.length + scene.things.length + scene.obstacles.length + scene.tags.length;
   return (
     <Group>
-      <Row label={ko.row.here}>
-        <Item>{scene.place.name}</Item>
-        <View className="flex-row items-center gap-1">
-          <Item tone="muted">{ko.beats}</Item>
-          <Boxes fill={beats} boxes={beatsMax} />
-        </View>
-      </Row>
       {around ? (
         <Row label={ko.row.around}>
           {scene.people.map((p) => <Item key={p.id} color={colors.kind.person}>{p.name}</Item>)}
@@ -30,6 +23,13 @@ export function Scene({ scene, beats, beatsMax }: { scene: GameView['scene']; be
           {scene.tags.map((t) => <Item key={`${t.owner}${t.slot}`} tone={t.kind === 'edge' ? 'gold' : 'danger'}>{t.name}</Item>)}
         </Row>
       ) : null}
+      <Row label={ko.row.here}>
+        <Item>{scene.place.name}</Item>
+        <View className="flex-row items-center gap-1">
+          <Item tone="muted">{ko.beats}</Item>
+          <Boxes fill={beats} boxes={beatsMax} />
+        </View>
+      </Row>
       {scene.exits.length ? (
         <Row label={ko.row.exits}>
           {scene.exits.map((e) => <Item key={e.id} dim={e.blocked}>{e.name}</Item>)}

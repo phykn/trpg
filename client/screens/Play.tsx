@@ -84,11 +84,11 @@ export function Play({ game }: { game: Game }) {
       <Header view={rows} menu={menuOpen} onMenu={commandsOpen ? () => { setSheet(false); setMenu(!menu); } : undefined}
         hero={sheetOpen}
         onGrowth={growthLater ? () => { setSheet(false); game.openGrowth(); } : undefined} onHero={phase === 'idle' ? () => { setMenu(false); setSheet(!sheet); } : undefined} />
-      <Clocks clocks={rows.clocks} crisis={revealing ? [] : crisis} />
       {phase === 'ending' ? <Ending view={view} recaps={game.recaps} onNew={game.newGame} /> : (
         <View className="min-h-0 flex-1">
           <View className="min-h-0 flex-1">
             <Scene scene={rows.scene} beats={rows.player.beats} beatsMax={rows.player.beats_max} />
+            <Clocks clocks={rows.clocks} crisis={revealing ? [] : crisis} />
             <Narration narration={game.narration} hold={revealing} failed={phase === 'narration_error'}
               fallback={view.last ? '' : view.story.premise}
               onTyped={game.typed} onRetry={game.retryNarration} />

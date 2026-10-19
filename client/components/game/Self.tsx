@@ -50,7 +50,6 @@ export function HeroSheet({ player, journal, onGrowth, onClose }: {
         <Text className="px-4 pb-1 font-sans-semibold text-body text-fg-default">{player.name || ko.hero}</Text>
         <Row inset label={ko.health}>
           <Health left={player.wound_boxes - player.wounds} of={player.wound_boxes} />
-          <Item tone="muted">{player.wound_boxes - player.wounds}/{player.wound_boxes}</Item>
         </Row>
         {player.tags.length ? (
           <Row inset label={ko.row.state}>
