@@ -277,3 +277,43 @@ async def test_a_fork_in_the_scene_lends_its_choices_as_the_examples_of_choose()
     decision = FakeDecision({"s1": {"look": 0.9}, "n": {"1": 0.9}})
     await interpret(Interpreter(decision), u, replay(u, {"path": 0, "step": 0}), "둘러본다")
     assert "기름" not in decision.asked[0][1]["s1"]["criteria"]["choose"]
+
+
+async def test_a_refusal_names_what_keeps_the_target_out_of_reach(tmp_path):
+    decision = FakeDecision({"s1": {"try": 0.9}, "n": {"1": 0.9}, "strain": {"natural": 0.9}})
+    # talking to 도해 runs into the hidden dog, which is then in sight
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("1"), moves=["go:village", "talk:dohae:chat"])
+    assert "hound" in [x["id"] for x in view["scene"]["obstacles"]]
+    out = await say(svc, gid, view, "ㅋㅋㅋ 도해의 아구창을 날린다")
+    # not a try on another target (the letter) but the reason
+    assert out["kind"] == "refused" and out["reason"] == "사나운 누렁이가 도해를 막고 있습니다."
+    decision.answers["s1"] = {"talk": 0.9}
+    out = await say(svc, gid, out["view"], "도해에게 이야기", "t2")
+    assert out["reason"] == "사나운 누렁이가 도해를 막고 있습니다."
+    # someone met elsewhere: the reader may well walk there, but a talk step says where they are not
+    u, g = svc.games[gid]
+    st = await svc.interpreter.fill(u, g, {"schema": "talk", "text": "윤슬에게 등대에 대해 묻는다", "fixed": {}})
+    assert st == {"refused": "윤슬은 여기 없습니다."}
+    st = await svc.interpreter.fill(u, g, {"schema": "talk", "text": "왜 못하지?", "fixed": {}})
+    assert st == {"refused": "사나운 누렁이가 도해를 막고 있습니다."}
+    # the guard keeps things from being handed over too
+    out = await svc.command(gid, {"request_id": "g", "revision": out["view"]["revision"], "action": "give:letter:dohae"})
+    assert out["kind"] == "refused"
+    decision.answers["s1"] = {"try": 0.9}
+    out = await say(svc, gid, out["view"], "도해 앞의 누렁이를 낮은 목소리로 달랜다", "t4")
+    assert out["kind"] != "refused"
+
+
+async def test_a_way_an_obstacle_blocks_is_refused_with_its_reason(tmp_path):
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("1"), moves=["go:yard"])
+    for i, text in enumerate(["등불 방으로 올라간다", "날아서 꼭대기 등불실로"]):
+        out = await say(svc, gid, view, text, f"t{i}")
+        assert out["reason"] == "녹슨 등대 문이 등불 방으로 가는 길을 막고 있습니다."
+
+
+async def test_giving_what_the_player_does_not_hold_says_so(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeDecision(), moves=["give:letter:yunseul"])
+    u, g = svc.games[gid]
+    st = await svc.interpreter.fill(u, g, {"schema": "give", "text": "윤슬에게 편지를 다시 건넨다", "fixed": {}})
+    assert st == {"refused": "아들의 편지를 지니고 있지 않습니다."}

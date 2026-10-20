@@ -142,6 +142,15 @@ Just before executing step `i`, its slots are asked together in one call, using 
 | Claim | Judgment | Only when the tone is `deceive`. For each claim sentence in the story, a yes/no question "플레이어는 이렇게 말합니까?" (Does the player say this?), asked on the sentence alone with no context. The claim with the highest "yes" at or above `θ` is taken; if none, there is no claim |
 | Reliance | Judgment | **Not chosen.** The roll card shows the target number and modifiers, so the player chooses there; layer 0 name matching sets the default, and the model only filters out what is unrelated to this attempt (4.2) |
 
+**Out of reach.** Before the slots are asked, a sentence whose named target is out of reach is refused with that cause instead of the bare refusal. The causes are:
+
+- an obstacle in sight blocks a person, thing or way the sentence names: "{장애물}이 {대상}을 막고 있습니다", "{장애물}이 {곳}으로 가는 길을 막고 있습니다";
+- a `talk` or `give` names someone the player met who is not here: "{이름}은 여기 없습니다";
+- a `talk` or `give` that names no one, where everyone here is blocked: the first of them, as above ("왜 못하지?" beside a guarded 도해);
+- a `give` names a known thing the player does not hold: "{물건}을 지니고 있지 않습니다".
+
+This also happens when the schema has values here but none of them is anything the sentence names. Otherwise the slot fell to another target: "도해의 아구창을 날린다", with 도해 behind a guard dog, became a try on the letter. A hidden obstacle is not a cause: it is not in the observation, so the step runs and is blocked, which reveals it. Players met the bare refusal in every playtest and could not tell a guard from a broken game (qa/findings.md).
+
 For the destination, the **current place** is offered along with the ways out, unless the sentence names a way out ("마당에서 마을로 간다", go from the yard to the village). Choosing it means the move is already done: that step is skipped, or, if no step has run, the sentence is refused with "이미 …에 있습니다" (you are already at …). Offered only the ways out, the decision model picked another way even when the sentence named the current place in other words; but it is also sometimes sure of the current place for sentences that pass through here and go on ("열린 문으로 들어가 꼭대기까지 오른다", go in through the open door and climb to the top). So, as with layer-1 refusals, the current place is accepted only when the narration model picks it too (qa_test/runs/misread-1).
 
 ### 3.4 Acceptance `δ_θ`

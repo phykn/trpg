@@ -11,7 +11,7 @@ from .models.decision import ModelUnavailable
 from .onto.atoms import APPROACHES, PLAYER
 from .onto.view import observe
 from .rules.acts import JUDGE, make, parse
-from .rules.candidates import Slot, candidates, expand, solution_label, space
+from .rules.candidates import Slot, blockers, candidates, expand, solution_label, space
 from .view import action_label, rely_label
 
 THETA = 0.5
@@ -57,6 +57,36 @@ def named(u, o, text: str) -> list[str]:
         if at:
             found.append((min(at), x))
     return [x for _, x in sorted(found)]
+
+
+def unreachable(u, o, text: str, schema: str) -> str | None:
+    """Why the sentence's own target is out of reach, when the engine knows it. Refused with no reason, players could
+    not tell a guard dog from a broken game, and a sentence aimed at a guarded person landed on another target
+    ("도해의 아구창을 날린다" → a try on the letter)."""
+    f, here = o.facts, o.facts.where(PLAYER)
+    for x in named(u, o, text):
+        by = blockers(u, f, x) if x != here else []
+        if by:
+            key = "blocked_way" if u.kind(x) == "place" else "blocked"
+            return ko.fill(ko.WHY[key], ob=u.name(by[0]), x=u.name(x))
+    if schema == "give":
+        # a thing handed over is out of sight in its new holder's hands, so memory says it is known
+        known = {a[1] for s in o.memory for a in (*s.delta.add, *s.delta.remove) if a[0] == "at" and a[1] in u.things}
+        for x in sorted(known | {x for x in o.seen if x in u.things}):
+            if f.where(x) != PLAYER and any(mentions(w, text) >= 0 for w in (u.name(x), *u.aliases(x))):
+                return ko.fill(ko.WHY["not_held"], x=u.name(x))
+    if schema in ("talk", "give"):
+        met = {w for s in o.memory for w in s.witnesses}
+        for x in sorted(met - set(o.seen)):
+            if x in u.agents and any(mentions(w, text) >= 0 for w in (u.name(x), *u.aliases(x))):
+                return ko.fill(ko.WHY["away"], x=u.name(x))
+        # spoken to no one by name ("왜 못하지?"), the people here are the ones meant
+        here_people = [x for x in sorted(o.seen, key=u.rank) if x in u.agents and f.where(x) == here]
+        guarded = [(x, by) for x in here_people if (by := blockers(u, f, x))]
+        if here_people and len(guarded) == len(here_people) and not set(named(u, o, text)) & set(u.agents):
+            x, by = guarded[0]
+            return ko.fill(ko.WHY["blocked"], ob=u.name(by[0]), x=u.name(x))
+    return None
 
 
 def addressee(u, o, text: str) -> str | None:
@@ -230,8 +260,10 @@ class Interpreter:
         p = g.presentation
         text, fixed = st["text"], dict(st.get("fixed", {}))
         slots = [s for s in space(u, o) if s.schema == st["schema"]]
-        if not slots:
-            return {"refused": ko.REFUSED["candidate"]}
+        why = unreachable(u, o, text, st["schema"])
+        names = named(u, o, text)
+        if not slots or (why and not any(x in s.intent for s in slots for x in names if x != PLAYER)):
+            return {"refused": why or ko.REFUSED["candidate"]}
         if st["schema"] == "try":
             return await self.fill_try(u, o, p, st, slots, text, fixed)
         here = (o.facts.where(PLAYER),)

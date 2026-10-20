@@ -8,7 +8,7 @@ import secrets
 from pathlib import Path
 
 from .cards import clarify_card, confirm_card, move_card, rely_options, roll_card, ways
-from .interpret import names_way
+from .interpret import names_way, unreachable
 from .locale import ko
 from .narrate import (
     RECAP_CHARS,
@@ -336,7 +336,8 @@ class GameService:
         if records or p["card"] is not None or had_card:
             p["revision"] += 1
         if not records and p["card"] is None and not had_card:
-            return self._refused(u, g, already or "candidate")
+            why = unreachable(u, observe(u, g.state, g.log), text, "") if text else None
+            return self._refused(u, g, already or why or "candidate")
         return self._result(u, g, "card" if p["card"] else "turn", turn, records)
 
     async def _relies(self, u, o, p, a, text: str | None) -> list[str]:

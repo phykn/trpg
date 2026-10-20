@@ -46,7 +46,7 @@ CommandResult
 ```
 
 - `kind` is `card` whenever a card stopped the command, even if there are `steps`. The client decides whether to reveal from whether `steps` exist, and whether to show a card from `view.card`.
-- `refused`: a layer-0 refusal, a sentence asking for an action that is not possible now, a sentence moving to where the player already is (engine.md 3.2, 3.3), an `action` outside the candidates, or, at the same `revision`, a `pick` outside the options or a stale card id. Neither the state nor the `revision` changes.
+- `refused`: a layer-0 refusal, a sentence asking for an action that is not possible now (with its cause when the engine knows it: a blocking obstacle, someone not here, a thing not held), a sentence moving to where the player already is (engine.md 3.2, 3.3), an `action` outside the candidates, or, at the same `revision`, a `pick` outside the options or a stale card id. Neither the state nor the `revision` changes.
 - The step that accepted a card is `steps[0]`.
 
 ## 3. Step records

@@ -53,7 +53,7 @@ places:
     exits: [village, dock, lamp_room]
   lamp_room:
     name: 등불 방
-    aliases: [등대 꼭대기]
+    aliases: [등대 꼭대기, 등불실]
     senses: [먼지 앉은 렌즈, 식은 기름 냄새, 유리창을 때리는 빗방울]
     exits: [yard]
 

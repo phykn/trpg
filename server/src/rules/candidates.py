@@ -116,7 +116,7 @@ def space(u, o: Obs) -> list[Slot]:
     out += [Slot("take", (x,)) for x in seen if x in u.things and f.where(x) == here and open_(x)]
     held = [x for x in seen if x in u.things and f.where(x) == PLAYER]
     people = [h for h in seen if h in u.agents and f.where(h) == here and open_(h)]
-    out += [Slot("give", (x, h)) for x in held for h in seen if h in u.agents and f.where(h) == here]
+    out += [Slot("give", (x, h)) for x in held for h in people]
     claims = (None, *u.claims)
     for h in people:
         topics = [t.id for t in u.agents[h].topics]

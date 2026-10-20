@@ -51,7 +51,7 @@ The old schema `pay` survives only in the action-id grammar (`acts.py`) so that 
 
 `candidates(U, O) → list[Action]` reads only the observation `O = (E, F, B, hᵥ)` and story constants. Candidates come in schema-table order, and within a schema in the story's declaration order.
 
-**Visible blocks**: `x` is visibly blocked when an obstacle `o ∈ E` lists `x` in its story `blocks`, `F` has `at(o, ·)`, and `fill(o) < boxes(o)`. `go`, `take`, `talk` and `try` that take a visibly blocked `x` as an argument are not candidates. Hidden blocks do not shrink the candidates.
+**Visible blocks**: `x` is visibly blocked when an obstacle `o ∈ E` lists `x` in its story `blocks`, `F` has `at(o, ·)`, and `fill(o) < boxes(o)`. `go`, `take`, `give`, `talk` and `try` that take a visibly blocked `x` as an argument are not candidates: a guard that keeps you from talking to someone also keeps you from handing them things (play: `refuse-1-play`). Hidden blocks do not shrink the candidates.
 
 | Schema | Candidates |
 |---|---|
