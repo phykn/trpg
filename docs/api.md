@@ -119,7 +119,7 @@ Cards (engine.md 4):
   "selected": "try:door:finesse;rely=thing:key" }
 ```
 
-A clarification card's `options` are `{id: action id, label}`, and confirm and move cards' `options` are `[{id: action id, label, effects: [name]}]`. None of the three has a `preview`. A move card's `selected` is the destination the sentence chose, and it is the first option (engine.md 4.4). A roll card option's `consumed` says relying on it uses it up, and `note` is the text for that ("1번 남음", 1 use left, for tags and traits); its `preview` holds the fields from rule.md 3.4.
+A clarification card's `options` are `{id: action id, label}`, and confirm and move cards' `options` are `[{id: action id, label, effects: [name]}]`. None of the three has a `preview`. A move card's `selected` is the destination the sentence chose, and it is the first option; when the sentence named that place alone it is the only option (engine.md 4.4). A roll card option's `consumed` says relying on it uses it up, and `note` is the text for that ("1번 남음", 1 use left, for tags and traits); its `preview` holds the fields from rule.md 3.4.
 
 ```
 { "risk": "normal",

@@ -9,7 +9,8 @@ from run_api import build_app
 from src.lang.polite import polite
 from src.locale import ko
 from src.models.decision import ModelUnavailable
-from src.narrate import Narrator, change_line, sentences_of, split
+from src.narrate import Narrator, change_line, messages, sentences_of, split
+from src.onto.atoms import PLAYER, State
 from src.service import GameService
 from src.story.validate import load_all
 
@@ -188,21 +189,56 @@ async def test_an_absent_person_acting_is_rewritten(tmp_path):
     assert "없는 사람" in llm.calls[1][1]["content"] and "윤슬" in llm.calls[1][1]["content"]
 
 
-async def test_a_person_named_in_delta_or_here_may_act(tmp_path):
+async def test_a_change_naming_someone_elsewhere_does_not_bring_them_here(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
     u, g = svc.games[gid]
     job = replace(svc._turn_job(u, g, 1), delta=["윤슬이 기름통을 얻었습니다"])
     said = ["윤슬이 당신의 젖은 소매를 가볍게 스칩니다.", "도해가 낮게 기침합니다.", "\"윤슬이 온다\"고 누가 외칩니다."]
     per, _ = svc.narrator.rules(job, said, [])
-    assert per == {}
-    per, _ = svc.narrator.rules(replace(job, delta=[]), said, [])
     assert list(per) == [0]
+
+
+async def test_a_companion_left_behind_appears_only_parting(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))     # the village; 윤슬 is at the dock
+    u, g = svc.games[gid]
+    job = replace(svc._turn_job(u, g, 1), left={"yunseul": "dock"})
+    said = ["윤슬은 선착장에 남아 손을 흔듭니다.", "윤슬이 당신의 젖은 소매를 가볍게 스칩니다."]
+    per, _ = svc.narrator.rules(job, said, [])
+    assert list(per) == [1]
+    prompt = messages(job)[1]["content"]
+    assert "윤슬은 선착장에 남았습니다" in prompt and u.agents["yunseul"].fear.rstrip(".") in prompt
+
+
+async def test_an_ending_picks_up_what_the_player_left_behind(tmp_path):
+    from src.onto.log import Delta
+    from src.onto.view import Seen
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))     # met 윤슬 at the dock, now in the village with 도해
+    u, g = svc.games[gid]
+    job = svc._turn_job(u, g, 1)
+    atoms = [a for a in job.o.facts.atoms() if a[:2] != ("regards", "yunseul")]
+    trust = [("regards", "yunseul", PLAYER, "trust", 2), ("regards", "yunseul", PLAYER, "fear", 0)]
+    gave = Seen(9, "give", None, "none", ("dohae", PLAYER), Delta(frozenset({("at", "letter", "dohae")}), frozenset()), ())
+    o = replace(job.o, facts=State.of([*atoms, *trust]), memory=(*job.o.memory, gave))
+    job = replace(job, o=o, ending="불이 다시 켜집니다")
+    now = messages(job)[1]["content"].split(ko.HEAD["now"])[1]
+    assert "윤슬은 당신을 신뢰합니다" in now and "도해가 아들의 편지를 지니고 있습니다" in now
+    assert now.rstrip().endswith("불이 다시 켜집니다") and "아직 멀었습니다" not in now
+    said = ["멀리 선착장에서 윤슬이 불빛을 올려다봅니다.", "윤슬이 당신 곁에서 웃습니다."]
+    assert list(svc.narrator.rules(job, said, [])[0]) == [1]
+    assert list(svc.narrator.rules(replace(job, ending=None), said, [])[0]) == [0, 1]
 
 
 def test_a_lowered_threat_recedes_instead_of_approaching(u):
     up = {"kind": "clock", "id": "hound", "name": "사냥개", "from": 0, "to": 1}
     assert change_line(u, up).endswith("다가왔습니다")
     assert change_line(u, {**up, "from": 1, "to": 0}).endswith("물러났습니다")
+    # a full clock strikes and starts over; read as a fall, it said the storm receded (play-2-bold 23, play-2-odd 50)
+    assert change_line(u, {**up, "kind": "crisis", "from": 3, "to": 0}).endswith("끝내 닥쳤습니다")
+    lamp = {"kind": "fill", "id": "lamp", "name": "꺼진 등불", "from": 3, "to": 2}
+    assert change_line(u, lamp) == "꺼진 등불이 조금 되돌아갔습니다"
+    # a deadline's name is often a clause ("해가 진다"), so no particle follows it, and its arrival says the goal was missed
+    assert change_line(u, {"kind": "arrival", "id": "deadline.1", "name": "해가 진다"}) == \
+        "해가 진다: 목표를 이루지 못한 채 시간이 다 되었습니다"
 
 
 def test_event_verbs_in_a_quote_are_not_claims():
@@ -249,3 +285,11 @@ def test_repetition_cues_and_address():
     assert fresh_cue(senses, []) == "젖은 밧줄 냄새"
     assert fresh_cue(senses, ["젖은 밧줄의 냄새. 말뚝에 부딪히는 파도. 낮게 깔린 회색 구름."]) is None
     assert ADDRESS.search("\"어머, 아저씨! 바다요?\"") and not ADDRESS.search("\"저 아저씨는 누구야?\"")
+
+
+def test_worn_phrases_are_those_in_two_recent_narrations_aside_from_names_and_senses(u):
+    from src.narrate import worn
+    previous = ["파도가 등대를 집어삼킬 듯 몰아칩니다. 윤슬이 웃습니다.",
+                "어둠이 바다를 집어삼킬 듯한 기세입니다. 윤슬이 웃습니다.",
+                "젖은 밧줄 냄새가 납니다."]
+    assert worn(u, previous) == ["집어삼킬 듯한"]

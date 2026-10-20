@@ -265,3 +265,15 @@ async def test_story_links_skip_the_question_and_a_silent_model_hides_nothing(tm
     assert await Interpreter(sure).relevant(u, o, p, a, values, None) == ["thing:oil", "tag:lamp:1"]
     assert list(sure.asked[0][1]["rely"]["criteria"]) == ["r0", "r1", "none"]
     assert await Interpreter(FakeDecision(fail=True)).relevant(u, o, p, a, values, None) == values
+
+
+async def test_a_fork_in_the_scene_lends_its_choices_as_the_examples_of_choose():
+    from src.story.evals import interpret, replay
+    u = STORIES["lighthouse"]
+    decision = FakeDecision({"s1": {"choose": 0.9}, "n": {"1": 0.9}})
+    await interpret(Interpreter(decision), u, replay(u, {"path": 0, "step": 4}), "등불에 기름을 붓는다")
+    choose = decision.asked[0][1]["s1"]["criteria"]["choose"]
+    assert "기름을 모두 등불에 붓는다" in choose and "절반을 마을 봉화에 남긴다" in choose
+    decision = FakeDecision({"s1": {"look": 0.9}, "n": {"1": 0.9}})
+    await interpret(Interpreter(decision), u, replay(u, {"path": 0, "step": 0}), "둘러본다")
+    assert "기름" not in decision.asked[0][1]["s1"]["criteria"]["choose"]

@@ -7,7 +7,8 @@ import re
 import secrets
 from pathlib import Path
 
-from .cards import clarify_card, confirm_card, move_card, rely_options, roll_card
+from .cards import clarify_card, confirm_card, move_card, rely_options, roll_card, ways
+from .interpret import names_way
 from .locale import ko
 from .narrate import (
     RECAP_CHARS,
@@ -319,7 +320,8 @@ class GameService:
                 # A sentence picks a way by meaning, so the player sees where and with whom before leaving (engine.md 4.4).
                 if a.schema == "go" and kind == "text":
                     p["card_seq"] += 1
-                    p["card"] = move_card(u, o, p, a, rest, labels, step_echo, f"c{p['card_seq']}")
+                    only = names_way(u, a.intent[0], ways(u, o), text)
+                    p["card"] = move_card(u, o, p, a, rest, labels, step_echo, f"c{p['card_seq']}", only)
                     self._opened(p, origin)
                     break
             records.append(self._step(u, g, a))
@@ -444,6 +446,8 @@ class GameService:
         here = o.facts.where(PLAYER)
         people = {x for x in o.seen if x in u.agents and o.facts.where(x) == here}
         speakers = [x for x in dict.fromkeys(named) if x in people]
+        left = {c["id"]: o.facts.where(c["id"]) for r in turn["steps"] for c in r["changes"]
+                if c["kind"] == "follow" and c["state"] == "stop" and o.facts.where(c["id"]) != here}
         tags = [{"index": i, "slot": atom[4], "owner": atom[1], "name": name}
                 for i, (atom, t, name) in enumerate(p["tags"])
                 if turn["t0"] <= t <= turn["t1"] and o.facts.mark_.get((atom[1], atom[4])) == tuple(atom[2:4])]
@@ -452,7 +456,7 @@ class GameService:
         previous = [p["narration"][str(m)]["text"] for m in range(max(1, n - PREVIOUS_TURNS), n)
                     if str(m) in p["narration"]]
         return Job(u, o, p, happened, delta, {PLAYER, here, *people, *ids}, text=turn["text"], tags=tags,
-                   previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers,
+                   previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers, left=left,
                    chars=SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars)
 
     def _recap_job(self, u: Universe, g: Game, k: int) -> Job | None:

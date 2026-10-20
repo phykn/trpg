@@ -74,7 +74,7 @@ Narration and its check read `scene(U, O, X)`, which is `context` with these cha
 - Ways out are included only from places in the focus.
 - Number lines are dropped. Approach values are for rolls, and narration may not state numbers. A wound is written only when there is one, as "당신은 다친 몸입니다" (you are wounded). A regard line at 0 says nothing yet reads as an attitude at odds with the persona ("덤덤하게", indifferently), so it is dropped.
 - Obstacle progress is dropped at 0 and otherwise written "{name}: 조금 풀렸습니다 · 거의 풀렸습니다 · 풀렸습니다" (loosened a little · almost undone · undone): the second when one box is left, the third when full.
-- The current chapter's risk clocks and deadlines go in without numbers, as "{name}: 아직 멀었습니다 · 다가오고 있습니다 · 코앞에 닥쳤습니다" (still far · drawing near · upon you). With no box filled it is the first; with one box left or all full, the third. The passage of time that the story's `style` describes (light, waves) follows this line.
+- The current chapter's risk clocks and deadlines go in without numbers, as "{name}: 아직 멀었습니다 · 다가오고 있습니다 · 코앞에 닥쳤습니다" (still far · drawing near · upon you). With no box filled it is the first; with one box left or all full, the third. The passage of time that the story's `style` describes (light, waves) follows this line. Their names are events ("배가 암초에 닿는다") that were narrated as happening, so the turn's steering repeats these lines and adds that what has not happened is not written as happened. Only the steering says it: in the context lines the check read "아직 일어나지 않았고" against ordinary sentences and called 13 of them contradictions in the narration bench, against 1 before (`narr-2/fix-2`). The turn's steering also lists up to three two-word phrases found in two of the last three narrations (names and place senses aside), to be said differently this time.
 
 ## 3. Interpretation
 
@@ -91,7 +91,7 @@ K_σ(O) = { a ∈ K(O) | a's schema is σ }
 | 1. Parts | How many actions, and which schema the first step is. If unsure or several, the narration model reads the sequence of steps | Count `{1, 2, 3}`; step 1 from the 9 of `Σ_말` (schemas possible here, `{σ ∣ space(σ) ≠ ∅}`, first). The narration model gets the same 9 | One decision-model call, plus one narration-model call if needed |
 | 2. Slots | The arguments of step `i` | Values of `space(V_{t+i−1})` consistent with earlier slots. For the destination, also the current place | **Just before** executing step `i`. Only when there are two or more values. If empty, stop at that step (refuse the sentence if it is the first step) |
 
-Layer 1 options are a few fixed, story-free choices, which is the kind of question a small model handles best. Arguments for steps 2 and 3 are asked from the observation after the earlier step has run: in "창고로 가서 상자를 연다" (go to the storeroom and open the box), the box becomes visible only after entering the storeroom.
+Layer 1 options are a few fixed, story-free choices, which is the kind of question a small model handles best. The one exception: when a fork waits in the scene, the `choose` option's examples are that fork's own choices, since with general examples "pour the oil on the lamp" read as a `try` (qa_test/runs/play-1-*). Arguments for steps 2 and 3 are asked from the observation after the earlier step has run: in "창고로 가서 상자를 연다" (go to the storeroom and open the box), the box becomes visible only after entering the storeroom.
 
 ### 3.1 Layer 0: rules
 
@@ -207,7 +207,7 @@ A `go(q)` step chosen by a sentence (`origin` is the sentence) stops just before
 
 | Field | Content |
 |---|---|
-| `options` | For each current `go` candidate, `{id: action id, label: place name, effects: [for each companion "{name}과 함께" (with {name}), or for avoids "{name}은 남음" ({name} stays)]}`. The sentence's choice first, the rest in candidate order |
+| `options` | `{id: action id, label: place name, effects: [for each companion "{name}과 함께" (with {name}), or for avoids "{name}은 남음: {fear}" ({name} stays, with the character's `fear` as the reason)]}`. When the sentence names the chosen place (its name or an alias) and no other way, only that place, so the card just confirms the move. Otherwise every current `go` candidate, the sentence's choice first, the rest in candidate order |
 | `selected` | The `go(q)` the sentence chose |
 | `plan` | That step and the rest of the plan. Choosing another place goes there, and the rest of the plan fills its slots again from there |
 
@@ -243,6 +243,7 @@ Format rules:
 - The player's sentence is read for its meaning, not copied, and shown as the actions and words of `당신`. Questions are answered from facts in the context; anything else is not yet knowable.
 - A person spoken to or handed something answers directly, from where they stand, in double-quoted dialogue attributed to them and true to their persona and voice, without copying sample lines and without any form of address for you.
 - People know only what the context and what happened state; otherwise they say they do not know or change the subject.
+- A companion left behind this turn (their `avoids`) is shown parting, with their `fear` as the reason; after that they are not in the scene.
 
 ### 5.3 Check
 
@@ -250,6 +251,7 @@ Format rules:
    - Length: sentence and character counts. A quoted line counts as part of its sentence, and a sentence that is only a quote attaches to the preceding one that names the speaker.
    - Form: 합니다체 (`lang/polite.py` fixes 해라체 endings), no second person other than `당신`, no list or option shapes, numbers or parentheses (sounds and gestures go in sentences too), a `태그:` line of at most 12 characters, no names of hidden entities.
    - Facts, read outside quotes only (dialogue is not something happening now): obtaining a thing not held (`at(x, player) ∉ F'`), handing over a thing held, or reaching a place not reached (`at(player, place) ∉ F'`), each found as a name plus a verb of that kind.
+   - Presence: a person who is not at the player's place may not stand as a subject (`윤슬이`, `노인은`) outside quotes, even when a change names them (their regard, a thing they got). Two exceptions: a companion left behind this turn, in a sentence that tells the parting (`ko.PARTING` words or the place they stayed at), and in the ending, anyone the legacy lines name, in a sentence that sets them far off (`ko.AFAR`) (5.5).
    - Repetition: a phrase of 10 or more characters, spaces excluded, identical to the last 3 turns of narration or to the sample lines of a person speaking now (about three words; shorter overlaps are common phrasing).
    - Address: a form of address for you in dialogue that guesses age or gender, like 아저씨 (mister) or 언니 (big sister) (`ko.ADDRESS`).
 2. **Claim extraction** `κ` (`lang/claims.py`): from each sentence, `Σ` literals are extracted using names and aliases and the verb forms of the frame table's change and present frames. Taking `F'` as the facts of `Vₜ₊ₖ`, a positive literal `φ` is accepted only if `φ ∈ F'`, and a negative literal `¬φ` only if it follows from `F'` and `C` (e.g. `at(key, A) ∈ F'` gives `¬at(key, B)` by C1). A negative claim such as "여기엔 경비가 없다" (there is no guard here) is not accepted, since there may be a hidden guard. Sentences that cannot be rendered in `Σ` (smells, weather, expressions) contradict no state, so they are free. Growing `Σ` widens what the check covers and narrows narration's freedom.
@@ -265,7 +267,7 @@ If any sentence is rejected, the narration is rewritten with that sentence and t
 
 Names from the `태그:` line are kept in the presentation layer, keyed by `(mark atom, t at creation)`. When a slot is rewritten, an old name does not attach to the new tag, and a name is shown only while its atom is in `F`. `R` and conditions do not read this table.
 
-In a turn where a chapter change or ending happens, a recap of the finished chapter `k` is written after the narration, in the same way. Instead of 5.1, its input is up to 5 notable events from that chapter's `M` (improvisations that raised `fill` by 2, claims, promises and how they ended, declarations, fork choices, scars, threat arrivals) rendered in change frames; the check is the same. `GET /games/{id}/chapters/{k}/recap` returns it in the same stream, and it is kept only in `P`. The ending's narration includes the story's `frame`.
+In a turn where a chapter change or ending happens, a recap of the finished chapter `k` is written after the narration, in the same way. Instead of 5.1, its input is up to 5 notable events from that chapter's `M` (improvisations that raised `fill` by 2, claims, promises and how they ended, declarations, fork choices, scars, threat arrivals) rendered in change frames; the check is the same. `GET /games/{id}/chapters/{k}/recap` returns it in the same stream, and it is kept only in `P`. The ending's steering replaces the place cue, pace lines and usual close: it lists the legacy lines and asks for the change, then one legacy line, then the story's `frame` as the last sentence; with no legacy lines, the change and the frame. The legacy lines are what the player leaves behind, rendered as context facts. They are trust that moved from its start for someone the player met (a witness in `M`), debts to or from the player, things the player saw go to an agent that did not start there (from `M`), and companions. They also go into the check's context with the frame. Anyone not here appears only far off and gets no new event. Before this, the pace line and the usual close outweighed the frame: no ending told whether the boats came home, and none named a person (play-1-talker 46, play-2-talker 48). Re-narrating the round-2 endings gave the frame in 6 of 6 and a legacy line in 6 of 6, with one invented event for an absent person (`qa_test/runs/play-2-reending-3.txt`).
 
 ## 6. Presentation layer `P`
 

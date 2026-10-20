@@ -59,6 +59,8 @@ export const ko = {
   cancel: '그만두기',
   choose: '고른다',
   whereTo: '어디로 갈까요?',
+  goTo: (place: string) => `${ro(place)} 갈까요?`,
+  leave: '간다',
   thanks: '덕분에',
   because: '때문에',
 } as const;

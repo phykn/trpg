@@ -36,6 +36,7 @@ ACTION = {
     "claim": "{h}에게 {claim}",
     "try_self": "{approach}{으로} 해 본다",
     "try": "{x}에 {approach}{으로} 맞선다",
+    "try_agent": "{x}에게 {approach}{으로} 맞선다",
     "declare": "선언: {name}",
     "pass": "장면을 넘긴다",
     "rest": "쉬어 간다",
@@ -48,7 +49,10 @@ SWAP = "{old} → {new}"
 RELYING = "{rely}에 기대어 "
 NO_RELY = "기대지 않음"
 MOVE_WITH = "{name}{와} 함께"
-MOVE_LEFT = "{name}{은} 남음"
+# A sentence about someone left behind must tell the parting: stay, stop, wait, see off.
+PARTING = ("남", "멈춰", "멈추", "머무", "머물", "기다", "배웅", "돌아서", "따라오지", "올라오지", "들어오지")
+AFAR = ("멀리", "먼 곳")
+MOVE_LEFT = "{name}{은} 남음: {fear}"
 # A tag goes for good and a trait returns next chapter, but on the card both are one use away from gone.
 CONSUMED = dict.fromkeys(("tag", "trait"), "1번 남음")
 # The roll card's relevance question (engine.md 4.2): one option per reliance, and none.
@@ -211,6 +215,9 @@ SCHEMA_ASK = {
     "cut": "기다리거나 쉬며 시간을 보낸다 (예: 날이 밝을 때까지 기다린다, 잠깐 눈을 붙인다)",
     "choose": "어떻게 할지 결정을 내린다 (예: 남은 돈은 고아원에 맡기기로 한다, 두 길 중 강 쪽을 택한다)",
 }
+# With a fork in the scene its own choices are the examples: the general ones left "pour all the oil on the lamp"
+# reading as a try (qa_test/runs/play-1-*).
+CHOOSE_HERE = "어떻게 할지 결정을 내린다 (예: {choices})"
 STEP_QUESTION = "플레이어 문장에서 가장 먼저 하는 행동은 무엇입니까? 뒤에 이어지는 행동은 보지 않습니다."
 # Asking the count beats an "end" option after each step: the model stops adding steps to one-action sentences.
 COUNT_QUESTION = "플레이어 문장은 서로 다른 행동을 몇 가지 차례로 합니까?"
@@ -255,9 +262,12 @@ NO_TARGET = "특정한 대상 없이"
 CHANGE = {
     "fill": "{name}{이} 조금 풀렸습니다",
     "fill_done": "{name}{이} 다 풀렸습니다",
-    "clock": "{name}{이} 다가왔습니다",
-    "crisis": "{name}{이} 조금 물러났습니다",
-    "arrival": "{name}{이} 들이닥쳤습니다",
+    "fill_back": "{name}{이} 조금 되돌아갔습니다",
+    "clock": "{name}: 다가왔습니다",
+    "crisis": "{name}: 끝내 닥쳤습니다",
+    "recede": "{name}: 조금 물러났습니다",
+    "arrival": "{name}: 들이닥쳤습니다",
+    "deadline": "{name}: 목표를 이루지 못한 채 시간이 다 되었습니다",
     "tag_add": "{owner}에 {name}{이} 생겼습니다",
     "scar": "당신에게 {name}{이} 남았습니다",
     "tag_remove": "{owner}의 {name}{이} 사라졌습니다",
@@ -277,9 +287,9 @@ CHANGE = {
     "regards_down": "{name}의 마음이 당신에게서 멀어졌습니다",
     "promise_made": "당신은 {name}에게 {promise}{을} 약속했습니다",
     "kindness_made": "{name}{이} 당신에게 신세를 졌습니다",
-    "promise_kept": "당신은 {name}과의 약속을 지켰습니다",
-    "promise_broken": "당신은 {name}과의 약속을 어겼습니다",
-    "promise_closed": "{name}과의 빚이 정리되었습니다",
+    "promise_kept": "당신은 {name}{와}의 약속을 지켰습니다",
+    "promise_broken": "당신은 {name}{와}의 약속을 어겼습니다",
+    "promise_closed": "{name}{와}의 빚이 정리되었습니다",
     "chapter": "새 장이 시작됩니다: {name}",
     "ending": "이야기가 끝납니다: {name}",
 }
@@ -300,11 +310,19 @@ HEAD = {"context": "[문맥]", "happened": "[일어난 일]", "tags": "[새 태�
         "now": "[이번 서술]",
         "player": "[플레이어 문장]", "ending": "[결말]", "feedback": "[고칠 점]", "notable": "[이 장의 일]"}
 # The steering block closes the prompt: a small model follows the end of its prompt best (narr-2 REPORT).
+# Clock and deadline names are events ("배가 암초에 닿는다") that were narrated as happening (qa_test/runs/play-1-bold
+# 13–27). Only the steering says so: in the context lines, "아직 일어나지 않았고" made the check call ordinary
+# sentences contradictions (narr-2/fix-2).
 NOW = {"speaker": "{x}: {persona} 말투는 {voice}",
        "cue": "새로 그릴 감각: {cue}",
        "no_cue": "풍경은 이미 보여 주었으니, 이번에는 인물과 바뀐 것을 그립니다.",
-       "pace": "때: {text}. 하늘, 빛, 파도는 이 흐름만큼만 바뀝니다.",
-       "close": "이번에 바뀐 것을 보여 주고, 마지막 문장은 인물의 반응이나 눈앞의 것으로 끝냅니다."}
+       "pace": "때: {text}. 하늘, 빛, 파도는 이 흐름만큼만 바뀌고, 아직 일어나지 않은 일은 일어난 것처럼 쓰지 않습니다.",
+       "worn": "최근 서술에서 거듭 쓴 표현이니 이번에는 다른 말로 씁니다: {words}",
+       "left": "{name}{은} {place}에 남았습니다. 까닭: {fear}. 이제 이 자리에 없으니 헤어지는 모습만 그리고 곁에 있는 것처럼 쓰지 않습니다.",
+       "close": "이번에 바뀐 것을 보여 주고, 마지막 문장은 인물의 반응이나 눈앞의 것으로 끝냅니다.",
+       "legacy": "결말에 담을 수 있는 것: {items}",
+       "ending": "이 서술로 이야기가 끝납니다. 이번에 바뀐 것을 보여 준 뒤, 마지막 문장은 이 결말을 그립니다: {frame}",
+       "ending_legacy": "이 서술로 이야기가 끝납니다. 첫 문장은 이번에 바뀐 것, 다음 문장은 위의 담을 수 있는 것 가운데 하나입니다. 여기 없는 사람은 '멀리'라는 말과 함께, 그가 있는 곳에서 이 결말을 맞는 모습으로만 그리고 그에게 새 일을 만들지 않습니다. 마지막 문장은 이 결말입니다: {frame}"}
 NAMING = "이번에 생긴 태그마다 서술 뒤에 한 줄씩 '태그: 이름'을 적으십시오. 이름은 12자 이하의 짧은 말입니다. 기본 이름: {names}"
 ENDING_FRAME = "이 서술로 이야기가 끝납니다. 다음 틀로 마무리하고 다음 행동을 묻지 않습니다: {frame}"
 RECAP_TASK = "장 '{title}'이 끝났습니다. 아래 일들을 되짚는 짧은 문단 하나를 쓰십시오. {sentences}문장 이하, {chars}자 이하, 합니다체."

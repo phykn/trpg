@@ -339,3 +339,22 @@ def test_a_companion_goes_along_until_a_place_it_avoids(u, play):
     play.do("talk:yunseul:stay")
     play.do("go:village")
     assert play.s.where("yunseul") == "yard" and not play.s.rows("follows")
+
+
+def test_a_chapter_its_deadline_ended_starts_the_next_deadline_a_box_closer(u, creation):
+    from src.story.validate import Run
+    late = Run(u, creation)
+    while late.s.flag("chapter") in (None, 1):
+        late.step(parse("cut:pass"))
+    assert late.s.fill("deadline.2") == 1
+    on_time = Run(u, creation)
+    for a, r in (("go:village", None), ("go:yard", None), ("try:door:finesse", (6, 6, 0)), ("go:lamp_room", None)):
+        on_time.step(parse(a), r)
+    assert on_time.s.flag("chapter") == 2 and on_time.s.fill("deadline.2") == 0
+
+
+def test_an_attempt_on_a_person_takes_ege(u, s0):
+    from src.view import action_label
+    o = observe(u, s0, Log())
+    assert action_label(u, o, {}, parse("try:dohae:charm")) == "도해에게 매력으로 맞선다"
+    assert action_label(u, o, {}, parse("try:door:charm")) == "녹슨 등대 문에 매력으로 맞선다"

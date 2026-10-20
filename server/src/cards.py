@@ -89,15 +89,20 @@ def confirm_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[st
     return {"id": card_id, "kind": "confirm", "options": [str(a)], "rest": rest, "public": public}
 
 
-def move_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[str], echo: dict, card_id: str) -> dict:
-    """The ways out with the sentence's pick first, each saying who comes along (engine.md 4.4)."""
-    ways = [slot.intent[0] for slot in space(u, o) if slot.schema == "go"]
-    ways = [a.intent[0], *(q for q in ways if q != a.intent[0])]
+def ways(u, o: Obs) -> list[str]:
+    return [slot.intent[0] for slot in space(u, o) if slot.schema == "go"]
+
+
+def move_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[str], echo: dict, card_id: str,
+              only: bool = False) -> dict:
+    """The sentence's way first, then the other ways unless the sentence named it alone; each says who comes along
+    (engine.md 4.4)."""
+    out = [a.intent[0]] if only else [a.intent[0], *(q for q in ways(u, o) if q != a.intent[0])]
     company = [h for h, g in o.facts.rows("follows") if g == PLAYER]
     options = []
-    for q in ways:
-        effects = [ko.fill(ko.MOVE_LEFT if q in u.agents[h].avoids else ko.MOVE_WITH, name=u.name(h))
-                   for h in sorted(company, key=u.rank)]
+    for q in out:
+        effects = [ko.fill(ko.MOVE_LEFT, name=u.name(h), fear=u.agents[h].fear) if q in u.agents[h].avoids
+                   else ko.fill(ko.MOVE_WITH, name=u.name(h)) for h in sorted(company, key=u.rank)]
         options.append({"id": str(make("go", (q,))), "label": u.name(q), "effects": effects})
     public = {"id": card_id, "kind": "move", "echo": echo, "plan": _plan(u, o, p, a, rest_labels),
               "options": options, "selected": str(a)}

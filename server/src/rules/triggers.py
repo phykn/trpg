@@ -13,7 +13,7 @@ def ended(s: State) -> bool:
 def apply(ctx: Ctx, effects) -> None:
     for e in effects:
         if e[0] == "chapter_to":
-            chapter_to(ctx, e[1], e[2])
+            chapter_to(ctx, e[1], e[2], *e[3:])
         elif e[0] == "end":
             end(ctx, e[1])
         else:
@@ -43,7 +43,7 @@ def player_promises(s: State) -> list[str]:
     return sorted(h for g, h, k in s.rows("owes") if g == PLAYER and k == "promise")
 
 
-def chapter_to(ctx: Ctx, k: int, extra) -> None:
+def chapter_to(ctx: Ctx, k: int, extra, late: bool = False) -> None:
     w = ctx.work
     w.set_("flag", ("chapter",), k)
     w.expire("chapter")
@@ -56,6 +56,9 @@ def chapter_to(ctx: Ctx, k: int, extra) -> None:
     w.retire(f"deadline.{k - 1}")
     w.move(f"clock.{k}", PLAYER)
     w.move(f"deadline.{k}", PLAYER)
+    # A chapter its deadline ended costs time: without it a missed goal changed nothing (qa_test/runs/play-1-*).
+    if late and ctx.u.boxes(f"deadline.{k}") > 1:
+        w.set_("fill", (f"deadline.{k}",), "+1")
     w.set_("stat", (PLAYER, "growth"), "+1")
     apply(ctx, extra)
 

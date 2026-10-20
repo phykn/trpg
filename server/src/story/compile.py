@@ -411,7 +411,7 @@ class _Builder:
             if not last and cv.get("goal") is None:
                 self.fail(f"{w}: needs a goal")
             arrival = self.effects(dl.get("effects"), f"{w}.deadline.effects")
-            arrival += (("end", ending),) if ending else (("chapter_to", k + 1, ()),)
+            arrival += (("end", ending),) if ending else (("chapter_to", k + 1, (), True),)
             crisis = self.effects(cv["clock"]["crisis"], f"{w}.clock.crisis")
             if not crisis:
                 self.fail(f"{w}.clock.crisis: needs at least one effect")

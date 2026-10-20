@@ -40,6 +40,14 @@ def mentions(word: str, text: str) -> int:
     return m.start() if m else -1
 
 
+def names_way(u, q: str, ways: list[str], text: str) -> bool:
+    """The sentence names way q and no other way, so its move card only confirms it (engine.md 4.4)."""
+    said = [w for w in ways
+            if any(mentions(n, text) >= 0 or mentions(n.replace(" ", ""), text) >= 0
+                   for n in (u.name(w), *u.aliases(w)))]
+    return said == [q]
+
+
 def named(u, o, text: str) -> list[str]:
     found = []
     for x in o.seen:
@@ -178,6 +186,9 @@ class Interpreter:
         # talk to someone kept away) on another and was sure of it. An impossible first step stops the sentence
         # (qa_test/runs/misread-1).
         say = {σ: ko.SCHEMA_ASK[σ] for σ in sorted(SAY, key=lambda σ: σ not in have)}
+        forks = [action_label(u, o, p, a) for a in candidates(u, o) if a.schema == "choose"]
+        if forks:
+            say["choose"] = ko.fill(ko.CHOOSE_HERE, choices=", ".join(forks))
         qs = {"s1": choice(ko.STEP_QUESTION, say), "n": choice(ko.COUNT_QUESTION, ko.COUNT)}
         # Layer 1 options are scene-free, so Kev reads the sentence alone: on the skeleton evals the context
         # ρ({player, here}) lowered accuracy from 80% to 71% (qa_test/runs/interp-2-ctx).

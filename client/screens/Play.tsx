@@ -118,7 +118,8 @@ export function Play({ game }: { game: Game }) {
       {phase === 'ending' ? <Ending view={view} recaps={game.recaps} onNew={game.newGame} /> : (
         <View className="min-h-0 flex-1">
           <View className="min-h-0 flex-1">
-            <Clocks clocks={rows.clocks} crisis={revealing ? [] : crisis} />
+            <Clocks clocks={rows.clocks} crisis={revealing ? [] : crisis}
+              time={rows.player.beats_max ? rows.player.beats / rows.player.beats_max : 0} />
             <Scene scene={rows.scene} onDraft={commandsOpen ? (t) => { setDraft(t); input.current?.focus(); } : undefined} />
             <Chat entries={log.entries} live={live} roll={roll} waiting={phase === 'sending' || phase === 'revealing' || (phase === 'narrating' && live)}
               narration={game.narration} hold={revealing} failed={phase === 'narration_error'}

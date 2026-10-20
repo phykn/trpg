@@ -190,7 +190,7 @@ Both the roll decision and the screen evaluate `free_when` on visible state (V3 
 
 What the engine builds:
 - Chapter `k`'s goal trigger `(flag(chapter, k) ∧ goal, [chapter_to(k+1)] ++ goal_effects)`
-- The deadline's arrival effect: `effects ++ [end(e)]` with `ending: e`, otherwise `effects ++ [chapter_to(k+1)]`
+- The deadline's arrival effect: `effects ++ [end(e)]` with `ending: e`, otherwise `effects ++ [chapter_to(k+1)]`, which starts the next deadline a box closer (rule.md 4.3)
 - Engine ids for risk clocks and deadlines (`clock.k`, `deadline.k`) and their placement in `S₀`: the first chapter's at `at(·, player)`, the others with no `at`, all with `fill` 0
 
 ### 3.8 Threats and forks

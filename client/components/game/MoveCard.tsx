@@ -1,9 +1,22 @@
+import { Text } from 'react-native';
+
+import { Button } from '@/components/ui/Button';
 import { Choice, Sheet } from '@/components/ui/Sheet';
 import { ko } from '@/locale/ko';
 import type { Card } from '@/services/types';
 
-// The way the sentence chose comes first in gold, each way saying who comes along; one tap leaves.
+// A sentence that named its place gets one way to confirm; otherwise every way, the sentence's pick first in gold.
+// Each says who comes along; one tap leaves.
 export function MoveCard({ card, onPick, onCancel }: { card: Card; onPick: (id: string) => void; onCancel: () => void }) {
+  if (card.options.length === 1) {
+    const o = card.options[0];
+    return (
+      <Sheet title={ko.goTo(o.label)} icon="arrow" onClose={onCancel}>
+        {o.effects?.length ? <Text className="font-sans text-panel text-fg-muted">{o.effects.join(' · ')}</Text> : null}
+        <Button icon="arrow" label={ko.leave} onPress={() => onPick(o.id)} />
+      </Sheet>
+    );
+  }
   return (
     <Sheet title={ko.whereTo} icon="arrow" onClose={onCancel}>
       {card.options.map((o) => (

@@ -128,7 +128,7 @@ def action_label(u, o: Obs, p: dict, a: Action) -> str:
         sol = solution_label(u, o, a)
         if sol:
             return sol
-        text = ko.fill(ko.ACTION["try"], x=u.name(x), approach=ko.APPROACHES[ap])
+        text = ko.fill(ko.ACTION["try_agent" if u.kind(x) == "agent" else "try"], x=u.name(x), approach=ko.APPROACHES[ap])
         text = f"{ko.STRAINS['forced']} {text}" if a.get("strain") == "forced" else text
         return _relying(u, o, p, a) + text
     if s == "declare":

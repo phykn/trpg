@@ -248,7 +248,8 @@ async def test_a_sentence_move_waits_on_a_move_card_naming_who_comes(tmp_path):
     out = await cmd(svc, gid, out["view"], "r3", text="마을")
     card = out["view"]["card"]
     assert card["kind"] == "move" and not out["steps"] and card["selected"] == "go:village"
-    assert card["options"][0] == {"id": "go:village", "label": "바닷가 마을", "effects": ["윤슬과 함께"]}
+    # the sentence named the place alone (an alias here), so the card only confirms it
+    assert card["options"] == [{"id": "go:village", "label": "바닷가 마을", "effects": ["윤슬과 함께"]}]
     out = await cmd(svc, gid, out["view"], "r4", card=card["id"], pick="go:village")
     assert out["view"]["scene"]["place"]["id"] == "village"
     assert [p["id"] for p in out["view"]["scene"]["people"] if p["with"]] == ["yunseul"]
@@ -267,6 +268,19 @@ async def test_a_move_card_can_take_another_way_or_be_closed(tmp_path):
     card = out["view"]["card"]
     out = await cmd(svc, gid, out["view"], "r5", card=card["id"], pick="go:dock")
     assert [s["action"] for s in out["steps"]] == ["go:dock"]
+
+
+async def test_a_move_card_lists_the_ways_unless_the_sentence_names_one_alone(tmp_path):
+    texts = ["등대앞으로 간다", "등대 마당 쪽", "선착장 말고 등대 앞으로", "저기로"]
+    svc = service(tmp_path, {t: ["go:yard"] for t in texts})
+    gid, view = await new(svc)
+    _, view = await press(svc, gid, view, "go:village", "r0")
+    shown = []
+    for i, t in enumerate(texts):
+        out = await cmd(svc, gid, view, f"r{i}a", text=t)
+        shown.append([o["id"] for o in out["view"]["card"]["options"]])
+        view = (await cmd(svc, gid, out["view"], f"r{i}b", card=out["view"]["card"]["id"], cancel=True))["view"]
+    assert shown == [["go:yard"], ["go:yard"], ["go:yard", "go:dock"], ["go:yard", "go:dock"]]
 
 
 async def test_a_button_move_needs_no_card(svc):

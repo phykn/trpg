@@ -218,6 +218,8 @@ A **deadline** `deadline.k` is a threat, one per chapter, whose arrival effect u
 4. `retire(clock.k−1)`, `retire(deadline.k−1)`, `move(clock.k, player)`, `move(deadline.k, player)`
 5. `growth +1`, plus the story's `goal_effects` when the change comes from reaching the goal
 
+When the change comes from the deadline's arrival instead (the goal was missed), step 4 also does `fill +1` on `deadline.k` if it has more than one box: being late costs time in the next chapter.
+
 `end(e)` does `set(flag, ending, e)`, then settles all of the player's remaining promises as in step 2, and stops that step's trigger scan. When the chapter goal becomes true in `Δ₀`, story triggers are scanned before engine triggers, so even if the previous clock filled up in the same step, that clock retires without `τ_risk`.
 
 ## 5. People

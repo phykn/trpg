@@ -6,9 +6,10 @@ import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
+from itertools import pairwise
 
-from .lang.claims import accepts, claims, mentioned, subjects
-from .lang.context import render, scene
+from .lang.claims import accepts, claims, subjects
+from .lang.context import fact_line, render, scene
 from .lang.polite import QUOTED, plain, polite
 from .locale import ko
 from .models.decision import ModelUnavailable
@@ -52,6 +53,7 @@ class Job:
     sentences: int = SENTENCES
     task: str | None = None          # a recap's task line instead of the turn
     speakers: list[str] = field(default_factory=list)   # people here that this turn's actions name
+    left: dict[str, str] = field(default_factory=dict)   # companions this turn left behind: person → place
 
 
 def sentences_of(text: str) -> list[str]:
@@ -77,9 +79,11 @@ def change_line(u, c: dict) -> str | None:
     k = c["kind"]
     if k == "fill":
         done = c["to"] >= u.boxes(c["id"])
-        return ko.fill(ko.CHANGE["fill_done" if done else "fill"], name=c["name"])
+        return ko.fill(ko.CHANGE["fill_done" if done else "fill" if c["to"] > c["from"] else "fill_back"], name=c["name"])
     if k == "clock" and c["to"] < c["from"]:
-        return ko.fill(ko.CHANGE["crisis"], name=c["name"])
+        return ko.fill(ko.CHANGE["recede"], name=c["name"])
+    if k == "arrival" and c["id"].startswith("deadline."):
+        return ko.fill(ko.CHANGE["deadline"], name=c["name"])
     if k in ("clock", "crisis", "arrival", "chapter", "ending"):
         return ko.fill(ko.CHANGE[k], name=c["name"])
     if k in ("tag_add", "tag_remove"):
@@ -132,12 +136,74 @@ def forbidden(u, o: Obs) -> dict[str, str]:
 
 
 def absent(job: Job) -> set:
-    """A recap tells past scenes, so everyone may act in it."""
+    """A recap tells past scenes, so everyone may act in it. A change naming someone elsewhere (their regard, a thing
+    they got) does not bring them here."""
     if job.task:
         return set()
     u, o = job.u, job.o
-    named = {x for line in job.delta for _, x in mentioned(u, line)}
-    return {x for x in u.agents if o.facts.where(x) != o.here or o.here is None} - named
+    return {x for x in u.agents if o.facts.where(x) != o.here or o.here is None}
+
+
+def legacy(u, o: Obs) -> list[tuple]:
+    """What the player leaves behind for the ending to pick up: trust that moved with someone they met, debts,
+    things they saw go to someone, and companions. Without them every ending was one or two lines about the lamp
+    (qa_test/runs/play-1-talker 30, 46). Met and handed over come from memory: at the ending those people are
+    rarely in sight (play-2-talker 48)."""
+    met = {w for s in o.memory for w in s.witnesses if w in u.agents}
+    last = {a[1]: a for s in o.memory for a in sorted(s.delta.add, key=str) if a[0] == "at" and a[1] in u.things}
+
+    def left(a) -> bool:
+        if a[0] == "regards":
+            return a[2] == PLAYER and a[3] == "trust" and a[1] in met and a[4] != u.agents[a[1]].regards.get("trust", 0)
+        if a[0] == "owes":
+            return PLAYER in a[1:3]
+        return a[0] == "follows"
+    out = [a for a in o.facts.atoms() if left(a)]
+    out += [a for a in last.values() if a[2] in u.agents and u.things[a[1]].at != a[2]]
+    return sorted(out, key=lambda a: (a[0], str(a[1:])))
+
+
+def parting(job: Job, x: str, sentence: str) -> bool:
+    """Someone left behind this turn may stand in a sentence that tells the parting."""
+    return x in job.left and any(w in sentence for w in (*ko.PARTING, job.u.name(job.left[x])))
+
+
+def afar(job: Job, x: str, sentence: str) -> bool:
+    """At the ending, someone the legacy names may stand in a sentence set far off. Without the distance word they
+    were put beside the player or on the wrecked boat (qa_test/runs/play-2-reending-2.txt)."""
+    return (bool(job.ending) and any(w in sentence for w in ko.AFAR)
+            and any(x in a[1:3] for a in legacy(job.u, job.o)))
+
+
+WORD = re.compile(r"[가-힣]+")
+WORN = 3
+
+
+def pairs(text: str) -> dict[tuple[str, str], str]:
+    """Two-word phrases within a sentence, keyed loosely so 집어삼킬 듯/듯한 count as one."""
+    out = {}
+    for sent in re.split(r"[.?!…\"“”]", text):
+        ws = WORD.findall(sent)
+        for a, b in pairwise(ws):
+            if len(a) >= 2:
+                out.setdefault((a[:2], b[:1]), f"{a} {b}")
+    return out
+
+
+def worn(u, previous: list[str]) -> list[str]:
+    """Phrases in two of the recent narrations, names and place senses aside. Below the repetition check's 10
+    characters, "집어삼킬 듯" came back in nearly every turn (qa_test/runs/play-1-*)."""
+    skip = {"당신", *(w for x in (*u.places, *u.agents, *u.things, *u.obstacles) for n in (u.name(x), *u.aliases(x))
+                      for w in n.split() if len(w) >= 2),
+            *(w for q in u.places.values() for c in q.senses for w in c.split() if len(w) >= 2)}
+    seen = [pairs(t) for t in previous]
+    count: dict = {}
+    for d in seen:
+        for k in d:
+            count[k] = count.get(k, 0) + 1
+    latest = {k: v for d in seen for k, v in d.items()}
+    twice = [latest[k] for k, n in count.items() if n >= 2]
+    return [ph for ph in twice if not any(w.startswith(x) for w in ph.split() for x in skip)][:WORN]
 
 
 def fresh_cue(senses: list[str], previous: list[str]) -> str | None:
@@ -156,6 +222,20 @@ def steering(job: Job, lines) -> list[str]:
     for x in job.speakers:
         a = u.agents[x]
         out.append(ko.fill(ko.NOW["speaker"], x=a.name, persona=ko.PERSONAS[a.persona], voice=a.voice))
+    for x, q in job.left.items():
+        out.append(ko.fill(ko.NOW["left"], name=u.name(x), place=u.name(q), fear=u.agents[x].fear.rstrip(".")))
+    tired = worn(u, job.previous)
+    if job.ending:
+        # The usual cue, pace and close ("end on someone's reaction") outweighed the frame, so no ending told
+        # whether the boats came home, and with a cue the legacy never fit in 160 characters (play-2-explorer 44,
+        # play-2-talker 48).
+        kept = [x for a in legacy(u, job.o) if (x := fact_line(u, job.p, a))]
+        if tired:
+            out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
+        if kept:
+            out.append(ko.fill(ko.NOW["legacy"], items=" / ".join(kept)))
+        close = ko.fill(ko.NOW["ending_legacy" if kept else "ending"], frame=job.ending)
+        return [*(f"- {x}" for x in out), f"- {close}"]
     here = job.o.facts.where(PLAYER)
     cue = fresh_cue(list(u.places[here].senses), job.previous) if here in u.places else None
     out.append(ko.fill(ko.NOW["cue"], cue=cue) if cue else ko.NOW["no_cue"])
@@ -163,6 +243,8 @@ def steering(job: Job, lines) -> list[str]:
             and u.obstacles[ln.atom[1]].sub in ("clock", "deadline")]
     if pace:
         out.append(ko.fill(ko.NOW["pace"], text=", ".join(pace)))
+    if tired:
+        out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
     return [*(f"- {x}" for x in out), f"- {ko.NOW['close']}"]
 
 
@@ -243,7 +325,7 @@ class Narrator:
             hidden = [w for w in bad if w in s]
             if hidden:
                 why.append(ko.fill(ko.FEEDBACK["hidden"], names=", ".join(hidden)))
-            away = [x for x in subjects(u, bare) if x in gone]
+            away = [x for x in subjects(u, bare) if x in gone and not parting(job, x, bare) and not afar(job, x, bare)]
             if away:
                 why.append(ko.fill(ko.FEEDBACK["absent"], names=", ".join(u.name(x) for x in away)))
             wrong = [(pos, atom) for pos, atom in claims(u, s) if not accepts(facts, pos, atom)]
@@ -283,6 +365,9 @@ class Narrator:
         state = render(scene(job.u, job.o, job.focus, job.p))
         if job.happened:
             state += "\n" + ko.HEAD["happened"] + "\n" + "\n".join(f"- {x}" for x in job.happened)
+        if job.ending:
+            kept = [x for a in legacy(job.u, job.o) if (x := fact_line(job.u, job.p, a))]
+            state += "\n" + "\n".join([ko.HEAD["ending"], job.ending, *(f"- {x}" for x in kept)])
         qs = {}
         for i, s in enumerate(said):
             if i not in skip:

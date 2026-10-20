@@ -1,3 +1,5 @@
+import re
+
 import pytest
 import yaml
 from conftest import REPO, skeleton_raw
@@ -88,3 +90,22 @@ def test_the_round_trip_through_yaml_keeps_the_story(tmp_path):
     path.parent.mkdir()
     path.write_text(yaml.safe_dump(raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
     assert V.load(path).triggers == build(skeleton_raw(), "x").triggers
+
+
+def test_server_text_takes_particles_from_the_value_before_them():
+    """A literal 과/을/이… after a placeholder is wrong for half the names ("도해과의")."""
+    from src.locale import ko
+
+    def strings(v):
+        if isinstance(v, str):
+            yield v
+        elif isinstance(v, dict):
+            for w in v.values():
+                yield from strings(w)
+        elif isinstance(v, (list, tuple)):
+            for w in v:
+                yield from strings(w)
+
+    fixed = re.compile(r"\{[a-z_]+\}(과|와|을|를|이|가|은|는|으로)(?![가-힣])|\{[a-z_]+\}(과|와|을|를|이|가|은|는)의")
+    bad = [s for name in dir(ko) if name.isupper() for s in strings(getattr(ko, name)) if fixed.search(s)]
+    assert bad == []
