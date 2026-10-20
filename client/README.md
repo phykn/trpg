@@ -1,53 +1,50 @@
-# Web client
+# Client
 
-A mobile web app where you read the scene and act in sentences on one fixed-height screen (Expo, React Native Web, NativeWind). It uses no illustrations, scrolls nothing outside the chat area, and keeps the same width (412px) on desktop. The screen design is in [docs/ui.md](../docs/ui.md); setup and play are in the [root README](../README.md).
-
-## Screens and code
-
-`app/index.tsx` → `screens/` → `logic/useGame.ts` → `services/api.ts`
-
-- `screens/Title.tsx`: story shelf, continue, new game. `screens/Start.tsx`: name, stats, traits. `screens/Play.tsx`: the play screen layout.
-- `components/ui/`: parts shared by every screen. `Icon` (line icons), `Button` and `IconButton`, `Sheet` (a bottom sheet and `Choice`), `motion.ts` (entrance motion), `useDialog` (Escape, focus trap and return).
-- `components/game/`: icon rows (`Row`, `Item`, `Pill`), the header and hero panel, risk clocks, the scene, boxes, chat, the input line, the roll card and dice, clarify, confirm and growth cards, the menu, the ending.
-- `logic/useGame.ts`: start, restore, the command lifecycle, the narration stream, failure recovery. It adopts only server responses as game state and never repeats the rules. `logic/reveal.ts` is a pure function that turns step records into a reveal schedule; `logic/useLog.ts` is the chat history kept on this device.
-- `services/api.ts`: the only boundary for authenticated requests and the NDJSON narration stream. `types.ts` holds the response shapes; `storage.ts` stores the continue ID (`trpg.game_id`) and the chat history.
-- `design/tokens.js`: colors, spacing, fonts, motion timings. `locale/ko.ts`: sentences the client composes. All story text comes from server responses.
-
-Once a command is saved, the screen updates first and then receives that turn's narration as a stream. The next command stays locked until the narration finishes or fails. If there is no response within 30 seconds, only the same command (same `request_id`) can be sent again. The `view` in a 409 response is adopted as is.
+The mobile web client (Expo, React Native Web, NativeWind). Its screens, state machine and module map are in [docs/ui.md](../docs/ui.md); it talks to the server only through [docs/api.md](../docs/api.md).
 
 ## Commands
 
 Run from `client/`.
 
 ```bash
-npm run web              # connect to the local API (--local), localhost:8090
-npm run web -- --clear   # clear the cache after token, Tailwind, Babel or Metro changes
-npm run build:web        # web build against the local API → dist/ (after routing or config changes)
+npm run web              # against the local API (--local), on localhost:8090
+npm run web -- --clear   # after token, Tailwind, Babel or Metro changes
+npm run build:web        # static build against the local API → dist/ (after routing or config changes)
 npm run dev              # web + API, reachable from a phone on the same network
-npm run dev:public       # web + API + a public HTTPS address
-npm test -- --runInBand  # single: npx jest path/to/file.test.ts
+npm run dev:public       # web + API + a temporary public HTTPS address
+npm test -- --runInBand  # one file: npx jest path/to/file.test.ts
 npx tsc --noEmit
 npm run lint
 node --test scripts/dev-proxy.test.cjs
 ```
 
+The port is 8090 because the decision model uses 8081, Expo's default. `dev` and `dev:public` start the local API unless one is already running, and forward `/api` to it, so a phone uses one address for both. The `dev:public` address changes on every run; on Windows it keeps a verified `cloudflared` binary in `node_modules/.cache/`.
+
 ## Public serving (workers.dev)
 
+A fixed public address, with the API and models on this Mac:
+
 ```bash
-npm run deploy           # build the web client and deploy it to the Cloudflare Worker (trpg); serve also does this on client changes
-npm run serve            # start the API and a tunnel on the Mac and write the tunnel URL to Worker KV; run each time you play
+npm run deploy           # build the client and deploy it to the Cloudflare Worker `trpg`
+npm run serve            # run the API and a quick tunnel, and write the tunnel URL to the Worker's KV
 ```
 
-The Worker serves the static client and forwards `/api/*` to the current tunnel URL in KV. If the tunnel drops, `serve` opens a new one and rewrites KV. While it runs, `serve` keeps both sides current: when `.py` files in `server/` or `.yaml` files in `scenarios/` change, it restarts only the API, so the address keeps working; when client files change, it rebuilds and redeploys the web client (about a minute), and a page reload picks it up. KV updates take about a minute to take effect. The first time, run `npx wrangler login`; both models must be running. With `serve` stopped, the page still opens but the API returns 502.
+Deploy once; after that `serve` redeploys whenever client files change. The Worker serves the static client and forwards `/api/*` to the tunnel URL in KV. While `serve` runs:
 
-`dev` forwards `/api` requests to the local API, so a phone also uses the same address for the web client and the API. It reuses an already-running local API. The `dev:public` address changes on every run; on Windows, a verified official `cloudflared` binary is kept in `node_modules/.cache/`.
+- A dropped tunnel is reopened and its new URL written to KV, which takes about a minute to take effect.
+- A change to a `.py` file in `server/` or a `.yaml` file in `scenarios/` restarts only the API; the address keeps working. If the API fails to start (a story that fails validation, say), `/api` returns 502 until a later change fixes it. Changing a story makes its saved games incompatible: they open on a blocked screen, and the player starts a new game.
+- A change to client files rebuilds and redeploys the client (about a minute); reloading the page picks it up.
+
+Run `npx wrangler login` once before the first use; on another Cloudflare account, also create the KV namespace (`npx wrangler kv namespace create TUNNEL`) and put its id in `wrangler.jsonc`. Both models must be running. With `serve` stopped the page still opens, but `/api` returns 502.
+
+The bundle carries the local credentials `local/local`, so anyone with the address can play: share it only with people you trust.
 
 ## Connect to another server
 
-The local web commands always use a fixed local configuration. To connect to another server, set three environment variables and run Expo directly. Also add the browser's address to the server's `CORS_ORIGINS`. Keep the port at 8090 (Expo's default 8081 is used by the decision model).
+The scripts above always use local settings. To use another server, set the three public variables and run Expo directly, keeping port 8090. Add the browser's address to that server's `CORS_ORIGINS`.
 
 ```bash
 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://127.0.0.1:8000 EXPO_PUBLIC_API_USER=local EXPO_PUBLIC_API_PASS=local npx expo start --web --host localhost --port 8090
 ```
 
-These values are public connection settings, visible in the web bundle. Running `npx expo export --platform web` with the same settings produces a static build that connects to that server. `npm start`, `npm run android` and `npm run ios` are Expo development commands that read `.env.shared` and `.env.dev`; the web is what gets verified.
+These values end up in the web bundle, so treat them as public. `npx expo export --platform web` with the same variables makes a static build for that server. `npm start`, `npm run android` and `npm run ios` read `.env.shared` and `.env.dev`; only the web build is verified.

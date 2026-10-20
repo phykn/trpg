@@ -42,9 +42,9 @@ The modifier sum `z = stat(player, approach) + help − hinder` ranges from −1
 | 3 | 91.7% | 83.3% | 72.2% |
 | 4 | 97.2% | 91.7% | 83.3% |
 
-- At normal risk with `z = 1`, success is 58%, and relying on one thing (+1) raises it to 72%. A failure always brings a cost the engine applies at once (a clock, plus a complication at normal and high risk), and this is the main source of consequence and tension.
+- Relying on one thing (+1) raises success by 6–17 percentage points (14–17 at normal risk with `0 ≤ z ≤ 2`, e.g. 58% → 72% at `z = 1`), so reading the situation and finding something to rely on pays off.
 - Even a strong approach (`z = 3, 4`) fails 17–28% of the time at high risk, so tension remains after growth.
-- Relying on one thing (+1) raises success by 6–17 percentage points (14–17 at normal risk with `0 ≤ z ≤ 2`), so reading the situation and finding something to rely on pays off.
+- Every failure brings a cost the engine applies at once (a clock, plus a complication at normal and high risk; H1).
 
 ### 3.2 Risk clock rhythm
 
@@ -81,7 +81,7 @@ Every metric is computed offline from the saved log `L` (each event's `a`, `r`, 
 | F11 | Dropout (이탈) | Share of games abandoned before an ending, and the chapter they were in | 20% or less in chapter 1 | Length of the first chapter and the steps before the first roll |
 | F12 | Survey | 5-point scale after the ending: "내 선택이 이야기를 바꿨다" (my choices changed the story), "다시 하고 싶다" (I want to play again), "인물이 나를 기억했다" (the people remembered me) | Mean of 4 or more | The element (section 1) of the lowest-rated item |
 | F13 | Relying (기대기) | Among rolls with something to rely on, the share where the player relied on it, and the share where the decisive chip was the relied-on thing | 30–70%, recorded | Low: things to rely on are not visible or feel too precious to spend; high: relying is free |
-| F14 | Card abandonment (카드 이탈) | Share of roll cards closed in favor of a different command | 20% or less | The card shows something other than what the sentence meant → interpretation (engine.md section 3) |
+| F14 | Card abandonment (카드 이탈) | Share of roll cards closed in favor of a different command | 20% or less | The card shows something other than what the sentence meant → interpretation (engine.md 3) |
 
 | Element | Metrics |
 |---|---|
@@ -95,7 +95,7 @@ Every metric is computed offline from the saved log `L` (each event's `a`, `r`, 
 ## 5. Hypotheses and decisions
 
 - **H1**: Failure and the cost the engine applies at once (F4) are the main source of consequence and tension. If F4 is out of range, F7 and the consequence item of F12 drop too.
-- **H2**: If a sentence can freely set the approach, target, attitude and claim (engine.md 4.2) and is accepted reliably (F1), players write sentences (F2), and players who write sentences rate agency higher (F12).
+- **H2**: If a sentence can freely set the approach, target, tone and claim (rule.md 9) and is accepted reliably (F1), players write sentences (F2), and players who write sentences rate agency higher (F12).
 - **H3**: If players can see deadlines and threats approaching, they respond (F6), and more chapters ending by deadline (F10) means more dropout (F11).
 - **H4**: Promises and relationship change (F8) best explain "인물이 나를 기억했다" (the people remembered me, F12).
 

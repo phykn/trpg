@@ -13,7 +13,7 @@ server/src/onto/
   save.py     snapshot writing, rebuilding from the log
 ```
 
-This package knows neither the models nor the rules. Predicates the rules add (`owes`, `spent`) and their operations (`assert_`, `expire` and others) also live here.
+This package knows neither the models nor the rules, though the predicates the rules need (`owes`, `spent`, `follows`) and their operations live here.
 
 ## 1. World
 
@@ -204,18 +204,19 @@ The only code that changes the world is the operations in `change.py`. Each oper
 |---|---|
 | `move(x, y)` | `at[x] = y`. If `x = player`, `y` must be a place or the move is refused, and every `h` with `follows(h, player)` moves to `y` too. If `x` is a person following someone, that `follows` is removed. Both keep C4 |
 | `set_(pred, key, v)` | sets a `regards`, `fill`, `stat` or `flag` value. If `v` is `"+n"` or `"-n"`, it is added to the current value, and the result is clamped to its range in 1.3. Does nothing if the value is unchanged |
+| `drop_stat(g, s)` | removes `g`'s `stat` entry `s` (a trait given up in growth) |
 | `reveal(g, p)` | adds `believes(g, p)` |
 | `tag(x, kind, life)` | uses the lowest-numbered empty slot. If all are full, it clears the lowest-numbered slot that is not a `scar` and uses that. If only `scar` tags remain, it does nothing |
 | `untag(x, slot)` | clears that slot |
 | `link(p, q)`, `unlink(p, q)` | adds or removes a `link` |
 | `retire(o)` | removes `at[o]`. For a threat or fork, it also clears the fired flag of its appearance trigger |
 | `expire(life)` | removes every `mark` with that life |
-| `assert_(atom)`, `retract(atom)` | adds or removes `owes`, `spent` and `follows` atoms |
+| `insert(atom)`, `retract(atom)` | adds or removes `owes`, `spent` and `follows` atoms |
 | `clear_spent(g)` | removes all of `g`'s `spent` atoms |
 
 Story effects (story.md 2.4) translate directly into these operations. `{set: [regards, g, h, axis, v]}` becomes `set_("regards", (g, h, axis), v)`, and `{tag: [x, kind, life, name]}` becomes `tag(x, kind, life)` plus a default name kept in the presentation layer.
 
-**Atomicity**: the rules compute a step on `Work(S)` and return a `Delta` (the difference). The service creates the event, then replaces the state, log and presentation layer in a single save (engine.md 7). If an exception occurs midway, only the copy is discarded.
+**Atomicity**: the rules compute a step on `Work(S)` and return a `Delta` (the difference). The service appends the event and writes the log and presentation layer in a single save (section 6, engine.md 7). If an exception occurs midway, only the copy is discarded.
 
 **Iteration order**: every iteration that affects output (complication candidates, threat arrivals, triggers) follows the story's declaration order, and every other set is emitted sorted, because the order of a Python `set` can differ between runs.
 
@@ -280,7 +281,7 @@ Each game is a single file, `saves/engine/g_<id>.json`, and the log is the sourc
 
 `presentation` is the presentation layer `P` (engine.md 6), and `digest` is a hash of the story file's bytes.
 
-- **Write**: write to a temporary file, `fsync`, then `rename`. A request's state, log and presentation layer change together in this one write. The server is a single process with one lock per game.
+- **Write**: write to a temporary file, `fsync`, then `rename`. A request's log and presentation layer change together in this one write. The server is a single process with one lock per game.
 - **Rebuild** `load(path) → Game`: refuses the save if `schema_version` or the story `digest` differs (if `U` and `S₀` change, the atoms in the log lose their meaning). A change in engine code is not refused, because `R` is not rerun. Starting from `S₀ = initial(U, creation)`, it applies `S ← apply(S, e.delta)` for each event, checks `conforms(S)` at every step and refuses on a violation, and rebuilds `h`, the memory cache and the belief order in the same pass. The cost is linear in the number of events, and a game has a few hundred.
 
 ## 7. Properties and checks
@@ -296,7 +297,7 @@ Each game is a single file, `saves/engine/g_<id>.json`, and the log is the sourc
 | Single source | everything the screen, candidates, fact list and prompts assert as fact at one moment lies in `F ⊆ S`, so it is true all together and never violates `C`. Beliefs are shown as beliefs | renderers, `context` | renderers use no atom outside `F` and `B` |
 | Story independence | engine code contains no story id, name or sentence (a syntactic proxy for generality). The properties must hold for every story that passes validation, so each story is fuzzed | all of `server/src/` | a boundary test that searches `src/` for the skeleton story's ids and names |
 | Story conformance | `S₀ ⊨ C`, the player in exactly one place, parameters defined over `Σ` and `U`, and effects limited to the operations in section 4 | `initial`, story.md V1–V2 | validation at startup |
-| Reachability | configurations `(S, h)` are finite and the next one is determined by `(S, h, a, r)`, so "can the goal be reached?" is reachability in a finite graph. Dice expand into all three results | story.md V5–V6 | validation at startup |
+| Reachability | configurations `(S, h)` are finite and the next one is determined by `(S, h, a, r)`, so "can the goal be reached?" is reachability in a finite graph. Dice expand into both results | story.md V5–V6 | validation at startup |
 
 ## 8. Decisions
 

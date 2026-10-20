@@ -1,11 +1,12 @@
 # API
 
-The boundary between the server and the client. Every route goes through Basic Auth (`local/local` with `--local`). The server composes the Korean sentences in responses, and the client shows them verbatim. The `/games/*` routes, the save's `schema_version`, request receipts and the browser's `trpg.game_id` stay unchanged unless a migration is requested.
+The boundary between the server and the client. Every route except `GET /health` needs Basic Auth (`local/local` with `--local`). The server composes the Korean sentences in responses, and the client shows them verbatim. The `/games/*` routes, the save's `schema_version`, request receipts and the browser's `trpg.game_id` stay unchanged unless a migration is requested.
 
 ## 1. Routes
 
 | Route | Body | Response |
 |---|---|---|
+| `GET /health` | | `{ok: true, mode: "engine"}`, without auth |
 | `GET /stories` | | Story list: `id`, title, premise, approach values, trait candidates and `pick` |
 | `POST /games` | `{request_id, story, creation}`. `creation` is `{name, approaches, traits}`, and `name` is 1–10 characters after trimming whitespace | `{game_id, view}`. `game_id` is a hash of `request_id`, so resending the same request returns the same response for the game already created (409 if the body differs) |
 | `GET /games/{id}` | | `view` |
@@ -99,26 +100,26 @@ Everything is built from `Obs` and the presentation layer.
 | `player` | Name (`creation.name`; an empty string in old saves), the four approaches, traits (name, whether used this chapter), tags (slot, kind, lifetime, name), wounds/boxes, beats/`B`, growth |
 | `clocks` | Risk clocks in play, deadlines, active threats and forks (name, `fill`, boxes, kind) |
 | `journal` | Beliefs (sentences in `B`, the order they were learned, whether they refer to something in the current scene), promises and debts (`owes`), relations per person, fork choices (name, chapter) |
-| `buttons` | Suggestions (rule.md section 9): action id, label, whether it rolls |
+| `buttons` | Suggestions (rule.md 9): action id, label, whether it rolls |
 | `growth` | Growth actions `[{action, label, kind, name}]` (when growth is 1 or more). `kind` is `approach`, `trait` or `scar`, and `name` is a short name written under that branch ("뱃사람 → 토박이", sailor → islander) |
 | `card` | The pending card (below), or none |
 | `last` | The last turn's number, its step records, and whether its narration is cached |
 | `recaps` | Chapter numbers that have a recap |
 | `ending` | Ending id and title, or none |
 
-Cards (engine.md section 4):
+Cards (engine.md 4):
 
 ```
 { "id": "c42", "kind": "roll" | "clarify" | "confirm" | "move",
   "echo": {"text": "열쇠로 살살 돌려 본다", "slots": [{"slot": "approach", "label": "솜씨"}, {"slot": "strain", "label": "자연스럽게"}]},
   "plan": {"step": {"action": "try:door:finesse", "label": "녹슨 등대 문에 솜씨로 맞선다", "target": {"id": "door", "name": "녹슨 등대 문", "fill": 0, "boxes": 3}},
            "rest": ["등대 꼭대기로 간다"]},
-  "options": [{"id": "try:door:finesse;rely=thing:key", "label": "등대 열쇠", "consumed": false, "preview": {…}},
-              {"id": "try:door:finesse", "label": "기대지 않음", "consumed": false, "preview": {…}}],
+  "options": [{"id": "try:door:finesse;rely=thing:key", "label": "등대 열쇠", "consumed": false, "note": null, "preview": {…}},
+              {"id": "try:door:finesse", "label": "기대지 않음", "consumed": false, "note": null, "preview": {…}}],
   "selected": "try:door:finesse;rely=thing:key" }
 ```
 
-A clarification card's `options` are `{id: action id, label}`, and confirm and move cards' `options` are `[{id: action id, label, effects: [name]}]`. None of the three has a `preview`. A move card's `selected` is the destination the sentence chose, and it is the first option (engine.md 4.4). A roll card's `preview` holds the fields from rule.md 3.4.
+A clarification card's `options` are `{id: action id, label}`, and confirm and move cards' `options` are `[{id: action id, label, effects: [name]}]`. None of the three has a `preview`. A move card's `selected` is the destination the sentence chose, and it is the first option (engine.md 4.4). A roll card option's `consumed` says relying on it uses it up, and `note` is the text for that ("1번 남음", 1 use left, for tags and traits); its `preview` holds the fields from rule.md 3.4.
 
 ```
 { "risk": "normal",

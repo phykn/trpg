@@ -10,7 +10,7 @@ scenarios/<folder>/   any folder name; the story id is the id in story.yaml
 
 ## 1. Principles
 
-Whatever a story must not write has no place to be written. Chapter transitions, endings, clocks and deadlines, threat appearances and latent entities are fields that story effects cannot touch, and the engine builds the triggers and effects from those fields. A story changes the world only through the effect operations in 2.4, and its only actions are solutions: a `try` with a name and a condition attached. So most of the structure the rules require holds by grammar, and what is left to checks is section 4. One story is one file in one format.
+The format has no field for anything a story must not write. Chapter transitions, endings, clocks and deadlines, threat appearances and latent entities are fields that story effects cannot touch, and the engine builds the triggers and effects from those fields. A story changes the world only through the effect operations in 2.4, and its only actions are solutions: a `try` with a name and a condition attached. So most of the structure the rules require holds by grammar, and what is left to checks is section 4. One story is one file in one format.
 
 ## 2. Common
 
@@ -18,7 +18,7 @@ Whatever a story must not write has no place to be written. Chapter transitions,
 
 - Written in a subset of YAML 1.2. No anchors, aliases or tags, and scalars are read only as the type the schema specifies (`no` and `on` are strings). **Map order is part of the format**, and the loader keeps the document's order. The order of triggers, endings and complications comes from this. Comments are written in Korean.
 - **An id is a map key.** Everything that has an id (places, characters, things, obstacles, threats, forks, solutions, complications, topics, beliefs, claims, latents, choices, triggers, endings, traits) is written as a map key, with no separate `id` field. Ids use lowercase letters, digits and `_`, and are unique across the whole story. The reserved ids are `player` (`p★`), `chat`, `favor`, `come`, `stay`, `pass`, `rest`, `chapter`, `ending`, `collapse` (only in the endings section), `promise`, `kindness`, `full`, and anything starting with `fired_`.
-- Every place, character, thing, obstacle, threat and fork has a `name`; `aliases` is optional. The engine's frame tables use these names to write and read facts and changes (engine.md section 1). Aliases never overlap anywhere in the story.
+- Every place, character, thing, obstacle, threat and fork has a `name`; `aliases` is optional. The engine's frame tables use these names to write and read facts and changes (engine.md 1). Aliases never overlap anywhere in the story.
 - All text except proposition sentences (2.5) is a **public parameter**: `premise`, `style`, names and aliases, `senses`, `look`, `voice`, `desire`, `fear`, a trait's `text`, a topic's `title`, `label`, the `name` of complications, choices, default choices, promises, latents, clocks and deadlines, a claim's `text`, and an ending's `title` and `frame`. Anything to be hidden goes only in proposition sentences.
 
 ### 2.2 Engine vocabulary
@@ -26,7 +26,7 @@ Whatever a story must not write has no place to be written. Chapter transitions,
 | Value kind | id (Korean) |
 |---|---|
 | Approach | `force` 완력, `finesse` 솜씨, `wits` 재치, `charm` 매력 |
-| Risk | `low` 낮음, `normal` 보통 (an obstacle's default risk) |
+| Risk | `low` 낮음, `normal` 보통 (an obstacle's default risk; `high` comes only from the rules, rule.md 3.2) |
 | Tone | `polite` 정중, `friendly` 친근, `plead` 간청, `threaten` 위협, `deceive` 속임 |
 | Strain | `natural` 자연스러움, `forced` 무리 |
 | Axis | `trust` 신뢰, `fear` 두려움 |
@@ -58,7 +58,7 @@ The comparisons are `=`, `>=`, `<=`, `>` and `<`. Where a condition sits decides
 
 ### 2.4 Effects
 
-An effect is a sequence of operations, composed in order, each one reading the state the earlier ones left (ontology.md section 4). These are the only operations a story can use.
+An effect is a sequence of operations, composed in order, each one reading the state the earlier ones left (ontology.md 4). These are the only operations a story can use.
 
 | Form | Operation | Target |
 |---|---|---|
@@ -94,7 +94,7 @@ A story has no separate propositions section. A proposition comes into being as 
 
 | Key | Contents |
 |---|---|
-| `id`, `version`, `title`, `premise` | Story id (independent of the folder name, unique across stories), version, title, public premise |
+| `id`, `version`, `title`, `premise` | Story id (independent of the folder name, unique across stories), version (an integer recorded in saves; compatibility uses the file digest, ontology.md 6), title, public premise |
 | `beats`, `wound_boxes` | Scene length `B ≥ 2`, number of wound boxes `≥ 1` |
 | `flags` | Story flags `{name: [value, …]}`. The first value is the starting value; the values are a contiguous integer range or strings |
 | `style` | The writing style, passed verbatim to the narration model (multi-line) |
@@ -107,7 +107,14 @@ A story has no separate propositions section. A proposition comes into being as 
 
 `S₀` holds `flag(chapter, 1)` and the starting values of the declared flags.
 
-Optional: at the top level, `flags`, `impossible`, `threats`, `forks`, `claims`, `latents` and `triggers` (empty when absent); on entries, `aliases`, `clue`, `hidden` and `complications`; the protagonist's `traits` (no traits when absent); a place's `rest`; a character's `regards`, `beliefs`, `wants`, `topics`, `favor` and `avoids`; a topic's `free_when` (false when absent); an obstacle's `risk` (default `normal`), `fits`, `clashes` and `blocks`; a solution's `rely` and `when`; a chapter's `goal_effects`; a deadline's `effects` and `ending` (`ending` is required in the last chapter); a latent's `brings` and `effects`; and `evals.yaml`. Every other field is required.
+Every field is required except these:
+
+- Top level: `flags`, `impossible`, `threats`, `forks`, `claims`, `latents`, `triggers` (empty when absent).
+- Any entry: `aliases`, `clue`, `hidden`, `complications`.
+- Protagonist: `traits` (none when absent). Place: `rest`. Character: `regards`, `beliefs`, `wants`, `topics`, `favor`, `avoids`. Topic: `free_when` (false when absent).
+- Obstacle: `risk` (default `normal`), `fits`, `clashes`, `blocks`. Solution: `rely`, `when`.
+- Chapter: `goal` (only in the last chapter, which has none), `goal_effects`; a deadline's `effects` and `ending` (3.7). Latent: `brings`, `effects`.
+- The file `evals.yaml`.
 
 ### 3.2 Protagonist
 
@@ -176,14 +183,14 @@ Both the roll decision and the screen evaluate `free_when` on visible state (V3 
 |---|---|---|
 | `title` | Public title | |
 | `aim` | A one-sentence goal always shown on screen: the `goal` in the player's words | |
-| `goal` | Chapter goal. Absent in the last chapter | world |
+| `goal` | Chapter goal. Required except in the last chapter, which has none | world |
 | `goal_effects` | Effects added to the chapter transition when the goal is met | |
 | `clock` | Required. Risk clock `{name, boxes ≥ 3, crisis}`. `crisis` is the effects applied each time the clock fills (one or more) | |
-| `deadline` | Required. Deadline `{name, boxes 1…6, effects, ending}`. `ending` is an ending id other than `collapse`, and may name an ending that has a `when` | |
+| `deadline` | Required. Deadline `{name, boxes 1…6}`, optionally `effects` and `ending`. `ending` is required in the last chapter: an ending id other than `collapse`, possibly one that has a `when` | |
 
 What the engine builds:
 - Chapter `k`'s goal trigger `(flag(chapter, k) ∧ goal, [chapter_to(k+1)] ++ goal_effects)`
-- The deadline's arrival effect: `effects ++ [end(e)]` with `ending: e`, otherwise `effects ++ [chapter_to(k+1)]`. The last chapter's deadline must have an `ending`
+- The deadline's arrival effect: `effects ++ [end(e)]` with `ending: e`, otherwise `effects ++ [chapter_to(k+1)]`
 - Engine ids for risk clocks and deadlines (`clock.k`, `deadline.k`) and their placement in `S₀`: the first chapter's at `at(·, player)`, the others with no `at`, all with `fill` 0
 
 ### 3.8 Threats and forks
@@ -194,9 +201,9 @@ What the engine builds:
 | `appears_when` | Appearance condition | Same | world |
 | `arrival` | Arrival effect | - | |
 | `choices` | - | `{id: {name, effects}}`, two or more | |
-| `default` | - | `{name, effects}` for holding out; cannot be chosen | |
+| `default` | - | `{name, effects}`: what happens if the boxes fill before a choice; it cannot be chosen | |
 
-Threats and forks have no `at` and `fill` 0 in `S₀`. The engine wires `appears_when` into a one-shot trigger `appear.<id>` (effects `[move(w, player)]`). A threat is driven off by a `retire` in some other effect, and a `set` that lowers its `fill` delays its arrival. `retire` also sets the appearance trigger's fired flag, so a threat or fork retired before it appears never appears.
+Threats and forks have no `at` and `fill` 0 in `S₀`. The engine wires `appears_when` into a one-shot trigger `appear.<id>` (effects `[move(<id>, player)]`); to tie one to a chapter, include `{flag: [chapter, k]}` in it. A threat is driven off by a `retire` in some other effect, and a `set` that lowers its `fill` delays its arrival. `retire` also sets the appearance trigger's fired flag, so a threat or fork retired before it appears never appears. Once in, it stays across chapter changes: its boxes fill at every scene end (rule.md 4.1), and when they are full `τ_arrive` applies `arrival` or `default` and retires it (rule.md 8).
 
 ### 3.9 Claims
 
@@ -219,13 +226,13 @@ Threats and forks have no `at` and `fill` 0 in `S₀`. The engine wires `appears
 ### 3.11 Triggers and endings
 
 - `triggers: {id: {when, effects, repeat}}`. `when` is evaluated against the world, and without `repeat: true` a trigger fires once per game.
-- `endings: {id: {title, when, frame}}`. `collapse` is required. With `when`, the engine wires the ending into a trigger `end.<id>` (effects `[end(id)]`); without it, some chapter's deadline must point to it with `ending`. `frame` is the public sentence handed to the ending's narration. The engine's `collapse` ending (the protagonist collapses, rule.md section 6) has only `title` and `frame`, with no `when`.
+- `endings: {id: {title, when, frame}}`. `collapse` is required. With `when`, the engine wires the ending into a trigger `end.<id>` (effects `[end(id)]`); without it, some chapter's deadline must point to it with `ending`. `frame` is the public sentence handed to the ending's narration. The engine's `collapse` ending (the protagonist collapses, rule.md 6) has only `title` and `frame`, with no `when`.
 
-The engine wires story triggers in this order: threat and fork appearances, `triggers`, chapter goals, endings with `when`. Within one kind, the order is declaration order. The five engine triggers come after them (rule.md section 8).
+The engine wires story triggers in this order: threat and fork appearances, `triggers`, chapter goals, endings with `when`. Within one kind, the order is declaration order. The five engine triggers come after them (rule.md 8).
 
 ### 3.12 Action ids
 
-The action ids used by witnesses, receipts, buttons and patterns are `schema:intent arguments`, with judgment arguments appended as `;key=value`. An omitted judgment argument takes its default `ν₀`. A `rely` value is prefixed with the kind of thing it points to: `thing:<id>`, `prop:<id>`, `trait:<id>`, `bond:<id>`, `tag:<entity>:<slot>` (rule.md section 2). A solution's `rely` field holds only the id; the story determines the kind.
+The action ids used by witnesses, receipts, buttons and patterns are `schema:intent arguments`, with judgment arguments appended as `;key=value`. An omitted judgment argument takes its default `ν₀`. A `rely` value is prefixed with the kind of thing it points to: `thing:<id>`, `prop:<id>`, `trait:<id>`, `bond:<id>`, `tag:<entity>:<slot>` (rule.md 2). A solution's `rely` field holds only the id; the story determines the kind.
 
 ```
 go:village   look:door   take:oil   give:letter:dohae   declare:l_baek   cut:pass   cut:rest
@@ -240,7 +247,7 @@ The properties the rules require of a story, and where each one is upheld.
 | Property | Holds by structure | Left to checks |
 |---|---|---|
 | Valid start and effects | Effects are only the operations in 2.4; `move(player, ·)` goes to a place | V1, V2 |
-| Grammar of clocks and triggers (rule.md 4.2, section 8) | Clocks and deadlines cannot be pointed at; story effects have no `stat`; wounds come only from `wound`; a threat appears once, through `appears_when`; the engine builds chapter transitions and endings from the chapter and ending fields; every chapter has a clock and a deadline | V3: no trigger condition is true in `S₀` |
+| Grammar of clocks and triggers (rule.md 4.2, 8) | Clocks and deadlines cannot be pointed at; story effects have no `stat`; wounds come only from `wound`; a threat appears once, through `appears_when`; the engine builds chapter transitions and endings from the chapter and ending fields; every chapter has a clock and a deadline | V3: no trigger condition is true in `S₀` |
 | Latent isolation | A latent's entities and propositions come into being inside its entry | V1: the scope rule (3.10) |
 | Finite values | Flags take only declared values | V1 |
 | Visible evaluation = world evaluation | - | V3: the atoms of visibly evaluated conditions |
@@ -253,18 +260,18 @@ At startup the server runs these on every story in this order, and does not star
 
 | | Stage | What it checks |
 |---|---|---|
-| V1 | Format | Schema (fields, value types, value ranges); id uniqueness and references; `brings` scope; two or more solutions, each with a different approach; `clock` and `deadline` in every chapter; the last chapter has no goal and its deadline has an `ending`; every ending without `when` (except `collapse`) is pointed to by some deadline; a `collapse` ending exists; flag values are among the declared ones; at most 58 story complications per weight |
+| V1 | Format | Schema (fields, value types, value ranges); id uniqueness and references; `brings` scope; two or more solutions, each with a different approach; `clock` and `deadline` in every chapter; the last chapter has no goal and its deadline has an `ending`; every ending without `when` (except `collapse`) is pointed to by some deadline; a `collapse` ending exists; flag values are among the declared ones; at most 58 story complications per weight (`u` has 60 values and the engine adds two, rule.md 3.3) |
 | V2 | Start state | Build `S₀`; `S₀ ⊨ C`; `player` is in exactly one place |
 | V3 | Placement | No trigger condition is true in `S₀` (engine triggers included). Visibly evaluated conditions (the `when` of solutions and latents, the `when` of complications being chosen, a topic's `free_when`) use only atoms that are always in `F` when they are evaluated: the player's own atoms (`at: [player, place]`, `at: [thing, player]`, `believes: [player, p]`, `mark: [player, tag]`, and `regards` and `owes` that involve `player`), `did`, and the atoms of the entity the condition is attached to (`at: [that entity, ·]`, `mark: [that entity, ·]`, `fill: [that obstacle, ·]`). The `at` of a thing a character holds, entities elsewhere, and `flag` are not allowed. A blocking obstacle sits in the same place as the thing, character or obstacle it blocks; if it blocks a place, it sits in every place that has an `exits` entry or a `link` effect leading there |
 | V4 | Names | The names and aliases of hidden entities (those with `hidden` or inside `brings`) do not appear in the public parameters of 2.1; aliases do not overlap; no `impossible` phrase is a substring of a name, an alias or a solution `label` (because layer 0 matches by substring, engine.md 3.1) |
 | V5 | Witnesses | The replay in section 5 |
-| V6 | Fuzzing | Random action sequences (picked from `K`, with random dice) run to an ending; at every step, `S ⊨ C` and `K ≠ ∅`; at every step with a roll, the preview's risk, modifier chip list and total equal the values from execution (rule.md section 10, preview = execution) |
+| V6 | Fuzzing | Random action sequences (picked from `K`, with random dice) run to an ending; at every step, `S ⊨ C` and `K ≠ ∅`; at every step with a roll, the preview's risk, modifier chip list and total equal the values from execution (rule.md 10, preview = execution) |
 
-V1–V4 make one pass over the story, and V5 computes `K` and `R` for as many steps as the witnesses have. That deadlines produce endings, and that there are "no dead ends", is guaranteed by structure (rule.md section 10).
+V1–V4 make one pass over the story, and V5 computes `K` and `R` for as many steps as the witnesses have. That deadlines produce endings, and that there are "no dead ends", is guaranteed by structure (rule.md 10).
 
 ## 5. Witnesses
 
-`witnesses.paths` holds a sequence of actions and dice from the start to each chapter goal, and to each ending with `when` and to `collapse`, one per target. Witnesses are found by the authoring tool; the author only checks them. Paths beyond the required ones are allowed, and all of them are replayed.
+`witnesses.paths` holds a sequence of actions and dice from the start to each chapter goal, and to each ending with `when` and to `collapse`, one per target. The author writes them, and validation names the path and step where replay fails. Dice `[6, 6, 0]` make any roll succeed. Paths beyond the required ones are allowed, and all of them are replayed.
 
 ```yaml
 witnesses:

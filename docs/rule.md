@@ -79,14 +79,14 @@ Judgment arguments multiply onto the actions above.
 | `rely` value | Condition | Help atom | Consumed |
 |---|---|---|---|
 | `tag:<x>:<slot>` | `x` is the target, `here` or the player, and `mark(x, edge, ·, slot) ∈ F` | that `mark` | `untag` after the roll |
-| `trait:<id>` | a trait the player has, with `spent(player, id) ∉ F` | `stat(player, id, 1)` | `assert(spent(player, id))` after the roll, whatever the result |
+| `trait:<id>` | a trait the player has, with `spent(player, id) ∉ F` | `stat(player, id, 1)` | `insert(spent(player, id))` after the roll, whatever the result |
 | `thing:<id>` | `at(id, player) ∈ F` | that `at` | nothing |
 | `prop:<id>` | `id ∈ B` | `believes(player, id)` | nothing |
 | `bond:<h>` | `regards(h, player, trust, 3) ∈ F` (a bond) | that `regards` | nothing |
 
 **Once an ending is set**, the candidates are empty and the game is over. `try(player, ·)` is always a candidate, so `K ≠ ∅` before the ending (progress).
 
-Because judgment arguments multiply, `K` gets large, so the engine never expands it in full. `space(U, O)` returns, per schema, a list with only the intent arguments expanded, plus the allowed values of each judgment argument. `admits(U, O, a)` decides `a ∈ K(O)`. Both use the same condition functions. Interpretation questions and the roll card (engine.md sections 3–4) use `space`; the admission check right before execution uses `admits`.
+Because judgment arguments multiply, `K` gets large, so the engine never expands it in full. `space(U, O)` returns, per schema, a list with only the intent arguments expanded, plus the allowed values of each judgment argument. `admits(U, O, a)` decides `a ∈ K(O)`. Both use the same condition functions. Interpretation questions and the roll card (engine.md 3–4) use `space`; the admission check right before execution uses `admits`.
 
 **Solutions** add no candidates. A solution is a single action id, `try(o, approach)` with `rely` filled in, plus a `label` and a condition `when`. When `when` (and the conditions `rely` implicitly adds) is true in the view, that action is named `label`. The same action id goes through the same `R` whether or not a solution exists.
 
@@ -125,7 +125,7 @@ def chance(z, dc) -> float               # P(2d6 + z >= dc)
 risk(try(player, ·))            = low
 risk(try(o, approach, strain))  = min(high, base(o) + [approach ∈ clashes(o)] + [strain = forced])
 risk(talk(h, ·, tone))          = min(high, normal + [tone ∈ {threaten, deceive}])
-risk(choose(·))                 = high          (irreversible)
+risk(choose(·))                 = high          (irreversible; it does not roll, so this only puts up the confirm card, engine.md 4.3)
 risk(anything else)             = low
 ```
 
@@ -139,11 +139,11 @@ The atoms of the **modifiers** become the event's `mods`, in this order.
 | help | 1 with a `rely`, otherwise 0 | one atom from the table in section 2 |
 | hinder | 1 if any atom below exists, otherwise 0 | every `snag` `mark` on the target, `here` and the player. In `talk`, a `regards` in which the other party's relevant axis toward the player (`fear` for `threaten`, otherwise `trust`) is negative |
 
-Help and hinder are each 0 or 1 however many atoms there are, so a roll's `help − hinder` is −1, 0 or +1 (bounded advantage). Even with several hinder atoms, the screen shows a single hinder (value −1, names joined together) (api.md section 3).
+Help and hinder are each 0 or 1 however many atoms there are, so a roll's `help − hinder` is −1, 0 or +1 (bounded advantage). The client shows them as chips (api.md 3).
 
 `modifiers` reads only the atoms passed in `facts`. `R` passes `S`; the preview passes `F`. Every atom the modifiers read is either a `mark`, `stat` or `regards` about an entity in `E` (the target, `here`, the player, the other party present) or an atom of `F` or `B` that `rely` points to. So for a rolling action `a ∈ K(O)`, `modifiers(U, S, a) = modifiers(U, F, a)`.
 
-`outcome`, `chance` and the step record's `dc` (api.md section 3) all come from the one `DC`. There are only two results: `success` and `fail`.
+`outcome`, `chance` and the step record's `dc` (api.md 3) all come from the one `DC`.
 
 ### 3.3 Costs and complications
 
@@ -181,14 +181,14 @@ For a rolling action `a ∈ K(O)`, this computes from the observation alone what
 | Field | Value |
 |---|---|
 | `risk` | `risk(U, a)` |
-| `mods` | `modifiers(U, O.facts, a)` as the chip list of api.md section 3 (`kind`, `label`, `value`). Same shape and order as the step record's `mods` |
+| `mods` | `modifiers(U, O.facts, a)` as the chip list of api.md 3 (`kind`, `label`, `value`). Same shape and order as the step record's `mods` |
 | `z` | `stat + help − hinder` |
 | `dc` | `DC[risk]` |
 | `stakes` | The cost of failure: `clock` is the boxes the held clock would fill (`min(n, remaining boxes)`, 0 with no clock); `weight` is the complication weight (null if none) |
 | `clock` | the held risk clock's id, name, box count and `fill` |
 | `gain` | What happens to the target on success: for an obstacle, `min(1 + [approach ∈ fits], remaining boxes)` boxes; for any other `try`, removing the lowest-slot `snag` (its name) or an `edge` scene tag; for `talk`, the topic's reveal or the favor's effects (names) |
 
-**The preview matches execution.** Risk is a function of the story and `a`, and the modifiers are the same on `S` and `F` (end of 3.2), so when the roll happens, its `z`, `mods` and risk equal the preview's. Only two things differ. A hidden block stops the roll (`blocked`, and nothing relied on is consumed), and the failure complication may be picked from hidden ones, so the preview states only the weight.
+**The preview matches execution.** Risk is a function of the story and `a`, and the modifiers are the same on `S` and `F` (end of 3.2), so when the roll happens, its `z`, `mods` and risk equal the preview's. Only two things differ: a hidden block stops the roll (`blocked`, and nothing relied on is consumed), and the failure complication may be a hidden one (3.3).
 
 ## 4. Time
 
@@ -230,13 +230,13 @@ The axes of `regards(g, h, axis, n)` are `trust` and `fear`. The **relationship*
 
 1. **Hidden block**: if a hidden obstacle blocks `h`, reveal it and stop.
 2. **Whether to roll** (judged on the view; inside `R`, `fact_rule` builds `F` from `S` and makes the same judgment): no roll if the topic is a proposition the player already believes, `free_when` is true, the topic is `chat` or `stay`, it is a favor with `owes(h, player, kindness)`, or it is `come` with `regards(h, player, trust) ≥ 1`. Other topics, favors and `come` roll.
-3. **Result**: an unrolled topic is revealed (`x.hidden` for `reveals: x`, otherwise the topic id); a favor granted out of kindness applies the favor's effects and `retract(owes(h, player, kindness))`. When rolled, `success` reveals the topic, or applies the favor's effects and `assert(owes(player, h, promise))`. `come` does `assert(follows(h, player))` when unrolled or on `success`; `stay` does `retract(follows(h, player))`. Costs follow 3.3.
+3. **Result**: an unrolled topic is revealed (`x.hidden` for `reveals: x`, otherwise the topic id); a favor granted out of kindness applies the favor's effects and `retract(owes(h, player, kindness))`. When rolled, `success` reveals the topic, or applies the favor's effects and `insert(owes(player, h, promise))`. `come` does `insert(follows(h, player))` when unrolled or on `success`; `stay` does `retract(follows(h, player))`. Costs follow 3.3.
 4. **Tone**: `threaten` gives `regards(h, player, fear) +1` and `trust −1` whatever the result. With `deceive`, if `h` believes the `claim`'s `against`, the lie is caught: `trust −2`, and a `snag` chapter tag on the player (default name "의심", "suspicion"). A claim that matches no story proposition remains only as text.
 5. **Favor count**: for each character the engine adds a pattern `favor:h` (action `talk:h:favor`, results `success` or `none`) to `Pat`. A step that grants the favor matches this pattern, and candidates offer no favor once `favor:h ∈ hᵥ`. Candidates read only `F` and `hᵥ`, so they use visible history instead of a story flag.
 
-**Companions**: a character with `follows(h, player)` moves along when the player moves (ontology.md section 4, `move`). They do not follow into places in the story's `avoids` (story.md 3.4). If the player does `go` there, `h` stays behind and `follows` is removed. The player can bring someone along without a favor, but someone who does not yet trust the player has to be won over with charm.
+**Companions**: a character with `follows(h, player)` moves along when the player moves (ontology.md 4, `move`). They do not follow into places in the story's `avoids` (story.md 3.4). If the player does `go` there, `h` stays behind and `follows` is removed. The player can bring someone along without a favor, but someone who does not yet trust the player has to be won over with charm.
 
-`give(x, h)` is `move(x, h)`; if `x ∈ wants(h)`, it also does `regards(h, player, trust) +1` and `assert(owes(h, player, kindness))`.
+`give(x, h)` is `move(x, h)`; if `x ∈ wants(h)`, it also does `regards(h, player, trust) +1` and `insert(owes(h, player, kindness))`.
 
 ### 5.2 Promises
 
@@ -245,7 +245,7 @@ The axes of `regards(g, h, axis, n)` are `trust` and `fear`. The **relationship*
 - **Kept**: `retract(owes)`, `regards(h, player, trust) +1`.
 - **Broken**: `retract(owes)`, `trust −2`, and a `snag` chapter tag on the player (default name "약속을 어김", "broke a promise"). A broken-promise tag inside a chapter change is added after `expire(chapter)`, so it carries into the next chapter.
 
-`τ_promise` (section 6) settles promises whose condition has become true. The rest are settled by the first chapter change or ending after the step that made them. So a promise is settled at the next chapter change at the latest.
+`τ_promise` (section 8) settles promises whose condition has become true. The rest are settled by the first chapter change or ending after the step that made them. So a promise is settled at the next chapter change at the latest.
 
 ## 6. The protagonist
 
@@ -298,7 +298,7 @@ def resolve(U, S, h, a, r) -> Step:
 4. **Scan** `scan`: walk the list in order, apply the effect of the first trigger that fires to `work`, and go back to the top of the list. Stop when nothing fires, and stop at once when `flag ending` is set. A story trigger `τᵢ` fires when it has not fired this step, `start_true[i]` is false and `holds(τᵢ.when, work, h*)` is true. An engine trigger fires when its condition is true in `work`.
 5. `delta = diff(S, work)`. `mods` are the atoms of 3.2.
 
-The scan ends after at most `m + 3 + w + q` firings (story triggers, three engine ones, threats, forks and deadlines, favors) and is deterministic. That is because effects after `Δ₀` raise no clock, beats or wounds, arrivals retire their threats, and settling a promise removes its `owes`. The code raises an exception past that bound; it is a bug that fuzzing (story.md V6) should catch. At the end every engine trigger condition is false, so every step starts with no clock full.
+The scan ends after at most `m + 3 + w + q` firings and is deterministic: `m` story triggers, one firing each of `τ_risk`, `τ_fall` and `τ_scene`, `w` arrivals (threats, forks, deadlines) and `q` promise settlements. Effects after `Δ₀` raise no clock, beats or wounds, arrivals retire their threats, and settling a promise removes its `owes`, so none fires twice. The code raises an exception past that bound; it is a bug that fuzzing (story.md V6) should catch. At the end every engine trigger condition is false, so every step starts with no clock full.
 
 `Step.result` is one of `success`, `fail` (rolled), `none` (done without a roll) or `blocked` (a hidden block was revealed), and it is stored in the event. `risk` is recomputed from `a`, so it is not stored.
 
@@ -310,13 +310,13 @@ The scan ends after at most `m + 3 + w + q` firings (story triggers, three engin
 - **Talk**: the first topic, in story order, of the character present that the player does not yet believe
 - **Forward**: if a fork is active, `choose` its first option. Otherwise the first solution whose `when` is true in the view, or failing that, a `go` to a place named in the chapter goal's condition
 
-Every judgment argument on a button is `ν₀`, except the `rely` that defines the button (the solution's `rely`, or the tag). Anyone can pick what to rely on in the roll card (engine.md 4.2), so what sets a typed sentence apart from a button is the free choice of approach, target and tone.
+Every judgment argument on a button is `ν₀`, except the `rely` that defines the button (the solution's `rely`, or the tag). Anyone can pick what to rely on in the roll card (engine.md 4.2), so a typed sentence differs from a button only in freely setting the approach, target, tone and claim (fun.md H2 measures this).
 
 ## 10. Properties and checks
 
 | Property | What and why | Enforced by | Check |
 |---|---|---|---|
-| Admission check | `a ∈ K(Vₜ)` before it touches the state. Includes buttons, cards and the API | the service runs `admits` then `resolve` on every step (engine.md section 7) | ids outside the candidates, ids from stale cards → rejected |
+| Admission check | `a ∈ K(Vₜ)` before it touches the state. Includes buttons, cards and the API | the service runs `admits` then `resolve` on every step (engine.md 7) | ids outside the candidates, ids from stale cards → rejected |
 | Progress | `try(player, ·)` is always a candidate before the ending | `candidates` | `space` is non-empty at every fuzzed step (before the ending) |
 | Neutral value | `ν₀` creates no help, added risk or `spent`, and `try(player)` has `Δ = ∅` | sections 1 and 7 | results of actions with every judgment argument at `ν₀` |
 | Bounded advantage | help and hinder rest on atoms of `F` or `B` and are each 0 or 1. A `try` success changes only `fill` and `mark`; things, propositions and paths move only through story effects and `take`, `give`, `look` and `talk` | `modifiers`, section 7 | a target with several tags → hinder 1 |
@@ -327,4 +327,4 @@ Every judgment argument on a button is `ν₀`, except the `rely` that defines t
 | Rolls move forward | a rolled step changes something visible, and `fail` changes the clock (section 7) | `schemas.py` | at every rolled step under fuzzing, the player's visible atoms change |
 | Time moves forward | a scene ends within `B` steps other than `try(player)`, and an active threat with `n` boxes arrives or retires within `n·B` such steps unless an effect lowers its `fill` | section 4 | fuzzing |
 | Guaranteed ending | in any configuration, `cut(pass)` alone reaches an ending within `1 + Σₖ nₖ` steps (the box counts of the remaining chapters' deadlines). No dice involved | the structure of story.md (a deadline in every chapter, and the last one leads to an ending) | startup validation checks only the structure |
-| Story properties | the grammar of clocks and triggers, isolation of latents, witnesses | story.md section 4 | startup validation |
+| Story properties | the grammar of clocks and triggers, isolation of latents, witnesses | story.md 4 | startup validation |

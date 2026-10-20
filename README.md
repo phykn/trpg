@@ -1,18 +1,28 @@
 # Words and Dice
 
-A web TRPG engine where the player tries anything by typing a Korean sentence, rules decide the outcome, and local models write the scene. Stories are data files in `scenarios/`; the code runs any story.
+A web TRPG engine. The player types any action as a Korean sentence, the rules decide the outcome, and local models write the scene. Stories are data in `scenarios/`; the engine code contains none.
 
-- The **decision model** (`:8081`, `malkuth` or `kev`) reads the sentence as closed options: an action available right now, or improvise. It never invents anything.
-- The **rules** check whether 2d6 plus modifiers reaches the target (7, 8 or 9 by risk), then compute and save progress boxes, risk clocks, tags and costs.
-- The **narration model** (`:8082`, `gemma4`, `qwen` or `minicpm`, always non-thinking) writes only what changed as a scene, and the decision model checks it against the facts (up to 2 rewrites).
+- The **decision model** (`malkuth`, `:8081`) maps the sentence to a closed option: an action possible right now. It never invents anything.
+- The **rules** roll 2d6 plus modifiers against a target of 7, 8 or 9 set by risk, then apply progress, risk clocks, tags and costs.
+- The **narration model** (`gemma4`, `qwen` or `minicpm`, `:8082`, always non-thinking) writes only what changed. The decision model checks the text against the facts, with up to two rewrites.
 
-The design is in [docs/](docs/): world ([ontology.md](docs/ontology.md)), story format ([story.md](docs/story.md)), rules ([rule.md](docs/rule.md)), engine ([engine.md](docs/engine.md)), [api.md](docs/api.md), screens ([ui.md](docs/ui.md)), fun ([fun.md](docs/fun.md)).
+## Design docs
+
+| Doc | Defines |
+|---|---|
+| [ontology.md](docs/ontology.md) | World state, observation, change operations, saves |
+| [story.md](docs/story.md) | Story file format and validation |
+| [rule.md](docs/rule.md) | Candidate actions, rolls, time, people |
+| [engine.md](docs/engine.md) | Interpretation, cards, narration, turn protocol |
+| [api.md](docs/api.md) | HTTP routes and response shapes |
+| [ui.md](docs/ui.md) | Screens, the roll, client state |
+| [fun.md](docs/fun.md) | Fun metrics and hypotheses |
 
 ## Setup
 
-Both models are required and run outside this repository ([local-models](https://github.com/phykn/local-models)). The engine never starts or switches models. At startup the server checks that both servers run the configured models, and refuses to start otherwise.
+Both models are required and run outside this repository ([local-models](https://github.com/phykn/local-models)). Start them first; the server checks them at startup and refuses to start if either runs a different model.
 
-Install once from the repository root (developed and verified with Python 3.13 and Node):
+Install once from the repository root (Python 3.13, Node):
 
 ```bash
 python3 -m venv .venv
@@ -22,6 +32,8 @@ python3 -m venv .venv
 
 ## Run locally
 
+In two terminals from the repository root:
+
 ```bash
 .venv/bin/python server/run_api.py --local
 ```
@@ -30,46 +42,32 @@ python3 -m venv .venv
 cd client && npm run web
 ```
 
-Run each command from the repository root in its own terminal, then open **http://localhost:8090** in a browser. `--local` needs no personal env file and uses `127.0.0.1:8000`, auth `local/local`, decision model `malkuth` (`:8081`) and narration model `gemma4` (`:8082`). Pick other models with `DECISION_MODEL` and `LLM_MODEL` ([server/README.md](server/README.md)). If a server runs a different model than configured, the startup error names the model currently loaded. The web port is 8090 because the decision model uses 8081.
+Open http://localhost:8090. `--local` needs no env file; the API is on `127.0.0.1:8000` with auth `local/local`. The web client reloads on its own; restart the API after changing server code or a story. Other models and settings: [server/README.md](server/README.md). Phone and public access: [client/README.md](client/README.md).
 
 ## Play
 
-1. On the title screen, pick a story, then set a name, stats and traits.
-2. Type actions as sentences in the input line. Tapping a name in a scene line starts a sentence: a destination fills in the whole "…로 간다" ("go to …"), people, things and obstacles fill in the opening, and a blocked destination starts with the obstacle blocking it. One sentence can chain up to three steps.
-3. An action that rolls opens a roll card. It shows the target, modifiers and what you can lean on; press and release the dice to roll.
-4. Filling an obstacle's boxes opens the way; when a risk clock fills, things get worse. The story's conditions decide the ending.
+1. On the title screen pick a story, then set a name, stats and traits.
+2. Type an action as a sentence. Tapping a name in the scene starts the sentence for you. One sentence can chain up to three actions.
+3. An action that rolls opens a roll card with the target and modifiers. Choose what to rely on, then press and release the dice.
+4. Filling an obstacle's boxes gets you past it; a full risk clock makes things worse. The story's conditions decide the ending.
 
-Every turn is saved before narration, without waiting for it. If narration breaks off, only the rewrite is requested again.
+Each turn is saved before its narration is written. The browser keeps only the game id and the chat history.
 
-## Write a new story
+## Write a story
 
-Write `scenarios/<folder>/story.yaml` in the format of [docs/story.md](docs/story.md). The only example is [scenarios/skeleton/story.yaml](scenarios/skeleton/story.yaml). No code changes are needed. The server validates every story at startup and will not start if any fails; you can also validate ahead of time:
-
-```bash
-cd server && ../.venv/bin/python -m src.story ../scenarios/<folder>
-```
+Write `scenarios/<folder>/story.yaml` in the format of [docs/story.md](docs/story.md), starting from [scenarios/skeleton/story.yaml](scenarios/skeleton/story.yaml). No code changes are needed. The server validates every story at startup and refuses to start if one fails; to validate earlier, use the command in [server/README.md](server/README.md#commands).
 
 ## Where to change things
 
 | Goal | Location |
 |---|---|
-| Story, people, obstacles, endings | `scenarios/<folder>/story.yaml` ([docs/story.md](docs/story.md)) |
-| Checks, costs, tags, conversation rules | [server/src/rules/](server/src/rules/) |
+| Story, people, obstacles, endings | `scenarios/<folder>/story.yaml` |
+| Rolls, costs, tags, conversation rules | [server/src/rules/](server/src/rules/) |
 | Sentence interpretation | [server/src/interpret.py](server/src/interpret.py) |
-| Narration and checking | [server/src/narrate.py](server/src/narrate.py) |
-| API, saves, the order of a turn | [docs/api.md](docs/api.md), [docs/engine.md](docs/engine.md) section 7 |
-| Screens | [client/screens/](client/screens/), [client/components/](client/components/) ([docs/ui.md](docs/ui.md)) |
+| Narration and its check | [server/src/narrate.py](server/src/narrate.py) |
+| Turn order, saves | [server/src/service.py](server/src/service.py) (engine.md 7) |
+| Screens | [client/screens/](client/screens/), [client/components/](client/components/) |
 
-## Verification
+## Checks
 
-```bash
-.venv/bin/python -m pytest -q
-.venv/bin/python -m ruff check server/
-cd client && npm test -- --runInBand && npx tsc --noEmit && npm run lint
-```
-
-Passing automated tests is not evidence that the game is fun. For checking the real UI, follow section 6.2 of [docs/ui.md](docs/ui.md).
-
-## Saves
-
-A single file, `saves/engine/g_<id>.json`, atomically stores the world, turn log, narration cache, random seed and request receipts. The browser keeps only `trpg.game_id` and the chat history. File saves are meant for a single server process.
+[qa/README.md](qa/README.md) lists the checks to run for each kind of change.

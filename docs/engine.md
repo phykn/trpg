@@ -19,11 +19,13 @@ server/src/
   lang/                  context.py (ρ), claims.py (κ), polite.py (합니다체)
   models/                decision.py (decision model), llm.py (narration model)
   interpret.py           question tree and acceptance
-  cards.py               clarify, roll and confirm cards
+  cards.py               clarify, roll, confirm and move cards
   narrate.py             narration, checks, rewrites, recaps
   view.py                GameView, step records (api.md)
   service.py             turn protocol (lock, revision, receipts)
   api.py                 HTTP boundary (api.md)
+  config.py              settings from the environment
+  fun.py                 offline fun metrics (fun.md 4)
 ```
 
 Models are called only from `interpret.py`, `narrate.py` and the startup check. These two files receive only `Obs` and text built from it, exogenous inputs, and story constants (style).
@@ -121,11 +123,11 @@ The first matching row from the top applies.
 | Unsure | One or more steps | The first step read |
 | Unsure | None | `try(player)` |
 
-The decision model reads one sure action well but is weak at everything else. Asked step by step, it confidently attached a next step even to one-action sentences, and it got only about one in five multi-action sentences right. The narration model's reading gets most multi-action sentences right and matches the decision model on one-action sentences (qa_test/runs/decision-1). The decision model's count filters first, so the narration model is called only on sentences that are unsure or look like several actions. If layer 0 settled the plan, nothing is asked.
+If layer 0 settled the plan, nothing is asked. Why the split and the thresholds:
 
-`θ₁` is higher than the `θ` (0.5) of other questions because a first step between 0.5 and 0.7 is hard to call sure. In that band, 4 sentences were right only by the decision model and 24 only by the narration model's reading; above 0.7 it was 4 to 3. The errors clustered on short spoken sentences ("같이 가자" (let's go together) read as movement, "안으로 들어간다" (go inside) as looking). Raising it to 0.7 gave +6/−3 on the 336-sentence bench, +9/−0 on the 207 pairs with the first schema removed, and +9/−1 on 150 sentences in play register (+24/−4 combined). More sentences call the narration model, so latency grows (qa_test/runs/misread-1).
-
-If the plan's first step is a schema not possible here, its slot is empty at layer 2 and the sentence is refused ("지금은 할 수 없는 행동입니다", you cannot do that now, with state and `revision` unchanged). These are sentences like talking to someone kept away or picking something up from an empty floor. When the options held only the possible schemas, the schema the sentence asked for was missing: the decision model either loaded its weight onto another schema and was sure of it (talk became movement), or the reading was discarded and the sentence became `try(player)`. Both models must be able to reach a refusal: even when the decision model is sure of an impossible schema, it counts as unsure and the reading is followed. Plans for the 336 bench sentences were unchanged (+1/−0). With the first schema removed from the scene for the same sentences, none of the 207 used to be refused and 115 did the wrong action; now 155 are refused and 50 do the wrong action (qa_test/runs/misread-1).
+- **Reading.** The decision model reads one sure action well, but asked step by step it attached a next step even to one-action sentences and got about one in five multi-action sentences right. The narration model's reading gets most of them right and matches it on one-action sentences. The decision model's count filters first, so the reading is called only for unsure or multi-action sentences (qa_test/runs/decision-1).
+- **`θ₁` = 0.7**, above the `θ` (0.5) of other questions. Between 0.5 and 0.7 the reading was right more often (24 sentences to 4), mostly on short spoken sentences ("같이 가자", let's go together, read as movement). Raising it gave +24/−4 across three benches, at the cost of more reading calls (qa_test/runs/misread-1).
+- **Impossible schemas.** A first step that is not possible here leaves its slot empty at layer 2, and the sentence is refused ("지금은 할 수 없는 행동입니다", you cannot do that now; state and `revision` unchanged): talking to someone kept away, picking something up from an empty floor. Offering only the possible schemas made both models land on a wrong action instead, so all nine are offered and a sure but impossible answer counts as unsure. With the asked schema removed from the scene, refusals went from 0 to 155 of 207 sentences and wrong actions from 115 to 50 (qa_test/runs/misread-1).
 
 ### 3.3 Layer 2: slots
 
@@ -138,15 +140,13 @@ Just before executing step `i`, its slots are asked together in one call, using 
 | Strain | Judgment | `natural`, `forced`, `불가능` (impossible). If `불가능`, refuse the sentence |
 | Tone | Judgment | Five |
 | Claim | Judgment | Only when the tone is `deceive`. For each claim sentence in the story, a yes/no question "플레이어는 이렇게 말합니까?" (Does the player say this?), asked on the sentence alone with no context. The claim with the highest "yes" at or above `θ` is taken; if none, there is no claim |
-| Reliance | Judgment | **Not chosen.** Layer 0 name matching sets the default and the player chooses on the roll card. The model only filters what the card shows (4.2) |
+| Reliance | Judgment | **Not chosen.** The roll card shows the target number and modifiers, so the player chooses there; layer 0 name matching sets the default, and the model only filters out what is unrelated to this attempt (4.2) |
 
-For the destination, the **current place** is offered along with the ways out. It is left out when the sentence names a way out ("마당에서 마을로 간다", go from the yard to the village). Naming only the current place does not settle it either: "부두로 간다" (go to the dock) stays, and "선착장을 떠난다" (leave the landing) goes. Choosing the current place means the move is already done, so that step is skipped and the next step runs. If no step has run, the sentence is refused with "이미 …에 있습니다" (you are already at …). When offered only the ways out, the decision model picked another way even for sentences that named the current place in other words. Conversely, the decision model is sometimes sure of the current place for sentences that pass through something here and go out ("열린 문으로 들어가 꼭대기까지 오른다", go in through the open door and climb to the top), so, as with layer-1 refusals, the current place is accepted only when the narration model picks it too (qa_test/runs/misread-1).
-
-The model does not choose the reliance because the roll card shows the target number and modifiers and lets the player choose, so there is no reason for the model to decide. The model only filters, so that things unrelated to this attempt (a letter, when fixing the lamp) do not appear on the card.
+For the destination, the **current place** is offered along with the ways out, unless the sentence names a way out ("마당에서 마을로 간다", go from the yard to the village). Choosing it means the move is already done: that step is skipped, or, if no step has run, the sentence is refused with "이미 …에 있습니다" (you are already at …). Offered only the ways out, the decision model picked another way even when the sentence named the current place in other words; but it is also sometimes sure of the current place for sentences that pass through here and go on ("열린 문으로 들어가 꼭대기까지 오른다", go in through the open door and climb to the top). So, as with layer-1 refusals, the current place is accepted only when the narration model picks it too (qa_test/runs/misread-1).
 
 ### 3.4 Acceptance `δ_θ`
 
-In one question's answer distribution, `ω₁, ω₂, ω₃` are the options in order of probability. `θ` is a setting, initially 0.5 (adjusted by the measurements in section 9). Only layer 1 step 1 uses `θ₁ = 0.7` (3.2).
+In one question's answer distribution, `ω₁, ω₂, ω₃` are the options in order of probability. `θ` is a setting, initially 0.5 (adjusted by the measurements in section 9). Layer 1 step 1 uses `θ₁` instead (3.2).
 
 | Question | `p(ω₁) ≥ θ` | Otherwise |
 |---|---|---|
@@ -155,7 +155,9 @@ In one question's answer distribution, `ω₁, ω₂, ω₃` are the options in 
 | Layer 2 intent slot | Accept. But for the `try` target and approach the narration model's pick always comes first, and the current place as destination goes to the Otherwise column | The narration model gets the same context, question and options, numbered, and picks one (temperature 0). With no answer, the player picks on a clarify card `{ω₁, ω₂, ω₃}` (all values if there are three or fewer). For the approach alone, the player's highest stat (ties broken by approach order) is used instead of a card: its modifier is then the largest, and the roll card shows the approach |
 | Layer 2 judgment slot | Accept | `ν₀` |
 
-The narration model is used only at layer 1 and at layer-2 intent slots, to close off any path where both models err together in a judgment slot and produce a gain. Layer 1 decides only the kind and order of actions, and intent slots only what the player is aiming at; neither changes the resolution. Where the decision model is unsure of an intent slot, the narration model is almost always right, so its answer is used before asking the player. For the `try` target and approach, the decision model is often wrong even when sure while the narration model is almost always right, so both are asked together and the narration model's answer comes first (qa_test/runs/decision-1). So the schema and arguments of an executed action are each set by an answer with probability `≥ θ`, the narration model's reading or pick (layer 1 and intent slots only), a rule, the player's choice, or `ν₀` — or the whole action is `try(player)`, which changes nothing. In a judgment slot the model is unsure of, there is neither gain nor added risk.
+The narration model answers only at layer 1 and at intent slots, which decide what the player aims at, never how it resolves; so both models erring together cannot produce a gain in a judgment slot. Where the decision model is unsure of an intent slot, the narration model is almost always right, and for the `try` target and approach it is right even where the decision model is sure and wrong, so its pick comes first there (qa_test/runs/decision-1).
+
+**Conservatism.** Every part of an executed action is set by an answer with probability `≥ θ`, the narration model's reading or pick (layer 1 and intent slots only), a rule, the player's choice, or `ν₀`; otherwise the whole action is `try(player)`, which changes nothing. An unsure judgment slot gives neither gain nor added risk.
 
 ### 3.5 Decision model calls
 
@@ -187,15 +189,13 @@ If the plan's next step `a` is a rolled action, the engine stops just before exe
 | Field | Content |
 |---|---|
 | `plan` | The step with `a`'s intent arguments and its judgment arguments other than `rely` fixed, plus the rest of the plan |
-| `options` | One for each relevant allowed value of `rely` (below), plus one "기대지 않음" (rely on nothing): action id, name, whether using it uses it up, `preview(U, O, a_rely)` (rule.md 3.4). Ordered by the rows of the `rely` table in rule.md section 2, within one kind by the story's declaration order (tags by slot order), with "rely on nothing" last |
+| `options` | One for each relevant allowed value of `rely` (below), plus one "기대지 않음" (rely on nothing): action id, name, whether using it uses it up, `preview(U, O, a_rely)` (rule.md 3.4). Ordered by the rows of the `rely` table in rule.md 2, within one kind by the story's declaration order (tags by slot order), with "rely on nothing" last |
 | `selected` | The `rely` option layer 0 set; otherwise "rely on nothing" |
 | `echo` | The sentence or button name, plus the names of the slots layer 2 read (target, approach, strain, tone) |
 
-**Relevance.** The rules give +1 help to any roll for any allowed `rely` (rule.md section 2), so before the card is placed only what is relevant to this roll is kept. What the story links is kept without asking: the `rely` values listed in the target obstacle's solutions, and the tags on the target. The rest goes to the decision model once. The context is the step's name, the target's appearance and the player's sentence; the single question is "이 시도를 실제로 돕는 것은 무엇입니까?" (What actually helps this attempt?); the options are a description of each remaining value (a trait's text, a thing's appearance, a known proposition's text, a tag or bond name) plus "아무것도 돕지 않음" (nothing helps). Only values whose probability is at least `ρ_rely` (initially 0.1) are kept. Asked yes/no value by value, the small decision model gave the same answer for every value in a scene, so the values are laid out in one question to be compared. With no answer, nothing is filtered, so that a model failure does not take a choice away from the player. The filtered result is saved with the card, so resending the same request returns the same card.
+**Relevance.** The rules give +1 help to any roll for any allowed `rely` (rule.md 2), so before the card is placed only what is relevant to this roll is kept. What the story links is kept without asking: the `rely` values listed in the target obstacle's solutions, and the tags on the target. The rest goes to the decision model once. The context is the step's name, the target's appearance and the player's sentence; the single question is "이 시도를 실제로 돕는 것은 무엇입니까?" (What actually helps this attempt?); the options are a description of each remaining value (a trait's text, a thing's appearance, a known proposition's text, a tag or bond name) plus "아무것도 돕지 않음" (nothing helps). Only values whose probability is at least `θ_rely` (initially 0.1) are kept. Asked yes/no value by value, the small decision model gave the same answer for every value in a scene, so the values are laid out in one question to be compared. With no answer, nothing is filtered, so that a model failure does not take a choice away from the player. The filtered result is saved with the card, so resending the same request returns the same card.
 
 Acceptance is `{card, pick}`, where `pick` is one action id from `options`. The service executes only if the request's `revision` matches the current one, `card` is the id of the pending card, `pick` is one of that card's options, and `admits(U, Vₜ, pick)` holds. A stale `revision` gets 409, and a `pick` outside the options at the same `revision` gets `refused` (api.md). This acceptance confirms exactly that action, so a high-risk roll gets no separate confirm card. The risk and modifiers shown on the card equal the values at execution (rule.md 3.4).
-
-A button's judgment arguments are `ν₀` apart from the `rely` that defines the button. But anyone can pick a reliance on the card, so a sentence's advantage lies in freely setting the approach, target, tone and claim. H2 in fun.md measures this difference.
 
 ### 4.3 Confirm
 
@@ -234,11 +234,24 @@ Small models follow the end of a prompt best, so style and this narration come l
 
 ### 5.2 Generation
 
-The narration model is always called in non-thinking mode (`enable_thinking: false`), with an output limit of 500 tokens. Narration must fit on one screen without paging (ui.md section 2), so accepted text is at most 4 sentences and 200 characters including spaces. A turn with a chapter change or an ending is shown together with a recap (5.5), so its narration is at most 160 characters and the recap at most 100. Format rules: 합니다체; `당신`; no lists of options; never decide the player's feelings; no numbers; a person who is spoken to or handed something answers directly, in double-quoted dialogue true to their persona and voice, reacts from where they stand, has each line attributed to them, does not copy sample lines verbatim, and addresses you without any form of address; people know only what the context and what happened state, and otherwise say they do not know or change the subject; when there is a success or failure, the first sentence makes that outcome clear; a failure shows things going wrong. The player's sentence is read for its meaning, without copying its abbreviations or phrasing, and shown as the actions and words of `당신`. Questions are answered from facts in the context, and anything not in the context is written as not yet knowable. Drafts never stream to the player; only text that passes the check goes out.
+The narration model is always called in non-thinking mode (`enable_thinking: false`), with an output limit of 500 tokens. Narration must fit on one screen without paging (ui.md 2), so accepted text is at most 4 sentences and 200 characters including spaces; in a turn with a chapter change or an ending, at most 160, plus a recap of at most 100 (5.5). Drafts never stream to the player; only text that passes the check goes out.
+
+Format rules:
+
+- 합니다체 and `당신`; no numbers, no lists of options, never the player's feelings.
+- When there is a success or failure, the first sentence makes it clear; a failure shows things going wrong.
+- The player's sentence is read for its meaning, not copied, and shown as the actions and words of `당신`. Questions are answered from facts in the context; anything else is not yet knowable.
+- A person spoken to or handed something answers directly, from where they stand, in double-quoted dialogue attributed to them and true to their persona and voice, without copying sample lines and without any form of address for you.
+- People know only what the context and what happened state; otherwise they say they do not know or change the subject.
 
 ### 5.3 Check
 
-1. **Rule check**: sentence count and character count (a quoted line is not split but counts as part of its sentence, and a sentence that is only a quote attaches to the preceding sentence that names the speaker), 합니다체 (`lang/polite.py` fixes 해라체 endings), second-person forms other than `당신`, list and option shapes, numbers, parentheses (sounds and gestures go in sentences too), the length of the `태그:` line (at most 12 characters) and names of hidden entities. Saying something not yet obtained was obtained (a thing's name + an obtain verb while `at(x, player) ∉ F'`), or that something held was handed over. Saying you reached somewhere (a place name + an arrival verb while `at(player, place) ∉ F'`). A phrase of 10 or more characters, spaces excluded, identical to previous narration (the last 3 turns) or to the sample lines of a person speaking now (about three words; shorter overlaps are common phrasing). A form of address for you in dialogue (words that guess age or gender, like 아저씨 (mister) or 언니 (big sister), `ko.ADDRESS`). Open, obtain, hand-over and arrival verbs are read only outside quotes (dialogue is not something happening now).
+1. **Rule check**, without a model:
+   - Length: sentence and character counts. A quoted line counts as part of its sentence, and a sentence that is only a quote attaches to the preceding one that names the speaker.
+   - Form: 합니다체 (`lang/polite.py` fixes 해라체 endings), no second person other than `당신`, no list or option shapes, numbers or parentheses (sounds and gestures go in sentences too), a `태그:` line of at most 12 characters, no names of hidden entities.
+   - Facts, read outside quotes only (dialogue is not something happening now): obtaining a thing not held (`at(x, player) ∉ F'`), handing over a thing held, or reaching a place not reached (`at(player, place) ∉ F'`), each found as a name plus a verb of that kind.
+   - Repetition: a phrase of 10 or more characters, spaces excluded, identical to the last 3 turns of narration or to the sample lines of a person speaking now (about three words; shorter overlaps are common phrasing).
+   - Address: a form of address for you in dialogue that guesses age or gender, like 아저씨 (mister) or 언니 (big sister) (`ko.ADDRESS`).
 2. **Claim extraction** `κ` (`lang/claims.py`): from each sentence, `Σ` literals are extracted using names and aliases and the verb forms of the frame table's change and present frames. Taking `F'` as the facts of `Vₜ₊ₖ`, a positive literal `φ` is accepted only if `φ ∈ F'`, and a negative literal `¬φ` only if it follows from `F'` and `C` (e.g. `at(key, A) ∈ F'` gives `¬at(key, B)` by C1). A negative claim such as "여기엔 경비가 없다" (there is no guard here) is not accepted, since there may be a hidden guard. Sentences that cannot be rendered in `Σ` (smells, weather, expressions) contradict no state, so they are free. Growing `Σ` widens what the check covers and narrows narration's freedom.
 3. **Decision model check**: for each sentence that passed 1 and 2, one choice question ("이 문장은 문맥과 비교해 어떻습니까?" (How does this sentence compare with the context?): 맞다 (correct), 사실과 어긋난다 (contradicts the facts), 없는 사람·물건·길을 지어냈다 (invents a person, thing or way that does not exist)) is asked with the context `ρ(Vₜ₊ₖ, X_N)`, all in one call. If the probability of "맞다" is at most `1 − θ_N` (initially 0.5), the sentence is rejected, and the more probable of the two faults is given as the point to fix. Asked yes/no per fault, the model answered "no" to both and missed most bad sentences (qa_test/runs/decision-1).
 
@@ -246,7 +259,7 @@ Acceptance reads only `Vₜ₊ₖ` (non-interference). Classifying a fault as in
 
 ### 5.4 Rewrites and fallback
 
-If any sentence is rejected, the narration is rewritten with that sentence and the reason (the rule check's name, the contradicted fact line) as feedback. Feedback reads only `(Vₜ₊ₖ, δ, draft)`. There are at most two rewrites. If the third attempt is still rejected, the rejected sentences are deleted from the draft with the fewest rejected sentences (the later one on a tie), since a rewrite can be worse. If everything is deleted, only the change lines of `δ` remain as the narration. Each attempt gets a different seed. The stream format is in api.md section 4.
+If any sentence is rejected, the narration is rewritten with that sentence and the reason (the rule check's name, the contradicted fact line) as feedback. Feedback reads only `(Vₜ₊ₖ, δ, draft)`. There are at most two rewrites. If the third attempt is still rejected, the rejected sentences are deleted from the draft with the fewest rejected sentences (the later one on a tie), since a rewrite can be worse. If everything is deleted, only the change lines of `δ` remain as the narration. Each attempt gets a different seed. The stream format is in api.md 4.
 
 ### 5.5 Tag names and recaps
 
@@ -289,17 +302,17 @@ lock(game_id)
        if the step rolls and is not accepted, place a roll card and stop
        if it is high risk without a roll and not accepted, place a confirm card and stop
        step = resolve(U, S, h, aᵢ, roll(seed, t)), append the event and S ← S ⊕ Δ
-       stop on an ending, failure or block
+       stop on an ending, or a fail or blocked result
   5. If at least one step ran, advance turn n and record it in turns. With neither a step nor a card, refuse
-  6. If the state or the card changed, revision +1, write the receipt, and save S·L·P at once (ontology.md section 6)
-  7. Respond: CommandResult (api.md section 2)
+  6. If the state or the card changed, revision +1, write the receipt, and save L and P at once (ontology.md 6)
+  7. Respond: CommandResult (api.md 2)
 ```
 
 - Layer-2 questions are asked inside the lock. Requests for the same game queue up one at a time; other games are not blocked.
 - Between the steps of 4, the observation is recomputed each time. What an earlier step revealed appears in the next step's slots.
 - A request that accepts a roll card runs that step without calling a model. If a remaining step has layer-2 questions, they are asked then, and that time is spent while the dice are rolling.
 - The game is saved before responding. If a response is lost, the client resends the same `request_id` and body and gets the same result at 1.
-- Narration is requested separately, after the response. Narration does not change the state, so it is built outside the lock, and the lock is taken only to write the cache. When narration requests for the same turn overlap, only one builds it and the rest wait for its result.
+- Narration is requested separately, after the response. Narration does not change the state, so it is built outside the lock, and the lock is taken only to write the cache into the save. When narration requests for the same turn overlap, only one builds it and the rest wait for its result.
 
 ## 8. Models and startup
 
@@ -319,7 +332,7 @@ At startup the server validates every story against story.md V1–V6 and sends a
 | Context purity | Every model input is built only from `ρ(Vₜ, X)`, `λ`, exogenous inputs and story constants. Narration and rewrite feedback use `Vₜ₊ₖ` and `δ` | `interpret`, `narrate` | Two states differing only in hidden atoms → the same prompt (compare the text a fake model received) |
 | Closed questions | `Ω` is computed before the call, and answers outside it have probability 0 | `decide` | Answers outside the options |
 | Interpretation totality | Every sentence ends as a plan, clarify, or refusal, because the tree's depth `1 + k` is finite, `δ_θ` always yields a value, and the layer-1 step-1 default `try(player)` is always a candidate | Section 3 | Random-sentence fuzzing |
-| Conservatism under uncertainty | The last paragraph of 3.4 | `δ_θ`, 4.2 | Low confidence on every judgment slot → `ν₀`; low confidence on every intent slot with no narration-model answer → clarify |
+| Conservatism under uncertainty | 3.4, Conservatism | `δ_θ`, 4.2 | Low confidence on every judgment slot → `ν₀`; low confidence on every intent slot with no narration-model answer → clarify |
 | Bounded misreading | An executed step yields the `R` outcome of one candidate, and its gain stays within rule.md's bounded advantage | Admission check | An id outside the candidates → refusal |
 | Cost bound | A turn finishes within `1 + k` decision-model interpretation calls, one narration-model action reading plus up to 2 picks per step, 3 narration attempts and 3 check calls, and each call has a time limit. A turn that ends a chapter adds 3 recap attempts + 3 checks | 3.5, section 8 | A fake model that never answers |
 | Card honesty | The risk, target number and modifiers shown on a roll card equal those at execution, and a high-risk step runs only after that exact action is accepted | 4.2, 4.3, section 7 | A card's `preview.mods`·`risk` equal its step's `Step` (the step record's `mods` is a projection of it); a high-risk second step in a chain; accepting a stale card; a `pick` outside the card |
