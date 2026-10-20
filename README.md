@@ -1,6 +1,4 @@
-# 말과 주사위
-
-*(Words and Dice)*
+# Words and Dice
 
 A web TRPG engine where the player tries anything by typing a Korean sentence, rules decide the outcome, and local models write the scene. Stories are data files in `scenarios/`; the code runs any story.
 
