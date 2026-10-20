@@ -57,7 +57,7 @@
 - {at: {path: 0, step: 3}, text: 열린 문으로 들어가 꼭대기까지 오른다, expect: go:lamp_room}
 - {at: {path: 0, step: 3}, text: 안으로 들어간다, expect: go:lamp_room}
 
-# 등불실: 꺼진 등불, 남은 기름
+# 등불실: 꺼진 등불, 기름 갈림길
 - {at: {path: 0, step: 5}, text: 렌즈를 닦고 불씨를 살린다, expect: try:lamp:finesse}
 - {at: {path: 0, step: 5}, text: 남은 기름을 몽땅 등불에 붓는다, expect: choose:g_oil:all_in}
 - {at: {path: 0, step: 5}, text: 기름 절반은 마을 봉화를 위해 남겨 둔다, expect: choose:g_oil:beacon}

@@ -22,7 +22,7 @@ Does the world feel natural, and does it feel like a game? A tester plays one ga
   - `move`: where to go and who comes along.
   - `confirm` or `clarify`: asks you to confirm the action, or which of several meanings you meant.
 
-  `*` marks the option your sentence chose. `→ 다음:` lists the rest of your sentence, done after this step.
+  `*` marks the option your sentence chose. `→ 다음:` lists the rest of your sentence, done after this step. Growth (`g1`, …) is offered only once no card is open, as on the web screen.
 - When a card shows the wrong action, note a misread, `cancel`, and rephrase once; if it is still wrong, press a button or pick the nearest option.
 - An ending prints `=== 결말: … ===`; after it, commands are refused and only `report` runs.
 - `new` takes `--approaches force=2,finesse=1,wits=1,charm=0` and `--traits a,b` (ids are printed at the start); without them it takes the story's values in order and its first traits.

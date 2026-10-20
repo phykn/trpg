@@ -8,7 +8,7 @@ import { useDialog } from '@/components/ui/useDialog';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
-import { Item, Row } from './Row';
+import { Item, Row, TagItems } from './Row';
 
 // Health counts what is left, so it must not look like a clock's boxes, which count what has gone wrong.
 // The sheet's row already leads with the heart, so only the button draws its own.
@@ -64,9 +64,7 @@ export function HeroSheet({ player, journal, onGrowth, onClose }: {
         </Row>
         {player.tags.length ? (
           <Row inset icon="tag" label={ko.row.state}>
-            {player.tags.map((t) => (
-              <Item key={`tag${t.slot}`} color={t.kind === 'edge' ? colors.gold.fg : colors.danger.fg}>{t.name}</Item>
-            ))}
+            <TagItems tags={player.tags} />
           </Row>
         ) : null}
         <Row inset icon="bolt" label={ko.row.ability}>

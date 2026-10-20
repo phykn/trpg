@@ -3,6 +3,8 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { colors } from '@/design/tokens';
+import { ko } from '@/locale/ko';
+import type { Tag } from '@/services/types';
 
 // Every row starts with its icon in one fixed column, so the content of all rows shares one left edge.
 // A row wraps instead of truncating, so names in it are never shortened.
@@ -29,6 +31,25 @@ export function Item({ children, dim, color = colors.fg.default, strong }: {
       style={{ color, opacity: dim ? 0.45 : 1, lineHeight: 22 }}>
       {children}
     </Text>
+  );
+}
+
+// Tags of one name, kind and life count once in a roll, so they show once; the life says when each goes
+// ("불리함, 불리함" with no end in sight, qa_test/runs/play-3-bold 17, play-3-talker 46, play-4-odd 15).
+export function TagItems({ tags }: { tags: Tag[] }) {
+  const seen = new Set<string>();
+  return (
+    <>
+      {tags.filter((t) => {
+        const k = `${t.kind}|${t.life}|${t.name}`;
+        return !seen.has(k) && !!seen.add(k);
+      }).map((t) => (
+        <Item key={`${t.owner ?? ''}${t.slot}`} color={t.kind === 'edge' ? colors.gold.fg : colors.danger.fg}>
+          {t.name}
+          {ko.tagLife[t.life] ? <Text style={{ color: colors.fg.muted }}>{` · ${ko.tagLife[t.life]}`}</Text> : null}
+        </Item>
+      ))}
+    </>
   );
 }
 

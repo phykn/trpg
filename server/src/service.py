@@ -11,6 +11,8 @@ from .cards import clarify_card, confirm_card, move_card, rely_options, roll_car
 from .interpret import names_way, unreachable
 from .locale import ko
 from .narrate import (
+    GROWN_CHARS,
+    GROWN_SENTENCES,
     RECAP_CHARS,
     RECAP_SENTENCES,
     SHORT_CHARS,
@@ -33,6 +35,7 @@ from .view import (
     chapter_k,
     default_tag_name,
     game_view,
+    rely_label,
     step_record,
 )
 
@@ -310,7 +313,9 @@ class GameService:
             step_echo = {**echo, "slots": st.get("slots", echo.get("slots", []))}
             if not st.get("accepted"):
                 rolling = rolls(u, o.facts, o.hist, a)
-                if rolling or risk(u, a) == "high":
+                # A thing handed over does not come back, and a sentence that only showed it was read as giving
+                # (qa_test/runs/play-3-talker 3, play-4-talker 7).
+                if rolling or risk(u, a) == "high" or a.schema == "give" and kind == "text":
                     p["card_seq"] += 1
                     cid = f"c{p['card_seq']}"
                     make = roll_card if rolling else confirm_card
@@ -470,9 +475,21 @@ class GameService:
         ending = next((c["id"] for r in turn["steps"] for c in r["changes"] if c["kind"] == "ending"), None)
         previous = [p["narration"][str(m)]["text"] for m in range(max(1, n - PREVIOUS_TURNS), n)
                     if str(m) in p["narration"]]
+        grown = all(r["action"].startswith("grow:") for r in turn["steps"])
+        progress = {c["id"]: c["to"] >= u.boxes(c["id"]) for r in turn["steps"] for c in r["changes"]
+                    if c["kind"] == "fill" and c["to"] > c["from"]}
+        blocked = tuple(r["label"] for r in turn["steps"] if r["result"] == "blocked")
+        came = [c for r in turn["steps"] for c in r["changes"] if c["kind"] in ("crisis", "arrival")]
+        struck = tuple(dict.fromkeys(c["name"] for c in came if not c["id"].startswith("deadline.")))
+        missed = tuple(dict.fromkeys(c["name"] for c in came if c["id"].startswith("deadline.")))
+        relied = tuple(dict.fromkeys(rely_label(u, p, o.facts, x) for r in turn["steps"]
+                                     if (x := parse(r["action"]).get("rely"))))
+        size = {"sentences": GROWN_SENTENCES, "chars": GROWN_CHARS} if grown else \
+            {"chars": SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars}
         return Job(u, o, p, happened, delta, {PLAYER, here, *people, *ids}, text=turn["text"], tags=tags,
                    previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers, left=left,
-                   joined=joined, unfinished=turn.get("unfinished"), chars=SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars)
+                   joined=joined, unfinished=turn.get("unfinished"), grown=grown, progress=progress, blocked=blocked,
+                   relied=relied, struck=struck, missed=missed, **size)
 
     def _recap_job(self, u: Universe, g: Game, k: int) -> Job | None:
         p = g.presentation

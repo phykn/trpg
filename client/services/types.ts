@@ -61,7 +61,7 @@ export type GameView = {
     choices: { kind: 'cost' | 'fork'; name: string; chapter: number }[];
   };
   buttons: { action: string; label: string; rolls: boolean }[];
-  growth: { action: string; label: string; kind: 'approach' | 'trait' | 'scar'; name: string }[];
+  growth: { action: string; label: string; kind: 'approach' | 'trait' | 'scar'; name: string; text?: string }[];
   card: Card | null;
   last: { turn: number; steps: StepRecord[]; narrated: boolean } | null;
   recaps: number[];

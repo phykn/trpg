@@ -9,7 +9,14 @@ from run_api import build_app
 from src.lang.polite import polite
 from src.locale import ko
 from src.models.decision import ModelUnavailable
-from src.narrate import Narrator, change_line, messages, sentences_of, split
+from src.narrate import (
+    Narrator,
+    change_line,
+    change_lines,
+    messages,
+    sentences_of,
+    split,
+)
 from src.onto.atoms import PLAYER, State
 from src.service import GameService
 from src.story.validate import load_all
@@ -65,6 +72,7 @@ def test_text_helpers():
     assert split("문이 열린다.\n태그: 젖은 발\n[문맥]\n- 사실") == ("문이 열립니다.", ["젖은 발"])
     assert split("등대 앞에 섰습니다. 태그: 흩날리는 물보라") == ("등대 앞에 섰습니다.", ["흩날리는 물보라"])
     assert polite("그가 \"간다\"고 말했다.") == "그가 \"간다\"고 말했습니다."
+    assert split("\"다 썼네. \\*컥\\*, 없네.\" **도해**가 말한다.") == ("\"다 썼네. 컥, 없네.\" 도해가 말합니다.", [])
 
 
 async def test_stages_then_text_and_done(tmp_path):
@@ -166,6 +174,7 @@ async def test_a_finished_chapter_has_a_recap(tmp_path):
             break
     out = await svc.command(gid, {"request_id": "up", "revision": view["revision"], "action": "go:lamp_room"})
     n = out["turn"]
+    assert svc._turn_job(*svc.games[gid], n - 1).progress == {"door": True}     # the roll that opened the door
     narr = await events(svc, gid, n)
     assert narr[-2]["type"] == "text"
     assert "160자" in llm.calls[-1][0]["content"]
@@ -214,6 +223,43 @@ async def test_a_companion_left_behind_appears_only_parting(tmp_path):
     assert "윤슬은 선착장에 남았습니다" in prompt and u.agents["yunseul"].fear.rstrip(".") in prompt
 
 
+async def test_obstacle_progress_is_steered_short_of_done(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
+    job = svc._turn_job(*svc.games[gid], 1)
+    now = messages(replace(job, progress={"lamp": False, "door": True}))[1]["content"].split(ko.HEAD["now"])[1]
+    assert "꺼진 등불은 조금 진척이 있었을 뿐 아직 다 되지 않았습니다" in now and "녹슨 등대 문은 마침내 다 되었습니다" in now
+    assert "진척" not in messages(job)[1]["content"].split(ko.HEAD["now"])[1]
+
+
+async def test_a_blocked_step_and_what_a_roll_leaned_on_are_steered(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
+    job = svc._turn_job(*svc.games[gid], 1)
+    now = messages(replace(job, blocked=("도해와 이야기한다",), relied=("기름통",)))[1]["content"].split(ko.HEAD["now"])[1]
+    assert "'도해와 이야기한다'는 무언가에 가로막혀" in now and "기름통을 밑천으로 삼았습니다" in now
+    assert "가로막혀" not in messages(job)[1]["content"]
+
+
+async def test_what_came_to_pass_is_steered_to_be_told(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
+    job = svc._turn_job(*svc.games[gid], 1)
+    now = messages(replace(job, struck=("무너지는 다리",), missed=("해가 진다",)))[1]["content"].split(ko.HEAD["now"])[1]
+    assert "이번에 닥친 일: 무너지는 다리." in now and "때가 다 된 일: 해가 진다." in now
+    assert "닥친 일" not in messages(job)[1]["content"]
+    u, g = svc.games[gid]
+    g.presentation["turns"][0]["steps"][0]["changes"] += [
+        {"kind": "arrival", "id": "deadline.1", "name": "해가 진다"},
+        {"kind": "crisis", "id": "storm", "name": "몰려오는 폭풍", "from": 3, "to": 0}]
+    job = svc._turn_job(u, g, 1)
+    assert job.struck == ("몰려오는 폭풍",) and job.missed == ("해가 진다",)
+
+
+async def test_a_growth_turn_is_steered_to_the_change_alone(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
+    job = replace(svc._turn_job(*svc.games[gid], 1), grown=True)
+    now = messages(job)[1]["content"].split(ko.HEAD["now"])[1]
+    assert ko.NOW["grown"] in now and "새로 그릴 감각" not in now and ko.NOW["close"] not in now
+
+
 async def test_a_turn_that_stops_before_the_rest_of_the_sentence_says_so(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
     u, g = svc.games[gid]
@@ -254,6 +300,13 @@ def test_a_lowered_threat_recedes_instead_of_approaching(u):
     # a deadline's name is often a clause ("해가 진다"), so no particle follows it, and its arrival says the goal was missed
     assert change_line(u, {"kind": "arrival", "id": "deadline.1", "name": "해가 진다"}) == \
         "해가 진다: 목표를 이루지 못한 채 시간이 다 되었습니다"
+
+
+def test_a_way_cut_both_ways_is_one_line(u):
+    cut = [{"kind": "link", "from": "yard", "to": "village", "name": "바닷가 마을", "open": False},
+           {"kind": "link", "from": "village", "to": "yard", "name": "등대 앞", "open": False}]
+    assert change_lines(u, cut) == ["바닷가 마을과 등대 앞 사이의 길이 끊겼습니다"]
+    assert change_lines(u, cut[:1]) == ["바닷가 마을로 가는 길이 끊겼습니다"]
 
 
 def test_event_verbs_in_a_quote_are_not_claims():

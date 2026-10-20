@@ -260,11 +260,6 @@ GROWTH_WORD, GROWTH_REPLY = "성장", "성장은 주인공 화면의 '성장'에
 # Whole phrases, so a storehouse (저장고) or "처음부터 차근차근" stays in the story.
 META = ("저장해", "저장하", "저장은", "저장이", "세이브", "다시 시작", "처음부터 다시", "게임 규칙", "규칙이 뭐", "규칙 알려",
         "도움말", "인공지능", "치트")
-# Showing a thing is talk unless the sentence also hands it over: read as giving, the player's only item was gone with
-# no card (play-2-odd 3, play-3-talker 3).
-SHOW_WORDS = ("보여주", "보여 주", "보여줘", "보여 줘", "보여드", "보여 드", "내보이", "보이며")
-GIVE_WORDS = ("건네", "건넨", "넘겨", "넘긴", "넘기", "맡겨", "맡긴", "맡기", "쥐여", "준다", "주고", "주며", "줘", "줄게",
-              "드린", "드리", "드려", "드릴")
 # Layer 0 cues for try's approach (engine.md 3.1). One matching approach fills the slot.
 APPROACH_WORDS = {
     "force": ("밀어", "밀치", "부수", "부숴", "때려", "힘껏", "들이받", "걷어차", "비틀", "버텨", "당겨"),
@@ -309,6 +304,8 @@ CHANGE = {
     "reveal_hidden": "{name}{이} 드러났습니다",
     "link_open": "{name}{으로} 가는 길이 열렸습니다",
     "link_close": "{name}{으로} 가는 길이 끊겼습니다",
+    "between_open": "{a}{와} {b} 사이의 길이 열렸습니다",
+    "between_close": "{a}{와} {b} 사이의 길이 끊겼습니다",
     "regards_up": "{name}의 마음이 당신 쪽으로 움직였습니다",
     "regards_down": "{name}의 마음이 당신에게서 멀어졌습니다",
     "promise_made": "당신은 {name}에게 {promise}{을} 약속했습니다",
@@ -346,6 +343,13 @@ NOW = {"speaker": "{x}: {persona} 말투는 {voice}",
        "worn": "최근 서술에서 거듭 쓴 표현이니 이번에는 다른 말로 씁니다: {words}",
        "left": "{name}{은} {place}에 남았습니다. 까닭: {fear}. 이제 이 자리에 없으니 헤어지는 모습만 그리고 곁에 있는 것처럼 쓰지 않습니다.",
        "bounded": "{name}{은} {places}에는 따라가지 않습니다. 까닭: {fear}. 그곳까지 함께 가겠다고 말하지 않습니다.",
+       "partial": "{name}{은} 조금 진척이 있었을 뿐 아직 다 되지 않았습니다. 눈앞의 작은 변화 하나로 보여 주고, 다 된 것처럼 쓰지 않습니다.",
+       "done": "{name}{은} 마침내 다 되었습니다. 그것이 눈앞에서 어떻게 달라졌는지 보여 줍니다.",
+       "struck": "이번에 닥친 일: {names}. 그 일로 눈앞의 무엇이 달라졌는지 한 문장으로 꼭 보여 줍니다.",
+       "missed": "때가 다 된 일: {names}. 이번 장의 목표를 이루지 못했다는 것을 한 문장으로 꼭 보여 줍니다.",
+       "blocked": "'{label}'는 무언가에 가로막혀 이루어지지 않았습니다. 상대가 대답하거나 그 일이 된 것처럼 쓰지 않고, 무엇이 가로막았는지 보여 줍니다.",
+       "relied": "이번 시도는 {rely}{을} 밑천으로 삼았습니다. 그것이 어떻게 쓰였는지 한 번 보여 줍니다.",
+       "grown": "이번 일은 당신이 고른 성장뿐입니다. 앞 장면을 다시 쓰지 않고, 그 변화가 당신 안에 자리 잡는 짧은 순간만 손이나 숨, 시선으로 그립니다.",
        "waits": "플레이어 문장 가운데 '{label}'부터는 아직 하지 않았습니다. 그 앞에서 멈추고, 그 결과를 미리 쓰지 않습니다.",
        "waits_rest": "플레이어 문장의 나머지 행동은 아직 하지 않았습니다. [일어난 일]까지만 쓰고, 그 결과를 미리 쓰지 않습니다.",
        "close": "이번에 바뀐 것을 보여 주고, 마지막 문장은 인물의 반응이나 눈앞의 것으로 끝냅니다.",

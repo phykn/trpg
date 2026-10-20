@@ -14,13 +14,15 @@ const KINDS: { kind: Growth['kind']; icon: IconName }[] = [
   { kind: 'approach', icon: 'bolt' }, { kind: 'trait', icon: 'star' }, { kind: 'scar', icon: 'tag' },
 ];
 
-// Raising a stat is a 2×2 grid; swaps and scars are one per line because their names are longer.
+// Raising a stat is a 2×2 grid; swaps and scars are one per line because their names are longer. A swap says what
+// the new trait knows, as the start screen does.
 function Tile({ g, onPick }: { g: Growth; onPick: (action: string) => void }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={g.label} onPress={() => onPick(g.action)}
-      style={pressed}
-      className="h-11 flex-1 flex-row items-center justify-center rounded-xl border border-border-default bg-canvas-subtle">
+    <Pressable accessibilityRole="button" accessibilityLabel={g.text ? `${g.label}, ${g.text}` : g.label}
+      onPress={() => onPick(g.action)} style={pressed}
+      className="min-h-[44px] flex-1 items-center justify-center rounded-xl border border-border-default bg-canvas-subtle px-3 py-1.5">
       <Text className="font-sans-semibold text-body text-fg-default">{g.name}</Text>
+      {g.text ? <Text className="text-center font-sans text-chip text-fg-muted">{g.text}</Text> : null}
     </Pressable>
   );
 }

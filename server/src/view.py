@@ -329,7 +329,8 @@ def game_view(u, g) -> dict:
             {"action": str(a), "label": action_label(u, o, p, a), "rolls": rolls(u, f, o.hist, a)}
             for a in recommend(u, o)],
         "growth": [] if ending or (f.stat(PLAYER, "growth") or 0) < 1 else [
-            {"action": str(a), "label": action_label(u, o, p, a), **dict(zip(("kind", "name"), growth_name(u, o, p, a)))}
+            {"action": str(a), "label": action_label(u, o, p, a), **dict(zip(("kind", "name"), growth_name(u, o, p, a))),
+             "text": u.traits[a.intent[2]][1] if a.intent[0] == "trait" else ""}
             for a in candidates(u, o) if a.schema == "grow"],
         "card": (p.get("card") or {}).get("public"),
         "last": None if last is None else {

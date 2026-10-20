@@ -23,7 +23,7 @@ import common  # noqa: E402
 from src.fun import measure, table  # noqa: E402
 from src.interpret import Interpreter  # noqa: E402
 from src.locale import ko  # noqa: E402
-from src.narrate import Narrator, change_line  # noqa: E402
+from src.narrate import Narrator, change_lines  # noqa: E402
 from src.onto.atoms import APPROACHES  # noqa: E402
 from src.rules.roll import chance  # noqa: E402
 from src.service import GameService  # noqa: E402
@@ -97,7 +97,8 @@ def state(v: dict) -> list[str]:
 
 def options(v: dict) -> list[str]:
     lines = [f"  {i}) {b['label']}" + (" [굴림]" if b["rolls"] else "") for i, b in enumerate(v["buttons"], 1)]
-    lines += [f"  g{i}) {g['label']}" for i, g in enumerate(v["growth"], 1)]
+    # The web UI offers growth only once no card is open (client/logic/useGame.ts destination).
+    lines += [f"  g{i}) {g['label']}" for i, g in enumerate(v["growth"], 1) if not v["card"]]
     if v["card"]:
         lines.append(card(v["card"]))
     if v["ending"]:
@@ -135,7 +136,7 @@ def steps(u, res: dict) -> list[str]:
         if r["result"] not in ("none", None):
             head += f" → {ko.RESULTS[r['result']]}"
         lines.append(head)
-        lines += [f"    {x}" for x in filter(None, (change_line(u, c) for c in r["changes"]))]
+        lines += [f"    {x}" for x in change_lines(u, r["changes"])]
     return lines
 
 
@@ -259,6 +260,8 @@ async def main():
             await send(run, {"card": c["id"], "pick": o["id"]}, f"(고름: {o['label']})")
     elif a.cmd == "press":
         v = await run.service().view(run.meta["game_id"])
+        if a.arg.startswith("g") and v["card"]:
+            sys.exit("성장은 열린 카드를 고르거나 닫은 뒤에 고를 수 있습니다.")
         b = v["growth"][int(a.arg[1:]) - 1] if a.arg.startswith("g") else v["buttons"][int(a.arg) - 1]
         await send(run, {"action": b["action"]}, f"(버튼: {b['label']})")
 

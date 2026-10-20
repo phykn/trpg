@@ -24,6 +24,8 @@ export const ko = {
   heroButton: (name: string, left: number, of: number) => `${name}, 체력 ${left}/${of}`,
   row: { goal: '목표', danger: '위험', ability: '능력', state: '상태', carried: '소지', here: '장소', around: '주변', record: '기록' },
   growth: '성장',
+  // A scar stays for good, so it needs no end.
+  tagLife: { scene: '이번 장면', chapter: '이번 장' } as Record<string, string>,
   promise: (name: string, what: string) => `${name}에게 ${what}`,
   kindness: (name: string) => `${name}에게 신세`,
   crisis: '위기',

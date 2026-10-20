@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from conftest import REPO
-from src.interpret import Interpreter, mentions, rules, shows, squeeze
+from src.interpret import Interpreter, mentions, rules, squeeze
 from src.locale import ko
 from src.models.decision import ModelUnavailable
 from src.onto.log import Log
@@ -105,14 +105,15 @@ async def test_sure_schema_and_named_place(tmp_path):
     assert set(decision.asked[0][1]) == {"s1", "n"} and "예:" in decision.asked[0][1]["s1"]["criteria"]["go"]
 
 
-async def test_showing_a_thing_is_talk_unless_it_is_handed_over(tmp_path):
-    assert shows("아들의 편지를 보여주며 누구에게 전해야 하는지 묻는다") and shows("편지 보여 드리고 물어본다")
-    assert not shows("윤슬에게 편지를 보여 주며 건넨다") and not shows("편지를 준다")
+async def test_a_sentence_that_hands_a_thing_over_asks_first(tmp_path):
     decision = FakeDecision({"s1": {"give": 0.9}, "n": {"1": 0.9}})
     svc, gid, view = await game(tmp_path, decision, FakeLLM("1"))
-    out = await say(svc, gid, view, "윤슬에게 아들의 편지를 보여주며 누구에게 전해야 하는지 묻는다")
-    assert out["view"]["card"]["plan"]["step"]["action"].startswith("talk:yunseul:")
-    out = await say(svc, gid, out["view"], "윤슬에게 편지를 보여 주며 건넨다", "t2")
+    out = await say(svc, gid, view, "윤슬에게 아들의 편지를 보여준다")      # read as giving (play-4-talker 7)
+    card = out["view"]["card"]
+    assert card["kind"] == "confirm" and card["options"][0]["id"] == "give:letter:yunseul" and not out["steps"]
+    assert card["options"][0]["effects"] == ["아들의 편지가 윤슬에게 감"]
+    out = await svc.command(gid, {"request_id": "ok", "revision": out["view"]["revision"], "card": card["id"],
+                                  "pick": "give:letter:yunseul"})
     assert [s["action"] for s in out["steps"]] == ["give:letter:yunseul"]
 
 

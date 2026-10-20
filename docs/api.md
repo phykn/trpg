@@ -101,7 +101,7 @@ Everything is built from `Obs` and the presentation layer.
 | `clocks` | Risk clocks in play, deadlines, active threats and forks (name, `fill`, boxes, kind) |
 | `journal` | Beliefs (sentences in `B`, the order they were learned, whether they refer to something in the current scene), promises and debts (`owes`), relations per person, fork choices (name, chapter) |
 | `buttons` | Suggestions (rule.md 9): action id, label, whether it rolls |
-| `growth` | Growth actions `[{action, label, kind, name}]` (when growth is 1 or more). `kind` is `approach`, `trait` or `scar`, and `name` is a short name written under that branch ("뱃사람 → 토박이", sailor → islander) |
+| `growth` | Growth actions `[{action, label, kind, name, text}]` (when growth is 1 or more). `kind` is `approach`, `trait` or `scar`, and `name` is a short name written under that branch ("뱃사람 → 토박이", sailor → islander). `text` is the new trait's description for a trait swap, otherwise empty |
 | `card` | The pending card (below), or none |
 | `last` | The last turn's number, its step records, and whether its narration is cached |
 | `recaps` | Chapter numbers that have a recap |

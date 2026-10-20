@@ -302,7 +302,7 @@ With a server running both models, play through the following at 412×915, deskt
 | Chain | A roll card after the reveal and narration of unrolled steps |
 | Blocked | A hidden blocker revealed instead of dice (with a story that has a hidden obstacle) |
 | Crisis and arrival | A clock fills and empties, a threat arrives |
-| Clarify, confirm, move | A confirm card on a fork choice, a move card at a place reached by sentence (companion note, choosing another place) |
+| Clarify, confirm, move | A confirm card on a fork choice or a give by sentence, a move card at a place reached by sentence (companion note, choosing another place) |
 | Growth, ending | Chapter-change recap, growth card, ending panel |
 | Recovery | Refresh during a roll, resend after a lost response, refresh during narration |
 

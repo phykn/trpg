@@ -4,7 +4,7 @@ import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 import { Boxes } from './Boxes';
-import { Item, Pill, Row } from './Row';
+import { Item, Pill, Row, TagItems } from './Row';
 
 // Where the player is and what is here; every name starts a sentence when tapped.
 export function Scene({ scene, onDraft }: { scene: GameView['scene']; onDraft?: (text: string) => void }) {
@@ -41,9 +41,7 @@ export function Scene({ scene, onDraft }: { scene: GameView['scene']; onDraft?: 
               </View>
             );
           })}
-          {scene.tags.map((t) => (
-            <Item key={`${t.owner}${t.slot}`} color={t.kind === 'edge' ? colors.gold.fg : colors.danger.fg}>{t.name}</Item>
-          ))}
+          <TagItems tags={scene.tags} />
         </Row>
       ) : null}
     </>

@@ -98,13 +98,6 @@ def addressee(u, o, text: str) -> str | None:
     return None
 
 
-def shows(text: str) -> bool:
-    rest = text
-    for w in ko.SHOW_WORDS:
-        rest = rest.replace(w, "")
-    return rest != text and not any(w in rest for w in ko.GIVE_WORDS)
-
-
 def approach_cue(text: str) -> str | None:
     hits = [ap for ap, words in ko.APPROACH_WORDS.items() if any(w in text for w in words)]
     return hits[0] if len(hits) == 1 else None
@@ -262,7 +255,7 @@ class Interpreter:
 
     @staticmethod
     def partial(schema: str, text: str) -> dict:
-        return {"schema": "talk" if schema == "give" and shows(text) else schema, "text": text, "fixed": {}}
+        return {"schema": schema, "text": text, "fixed": {}}
 
     async def fill(self, u, g, st: dict) -> dict:
         """Returning the step without "action" stops the plan; "already" skips it."""

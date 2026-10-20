@@ -83,6 +83,8 @@ def confirm_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[st
     if a.schema == "choose":
         g, c = a.intent
         effects = next(e for cid, _, e in u.obstacles[g].choices if cid == c)
+    elif a.schema == "give":
+        effects = [("move", *a.intent)]
     option = {"id": str(a), "label": action_label(u, o, p, a), "effects": effect_names(u, effects)}
     public = {"id": card_id, "kind": "confirm", "echo": echo, "plan": _plan(u, o, p, a, rest_labels),
               "options": [option], "selected": None}

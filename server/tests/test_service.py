@@ -113,6 +113,16 @@ async def test_roll_card_preview_is_the_step(svc):
     assert step["mods"] == pick["preview"]["mods"] and step["risk"] == pick["preview"]["risk"]
     assert step["total"] == step["roll"]["d1"] + step["roll"]["d2"] + 2
     assert done["view"]["card"] is None
+    assert svc._turn_job(*svc.games[gid], done["turn"]).relied == ("기계공",)
+
+
+async def test_a_blocked_step_reaches_the_narration(svc):
+    gid, view = await new(svc)
+    _, view = await press(svc, gid, view, "go:village", "r1")
+    out = await cmd(svc, gid, view, "r2", action="talk:dohae:chat")      # the hidden dog keeps strangers off
+    assert out["steps"][0]["result"] == "blocked"
+    job = svc._turn_job(*svc.games[gid], out["turn"])
+    assert job.blocked == (out["steps"][0]["label"],) and not job.relied
 
 
 async def test_card_cancel_and_stale_card(svc):
@@ -173,9 +183,14 @@ async def test_a_high_step_waits_for_a_confirm_card(tmp_path):
     assert {g["kind"] for g in growth} == {"approach", "trait"}
     swap = next(g for g in growth if g["kind"] == "trait")
     assert swap["label"].endswith(swap["name"]) and "→" in swap["name"] and ":" not in swap["name"]
+    assert swap["text"] and all(g["text"] == "" for g in growth if g["kind"] == "approach")
     done = await cmd(svc, gid, out["view"], "c2", card=card["id"], pick="choose:g_oil:beacon")
     assert done["steps"][0]["action"] == "choose:g_oil:beacon"
     assert done["view"]["journal"]["choices"][-1]["kind"] == "fork"
+    # a growth pick alone is told briefly, not as a scene (play-3-talker 24, play-3-explorer 30, play-3-bold 7)
+    grew = await cmd(svc, gid, done["view"], "g1", action=done["view"]["growth"][0]["action"])
+    job = svc._turn_job(*svc.games[gid], grew["turn"])
+    assert job.grown and job.sentences == 2 and not svc._turn_job(*svc.games[gid], done["turn"]).grown
 
 
 async def test_restart_gives_the_same_view(svc, tmp_path):

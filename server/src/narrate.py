@@ -19,6 +19,7 @@ from .onto.view import Obs
 ATTEMPTS = 3                 # one draft and two rewrites
 SENTENCES, CHARS = 4, 200
 SHORT_CHARS, RECAP_CHARS, RECAP_SENTENCES = 160, 100, 2
+GROWN_SENTENCES, GROWN_CHARS = 2, 100
 TAG_CHARS = 12
 MAX_TOKENS = 500
 THETA_N = 0.5
@@ -28,6 +29,8 @@ TAG_LINE = re.compile(r"['\"“]?태그\s*[:：]\s*([^\n'\"”]+?)['\"”]?\s*(?
 ECHO = re.compile(r"^\s*\[[^\]\n]{1,20}\]")
 ADDRESS = re.compile("(?<![가-힣])(" + "|".join(ko.ADDRESS) + r")(?=\s*[,!?…~.\"”]|$)")
 PAREN = re.compile(r"[()（）]")
+# Markdown emphasis reached the screen as "\*컥\*" (qa_test/runs/play-4-talker 24); a bullet's "* " stays for the list check.
+EMPHASIS = re.compile(r"\\(?=[*_`])|\*+(?=\S)|(?<=\S)\*+|`+")
 LIST_LINE = re.compile(r"^\s*(?:[-•*]|\d+[.)]|[①-⑩])\s")
 HAN = re.compile(r"[㐀-鿿Ѐ-ӿ]|[A-Za-z]{2,}")
 DIGIT = re.compile(r"[0-9０-９]")
@@ -56,6 +59,12 @@ class Job:
     left: dict[str, str] = field(default_factory=dict)   # companions this turn left behind: person → place
     joined: tuple[str, ...] = ()     # people who began to follow the player this turn
     unfinished: str | None = None    # the sentence's next action when the turn stopped before it ("" when unnamed)
+    grown: bool = False              # the turn only spent growth
+    progress: dict[str, bool] = field(default_factory=dict)   # obstacles this turn moved forward: id → overcome
+    blocked: tuple[str, ...] = ()    # labels of steps something hidden stopped
+    struck: tuple[str, ...] = ()     # clocks and threats that came to pass this turn
+    missed: tuple[str, ...] = ()     # deadlines that ran out this turn
+    relied: tuple[str, ...] = ()     # what this turn's rolls leaned on
 
 
 def sentences_of(text: str) -> list[str]:
@@ -125,10 +134,25 @@ def change_line(u, c: dict) -> str | None:
     return None
 
 
+def change_lines(u, changes: list[dict]) -> list[str]:
+    """A way cut both ways is one line: "등대 앞으로 가는 길이 끊겼습니다" read oddly while standing there
+    (qa_test/runs/play-4-talker 40)."""
+    links = {(c["from"], c["to"], c["open"]) for c in changes if c["kind"] == "link"}
+    out = []
+    for c in changes:
+        if c["kind"] == "link" and (c["to"], c["from"], c["open"]) in links:
+            if c["from"] < c["to"]:
+                out.append(ko.fill(ko.CHANGE["between_open" if c["open"] else "between_close"],
+                                   a=u.name(c["from"]), b=c["name"]))
+        elif line := change_line(u, c):
+            out.append(line)
+    return out
+
+
 def step_lines(u, record: dict) -> tuple[list[str], list[str]]:
     result = ko.RESULTS.get(record["result"], "")
     head = ko.fill(ko.STEP_LINE, label=record["label"], result=result) if result else record["label"]
-    changes = [line for c in record["changes"] if (line := change_line(u, c))]
+    changes = change_lines(u, record["changes"])
     return [head, *changes], changes
 
 
@@ -236,6 +260,10 @@ def steering(job: Job, lines) -> list[str]:
         if avoids := u.agents[x].avoids:
             out.append(ko.fill(ko.NOW["bounded"], name=u.name(x), places=", ".join(map(u.name, avoids)),
                                fear=u.agents[x].fear.rstrip(".")))
+    if job.grown:
+        # A growth pick is a menu choice; told as a turn, it replayed the last scene or only the scenery
+        # (qa_test/runs/play-3-talker 24, play-3-explorer 30, play-3-bold 7).
+        return [f"- {x}" for x in (*out, ko.NOW["grown"])]
     tired = worn(u, job.previous)
     if job.ending:
         # The usual cue, pace and close ("end on someone's reaction") outweighed the frame, so no ending told
@@ -255,6 +283,22 @@ def steering(job: Job, lines) -> list[str]:
             and u.obstacles[ln.atom[1]].sub in ("clock", "deadline")]
     if pace:
         out.append(ko.fill(ko.NOW["pace"], text=", ".join(pace)))
+    # A lamp at 1/4 already pushed back the dark (qa_test/runs/play-2-bold 6–7, play-4-odd 28).
+    for x, done in job.progress.items():
+        out.append(ko.fill(ko.NOW["done" if done else "partial"], name=u.name(x)))
+    # A bridge collapse and a missed sunset went untold behind the turn's other changes (qa_test/runs/play-4-talker 28,
+    # 40; play-4-odd 29; play-4-explorer 29).
+    if job.struck:
+        out.append(ko.fill(ko.NOW["struck"], names=", ".join(job.struck)))
+    if job.missed:
+        out.append(ko.fill(ko.NOW["missed"], names=", ".join(job.missed)))
+    # A blocked talk was still answered in full, so the testers could not tell what had stopped it
+    # (qa_test/runs/play-4-explorer 10, play-4-talker 21).
+    for label in job.blocked:
+        out.append(ko.fill(ko.NOW["blocked"], label=label))
+    # A leaned-on letter never appeared in the prose (qa_test/runs/play-4-talker 6, play-4-odd 4).
+    for x in job.relied:
+        out.append(ko.fill(ko.NOW["relied"], rely=x))
     # The player's sentence reaches the narrator whole, so a look before a roll card was told as the lamp already lit
     # (qa_test/runs/play-3-odd 18, play-3-explorer 41).
     if job.unfinished is not None:
@@ -298,7 +342,7 @@ def split(raw: str) -> tuple[str, list[str]]:
             break
         for m in TAG_LINE.finditer(line):
             names.append(m[1].strip().rstrip("."))
-        line = TAG_LINE.sub("", line).strip()
+        line = EMPHASIS.sub("", TAG_LINE.sub("", line)).strip()
         if line:
             lines.append(line)
     return polite(" ".join(lines)), names
@@ -450,4 +494,4 @@ class Narrator:
                 "tags": self.tag_names(job, names)}
 
 
-__all__ = ["Job", "Narrator", "change_ids", "change_line", "messages", "sentences_of", "split", "step_lines"]
+__all__ = ["Job", "Narrator", "change_ids", "change_line", "change_lines", "messages", "sentences_of", "split", "step_lines"]

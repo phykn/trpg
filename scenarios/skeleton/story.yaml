@@ -215,7 +215,7 @@ threats:
 
 forks:
   g_oil:
-    name: 남은 기름
+    name: 기름을 흘린다
     boxes: 2
     appears_when: {all: [{flag: [chapter, 2]}, {at: [player, lamp_room]}]}
     choices:
@@ -294,7 +294,7 @@ witnesses:
         - go:village                                  # 숨은 누렁이는 도해와의 대화만 막음
         - go:yard                                     # 다리 위협 등장, 물보라(방해 1)
         - {do: "try:door:finesse", roll: [6, 6, 0]}   # 성공 → 문이 열림
-        - go:lamp_room                                # 목표 → 2장, 남은 기름 등장
+        - go:lamp_room                                # 목표 → 2장, 기름 갈림길 등장
     - reach: {ending: two_lights}
       after: 0
       steps:

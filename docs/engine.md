@@ -124,8 +124,6 @@ The first matching row from the top applies.
 | Unsure | One or more steps | The first step read |
 | Unsure | None | `try(player)` |
 
-A `give` step becomes `talk` when the sentence shows something (`ko.SHOW_WORDS`: "보여 주며" …) without a word of handing it over (`ko.GIVE_WORDS`): read as giving, the player's only item was gone with no card (play-2-odd 3, play-3-talker 3).
-
 If layer 0 settled the plan, nothing is asked. Why the split and the thresholds:
 
 - **Reading.** The decision model reads one sure action well, but asked step by step it attached a next step even to one-action sentences and got about one in five multi-action sentences right. The narration model's reading gets most of them right and matches it on one-action sentences. The decision model's count filters first, so the reading is called only for unsure or multi-action sentences (qa_test/runs/decision-1).
@@ -211,7 +209,7 @@ Acceptance is `{card, pick}`, where `pick` is one action id from `options`. The 
 
 ### 4.3 Confirm
 
-A step that does not roll but has high risk, namely `choose`. The options are "고른다" (choose) and "그만두기" (cancel), and the card shows the name of the choice and the names of its effects. A high-risk step does not run until that exact action is accepted, and the acceptance is valid only at that card's `revision`.
+A step that does not roll but has high risk, namely `choose`, and a `give` that a sentence chose. The options are "고른다" (choose) and "그만두기" (cancel), and the card shows the name of the choice and the names of its effects (for a give, the thing going to that person). A high-risk step does not run until that exact action is accepted, and the acceptance is valid only at that card's `revision`. A thing given does not come back, and sentences that only showed something were read as giving it: the player's only item was gone with no card (play-2-odd 3, play-3-talker 3, play-4-talker 7). Asking for every give from a sentence keeps that one rule instead of lists of showing and giving words; a button's give runs at once.
 
 ### 4.4 Move
 
@@ -235,7 +233,7 @@ Acceptance is `{card, pick}`, where `pick` is one action id from the options. Ca
 |---|---|
 | System | Role, format rules (5.2) |
 | Context | `scene(Vₜ₊ₖ, X_N)` (section 2) |
-| What happened | For each step, `λ(aᵢ)`, the outcome name ("성공", success), and lines rendering `δ` in change frames |
+| What happened | For each step, `λ(aᵢ)`, the outcome name ("성공", success), and lines rendering `δ` in change frames. A way cut or opened in both directions is one line, "A와 B 사이의 길이 끊겼습니다" ("등대 앞으로 가는 길이 끊겼습니다" read oddly while standing there, play-4-talker 40) |
 | New tags | The default names of tags created this turn. The model writes the name it uses for each in the narration as a final line `태그: 이름` (tag: name) |
 | Previous narration | The narration of the last 3 turns (presentation layer) |
 | Player | This turn's sentence (if any) |
@@ -257,13 +255,18 @@ Format rules:
 - People know only what the context and what happened state; otherwise they say they do not know or change the subject.
 - A companion left behind this turn (their `avoids`) is shown parting, with their `fear` as the reason; after that they are not in the scene.
 - Someone who begins to follow the player this turn but avoids places says so: the change line names those places ("…함께 다니기로 했지만 …에는 가지 않습니다"), and the steering adds their `fear` and that they promise no farther. Agreeing out loud to the very trip they then refused read as a broken promise (play-3-talker 27, 32; play-3-explorer 21).
+- An obstacle this turn moved forward is named in the steering: short of full, as a small visible change that must not read as done; full, as what changed before the player's eyes. The prose said the lamp pushed back the dark at 1/4 and the flame poured out at 3/4 (play-2-bold 6–7, play-4-odd 28).
+- A clock or threat that came to pass this turn, and a deadline that ran out, are named in the steering to be shown in one sentence each. A bridge collapse and a missed sunset went untold behind the turn's other changes (play-4-talker 28, 40; play-4-odd 29; play-4-explorer 29).
+- A step that something hidden blocked is named in the steering as not having happened: no one answers and nothing is done; the narration shows what stood in the way. A blocked talk was answered in full, so testers could not tell what the dog had stopped (play-4-explorer 10, play-4-talker 21).
+- What a roll leaned on is named in the steering as the resource the attempt drew on, to be shown once in use. A leaned-on letter never appeared in the prose (play-4-talker 6, play-4-odd 4).
+- A turn that only spent growth gets two sentences and 100 characters and is told as the change settling in, without the place cue or a replay of the last scene. Told as a turn, a growth pick replayed taking the oil or listed the scenery again (play-3-talker 24, play-3-explorer 30, play-3-bold 7).
 - A turn that stopped before the rest of the sentence (at a card, after a failure, or at a step that could not be read) says which action has not happened yet, or that the rest has not, so the narration stops short of it. Given the whole sentence, the narration lit the lamp on the look before its roll card (play-3-odd 18, play-3-explorer 41).
 
 ### 5.3 Check
 
 1. **Rule check**, without a model:
    - Length: sentence and character counts. A quoted line counts as part of its sentence, and a sentence that is only a quote attaches to the preceding one that names the speaker.
-   - Form: 합니다체 (`lang/polite.py` fixes 해라체 endings), no second person other than `당신`, no list or option shapes, numbers or parentheses (sounds and gestures go in sentences too), a `태그:` line of at most 12 characters, no names of hidden entities.
+   - Form: Markdown emphasis (`*`, `\`, backticks) is removed before the check; it reached the screen as "\*컥\*" (play-4-talker 24). 합니다체 (`lang/polite.py` fixes 해라체 endings), no second person other than `당신`, no list or option shapes, numbers or parentheses (sounds and gestures go in sentences too), a `태그:` line of at most 12 characters, no names of hidden entities.
    - Facts, read outside quotes only (dialogue is not something happening now): obtaining a thing not held (`at(x, player) ∉ F'`), handing over a thing held, or reaching a place not reached (`at(player, place) ∉ F'`), each found as a name plus a verb of that kind.
    - Presence: a person who is not at the player's place may not stand as a subject (`윤슬이`, `노인은`) outside quotes, even when a change names them (their regard, a thing they got). Two exceptions: a companion left behind this turn, in a sentence that tells the parting (`ko.PARTING` words or the place they stayed at), and in the ending, anyone the legacy lines name, in a sentence that sets them far off (`ko.AFAR`) (5.5).
    - Repetition: a phrase of 10 or more characters, spaces excluded, identical to the last 3 turns of narration or to the sample lines of a person speaking now (about three words; shorter overlaps are common phrasing).

@@ -44,3 +44,17 @@ test('a companion carries the person icon', async () => {
   const icon = (name: string) => tree!.root.findAll((n: { props: Record<string, unknown> }) => n.props.label === name && 'icon' in n.props)[0].props.icon;
   expect([icon('윤슬'), icon('도해')]).toEqual(['user', undefined]);
 });
+
+test('tags of one name and life show once, with when they end', async () => {
+  const tagged = { ...scene(1), tags: [
+    { owner: 'yard', slot: 0, kind: 'snag', life: 'scene', name: '불리함' },
+    { owner: 'yard', slot: 1, kind: 'snag', life: 'scene', name: '불리함' },
+    { owner: 'yard', slot: 2, kind: 'edge', life: 'chapter', name: '마을 봉화' },
+  ] } as unknown as GameView['scene'];
+  let tree: ReturnType<typeof renderer.create>;
+  await flush(async () => { tree = renderer.create(<Scene scene={tagged} onDraft={jest.fn()} />); });
+  const text = JSON.stringify(tree!.toJSON());
+  expect(text.split('불리함').length - 1).toBe(1);
+  expect(text).toContain(' · 이번 장면');
+  expect(text).toContain(' · 이번 장"');
+});
