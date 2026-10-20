@@ -1,56 +1,56 @@
 # API
 
-서버와 화면의 경계입니다. 모든 경로는 Basic Auth를 거칩니다(`--local`이면 `local/local`). 응답의 한국어 문장은 서버가 만들고 화면은 그대로 보입니다. `/games/*` 경로, 저장의 `schema_version`, 요청 영수증, 브라우저의 `trpg.game_id`는 이행 요청이 없는 한 바꾸지 않습니다.
+The boundary between the server and the client. Every route goes through Basic Auth (`local/local` with `--local`). The server composes the Korean sentences in responses, and the client shows them verbatim. The `/games/*` routes, the save's `schema_version`, request receipts and the browser's `trpg.game_id` stay unchanged unless a migration is requested.
 
-## 1. 경로
+## 1. Routes
 
-| 경로 | 본문 | 응답 |
+| Route | Body | Response |
 |---|---|---|
-| `GET /stories` | | 이야기 목록: `id`, 제목, 전제, 방식 값들, 특성 후보와 `pick` |
-| `POST /games` | `{request_id, story, creation}`. `creation`은 `{name, approaches, traits}`이고 `name`은 앞뒤 공백을 뺀 1~10자 | `{game_id, view}`. `game_id`는 `request_id`의 해시라서 같은 요청을 다시 보내면 이미 만든 게임의 같은 응답을 줌(본문이 다르면 409) |
+| `GET /stories` | | Story list: `id`, title, premise, approach values, trait candidates and `pick` |
+| `POST /games` | `{request_id, story, creation}`. `creation` is `{name, approaches, traits}`, and `name` is 1–10 characters after trimming whitespace | `{game_id, view}`. `game_id` is a hash of `request_id`, so resending the same request returns the same response for the game already created (409 if the body differs) |
 | `GET /games/{id}` | | `view` |
-| `POST /games/{id}/commands` | 2절 | `CommandResult` |
-| `GET /games/{id}/turns/{n}/narration` | | NDJSON(4절) |
-| `GET /games/{id}/chapters/{k}/recap` | | NDJSON(4절) |
+| `POST /games/{id}/commands` | Section 2 | `CommandResult` |
+| `GET /games/{id}/turns/{n}/narration` | | NDJSON (section 4) |
+| `GET /games/{id}/chapters/{k}/recap` | | NDJSON (section 4) |
 
-`request_id`는 화면이 명령마다 새로 만드는 문자열(UUID, 64자 이하)입니다.
+`request_id` is a string (a UUID, at most 64 characters) that the client creates fresh for each command.
 
-| 오류 | 때 | 본문 |
+| Error | When | Body |
 |---|---|---|
-| 404 | 없는 게임 | |
-| 409 | 낡은 `revision`, 같은 `request_id`에 다른 본문 | `{view}` — 화면은 이 `view`를 받아들임 |
-| 409 | 호환되지 않는 저장(`schema_version`이나 원고 `digest`가 다름) | `{reason: "incompatible"}`, `view` 없음 |
-| 422 | 형식 오류 | `{reason}` |
+| 404 | No such game | |
+| 409 | Stale `revision`, or a different body for the same `request_id` | `{view}` — the client adopts this `view` |
+| 409 | Incompatible save (`schema_version` or the story `digest` differs) | `{reason: "incompatible"}`, no `view` |
+| 422 | Malformed request | `{reason}` |
 
-모델이 응답하지 않는 것은 오류가 아니라 읽을 수 없는 답이고(engine.md 3.5), 서술 모델의 실패는 스트림의 `error`입니다.
+A model that does not respond is not an error but an unreadable answer (engine.md 3.5). A narration model failure is an `error` in the stream.
 
-## 2. 명령
+## 2. Commands
 
-`POST /games/{id}/commands`의 본문은 `{request_id, revision}`에 다음 중 하나를 더한 것입니다.
+The body of `POST /games/{id}/commands` is `{request_id, revision}` plus one of the following.
 
-| 본문 | 뜻 |
+| Body | Meaning |
 |---|---|
-| `text` | 플레이어의 문장 |
-| `action` | 버튼의 행동 id(`view.buttons`, `view.growth`) |
-| `card, pick` | 카드의 답. `pick`은 그 카드 `options`의 id |
-| `card, cancel: true` | 카드를 버림 |
+| `text` | The player's sentence |
+| `action` | A button's action id (`view.buttons`, `view.growth`) |
+| `card, pick` | An answer to a card. `pick` is an id from that card's `options` |
+| `card, cancel: true` | Discards the card |
 
 ```
 CommandResult
 { "kind": "turn" | "card" | "refused",
-  "turn": 12 | null,          steps가 있으면 그 턴 번호(서술 경로의 {n})
-  "steps": [단계 기록, …],     실행한 단계. 카드로 멈춰도 그 앞의 단계는 있음
-  "reason": "…" | null,       refused의 이유(한국어)
+  "turn": 12 | null,          the turn number when there are steps ({n} in the narration route)
+  "steps": [step record, …],  executed steps. If a card stopped the turn, the steps before it are still here
+  "reason": "…" | null,       why it was refused (Korean)
   "view": GameView }
 ```
 
-- `kind`는 `steps`가 있어도 카드로 멈췄으면 `card`입니다. 화면은 `steps`의 유무로 드러남을, `view.card`로 카드를 정합니다.
-- `refused`: 0층의 거절, 지금 할 수 없는 행동을 묻는 문장, 이미 있는 곳으로 가는 문장(engine.md 3.2, 3.3), 후보 밖 `action`, 같은 `revision`에서 선택지 밖의 `pick`이나 낡은 카드 id. 상태와 `revision`은 바뀌지 않습니다.
-- 카드를 수락한 단계는 `steps[0]`입니다.
+- `kind` is `card` whenever a card stopped the command, even if there are `steps`. The client decides whether to reveal from whether `steps` exist, and whether to show a card from `view.card`.
+- `refused`: a layer-0 refusal, a sentence asking for an action that is not possible now, a sentence moving to where the player already is (engine.md 3.2, 3.3), an `action` outside the candidates, or, at the same `revision`, a `pick` outside the options or a stale card id. Neither the state nor the `revision` changes.
+- The step that accepted a card is `steps[0]`.
 
-## 3. 단계 기록
+## 3. Step records
 
-실행한 단계마다 하나이고, `Step`(결과, 위험, `mods`)과 사건의 플레이어 투영 `seen[player]`, `λ`, 표현층의 이름으로만 만듭니다. 숨은 변경은 들어 있지 않습니다.
+There is one per executed step. It is built only from the `Step` (result, risk, `mods`), the player's projection of the events `seen[player]`, `λ`, and names from the presentation layer. It contains no hidden changes.
 
 ```json
 {
@@ -65,48 +65,48 @@ CommandResult
 }
 ```
 
-- `mods`는 칩의 목록입니다. `stat`, 도움, 방해 차례이고, 방해의 원자가 여럿이어도 방해 하나(값 −1, 이름을 `·`로 이어 씀)입니다. `stat` 칩은 값이 0이어도 있고, 도움과 방해는 0이면 칩이 없습니다. 카드의 `preview.mods`와 같은 모양, 같은 차례라 화면은 번호로 짝지어 칩을 옮깁니다.
-- `total`과 `decisive`는 서버(`view.py`)만 계산합니다. 결과는 `total ≥ dc`면 `success`, 아니면 `fail`이고, `decisive`는 빼면 `dc`에 대한 결과가 바뀌는 칩의 `mods` 안 번호(0부터)들입니다. 위 예에서 솜씨의 2가 없었다면 7로 목표 8에 못 미쳐 실패였습니다.
-- `changes`는 `δ`의 원자를 화면의 종류로 묶은 것이고 `from`, `to`는 보이는 값입니다. 종류: `fill`(장애물 칸, `fit`은 어울리는 방식으로 더 찬 칸 수), `clock`, `crisis`(`name`은 시계 이름), `tag_add`, `tag_remove`, `wound`, `scar`, `move`(동행이 플레이어와 함께 옮기면 `with: true`), `follow`(`state`: `start`·`stop`, 인물의 `id`·`name`), `reveal`, `link`, `regards`, `promise`, `arrival`(`name`은 위협 이름), `chapter`(`from: k, to: k+1`), `ending`(`id`). 박자는 `view.player`로만 갑니다.
-- 굴리지 않은 단계는 `dc: null`, `roll: null`, `mods: []`, `total: null`, `decisive: []`이고 `result`는 `none`입니다. 숨은 막힘은 `result: "blocked"`에 `changes`가 `[{kind: "reveal", id: <장애물 id>, name}]`입니다.
-- 주사위의 `u`와 `seed`는 보내지 않습니다. `u`는 복잡화를 고르는 수일 뿐 플레이어의 경험에 쓰이지 않습니다.
+- `mods` is a list of chips, in the order `stat`, help, hinder. Several hinder atoms still make a single hinder chip (value −1, names joined with `·`). The `stat` chip is present even when its value is 0; help and hinder have no chip when they are 0. It has the same shape and order as the card's `preview.mods`, so the client pairs chips by index to move them.
+- Only the server (`view.py`) computes `total` and `decisive`. The result is `success` if `total ≥ dc`, otherwise `fail`. `decisive` lists the indices (from 0) in `mods` of the chips whose removal would change the result against `dc`. In the example above, without the 2 from 솜씨 (finesse) the total would be 7, short of the target 8, and the roll would have failed.
+- `changes` groups the atoms of `δ` into client-facing kinds, and `from` and `to` are visible values. Kinds: `fill` (obstacle boxes; `fit` is how many extra boxes the fitting approach filled), `clock`, `crisis` (`name` is the clock name), `tag_add`, `tag_remove`, `wound`, `scar`, `move` (`with: true` when a companion moves along with the player), `follow` (`state`: `start` or `stop`, with the person's `id` and `name`), `reveal`, `link`, `regards`, `promise`, `arrival` (`name` is the threat name), `chapter` (`from: k, to: k+1`), `ending` (`id`). Beats go only through `view.player`.
+- A step without a roll has `dc: null`, `roll: null`, `mods: []`, `total: null`, `decisive: []`, and its `result` is `none`. A hidden block has `result: "blocked"` with `changes` set to `[{kind: "reveal", id: <obstacle id>, name}]`.
+- The dice's `u` and `seed` are not sent. `u` only picks a complication and plays no part in the player's experience.
 
-## 4. 서술 스트림
+## 4. Narration stream
 
-`GET /games/{id}/turns/{n}/narration`은 NDJSON입니다. 검사 전의 글은 보내지 않으므로 화면은 지어낸 문장을 한 번도 보이지 않습니다.
+`GET /games/{id}/turns/{n}/narration` is NDJSON. Text is never sent before it passes the check, so the client never shows an invented sentence.
 
 ```
-{"type": "stage", "stage": "writing"}      초안을 쓰는 중
-{"type": "stage", "stage": "checking"}     검사 중
+{"type": "stage", "stage": "writing"}      writing the draft
+{"type": "stage", "stage": "checking"}     checking
 {"type": "stage", "stage": "rewriting", "attempt": 2}
-{"type": "text", "text": "…"}              받아들인 서술 전체
+{"type": "text", "text": "…"}              the whole accepted narration
 {"type": "done", "tags": [{"slot": 1, "owner": "player", "name": "젖은 발"}]}
-{"type": "error", "message": "…"}          모델이 응답하지 않음. 다시 요청하면 처음부터
+{"type": "error", "message": "…"}          the model did not respond. A new request starts over
 ```
 
-캐시가 있으면 `text`와 `done`만 바로 보냅니다. 같은 턴의 요청이 겹치면 하나만 만들고 나머지는 그 결과를 기다립니다. `GET /games/{id}/chapters/{k}/recap`은 같은 형식입니다. `k`는 단계 기록의 `changes`에 `chapter`가 있으면 그 `from`, `ending`이 있으면 `view.chapter.k`입니다.
+When a cache exists, only `text` and `done` are sent, immediately. Overlapping requests for the same turn produce it once, and the others wait for that result. `GET /games/{id}/chapters/{k}/recap` uses the same format. `k` is the `from` of the `chapter` change if the step records' `changes` contain one, or `view.chapter.k` if they contain an `ending`.
 
 ## 5. `GameView`
 
-모두 `Obs`와 표현층에서 만듭니다.
+Everything is built from `Obs` and the presentation layer.
 
-| 필드 | 내용 |
+| Field | Contents |
 |---|---|
-| `revision` | 다음 명령에 넣을 값 |
-| `story` | `{id, title, premise}` 이 판의 이야기. 첫 턴의 서술 자리에는 `premise`를 보임 |
-| `chapter` | `{k, title, aim}` 장 번호, 제목, 목표 문장 |
-| `scene` | 장소 이름, 감각 단서, 보이는 인물(이름, 태도 낱말, 동행이면 `with`), 물건, 장애물(이름, 칸, 막는 것), 갈 곳 |
-| `player` | 이름(`creation.name`, 옛 저장은 빈 글), 방식 넷, 특성(이름, 이번 장에 썼는지), 태그(슬롯, 종류, 수명, 이름), 상처/칸, 박자/`B`, 성장 |
-| `clocks` | 지닌 위험 시계, 마감, 활성 위협과 갈림(이름, `fill`, 칸 수, 종류) |
-| `journal` | 믿는 것(`B`의 문장, 믿게 된 차례, 지금 장면의 개체를 말하는지), 약속과 신세(`owes`), 인물별 관계, 갈림의 선택(이름, 장) |
-| `buttons` | 추천(rule.md 9절): 행동 id, 이름, 굴리는지 |
-| `growth` | 성장 행동 `[{action, label, kind, name}]`(성장이 1 이상일 때). `kind`는 `approach`, `trait`, `scar`이고 `name`은 그 갈래 아래에 적는 짧은 이름("뱃사람 → 토박이") |
-| `card` | 기다리는 카드(아래) 또는 없음 |
-| `last` | 마지막 턴의 번호, 단계 기록, 서술이 캐시되었는지 |
-| `recaps` | 되돌아보기가 있는 장 번호들 |
-| `ending` | 결말 id와 제목, 또는 없음 |
+| `revision` | The value to send with the next command |
+| `story` | `{id, title, premise}` of this game's story. The first turn shows `premise` where the narration would go |
+| `chapter` | `{k, title, aim}`: chapter number, title, aim sentence |
+| `scene` | Place name, sensory cues, visible people (name, attitude word, `with` if a companion), things, obstacles (name, boxes, what they block), exits |
+| `player` | Name (`creation.name`; an empty string in old saves), the four approaches, traits (name, whether used this chapter), tags (slot, kind, lifetime, name), wounds/boxes, beats/`B`, growth |
+| `clocks` | Risk clocks in play, deadlines, active threats and forks (name, `fill`, boxes, kind) |
+| `journal` | Beliefs (sentences in `B`, the order they were learned, whether they refer to something in the current scene), promises and debts (`owes`), relations per person, fork choices (name, chapter) |
+| `buttons` | Suggestions (rule.md section 9): action id, label, whether it rolls |
+| `growth` | Growth actions `[{action, label, kind, name}]` (when growth is 1 or more). `kind` is `approach`, `trait` or `scar`, and `name` is a short name written under that branch ("뱃사람 → 토박이", sailor → islander) |
+| `card` | The pending card (below), or none |
+| `last` | The last turn's number, its step records, and whether its narration is cached |
+| `recaps` | Chapter numbers that have a recap |
+| `ending` | Ending id and title, or none |
 
-카드(engine.md 4절):
+Cards (engine.md section 4):
 
 ```
 { "id": "c42", "kind": "roll" | "clarify" | "confirm" | "move",
@@ -118,7 +118,7 @@ CommandResult
   "selected": "try:door:finesse;rely=thing:key" }
 ```
 
-되묻기의 `options`는 `{id: 행동 id, label}`, 확인과 이동의 `options`는 `[{id: 행동 id, label, effects: [이름]}]`이고 셋 다 `preview`가 없습니다. 이동 카드의 `selected`는 문장이 고른 갈 곳이고 맨 앞 선택지입니다(engine.md 4.4). 굴림 카드의 `preview`는 rule.md 3.4의 필드입니다.
+A clarification card's `options` are `{id: action id, label}`, and confirm and move cards' `options` are `[{id: action id, label, effects: [name]}]`. None of the three has a `preview`. A move card's `selected` is the destination the sentence chose, and it is the first option (engine.md 4.4). A roll card's `preview` holds the fields from rule.md 3.4.
 
 ```
 { "risk": "normal",

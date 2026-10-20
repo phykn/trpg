@@ -1,24 +1,24 @@
-# 규칙
+# Rules
 
-규칙은 후보 `K`와 전이 `R`의 내용입니다. 여섯 면 주사위 둘, 위험에 따른 목표 수, 실패의 대가와 복잡화로 판정하고(3절), 박자와 장면과 위협으로 시간을 움직이며(4절), 대화가 관계와 약속을 남기고(5절), 주인공에게 선언·흉터·성장이 있습니다(6절). 상태와 연산은 [ontology.md](ontology.md), 원고 매개변수는 [story.md](story.md)의 것입니다.
+The rules fill in the candidates `K` and the transition `R`. A roll uses two six-sided dice, a target number set by risk, and the costs and complications of failure (section 3). Beats, scenes and threats move time forward (section 4). Conversation leaves relationships and promises behind (section 5). The protagonist has declarations, scars and growth (section 6). State and operations belong to [ontology.md](ontology.md); story parameters belong to [story.md](story.md).
 
 ```
 server/src/rules/
-  acts.py        행동 id: parse, format, SCHEMAS
+  acts.py        action ids: parse, format, SCHEMAS
   candidates.py  K: candidates, space, admits
   roll.py        roll(H), risk, DC, modifiers, outcome, chance, preview
-  costs.py       대가 표, pool, settle
-  schemas.py     스키마마다의 Δ₀, scene_end
-  triggers.py    scan, 엔진 방아쇠, chapter_to, end
-  resolve.py     R = Δ₀ → 방아쇠 → Step
-  recommend.py   추천 버튼
+  costs.py       cost table, pool, settle
+  schemas.py     Δ₀ per schema, scene_end
+  triggers.py    scan, engine triggers, chapter_to, end
+  resolve.py     R = Δ₀ → triggers → Step
+  recommend.py   recommended buttons
 ```
 
-`rules/`는 순수 함수만 둡니다. 시각, 난수, 파일, 모델, 표현층을 읽지 않습니다.
+`rules/` holds only pure functions. They never read the clock time, random numbers, files, models or the presentation layer.
 
-## 1. 행동
+## 1. Actions
 
-행동은 story.md 3.12의 id로 오가고 서버 안에서는 `Action`입니다.
+Actions travel as the ids of story.md 3.12. Inside the server they are `Action`.
 
 ```python
 @dataclass(frozen=True)
@@ -28,71 +28,71 @@ class Action:
     judge: tuple[tuple[str, str], ...]  # non-neutral judgment arguments, sorted by key
 ```
 
-**정규형**: 판단 인자는 키 차례로 쓰고 기본값 `ν₀`인 것은 쓰지 않습니다. `parse(format(a)) = a`이고 `format(parse(s))`는 정규형입니다. 영수증, 기록, 패턴, 버튼이 모두 정규형만 씁니다.
+**Canonical form**: judgment arguments are written in key order, and those at their default `ν₀` are left out. `parse(format(a)) = a`, and `format(parse(s))` is canonical. Receipts, logs, patterns and buttons all use only the canonical form.
 
-| 스키마 | 하는 일 | 의도 인자 | 판단 인자 (`ν₀`) |
+| Schema | What it does | Intent arguments | Judgment arguments (`ν₀`) |
 |---|---|---|---|
-| `go` | 이어진 장소로 감 | 갈 곳 | - |
-| `look` | 살펴서 명제를 앎 | 대상 | - |
-| `take` | 장소의 물건을 집음 | 물건 | - |
-| `give` | 지닌 물건을 건넴 | 물건, 받는 이 | - |
-| `talk` | 대화(5절) | 상대, 화제 | `tone`(`polite`), `claim`(없음), `rely`(없음) |
-| `try` | 즉흥 시도(3절) | 대상, 방식 | `strain`(`natural`), `rely`(없음). `try(player, ·)`는 `ν₀`만 |
-| `declare` | 잠재를 선언(6절) | 잠재 | - |
-| `cut` | 장면을 넘김(4절) | `pass` 또는 `rest` | - |
-| `choose` | 갈림에서 하나를 고름(4절) | 갈림, 선택지 | - |
-| `grow` | 성장(6절) | `grow:<방식>`, `grow:trait:<뺄>:<얻을>`, `grow:scar:<슬롯>` | - |
+| `go` | Moves to a connected place | destination | - |
+| `look` | Examines something to learn propositions | target | - |
+| `take` | Picks up a thing in the place | thing | - |
+| `give` | Hands over a carried thing | thing, recipient | - |
+| `talk` | Conversation (section 5) | other party, topic | `tone`(`polite`), `claim`(none), `rely`(none) |
+| `try` | Improvised attempt (section 3) | target, approach | `strain`(`natural`), `rely`(none). `try(player, ·)` takes only `ν₀` |
+| `declare` | Declares a latent (section 6) | latent | - |
+| `cut` | Skips ahead past the scene (section 4) | `pass` or `rest` | - |
+| `choose` | Picks one option at a fork (section 4) | fork, option | - |
+| `grow` | Growth (section 6) | `grow:<approach>`, `grow:trait:<drop>:<gain>`, `grow:scar:<slot>` | - |
 
-옛 스키마 `pay`는 이 규칙 전의 저장을 읽도록 행동 id의 문법(`acts.py`)에만 남았고, 후보도 `Δ₀`도 없습니다.
+The old schema `pay` survives only in the action-id grammar (`acts.py`) so that saves from before this rule still load. It has no candidates and no `Δ₀`.
 
-**의도 인자**는 무엇을 하려는지, **판단 인자**는 행동하는 모양입니다. `ν₀`는 도움도 위험 증가도 `spent`도 만들지 않습니다. 인자가 모두 유한한 종류 위를 돌므로 행동의 집합은 유한합니다. 스키마 표 `SCHEMAS`가 스키마마다 의도 인자의 종류, 판단 인자의 키, 굴림 여부를 정하는 함수, 행동 이름 틀의 키를 둡니다.
+**Intent arguments** say what the player means to do; **judgment arguments** say how the action is carried out. `ν₀` creates no help, no added risk and no `spent`. Every argument ranges over a finite kind, so the set of actions is finite. The schema table `SCHEMAS` holds, for each schema, the kinds of its intent arguments, the keys of its judgment arguments, the function that decides whether it rolls, and the key of its action-name template.
 
-## 2. 후보 `K`
+## 2. Candidates `K`
 
-`candidates(U, O) → list[Action]`은 관찰 `O = (E, F, B, hᵥ)`와 원고 상수만 읽습니다. 차례는 스키마 표의 차례, 그 안에서 원고의 선언 차례입니다.
+`candidates(U, O) → list[Action]` reads only the observation `O = (E, F, B, hᵥ)` and story constants. Candidates come in schema-table order, and within a schema in the story's declaration order.
 
-**보이는 막힘**: 장애물 `o ∈ E`가 원고의 `blocks`에 `x`를 두고 `F`에서 `at(o, ·)`가 있고 `fill(o) < 칸 수`면 `x`는 보이게 막혔습니다. 보이게 막힌 `x`를 인자로 하는 `go`, `take`, `talk`, `try`는 후보가 아닙니다. 숨은 막힘은 후보를 줄이지 않습니다.
+**Visible blocks**: `x` is visibly blocked when an obstacle `o ∈ E` lists `x` in its story `blocks`, `F` has `at(o, ·)`, and `fill(o) < boxes(o)`. `go`, `take`, `talk` and `try` that take a visibly blocked `x` as an argument are not candidates. Hidden blocks do not shrink the candidates.
 
-| 스키마 | 후보 |
+| Schema | Candidates |
 |---|---|
 | `go(q)` | `link(here, q) ∈ F`, `q ∈ E` |
 | `look(x)` | `x ∈ E`, `x ≠ player` |
-| `take(x)` | `x`가 물건이고 `at(x, here) ∈ F` |
-| `give(x, h)` | `at(x, player) ∈ F`인 물건 `x`, `at(h, here) ∈ F`인 인물 `h` |
-| `talk(h, 화제)` | `at(h, here) ∈ F`인 인물 `h`. 화제는 `h`의 화제들, `favor`(부탁이 있고, `favor:h ∉ hᵥ`이고, `owes(player, h, ·)`가 없음), `come`(`follows(h, player) ∉ F`), `stay`(`follows(h, player) ∈ F`), `chat` |
-| `try(x, 방식)` | `x = player`(판단 인자 모두 `ν₀`), 또는 `x ∈ E`인 `plain` 장애물로 `fill < 칸 수`(시계, 마감, 위협, 갈림은 대상이 아님), 또는 그 밖의 `x ∈ E`로 빈 태그 슬롯이나 `snag`이 있음 |
-| `declare(ℓ)` | `believes(player, ℓ) ∉ F`이고 `ℓ.when`이 보임에서 참 |
-| `cut(pass)` | 늘 |
-| `cut(rest)` | `here`가 쉴 곳 |
-| `choose(g, c)` | `at(g, player) ∈ F`인 갈림 `g`의 선택지 `c` |
-| `grow(항목)` | `growth ≥ 1`. 방식은 3 미만인 것, 특성은 지금 가진 것 하나와 원고의 다른 후보 하나, 흉터는 그 슬롯 |
+| `take(x)` | `x` is a thing and `at(x, here) ∈ F` |
+| `give(x, h)` | a thing `x` with `at(x, player) ∈ F`, and a character `h` with `at(h, here) ∈ F` |
+| `talk(h, topic)` | a character `h` with `at(h, here) ∈ F`. Topics are `h`'s topics, `favor` (`h` has a favor, `favor:h ∉ hᵥ`, and there is no `owes(player, h, ·)`), `come` (`follows(h, player) ∉ F`), `stay` (`follows(h, player) ∈ F`), and `chat` |
+| `try(x, approach)` | `x = player` (all judgment arguments `ν₀`); or a `plain` obstacle `x ∈ E` with `fill < boxes` (clocks, deadlines, threats and forks are not targets); or any other `x ∈ E` with an empty tag slot or a `snag` |
+| `declare(ℓ)` | `believes(player, ℓ) ∉ F` and `ℓ.when` is true in the view |
+| `cut(pass)` | always |
+| `cut(rest)` | `here` is a resting place |
+| `choose(g, c)` | an option `c` of a fork `g` with `at(g, player) ∈ F` |
+| `grow(item)` | `growth ≥ 1`. Approaches below 3; for a trait, one trait the player has now paired with one other trait candidate from the story; for a scar, its slot |
 
-판단 인자는 위 행동에 곱해 붙습니다.
+Judgment arguments multiply onto the actions above.
 
-| 판단 인자 | 붙는 스키마 | 값 |
+| Judgment argument | Applies to | Values |
 |---|---|---|
 | `tone` | `talk` | `polite`, `friendly`, `plead`, `threaten`, `deceive` |
-| `claim` | `talk`, `tone = deceive`일 때만 | 원고의 주장들. 주장은 거짓 명제라 정직한 태도로 말할 수 없음 |
+| `claim` | `talk`, only when `tone = deceive` | The story's claims. A claim is a false proposition, so it cannot be made in an honest tone |
 | `strain` | `try(x ≠ player)` | `natural`, `forced` |
-| `rely` | 굴리는 `talk`, `try(x ≠ player)` | 아래 표. 규칙은 관련성을 묻지 않고 허용되는 값이면 도움 1. 굴림 카드는 그중 이 굴림에 관련 있는 것만 내보임(engine.md 4.2) |
+| `rely` | a rolling `talk`, `try(x ≠ player)` | See the table below. The rules never ask whether it is relevant: any allowed value gives help 1. The roll card shows only the ones relevant to this roll (engine.md 4.2) |
 
-| `rely` 값 | 조건 | 도움의 원자 | 소모 |
+| `rely` value | Condition | Help atom | Consumed |
 |---|---|---|---|
-| `tag:<x>:<슬롯>` | `x`는 대상, `here`, 플레이어 중 하나이고 `mark(x, edge, ·, 슬롯) ∈ F` | 그 `mark` | 굴림 뒤 `untag` |
-| `trait:<id>` | 플레이어가 가진 특성이고 `spent(player, id) ∉ F` | `stat(player, id, 1)` | 굴림 뒤 `assert(spent(player, id))`. 결과와 무관 |
-| `thing:<id>` | `at(id, player) ∈ F` | 그 `at` | 없음 |
-| `prop:<id>` | `id ∈ B` | `believes(player, id)` | 없음 |
-| `bond:<h>` | `regards(h, player, trust, 3) ∈ F`(유대) | 그 `regards` | 없음 |
+| `tag:<x>:<slot>` | `x` is the target, `here` or the player, and `mark(x, edge, ·, slot) ∈ F` | that `mark` | `untag` after the roll |
+| `trait:<id>` | a trait the player has, with `spent(player, id) ∉ F` | `stat(player, id, 1)` | `assert(spent(player, id))` after the roll, whatever the result |
+| `thing:<id>` | `at(id, player) ∈ F` | that `at` | nothing |
+| `prop:<id>` | `id ∈ B` | `believes(player, id)` | nothing |
+| `bond:<h>` | `regards(h, player, trust, 3) ∈ F` (a bond) | that `regards` | nothing |
 
-**결말이 놓이면** 후보는 비고 게임이 끝납니다. `try(player, ·)`는 늘 후보이므로 결말 전에는 `K ≠ ∅`입니다(진행성).
+**Once an ending is set**, the candidates are empty and the game is over. `try(player, ·)` is always a candidate, so `K ≠ ∅` before the ending (progress).
 
-`K`의 크기는 판단 인자의 곱 때문에 커지므로 엔진은 `K`를 통째로 펼치지 않습니다. `space(U, O)`는 스키마별로 의도 인자만 펼친 목록과 판단 인자마다 허용되는 값을 돌려주고, `admits(U, O, a)`가 `a ∈ K(O)`를 판정하며, 둘은 같은 조건 함수를 씁니다. 해석의 질문과 굴림 카드(engine.md 3~4절)가 `space`를, 실행 직전의 허용 검사가 `admits`를 씁니다.
+Because judgment arguments multiply, `K` gets large, so the engine never expands it in full. `space(U, O)` returns, per schema, a list with only the intent arguments expanded, plus the allowed values of each judgment argument. `admits(U, O, a)` decides `a ∈ K(O)`. Both use the same condition functions. Interpretation questions and the roll card (engine.md sections 3–4) use `space`; the admission check right before execution uses `admits`.
 
-**해법**은 후보를 더하지 않습니다. 해법은 `try(o, approach)`에 `rely`를 채운 행동 id 하나에 `label`과 조건 `when`을 붙인 것이고, `when`(과 `rely`가 암묵으로 더하는 조건)이 보임에서 참일 때 그 행동의 이름이 `label`이 됩니다. 해법이 있든 없든 같은 행동 id는 같은 `R`을 거칩니다.
+**Solutions** add no candidates. A solution is a single action id, `try(o, approach)` with `rely` filled in, plus a `label` and a condition `when`. When `when` (and the conditions `rely` implicitly adds) is true in the view, that action is named `label`. The same action id goes through the same `R` whether or not a solution exists.
 
-## 3. 판정
+## 3. Rolls
 
-### 3.1 주사위
+### 3.1 Dice
 
 ```python
 def roll(seed: int, t: int) -> tuple[int, int, int]:
@@ -101,14 +101,14 @@ def roll(seed: int, t: int) -> tuple[int, int, int]:
     return n(0) % 6 + 1, n(8) % 6 + 1, n(16) % 60
 ```
 
-`r = (d₁, d₂, u)`. `seed`는 게임을 만들 때 `secrets.randbits(63)`으로 정합니다. 나머지의 치우침은 `10⁻¹⁷` 수준이라 무시합니다. `R`은 `r`을 인자로 받으므로 증인과 테스트는 주사위를 직접 줍니다.
+`r = (d₁, d₂, u)`. `seed` is set with `secrets.randbits(63)` when the game is created. The modulo bias is on the order of `10⁻¹⁷` and is ignored. `R` takes `r` as an argument, so witnesses and tests supply the dice directly.
 
 ```
-합 = d₁ + d₂ + stat(player, 방식) + 도움 − 방해        talk의 방식은 charm
-결과 = success (합 ≥ DC(위험)) | fail (합 < DC(위험))
+total = d₁ + d₂ + stat(player, approach) + help − hinder        talk's approach is charm
+result = success (total ≥ DC(risk)) | fail (total < DC(risk))
 ```
 
-### 3.2 위험, 보정, 결과
+### 3.2 Risk, modifiers and results
 
 ```python
 DC = {low: 7, normal: 8, high: 9}       # the total to reach, by risk
@@ -119,212 +119,212 @@ def outcome(r, mods, risk) -> Result     # band(d1 + d2 + z, DC[risk])
 def chance(z, dc) -> float               # P(2d6 + z >= dc)
 ```
 
-**위험**은 원고 매개변수와 `a`의 인자만 읽습니다. 그래서 숨은 원자만 다른 두 상태에서 같고, `rely` 선택지마다 같으며, 숨은 경비 같은 `S`의 숨은 부분은 위험에 들지 않고 행동해서 겪습니다. 판단 인자는 위험을 올릴 수만 있습니다.
+**Risk** reads only story parameters and the arguments of `a`. So it is the same in two states that differ only in hidden atoms, and the same for every `rely` option. Hidden parts of `S`, such as a hidden guard, never enter the risk; the player runs into them by acting. Judgment arguments can only raise risk.
 
 ```
 risk(try(player, ·))            = low
-risk(try(o, 방식, strain))       = min(high, 기본(o) + [방식 ∈ clashes(o)] + [strain = forced])
-risk(talk(h, ·, tone))           = min(high, normal + [tone ∈ {threaten, deceive}])
-risk(choose(·))                  = high          (되돌릴 수 없음)
-risk(그 밖)                      = low
+risk(try(o, approach, strain))  = min(high, base(o) + [approach ∈ clashes(o)] + [strain = forced])
+risk(talk(h, ·, tone))          = min(high, normal + [tone ∈ {threaten, deceive}])
+risk(choose(·))                 = high          (irreversible)
+risk(anything else)             = low
 ```
 
-`기본(o)`는 장애물의 `risk`(`low`·`normal`), 장애물이 아닌 대상이면 `normal`입니다.
+`base(o)` is the obstacle's `risk` (`low` or `normal`), or `normal` when the target is not an obstacle.
 
-**보정**의 원자는 이 차례로 사건의 `mods`가 됩니다.
+The atoms of the **modifiers** become the event's `mods`, in this order.
 
-| 보정 | 값 | 원자 |
+| Modifier | Value | Atoms |
 |---|---|---|
-| `stat` | `stat(player, 방식)`의 값 | 그 `stat` 원자 |
-| 도움 | `rely`가 있으면 1, 아니면 0 | 2절 표의 원자 하나 |
-| 방해 | 아래 원자가 하나라도 있으면 1, 아니면 0 | 대상, `here`, 플레이어에 걸린 `snag` `mark` 전부. `talk`에서 상대가 플레이어를 보는 관련 축(`threaten`이면 `fear`, 아니면 `trust`)이 음수인 `regards` |
+| `stat` | the value of `stat(player, approach)` | that `stat` atom |
+| help | 1 with a `rely`, otherwise 0 | one atom from the table in section 2 |
+| hinder | 1 if any atom below exists, otherwise 0 | every `snag` `mark` on the target, `here` and the player. In `talk`, a `regards` in which the other party's relevant axis toward the player (`fear` for `threaten`, otherwise `trust`) is negative |
 
-도움과 방해는 원자 수와 무관하게 각각 0 또는 1이므로 한 굴림의 `도움 − 방해`는 −1, 0, +1입니다(이득 한정). 방해의 원자가 여럿이어도 화면에는 방해 하나(값 −1, 이름을 이어 씀)로 보입니다(api.md 3절).
+Help and hinder are each 0 or 1 however many atoms there are, so a roll's `help − hinder` is −1, 0 or +1 (bounded advantage). Even with several hinder atoms, the screen shows a single hinder (value −1, names joined together) (api.md section 3).
 
-`modifiers`는 `facts`에 넘긴 원자만 읽습니다. `R`은 `S`를, 미리보기는 `F`를 넘깁니다. 보정이 읽는 원자는 모두 `E` 안의 개체(대상, `here`, 플레이어, 눈앞의 상대)에 대한 `mark`, `stat`, `regards`이거나 `rely`가 가리키는 `F`와 `B`의 원자라서, 굴리는 행동 `a ∈ K(O)`에 대해 `modifiers(U, S, a) = modifiers(U, F, a)`입니다.
+`modifiers` reads only the atoms passed in `facts`. `R` passes `S`; the preview passes `F`. Every atom the modifiers read is either a `mark`, `stat` or `regards` about an entity in `E` (the target, `here`, the player, the other party present) or an atom of `F` or `B` that `rely` points to. So for a rolling action `a ∈ K(O)`, `modifiers(U, S, a) = modifiers(U, F, a)`.
 
-`outcome`, `chance`, 단계 기록의 `dc`(api.md 3절)는 모두 `DC` 하나에서 나옵니다. 결과는 `success`와 `fail` 둘뿐입니다.
+`outcome`, `chance` and the step record's `dc` (api.md section 3) all come from the one `DC`. There are only two results: `success` and `fail`.
 
-### 3.3 대가와 복잡화
+### 3.3 Costs and complications
 
-**복잡화**는 `(조건, 효과, 무게)`입니다. 원고가 장소, 인물, 장애물에 붙여 선언하고(story.md 3.6), 엔진은 조건이 없는 것을 무게마다 둘씩 둡니다.
+A **complication** is `(condition, effect, weight)`. The story declares them on places, characters and obstacles (story.md 3.6), and the engine keeps two unconditional ones per weight.
 
-| 무게 | 엔진의 복잡화 | 이름(`locale/ko.py`) | 효과 |
+| Weight | Engine complication | Name (`locale/ko.py`) | Effect |
 |---|---|---|---|
-| `light` | `engine.snag` | 꼬임 | 플레이어에게 `snag` 장면 태그 |
-| | `engine.beat` | 지체 | `beats +1` |
-| `heavy` | `engine.wound` | 다침 | `wounds +1` |
-| | `engine.end` | 끊긴 장면 | 장면 끝(4.1) |
+| `light` | `engine.snag` | 꼬임 (snag) | `snag` scene tag on the player |
+| | `engine.beat` | 지체 (delay) | `beats +1` |
+| `heavy` | `engine.wound` | 다침 (injury) | `wounds +1` |
+| | `engine.end` | 끊긴 장면 (scene cut short) | scene end (4.1) |
 
-원고 복잡화의 효과는 `effects`에 `wound: n`이 있으면 `wounds +n`을 더한 것입니다. **대가는 `fail`에만** 있고 위험으로 정하며, 엔진이 바로 적용합니다. 플레이어는 고르지 않습니다.
+A story complication's effect is its `effects`, plus `wounds +n` when it has `wound: n`. **Costs apply only on `fail`**. Risk sets them, and the engine applies them at once. The player does not choose.
 
-| 위험 | `fail`의 대가 |
+| Risk | Cost of `fail` |
 |---|---|
-| `low` | 시계 +1 |
-| `normal` | 시계 +1, 가벼움 |
-| `high` | 시계 +2, 무거움 |
+| `low` | clock +1 |
+| `normal` | clock +1, light |
+| `high` | clock +2, heavy |
 
-**후보 목록** `pool(무게, 대상)`: 엔진의 것 둘(위 표의 차례), 그 뒤에 원고의 것을 장소(`here`), 인물(`here`에 있는 인물들, 원고 차례), 장애물(굴림의 대상) 차례로. 원고 복잡화는 붙은 곳의 암묵 조건과 `when`을 거칩니다. 엔진의 것이 조건이 없어 목록은 늘 둘 이상입니다.
+**The pool** `pool(weight, target)`: the two engine complications (in the order of the table above), then the story's, in this order: the place (`here`), characters (those at `here`, in story order), the obstacle (the roll's target). Story complications must pass the implicit condition of what they are attached to and their `when`. The engine's have no condition, so the pool always holds at least two.
 
-**적용**: 무게가 있으면 `when`을 세계 `(S, h)`에서 평가한 목록에서 `u mod 개수`번째의 효과를 `Δ₀`에 넣습니다. 겪어서 드러나는 것이므로 숨은 것을 써도 되고, 그래서 미리보기는 무게만 말합니다.
+**Applying**: when there is a weight, evaluate `when` in the world `(S, h)` and put the effect of entry `u mod count` of the resulting list into `Δ₀`. A complication is discovered by suffering it, so hidden ones may be picked; that is why the preview states only the weight.
 
-`settle(U, work, result, risk, u, target, h)`가 `fail`이면 대가 표의 한 줄(지닌 시계의 증가)을 `work`에 넣고 고른 복잡화를 돌려주며, 호출하는 쪽이 그 효과를 적용합니다. `success`면 아무것도 하지 않습니다.
+`settle(U, work, result, risk, u, target, h)` on `fail` puts one row of the cost table (the increase on the held clock) into `work` and returns the chosen complication, whose effect the caller applies. On `success` it does nothing.
 
-### 3.4 미리보기
+### 3.4 Preview
 
 ```python
 def preview(U, O, a) -> Preview
 ```
 
-굴림이 있는 행동 `a ∈ K(O)`에 대해, 굴리기 전에 플레이어에게 보일 것을 관찰만으로 계산합니다. 굴림 카드(engine.md 4.2)가 씁니다.
+For a rolling action `a ∈ K(O)`, this computes from the observation alone what the player sees before rolling. The roll card (engine.md 4.2) uses it.
 
-| 필드 | 값 |
+| Field | Value |
 |---|---|
 | `risk` | `risk(U, a)` |
-| `mods` | `modifiers(U, O.facts, a)`를 api.md 3절의 칩 목록(`kind`, `label`, `value`)으로. 단계 기록의 `mods`와 같은 모양, 같은 차례 |
-| `z` | `stat + 도움 − 방해` |
+| `mods` | `modifiers(U, O.facts, a)` as the chip list of api.md section 3 (`kind`, `label`, `value`). Same shape and order as the step record's `mods` |
+| `z` | `stat + help − hinder` |
 | `dc` | `DC[risk]` |
-| `stakes` | 실패의 대가: `clock`은 지닌 시계에 찰 칸(`min(n, 남은 칸)`, 시계가 없으면 0), `weight`는 복잡화의 무게(없으면 null) |
-| `clock` | 지닌 위험 시계의 id, 이름, 칸 수, `fill` |
-| `gain` | 성공했을 때 대상에 생길 일: 장애물이면 칸 `min(1 + [방식 ∈ fits], 남은 칸)`, 그 밖의 `try`면 가장 낮은 슬롯의 `snag`을 뗌(그 이름) 또는 `edge` 장면 태그, `talk`면 화제의 공개 또는 부탁의 효과(이름들) |
+| `stakes` | The cost of failure: `clock` is the boxes the held clock would fill (`min(n, remaining boxes)`, 0 with no clock); `weight` is the complication weight (null if none) |
+| `clock` | the held risk clock's id, name, box count and `fill` |
+| `gain` | What happens to the target on success: for an obstacle, `min(1 + [approach ∈ fits], remaining boxes)` boxes; for any other `try`, removing the lowest-slot `snag` (its name) or an `edge` scene tag; for `talk`, the topic's reveal or the favor's effects (names) |
 
-**미리보기는 실행과 같습니다.** 위험은 원고와 `a`의 함수이고 보정은 3.2의 끝에서 `S`와 `F`에서 같으므로, 굴림이 일어나면 그때의 `z`, `mods`, 위험은 미리보기의 값과 같습니다. 다른 것은 두 가지뿐입니다. 숨은 막힘이 있으면 굴림이 일어나지 않고(`blocked`, 기댄 것도 소모하지 않음), 실패의 복잡화는 숨은 것에서도 고를 수 있어 미리보기는 무게만 말합니다.
+**The preview matches execution.** Risk is a function of the story and `a`, and the modifiers are the same on `S` and `F` (end of 3.2), so when the roll happens, its `z`, `mods` and risk equal the preview's. Only two things differ. A hidden block stops the roll (`blocked`, and nothing relied on is consumed), and the failure complication may be picked from hidden ones, so the preview states only the weight.
 
-## 4. 시간
+## 4. Time
 
-### 4.1 박자와 장면
+### 4.1 Beats and scenes
 
-**박자** `stat(player, beats, n)`, `0 ≤ n ≤ B`. `try(player, ·)`와 `cut`을 뺀 모든 단계가 `Δ₀`에서 `beats +1`합니다.
+**Beats** `stat(player, beats, n)`, `0 ≤ n ≤ B`. Every step except `try(player, ·)` and `cut` adds `beats +1` in `Δ₀`.
 
-**장면 끝** `scene_end`: `expire(scene)`, `beats = 0`, 활성 위협(`at(w, player)`인 위협, 갈림, 마감)마다 `fill +1`. 위험 시계는 들지 않습니다. `go`는 장면 태그를 만료하지 않습니다.
+**Scene end** `scene_end`: `expire(scene)`, `beats = 0`, and `fill +1` on each active threat (a threat, fork or deadline with `at(w, player)`). Risk clocks are not included. `go` does not expire scene tags.
 
-`cut(pass)`는 장면 끝을 바로 일으킵니다("밤이 될 때까지 기다린다"). `cut(rest)`는 `here`가 쉴 곳일 때만 후보이고, 장면 끝에 더해 `wounds −1`, 활성 위협 `fill +1`을 한 번 더 합니다.
+`cut(pass)` ends the scene at once ("밤이 될 때까지 기다린다", "I wait until nightfall"). `cut(rest)` is a candidate only when `here` is a resting place; on top of the scene end it does `wounds −1` and one more `fill +1` on active threats.
 
-### 4.2 위험 시계와 위협
+### 4.2 Risk clocks and threats
 
-장마다 위험 시계 `clock.k` 하나를 플레이어가 지닙니다. 시계의 `fill`을 올리는 것은 굴림의 대가와 선언뿐, 내리는 것은 `τ_위험`뿐, 옮기는 것은 장 전환뿐입니다.
+In each chapter the player holds one risk clock `clock.k`. Only roll costs and declarations raise a clock's `fill`; only `τ_risk` lowers it; only a chapter change moves it.
 
-**위협**은 도착 효과를 가진 장애물입니다. 플레이어가 지니면(`at(w, player)`) **활성**이라 보이고 장면이 끝날 때마다 다가옵니다. 등장 방아쇠의 `move(w, player)`가 등장시키고, 원고 효과가 `fill`을 내리거나 `retire`로 물릴 수 있습니다. **갈림**은 선택지와 기본 선택지를 가진 위협입니다. `choose(g, c)`는 `c`의 효과를 내고 `g`를 물리며, 고르지 않고 버티면 도착해 기본 선택지가 일어납니다. 결말의 조건은 이력 패턴으로 어떤 선택이 있었는지 읽습니다.
+A **threat** is an obstacle with an arrival effect. When the player holds it (`at(w, player)`) it is **active**: it is visible and draws closer at every scene end. An appearance trigger's `move(w, player)` brings it in, and story effects can lower its `fill` or `retire` it. A **fork** is a threat with options and a default option. `choose(g, c)` applies `c`'s effects and retires `g`; holding out without choosing lets it arrive, and the default option happens. Ending conditions read which choice was made through history patterns.
 
-**마감** `deadline.k`는 장마다 하나인 위협이고, 도착 효과가 조건 없이 장 전환이나 결말을 냅니다. 첫 장의 것은 시작부터, 그 뒤의 것은 장 전환으로 활성이 됩니다.
+A **deadline** `deadline.k` is a threat, one per chapter, whose arrival effect unconditionally brings a chapter change or an ending. The first chapter's deadline is active from the start; later ones become active at a chapter change.
 
-### 4.3 장 전환과 결말
+### 4.3 Chapter changes and endings
 
-`chapter_to(k)`는 하나의 연산열입니다.
+`chapter_to(k)` is a single sequence of operations.
 
 1. `set(flag, chapter, k)`, `expire(chapter)`
-2. 단계를 시작할 때 있던 `owes(player, h, 약속)`마다 `keep`이 세계에서 참이면 지킴, 아니면 어김(5.2). 그 단계에 생긴 약속은 다음 장으로 넘어감
+2. For each `owes(player, h, promise)` present when the step started: kept if `keep` is true in the world, otherwise broken (5.2). Promises made during that step carry over to the next chapter
 3. `clear_spent(player)`
 4. `retire(clock.k−1)`, `retire(deadline.k−1)`, `move(clock.k, player)`, `move(deadline.k, player)`
-5. `growth +1`, 그리고 목표로 넘어갈 때는 원고의 `goal_effects`
+5. `growth +1`, plus the story's `goal_effects` when the change comes from reaching the goal
 
-`end(e)`는 `set(flag, ending, e)` 뒤에 남은 플레이어의 약속을 모두 2.처럼 결말 내고, 그 단계의 방아쇠 훑기를 멈춥니다. 장 목표가 `Δ₀`에서 참이 되면 원고 방아쇠가 엔진 방아쇠보다 먼저 훑이므로, 같은 단계에 지난 시계가 찼어도 그 시계는 `τ_위험` 없이 물러납니다.
+`end(e)` does `set(flag, ending, e)`, then settles all of the player's remaining promises as in step 2, and stops that step's trigger scan. When the chapter goal becomes true in `Δ₀`, story triggers are scanned before engine triggers, so even if the previous clock filled up in the same step, that clock retires without `τ_risk`.
 
-## 5. 사람
+## 5. People
 
-### 5.1 대화와 건넴
+### 5.1 Talking and giving
 
-`regards(g, h, 축, n)`의 축은 `trust`·`fear`입니다. 대화 굴림의 **관계**는 상대가 플레이어에게 가진 값으로 `threaten`이면 `fear`, 그 밖이면 `trust`이며, 음수일 때만 방해로 들어가고 양수는 유대(`trust` 3)로 기댑니다.
+The axes of `regards(g, h, axis, n)` are `trust` and `fear`. The **relationship** in a talk roll is the other party's value toward the player: `fear` for `threaten`, `trust` otherwise. It counts as hinder only when negative; a positive one is relied on as a bond (`trust` 3).
 
-`talk(h, 화제, tone, claim, rely)`의 `Δ₀`는 이 차례로 만듭니다.
+`Δ₀` of `talk(h, topic, tone, claim, rely)` is built in this order.
 
-1. **숨은 막힘**: `h`가 숨은 장애물에 막혔으면 드러내고 끝냅니다.
-2. **굴림 여부**(보임으로 판정하며, `R` 안에서는 `fact_rule`로 `S`에서 `F`를 만들어 같은 판정을 함): 화제가 이미 믿는 명제이거나, `free_when`이 참이거나, `chat`이거나, `stay`이거나, `owes(h, player, kindness)`가 있는 부탁이거나, `regards(h, player, trust) ≥ 1`인 `come`이면 굴리지 않습니다. 그 밖의 화제, 부탁, `come`은 굴립니다.
-3. **결과**: 굴리지 않는 화제는 공개(`reveals: x`면 `x.hidden`, 아니면 화제 id), 호의로 들어주는 부탁은 부탁의 효과와 `retract(owes(h, player, kindness))`. 굴리면 `success`에서 공개, 또는 부탁의 효과와 `assert(owes(player, h, promise))`. `come`은 굴리지 않거나 `success`일 때 `assert(follows(h, player))`, `stay`는 `retract(follows(h, player))`. 대가는 3.3입니다.
-4. **태도**: `threaten`은 결과와 무관하게 `regards(h, player, fear) +1`, `trust −1`. `deceive`이고 `claim`의 `against`를 `h`가 믿으면 들통: `trust −2`, 플레이어에게 `snag` 장 태그(기본 이름 "의심"). 원고 명제에 맞지 않는 주장은 문장으로만 남습니다.
-5. **부탁의 횟수**: 엔진은 인물마다 패턴 `favor:h`(행동 `talk:h:favor`, 결과 `success`·`none`)를 `Pat`에 더합니다. 들어준 단계가 이 패턴에 맞고, 후보는 `favor:h ∈ hᵥ`이면 부탁을 내지 않습니다. 후보는 `F`와 `hᵥ`만 읽으므로 원고 플래그 대신 보이는 이력을 씁니다.
+1. **Hidden block**: if a hidden obstacle blocks `h`, reveal it and stop.
+2. **Whether to roll** (judged on the view; inside `R`, `fact_rule` builds `F` from `S` and makes the same judgment): no roll if the topic is a proposition the player already believes, `free_when` is true, the topic is `chat` or `stay`, it is a favor with `owes(h, player, kindness)`, or it is `come` with `regards(h, player, trust) ≥ 1`. Other topics, favors and `come` roll.
+3. **Result**: an unrolled topic is revealed (`x.hidden` for `reveals: x`, otherwise the topic id); a favor granted out of kindness applies the favor's effects and `retract(owes(h, player, kindness))`. When rolled, `success` reveals the topic, or applies the favor's effects and `assert(owes(player, h, promise))`. `come` does `assert(follows(h, player))` when unrolled or on `success`; `stay` does `retract(follows(h, player))`. Costs follow 3.3.
+4. **Tone**: `threaten` gives `regards(h, player, fear) +1` and `trust −1` whatever the result. With `deceive`, if `h` believes the `claim`'s `against`, the lie is caught: `trust −2`, and a `snag` chapter tag on the player (default name "의심", "suspicion"). A claim that matches no story proposition remains only as text.
+5. **Favor count**: for each character the engine adds a pattern `favor:h` (action `talk:h:favor`, results `success` or `none`) to `Pat`. A step that grants the favor matches this pattern, and candidates offer no favor once `favor:h ∈ hᵥ`. Candidates read only `F` and `hᵥ`, so they use visible history instead of a story flag.
 
-**동행**: `follows(h, player)`인 인물은 플레이어가 옮길 때 함께 옮깁니다(ontology.md 4절 `move`). 원고의 `avoids`(story.md 3.4)에 있는 장소로는 따라가지 않습니다. 플레이어가 그곳으로 `go`하면 `h`는 남고 `follows`가 빠집니다. 부탁 없이 사람을 데려갈 수 있지만, 아직 믿지 않는 사람은 말솜씨로 설득해야 합니다.
+**Companions**: a character with `follows(h, player)` moves along when the player moves (ontology.md section 4, `move`). They do not follow into places in the story's `avoids` (story.md 3.4). If the player does `go` there, `h` stays behind and `follows` is removed. The player can bring someone along without a favor, but someone who does not yet trust the player has to be won over with charm.
 
-`give(x, h)`는 `move(x, h)`이고, `x ∈ wants(h)`면 `regards(h, player, trust) +1`, `assert(owes(h, player, kindness))`.
+`give(x, h)` is `move(x, h)`; if `x ∈ wants(h)`, it also does `regards(h, player, trust) +1` and `assert(owes(h, player, kindness))`.
 
-### 5.2 약속
+### 5.2 Promises
 
-`owes(g, h, k)`: `g`가 `h`에게 `k`를 빚졌습니다. `k`는 `promise`(`h`의 부탁에 걸린 약속으로, `keep`·`break` 조건은 `h`의 `favor.promise`에서 읽음) 또는 `kindness`(호의)입니다. 인물마다 부탁이 하나라 `owes(player, h, promise)`로 약속이 정해집니다. 플레이어의 약속은 부탁으로만 생깁니다.
+`owes(g, h, k)`: `g` owes `h` a `k`. `k` is `promise` (a promise tied to `h`'s favor, whose `keep` and `break` conditions are read from `h`'s `favor.promise`) or `kindness` (a good turn). Each character has one favor, so `owes(player, h, promise)` pins down the promise. The player makes promises only through favors.
 
-- **지킴**: `retract(owes)`, `regards(h, player, trust) +1`.
-- **어김**: `retract(owes)`, `trust −2`, 플레이어에게 `snag` 장 태그(기본 이름 "약속을 어김"). 장 전환 안의 어김 태그는 `expire(chapter)` 뒤에 붙으므로 다음 장으로 넘어갑니다.
+- **Kept**: `retract(owes)`, `regards(h, player, trust) +1`.
+- **Broken**: `retract(owes)`, `trust −2`, and a `snag` chapter tag on the player (default name "약속을 어김", "broke a promise"). A broken-promise tag inside a chapter change is added after `expire(chapter)`, so it carries into the next chapter.
 
-`τ_약속`(6절)이 조건이 참해진 약속을 결말 내고, 남은 것은 생긴 단계 뒤의 첫 장 전환이나 결말이 결말 냅니다. 그래서 약속은 늦어도 다음 장 전환에서 결말이 납니다.
+`τ_promise` (section 6) settles promises whose condition has become true. The rest are settled by the first chapter change or ending after the step that made them. So a promise is settled at the next chapter change at the latest.
 
-## 6. 주인공
+## 6. The protagonist
 
-- **선언** `declare(ℓ)`: `reveal(player, ℓ)`, `ℓ.effects`, 지닌 시계 `+1`. 플레이어가 "옛 친구가 이 마을에 산다"고 말하면 세계에 사실이 더해지는 것처럼 보이지만, 원고가 처음부터 둔 잠재가 드러날 뿐입니다(story.md 3.10의 범위 규칙).
-- **흉터** `τ_쓰러짐`: `wounds = 0`, `tag(player, snag, scar)`, 장면 끝. `tag`는 비울 슬롯에서 `scar`를 건너뛰고 그런 슬롯밖에 없으면 붙이지 않습니다. 같은 방아쇠의 효과 끝에서 플레이어의 슬롯이 모두 `scar`면 `end(collapse)`. `collapse`의 이름과 서술 틀은 원고가 둡니다.
-- **성장** `grow(항목)`: `growth ≥ 1`일 때만 후보이고 `growth −1`. 항목은 방식 하나 `+1`, 특성 교체(`stat` 원자를 빼고 더함), 흉터 하나 `untag` 중 하나입니다. 성장은 장 전환이 엽니다.
+- **Declaration** `declare(ℓ)`: `reveal(player, ℓ)`, `ℓ.effects`, held clock `+1`. When the player says "옛 친구가 이 마을에 산다" ("an old friend lives in this town"), it looks as if a fact is added to the world, but all that happens is that a latent the story placed from the start comes to light (the scope rule of story.md 3.10).
+- **Scar** `τ_fall`: `wounds = 0`, `tag(player, snag, scar)`, scene end. When picking a slot to overwrite, `tag` skips `scar` slots, and adds nothing if only those remain. If all the player's slots are `scar` at the end of that trigger's effects, `end(collapse)`. The story supplies the name and narration template of `collapse`.
+- **Growth** `grow(item)`: a candidate only when `growth ≥ 1`, and does `growth −1`. The item is one of: `+1` to one approach, a trait swap (remove one `stat` atom and add another), or `untag` of one scar. Chapter changes open up growth.
 
-## 7. 스키마의 결과 `Δ₀`
+## 7. Schema results `Δ₀`
 
-`schemas.py`는 스키마마다 `Δ₀`를 작업 사본 위의 연산열로 냅니다. 굴림이 있는 단계는 결과를 정한 뒤 효과를 냅니다.
+`schemas.py` produces `Δ₀` for each schema as a sequence of operations on the working copy. A rolling step decides its result first, then applies the effects.
 
-| 스키마 | `Δ₀` |
+| Schema | `Δ₀` |
 |---|---|
-| (공통) | `try(player, ·)`와 `cut`을 뺀 모든 단계가 `beats +1` |
-| `go(q)` | 숨은 장애물이 `q`를 막으면 `reveal(player, o.hidden)`(`blocked`). 아니면 `q ∈ avoids(h)`인 동행 `h`마다 `retract(follows(h, player))`, 그다음 `move(player, q)`(남은 동행이 함께 옮김) |
-| `look(x)` | `x ∈ about(p)`인 원고 명제 `p`를 원고 차례로 `reveal` |
-| `take(x)` | 숨은 막힘이면 드러냄. 아니면 `move(x, player)` |
+| (all) | every step except `try(player, ·)` and `cut` does `beats +1` |
+| `go(q)` | If a hidden obstacle blocks `q`, `reveal(player, o.hidden)` (`blocked`). Otherwise `retract(follows(h, player))` for each companion `h` with `q ∈ avoids(h)`, then `move(player, q)` (the remaining companions move along) |
+| `look(x)` | `reveal` each story proposition `p` with `x ∈ about(p)`, in story order |
+| `take(x)` | A hidden block is revealed. Otherwise `move(x, player)` |
 | `give(x, h)` | 5.1 |
-| `talk(h, 화제)` | 5.1 |
-| `try(player, ·)` | 아무것도 없음. 방아쇠도 훑지 않음 |
-| `try(o, 방식)` | 숨은 막힘이면 드러냄(굴림 없음). 아니면 굴림. `success`면 장애물은 `fill +(1 + [방식 ∈ fits(o)])`, 그 밖은 가장 낮은 슬롯의 `snag`을 `untag`하고 없으면 `tag(o, edge, scene)`. 대가는 3.3 |
-| `declare(ℓ)` | 6절 |
-| `cut(pass)` | 장면 끝 |
-| `cut(rest)` | 장면 끝, `wounds −1`, 활성 위협 `fill +1` |
+| `talk(h, topic)` | 5.1 |
+| `try(player, ·)` | Nothing. Triggers are not scanned either |
+| `try(o, approach)` | A hidden block is revealed (no roll). Otherwise roll. On `success`, an obstacle gets `fill +(1 + [approach ∈ fits(o)])`; any other target has its lowest-slot `snag` `untag`ged, or, if there is none, gets `tag(o, edge, scene)`. Costs follow 3.3 |
+| `declare(ℓ)` | section 6 |
+| `cut(pass)` | scene end |
+| `cut(rest)` | scene end, `wounds −1`, active threats `fill +1` |
 | `choose(g, c)` | `c.effects`, `retire(g)` |
-| `grow(항목)` | 6절 |
+| `grow(item)` | section 6 |
 
-굴린 뒤의 **기대기 소모**는 2절 표대로입니다. 굴림이 있는 단계는 늘 `beats`를 올리고 `success`는 대상을, `fail`은 시계를 바꾸므로, "아무 일도 없었습니다"로 끝나는 굴림은 없습니다.
+After the roll, **what was relied on is consumed** as in the table in section 2. A rolling step always raises `beats`, `success` changes the target and `fail` changes the clock, so no roll ever ends in "아무 일도 없었습니다" ("nothing happened").
 
-## 8. 방아쇠와 `R`
+## 8. Triggers and `R`
 
-방아쇠는 차례가 있는 `(조건, 효과)`입니다. 원고 방아쇠(ontology.md 5.3의 차례)는 **가장자리 발동**이고 한 단계에 많아야 한 번 발동하며, `repeat`가 아니면 발동 플래그로 한 게임에 한 번입니다. 그 뒤에 엔진 방아쇠 다섯이 이 차례로 오며 **수준 발동**입니다.
+A trigger is an ordered `(condition, effect)`. Story triggers (in the order of ontology.md 5.3) are **edge-fired**: each fires at most once per step and, unless it is `repeat`, once per game through its fired flag. After them come five engine triggers, in this order, which are **level-fired**.
 
-| 방아쇠 | 조건 | 효과 |
+| Trigger | Condition | Effect |
 |---|---|---|
-| `τ_위험` | 지닌 시계가 다 참 | 그 장의 `crisis`, 시계 `fill = 0` |
-| `τ_쓰러짐` | `wounds = wound_boxes` | 흉터(6절) |
-| `τ_장면` | `beats = B` | 장면 끝 |
-| `τ_도착` | 다 찬 활성 위협이 있음 | 원고 차례로 그런 것마다 도착 효과(위협은 `arrival`, 갈림은 `default`, 마감은 `chapter_to`나 `end`), `retire` |
-| `τ_약속` | `keep`이나 `break`가 참인 `owes(player, ·, 약속)`가 있음 | 5.2의 결말. 둘 다 참이면 지킴 |
+| `τ_risk` | the held clock is full | that chapter's `crisis`, clock `fill = 0` |
+| `τ_fall` | `wounds = wound_boxes` | scar (section 6) |
+| `τ_scene` | `beats = B` | scene end |
+| `τ_arrive` | some active threat is full | for each such threat, in story order, its arrival effect (`arrival` for a threat, `default` for a fork, `chapter_to` or `end` for a deadline), then `retire` |
+| `τ_promise` | some `owes(player, ·, promise)` has `keep` or `break` true | settled as in 5.2. If both are true, the promise is kept |
 
 ```python
 def resolve(U, S, h, a, r) -> Step:
     # Step(delta, mods, rolled, result, risk); never mutates S
 ```
 
-1. `work = Work(S)`. 원고 방아쇠마다 `start_true[i] = holds(τᵢ.when, S, h)`.
-2. 스키마의 `Δ₀`를 `work`에 적용합니다(7절). 굴림의 결과 `result`가 정해집니다.
-3. `h* = h ∪ { π | matches(π, a, result) }`. 한 단계 안에서 `a`와 `result`는 바뀌지 않으므로 한 번만 계산합니다.
-4. **훑기** `scan`: 목록을 차례로 보며 처음 발동하는 것 하나의 효과를 `work`에 적용하고 목록의 처음으로 돌아갑니다. 발동할 것이 없으면 멈추고, `flag ending`이 놓이면 바로 멈춥니다. 원고 방아쇠 `τᵢ`는 이번 단계에 발동하지 않았고 `start_true[i]`가 거짓이고 `holds(τᵢ.when, work, h*)`가 참일 때, 엔진 방아쇠는 조건이 `work`에서 참일 때 발동합니다.
-5. `delta = diff(S, work)`. `mods`는 3.2의 원자들입니다.
+1. `work = Work(S)`. For each story trigger, `start_true[i] = holds(τᵢ.when, S, h)`.
+2. Apply the schema's `Δ₀` to `work` (section 7). This decides the roll's `result`.
+3. `h* = h ∪ { π | matches(π, a, result) }`. `a` and `result` do not change within a step, so this is computed once.
+4. **Scan** `scan`: walk the list in order, apply the effect of the first trigger that fires to `work`, and go back to the top of the list. Stop when nothing fires, and stop at once when `flag ending` is set. A story trigger `τᵢ` fires when it has not fired this step, `start_true[i]` is false and `holds(τᵢ.when, work, h*)` is true. An engine trigger fires when its condition is true in `work`.
+5. `delta = diff(S, work)`. `mods` are the atoms of 3.2.
 
-훑기는 많아야 `m + 3 + w + q`번(원고 방아쇠 수, 엔진 셋, 위협·갈림·마감 수, 부탁 수) 뒤에 끝나고 결정적입니다. `Δ₀` 뒤의 효과는 시계·박자·상처를 올리지 않고, 도착은 위협을 물리고, 약속 결말은 `owes`를 지우기 때문입니다. 코드는 그 값을 넘으면 예외를 내며, 이는 퍼징(story.md V6)이 잡아야 할 버그입니다. 끝에서 엔진 방아쇠의 조건은 모두 거짓이므로 모든 단계는 시계가 다 차지 않은 채 시작합니다.
+The scan ends after at most `m + 3 + w + q` firings (story triggers, three engine ones, threats, forks and deadlines, favors) and is deterministic. That is because effects after `Δ₀` raise no clock, beats or wounds, arrivals retire their threats, and settling a promise removes its `owes`. The code raises an exception past that bound; it is a bug that fuzzing (story.md V6) should catch. At the end every engine trigger condition is false, so every step starts with no clock full.
 
-`Step.result`는 `success`, `fail`(굴림), `none`(굴림 없이 이룸), `blocked`(숨은 막힘이 드러남) 중 하나이고 사건에 저장합니다. `risk`는 `a`에서 다시 계산되므로 저장하지 않습니다.
+`Step.result` is one of `success`, `fail` (rolled), `none` (done without a roll) or `blocked` (a hidden block was revealed), and it is stored in the event. `risk` is recomputed from `a`, so it is not stored.
 
-## 9. 추천 버튼
+## 9. Recommended buttons
 
-`recommend(U, O) → list[Action]`, 많아야 셋. 차례로 하나씩 고릅니다.
+`recommend(U, O) → list[Action]`, at most three. It picks them one at a time, in this order.
 
-- **태그**: 플레이어나 `here`의 `edge` 태그에 기대는 `try`가 있으면 그것. 대상은 활성 장애물 중 원고 차례로 처음 것, 방식은 해법이 있으면 해법의 방식, 없으면 플레이어의 가장 높은 방식
-- **대화**: 눈앞 인물의 아직 믿지 않는 화제 중 원고 차례로 처음 것
-- **나아감**: 활성 갈림이 있으면 그 첫 선택지의 `choose`. 아니면 보임에서 `when`이 참인 해법 중 처음 것, 없으면 장 목표의 조건에 나오는 장소로 가는 `go`
+- **Tag**: a `try` that relies on an `edge` tag on the player or `here`, if there is one. The target is the first active obstacle in story order; the approach is the solution's approach if there is a solution, otherwise the player's highest approach
+- **Talk**: the first topic, in story order, of the character present that the player does not yet believe
+- **Forward**: if a fork is active, `choose` its first option. Otherwise the first solution whose `when` is true in the view, or failing that, a `go` to a place named in the chapter goal's condition
 
-버튼의 판단 인자는 버튼을 정의하는 `rely`(해법의 `rely`, 태그)를 빼고 모두 `ν₀`입니다. 기댈 것은 굴림 카드에서 누구나 고르므로(engine.md 4.2) 버튼과 문장의 차이는 방식, 대상, 태도를 자유롭게 고를 수 있는지에 있습니다.
+Every judgment argument on a button is `ν₀`, except the `rely` that defines the button (the solution's `rely`, or the tag). Anyone can pick what to rely on in the roll card (engine.md 4.2), so what sets a typed sentence apart from a button is the free choice of approach, target and tone.
 
-## 10. 성질과 검사
+## 10. Properties and checks
 
-| 성질 | 내용과 이유 | 지키는 곳 | 검사 |
+| Property | What and why | Enforced by | Check |
 |---|---|---|---|
-| 허용 검사 | 상태에 적용하기 전에 `a ∈ K(Vₜ)`. 버튼, 카드, API 포함 | 서비스가 단계마다 `admits` 뒤에 `resolve`(engine.md 7절) | 후보 밖 id, 낡은 카드의 id → 거절 |
-| 진행성 | `try(player, ·)`는 결말 전에 늘 후보 | `candidates` | 퍼징의 모든 단계(결말 전)에서 `space`가 비지 않음 |
-| 중립값 | `ν₀`는 도움, 위험 증가, `spent`를 만들지 않고 `try(player)`의 `Δ = ∅` | 1절, 7절 | 판단 인자를 모두 `ν₀`로 둔 행동의 결과 |
-| 이득 한정 | 도움·방해는 `F`나 `B`의 원자에 기대고 각각 0 또는 1. `try`의 성공이 바꾸는 것은 `fill`과 `mark`뿐이고 물건·명제·길은 원고 효과와 `take`·`give`·`look`·`talk`로만 움직임 | `modifiers`, 7절 | 태그를 여럿 건 대상 → 방해 1 |
-| 위험의 독립 | `risk`는 `(U, a)`만 읽음 | `risk`의 서명 | 숨은 원자만 다른 두 상태 → 같은 위험 |
-| 미리보기 = 실행 | 3.4 | `preview`, `modifiers` | 퍼징에서 굴린 단계마다 `preview`의 `z`, `mods`, `risk` = `Step`의 값, `result = band(total, dc)`; `chance(z, dc)`가 센 2d6 분포와 같음(위험마다 경계 단위 테스트) |
-| 인자의 종류 | `take`, `give`, `rely=thing:`의 인자는 물건. 시계는 인자가 아님 | `candidates` | 시계를 건네거나 기대는 id → 거절 |
-| 방아쇠의 끝 | 8절의 상한 | `scan` | 퍼징에서 예외 없음 |
-| 굴림의 전진 | 굴린 단계는 보이는 것을 바꾸고 `fail`은 시계를 바꿈(7절) | `schemas.py` | 퍼징에서 굴린 단계마다 플레이어의 보이는 원자가 바뀜 |
-| 시간의 전진 | `try(player)`를 뺀 단계 `B`번 안에 장면이 끝나고, 칸 수 `n`인 활성 위협은 `fill`을 내리는 효과가 없는 한 그런 단계 `n·B`번 안에 도착하거나 물러남 | 4절 | 퍼징 |
-| 결말의 보장 | 어느 구성에서든 `cut(pass)`만으로 많아야 `1 + Σₖ nₖ`(남은 장들의 마감 칸 수) 단계 안에 결말에 닿음. 주사위를 쓰지 않음 | story.md의 구조(장마다 마감, 마지막 장은 결말) | 시작 시 검증은 구조만 봄 |
-| 원고 성질 | 시계와 방아쇠의 문법, 잠재의 격리, 증인 | story.md 4절 | 시작 시 검증 |
+| Admission check | `a ∈ K(Vₜ)` before it touches the state. Includes buttons, cards and the API | the service runs `admits` then `resolve` on every step (engine.md section 7) | ids outside the candidates, ids from stale cards → rejected |
+| Progress | `try(player, ·)` is always a candidate before the ending | `candidates` | `space` is non-empty at every fuzzed step (before the ending) |
+| Neutral value | `ν₀` creates no help, added risk or `spent`, and `try(player)` has `Δ = ∅` | sections 1 and 7 | results of actions with every judgment argument at `ν₀` |
+| Bounded advantage | help and hinder rest on atoms of `F` or `B` and are each 0 or 1. A `try` success changes only `fill` and `mark`; things, propositions and paths move only through story effects and `take`, `give`, `look` and `talk` | `modifiers`, section 7 | a target with several tags → hinder 1 |
+| Risk independence | `risk` reads only `(U, a)` | the signature of `risk` | two states that differ only in hidden atoms → same risk |
+| Preview = execution | 3.4 | `preview`, `modifiers` | at every rolled step under fuzzing, `preview`'s `z`, `mods`, `risk` = the `Step`'s, and `result = band(total, dc)`; `chance(z, dc)` matches the enumerated 2d6 distribution (boundary unit tests per risk) |
+| Argument kinds | the arguments of `take`, `give` and `rely=thing:` are things. Clocks are never arguments | `candidates` | ids that give or rely on a clock → rejected |
+| Trigger termination | the bound in section 8 | `scan` | no exception under fuzzing |
+| Rolls move forward | a rolled step changes something visible, and `fail` changes the clock (section 7) | `schemas.py` | at every rolled step under fuzzing, the player's visible atoms change |
+| Time moves forward | a scene ends within `B` steps other than `try(player)`, and an active threat with `n` boxes arrives or retires within `n·B` such steps unless an effect lowers its `fill` | section 4 | fuzzing |
+| Guaranteed ending | in any configuration, `cut(pass)` alone reaches an ending within `1 + Σₖ nₖ` steps (the box counts of the remaining chapters' deadlines). No dice involved | the structure of story.md (a deadline in every chapter, and the last one leads to an ending) | startup validation checks only the structure |
+| Story properties | the grammar of clocks and triggers, isolation of latents, witnesses | story.md section 4 | startup validation |

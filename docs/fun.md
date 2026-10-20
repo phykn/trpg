@@ -1,39 +1,39 @@
-# 재미
+# Fun
 
-재미는 증명할 수 없습니다. 이 문서는 재미를 요소로 나누고, 각 요소의 전제 가운데 규칙이 보장하는 것을 가르며, 그 전제가 실제로 재미가 되는지는 기록 위의 측정과 가설로 다룹니다. 측정은 `R`, `K`, 프롬프트에 들어가지 않습니다.
+Fun cannot be proven. This document breaks fun into elements, separates out which of each element's premises the rules guarantee, and handles whether those premises actually turn into fun through measurements on the logs and hypotheses. Measurements never feed into `R`, `K` or prompts.
 
-## 1. 요소
+## 1. Elements
 
-| 요소 | 뜻 | 기대는 장치 |
+| Element | Meaning | Mechanics it relies on |
 |---|---|---|
-| **주체성** | 플레이어가 쓴 문장이 그 뜻대로 행동이 되고, 그 행동이 세계를 바꾼다 | 해석, 즉흥, 여러 해법, 기댈 것 고르기 |
-| **긴장** | 결과가 불확실하고 걸린 것이 보인다 | 2d6, 위험, 위험 시계, 위협, 마감, 굴림 카드 |
-| **결과** | 실패와 선택이 상황을 바꾸고 그 변화가 뒤에 다시 쓰인다 | 대가, 복잡화, 갈림, 흉터, 이력 패턴 |
-| **관계** | 인물이 플레이어가 한 일에 따라 다르게 대한다 | 신뢰와 두려움, 부탁, 약속, 유대 |
-| **성장** | 주인공과 플레이어가 장마다 나아진다 | 성장, 기댄 것, 선언 |
-| **리듬** | 긴장과 해소가 번갈아 오고 이야기가 늘어지지 않고 끝난다 | 박자와 장면, 마감, 휴식 |
+| **Agency** | The player's sentence becomes an action as meant, and that action changes the world | Interpretation, improvisation, multiple solutions, choosing what to rely on |
+| **Tension** | Outcomes are uncertain and the stakes are visible | 2d6, risk, risk clocks, threats, deadlines, roll cards |
+| **Consequence** | Failures and choices change the situation, and those changes come back into play later | Costs, complications, forks, scars, history patterns |
+| **Relationships** | People treat the player differently depending on what the player has done | Trust and fear, favors, promises, bonds |
+| **Growth** | The protagonist and the player get better with each chapter | Growth, what was relied on, declarations |
+| **Rhythm** | Tension and release alternate, and the story ends without dragging | Beats and scenes, deadlines, rest |
 
-## 2. 규칙이 보장하는 전제
+## 2. Premises the rules guarantee
 
-아래는 성질로 성립하므로 플레이에서 다시 재지 않습니다. 재는 것은 이것이 재미로 느껴지는가입니다.
+These hold as properties, so play does not measure them again. What play measures is whether they feel like fun.
 
-| 요소 | 전제 | 근거 |
+| Element | Premise | Basis |
 |---|---|---|
-| 주체성 | 실행되는 것은 늘 후보이고, 모델이 확신하지 못하면 플레이어가 고르거나 아무것도 바뀌지 않음 | engine.md 모델 교체, 불확실성의 보수성 |
-| 주체성 | 어떤 문장도 작은 이득 이상을 얻지 못하므로 말솜씨가 아니라 상황 판단이 결과를 가름 | rule.md 이득 한정, engine.md 오독의 한계 |
-| 긴장 | 굴림 카드의 위험, 목표 수, 보정은 실행 때와 같고, 숨은 것이 위험을 바꾸지 않음 | rule.md 위험의 독립, 미리보기 = 실행 |
-| 결과 | 굴림은 늘 보이는 무언가를 바꾸고, 실패는 위험 시계를 바꿈 | rule.md 굴림의 전진 |
-| 관계 | 부탁의 약속은 늦어도 다음 장 전환에서 지킴이나 어김으로 끝남 | rule.md 5.2 |
-| 리듬 | 판정이 있는 행동마다 시간이 흐르고, 원고가 `fill`을 내리지 않은 위협은 `n · B` 단계 안에 도착하거나 물러남 | rule.md 시간의 전진 |
-| 리듬 | 어디에 와 있든 결말에 닿을 수 있음 | rule.md 결말의 보장 |
+| Agency | What runs is always a candidate, and when the model is unsure, the player picks or nothing changes | engine.md model substitution, conservatism under uncertainty |
+| Agency | No sentence gains more than a small advantage, so judging the situation, not eloquence, decides the outcome | rule.md bounded advantage, engine.md bounded misreading |
+| Tension | A roll card's risk, target number and modifiers match execution, and hidden things never change the risk | rule.md risk independence, preview = execution |
+| Consequence | A roll always changes something visible, and a failure changes a risk clock | rule.md rolls move forward |
+| Relationships | A favor's promise ends as kept or broken by the next chapter change at the latest | rule.md 5.2 |
+| Rhythm | Time passes with every action that has a check, and a threat whose `fill` the story never lowers arrives or retreats within `n · B` steps | rule.md time moves forward |
+| Rhythm | The ending is reachable from wherever the player is | rule.md guaranteed ending |
 
-## 3. 굴림과 시간의 계산
+## 3. Roll and time math
 
-### 3.1 결과의 분포
+### 3.1 Outcome distribution
 
-보정 합 `z = stat(player, 방식) + 도움 − 방해`는 −1에서 4까지입니다(방식의 한도 `0…3`). 성공은 `2d6 + z ≥ DC`이고 `DC`는 위험마다 7, 8, 9입니다(rule.md 3.2). 표는 성공의 확률 `chance(z, DC)`이고 나머지가 실패입니다.
+The modifier sum `z = stat(player, approach) + help − hinder` ranges from −1 to 4 (approaches are limited to `0…3`). Success is `2d6 + z ≥ DC`, where `DC` is 7, 8 or 9 depending on risk (rule.md 3.2). The table gives the success chance `chance(z, DC)`; the rest is failure.
 
-| `z` | 낮음 (7) | 보통 (8) | 높음 (9) |
+| `z` | Low (7) | Normal (8) | High (9) |
 |---|---|---|---|
 | −1 | 41.7% | 27.8% | 16.7% |
 | 0 | 58.3% | 41.7% | 27.8% |
@@ -42,68 +42,68 @@
 | 3 | 91.7% | 83.3% | 72.2% |
 | 4 | 97.2% | 91.7% | 83.3% |
 
-- 보통 위험에서 `z = 1`이면 58% 성공하고, 기댄 것 하나(+1)로 72%가 됩니다. 실패는 늘 엔진이 바로 매기는 대가(시계, 보통·높음은 복잡화)를 낳고, 이것이 결과와 긴장의 주된 원천입니다.
-- 잘하는 방식(`z = 3, 4`)도 높음에서는 17~28%가 실패합니다. 그래서 성장해도 긴장이 남습니다.
-- 기댄 것 하나(+1)는 성공을 6~17%포인트(보통 위험의 `0 ≤ z ≤ 2`에서 14~17) 올립니다. 그래서 상황을 읽고 기댈 것을 찾는 데 보상이 있습니다.
+- At normal risk with `z = 1`, success is 58%, and relying on one thing (+1) raises it to 72%. A failure always brings a cost the engine applies at once (a clock, plus a complication at normal and high risk), and this is the main source of consequence and tension.
+- Even a strong approach (`z = 3, 4`) fails 17–28% of the time at high risk, so tension remains after growth.
+- Relying on one thing (+1) raises success by 6–17 percentage points (14–17 at normal risk with `0 ≤ z ≤ 2`), so reading the situation and finding something to rely on pays off.
 
-### 3.2 위험 시계의 리듬
+### 3.2 Risk clock rhythm
 
-굴림 한 번이 위험 시계에 더하는 기댓값은 `ρ = c · P(실패)`이고, `c`는 위험이 낮음·보통이면 1, 높음이면 2입니다(rule.md 3.3). 칸 수 `n`인 시계는 평균 약 `n / ρ`번 굴리면 찹니다(높음은 넘칠 수 있어 하한, 선언의 +1은 뺌).
+The expected amount one roll adds to a risk clock is `ρ = c · P(fail)`, where `c` is 1 at low or normal risk and 2 at high risk (rule.md 3.3). A clock with `n` boxes fills after about `n / ρ` rolls on average (a lower bound at high risk, which can overflow; the +1 from declarations is left out).
 
-| `z` | `ρ` (낮음) | `ρ` (보통) | `ρ` (높음) | `n = 4`일 때 굴림 수 (보통) |
+| `z` | `ρ` (low) | `ρ` (normal) | `ρ` (high) | Rolls at `n = 4` (normal) |
 |---|---|---|---|---|
-| 0 | 0.42 | 0.58 | 1.44 | 약 6.9 |
-| 1 | 0.28 | 0.42 | 1.17 | 약 9.6 |
-| 2 | 0.17 | 0.28 | 0.83 | 약 14.4 |
+| 0 | 0.42 | 0.58 | 1.44 | ~6.9 |
+| 1 | 0.28 | 0.42 | 1.17 | ~9.6 |
+| 2 | 0.17 | 0.28 | 0.83 | ~14.4 |
 
-원고는 이 표로 `n`을 정합니다. 장마다 위기를 한두 번 겪게 하려면 `n · (1~2) ≈ ρ ×` 그 장에서 기대하는 굴림 수입니다.
+The story sets `n` from this table. For one or two crises per chapter, `n · (1~2) ≈ ρ ×` the number of rolls expected in that chapter.
 
-### 3.3 장의 길이
+### 3.3 Chapter length
 
-박자가 오르는 단계 `B`번 안에 장면이 끝나고, 칸 수 `n_마감`인 마감은 장면 `n_마감`개 안에 도착합니다. 그래서 한 장은 박자가 오르는 단계 `n_마감 · B`번을 넘지 않습니다. 마감의 칸 수는 6 이하이므로 장의 최대 길이는 원고가 `B`로 정합니다. 장의 길이가 `l`단계 이상일 수 있으려면 `B ≥ l / n_마감`이어야 합니다(F10의 40단계는 `n_마감 = 6`일 때 `B ≥ 7`).
+A scene ends within `B` beat-raising steps, and a deadline with `n_deadline` boxes arrives within `n_deadline` scenes. So a chapter never runs longer than `n_deadline · B` beat-raising steps. A deadline has at most 6 boxes, so the story sets the maximum chapter length through `B`. For a chapter to be able to last `l` steps or more, `B ≥ l / n_deadline` must hold (F10's 40 steps need `B ≥ 7` when `n_deadline = 6`).
 
-## 4. 측정
+## 4. Measurement
 
-모든 지표는 저장된 기록 `L`(사건의 `a`, `r`, `Δ`, `mods`)과 표현층의 턴 기록에서 오프라인으로 계산하고, 설문만 플레이어에게 묻습니다. 설문의 답은 `S`, `L`, `P` 밖에 따로 둡니다. 마지막 요청 뒤 7일 동안 요청하지 않은 게임을 **그만둔 게임**으로 봅니다. 목표 범위는 처음 가설이며 5절의 절차로 고칩니다.
+Every metric is computed offline from the saved log `L` (each event's `a`, `r`, `Δ`, `mods`) and the presentation layer's turn records; only the survey asks the player. Survey answers are kept separately, outside `S`, `L` and `P`. A game with no requests for 7 days after its last request counts as **abandoned**. The target ranges are first hypotheses, revised by the procedure in section 5.
 
-| | 지표 | 정의 | 처음 가설 | 어긋나면 고칠 곳 |
+| | Metric | Definition | First hypothesis | Where to fix if it misses |
 |---|---|---|---|---|
-| F1 | 해석 수용 | 자유 문장 중 되묻기, 거절, `try(player)`로 끝나지 않은 비율 | 85% 이상 | 해석 규칙, 원고의 이름과 동의어 |
-| F2 | 자유 문장 | 버튼이 아니라 문장으로 고른 단계의 비율 | 50% 이상 | 추천 버튼이 너무 좋음, 문장이 자주 거절됨 |
-| F3 | 해법의 다양성 | 장애물마다 여러 플레이에서 쓰인 서로 다른 해법과 방식의 수 | 2 이상 | 원고의 해법과 어울림 |
-| F4 | 굴림의 결과 | 굴림 중 실패의 비율 | 25~50% | 방식 값, 원고의 기본 위험 |
-| F5 | 위기의 간격 | `τ_위험` 사이의 굴림 수 | 4~8 | 위험 시계의 칸 수(3.2) |
-| F6 | 위협 반응 | 등장한 위협 중 도착 전에 플레이어가 `fill`을 내리거나 물린 비율 | 30~70% | 위협의 칸 수, 해법의 수 |
-| F7 | 결과의 재사용 | 흉터, 선언, 갈림의 선택 중 그 뒤에 평가된 조건(결말, 복잡화, 화제)이 읽는 이력 패턴(원고에서 정적으로 뽑음)에 든 비율 | 50% 이상 | 원고의 패턴과 결말 조건 |
-| F8 | 관계의 변화 | 플레이마다 `regards`가 시작과 달라진 인물 수, 부탁의 약속이 지킴으로 끝난 비율 | 2명 이상, 40~80% | 인물의 욕망과 부탁 |
-| F9 | 결말의 분산 | 같은 이야기 여러 플레이의 결말 분포의 엔트로피를 최대값으로 나눈 값 | 0.5 이상 | 갈림과 결말 조건 |
-| F10 | 장의 길이 | 장마다 박자가 오른 단계 수, 마감으로 끝난 장의 비율 | 20~40단계, 50% 이하 | `B`, 마감의 칸 수 |
-| F11 | 이탈 | 결말 전에 그만둔 게임의 비율과 그때의 장 | 장 1에서 20% 이하 | 첫 장의 길이와 첫 굴림까지의 단계 |
-| F12 | 설문 | 결말 뒤 5점 척도: "내 선택이 이야기를 바꿨다", "다시 하고 싶다", "인물이 나를 기억했다" | 평균 4 이상 | 가장 낮은 문항의 요소(1절) |
-| F13 | 기대기 | 기댈 것이 있었던 굴림 중 기댄 비율, 그리고 결정적 칩이 기댄 것이었던 비율 | 30~70%, 기록함 | 낮으면 기댈 것이 보이지 않거나 아까움, 높으면 기댈 것이 공짜임 |
-| F14 | 카드 이탈 | 굴림 카드를 닫고 다른 명령을 낸 비율 | 20% 이하 | 카드가 문장의 뜻과 다른 것을 보임 → 해석(engine.md 3절) |
+| F1 | Interpretation acceptance (해석 수용) | Share of free sentences that do not end in a clarification, a refusal or `try(player)` | 85% or more | Interpretation rules, the story's names and synonyms |
+| F2 | Free sentences (자유 문장) | Share of steps chosen by a sentence rather than a button | 50% or more | Suggested buttons are too good, or sentences are refused too often |
+| F3 | Solution variety (해법의 다양성) | Number of distinct solutions and approaches used on each obstacle across plays | 2 or more | The story's solutions and fits |
+| F4 | Roll outcomes (굴림의 결과) | Share of rolls that fail | 25–50% | Approach values, the story's base risk |
+| F5 | Crisis spacing (위기의 간격) | Rolls between `τ_risk` (risk clock crises) | 4–8 | Risk clock boxes (3.2) |
+| F6 | Threat response (위협 반응) | Share of threats that appeared whose `fill` the player lowered, or that the player drove back, before they arrived | 30–70% | Threat boxes, number of solutions |
+| F7 | Consequence reuse (결과의 재사용) | Share of scars, declarations and fork choices that fall in a history pattern (extracted statically from the story) read by a condition evaluated later (ending, complication, topic) | 50% or more | The story's patterns and ending conditions |
+| F8 | Relationship change (관계의 변화) | Per play, the number of people whose `regards` differ from the start, and the share of favor promises that end kept | 2 or more people, 40–80% | People's desires and favors |
+| F9 | Ending spread (결말의 분산) | Entropy of the ending distribution over several plays of the same story, divided by its maximum | 0.5 or more | Forks and ending conditions |
+| F10 | Chapter length (장의 길이) | Beat-raising steps per chapter, and the share of chapters ended by a deadline | 20–40 steps, 50% or less | `B`, deadline boxes |
+| F11 | Dropout (이탈) | Share of games abandoned before an ending, and the chapter they were in | 20% or less in chapter 1 | Length of the first chapter and the steps before the first roll |
+| F12 | Survey | 5-point scale after the ending: "내 선택이 이야기를 바꿨다" (my choices changed the story), "다시 하고 싶다" (I want to play again), "인물이 나를 기억했다" (the people remembered me) | Mean of 4 or more | The element (section 1) of the lowest-rated item |
+| F13 | Relying (기대기) | Among rolls with something to rely on, the share where the player relied on it, and the share where the decisive chip was the relied-on thing | 30–70%, recorded | Low: things to rely on are not visible or feel too precious to spend; high: relying is free |
+| F14 | Card abandonment (카드 이탈) | Share of roll cards closed in favor of a different command | 20% or less | The card shows something other than what the sentence meant → interpretation (engine.md section 3) |
 
-| 요소 | 지표 |
+| Element | Metrics |
 |---|---|
-| 주체성 | F1, F2, F3, F12, F13 |
-| 긴장 | F4, F5, F6, F14 |
-| 결과 | F7, F9 |
-| 관계 | F8, F12 |
-| 성장 | F4(장별 추이), F12 |
-| 리듬 | F5, F10, F11 |
+| Agency | F1, F2, F3, F12, F13 |
+| Tension | F4, F5, F6, F14 |
+| Consequence | F7, F9 |
+| Relationships | F8, F12 |
+| Growth | F4 (trend by chapter), F12 |
+| Rhythm | F5, F10, F11 |
 
-## 5. 가설과 판단
+## 5. Hypotheses and decisions
 
-- **H1**: 실패와 엔진이 바로 매기는 그 대가(F4)가 결과와 긴장의 주된 원천이다. F4가 범위 밖이면 F7, F12의 결과 문항도 떨어진다.
-- **H2**: 문장이 방식, 대상, 태도, 주장을 자유롭게 정할 수 있고(engine.md 4.2) 잘 받아들여지면(F1) 플레이어가 문장을 쓴다(F2), 그리고 문장을 쓰는 플레이어가 주체성을 더 높게 답한다(F12).
-- **H3**: 마감과 위협이 다가오는 것이 보이면 플레이어가 반응하고(F6), 마감으로 끝나는 장(F10)이 늘면 이탈(F11)이 는다.
-- **H4**: 약속과 관계의 변화(F8)가 "인물이 나를 기억했다"(F12)를 가장 잘 설명한다.
+- **H1**: Failure and the cost the engine applies at once (F4) are the main source of consequence and tension. If F4 is out of range, F7 and the consequence item of F12 drop too.
+- **H2**: If a sentence can freely set the approach, target, attitude and claim (engine.md 4.2) and is accepted reliably (F1), players write sentences (F2), and players who write sentences rate agency higher (F12).
+- **H3**: If players can see deadlines and threats approaching, they respond (F6), and more chapters ending by deadline (F10) means more dropout (F11).
+- **H4**: Promises and relationship change (F8) best explain "인물이 나를 기억했다" (the people remembered me, F12).
 
-판단의 절차:
+Decision procedure:
 
-1. 지표는 원고와 규칙을 고치기 전에 새로 모은 플레이로 잽니다. 고치는 데 쓴 플레이로 고친 결과를 재지 않습니다.
-2. 한 번에 한 곳만 고치고, 고치기 전과 뒤를 같은 지표로 비교해 둘 다 보고합니다.
-3. 한 지표를 맞추려다 다른 요소의 지표가 범위 밖으로 나가면 고치지 않습니다.
-4. 가설이 지표로 거듭 반박되면 목표 범위가 아니라 가설을 고칩니다.
+1. Measure metrics on newly collected plays before changing the story or the rules. Never measure a change on the plays used to make it.
+2. Change one thing at a time, compare before and after on the same metrics, and report both.
+3. If fitting one metric pushes another element's metric out of range, do not make the change.
+4. If the metrics repeatedly refute a hypothesis, revise the hypothesis, not the target range.
 
-통과한 테스트와 맞춘 지표는 재미의 전제를 보여 줄 뿐이고, 재미 자체는 F12와 실제 플레이의 기록으로만 판단합니다.
+Passing tests and on-target metrics only show the premises of fun. Fun itself is judged only by F12 and the logs of real play.

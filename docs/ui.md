@@ -1,295 +1,295 @@
-# 화면
+# Screens
 
-플레이어가 한 턴을 어떻게 겪는지, 특히 **주사위를 굴리는 재미**를 웹 화면으로 만듭니다. 서버와는 [api.md](api.md)로만 이야기하고 규칙을 되풀이하지 않습니다. 고정 높이의 모바일 틀, 그림 없음, 대화 영역 밖의 스크롤 없음, 서술 중 명령 잠금은 바뀌지 않는 조건입니다.
+This doc turns how a player lives through one turn, above all **the fun of rolling dice**, into a web UI. The client talks to the server only through [api.md](api.md) and never repeats the rules. Fixed constraints: a fixed-height mobile frame, no illustrations, no scrolling outside the chat log, and commands locked during narration.
 
 ```
 client/
-  app/index.tsx              시작점, 저장된 game_id가 있으면 다시 열기
-  screens/Title.tsx          타이틀: 이어하기, 이야기 선반
-  screens/Start.tsx          주인공 만들기
-  screens/Play.tsx           플레이 화면의 배치
-  logic/useGame.ts           서버 상태, 명령의 생애, 복구 (3절)
-  logic/reveal.ts            드러남의 시간표 (순수 함수)
-  logic/useLog.ts            대화 내역 (이 기기에 판마다 저장)
-  services/api.ts            HTTP와 NDJSON의 유일한 경계
-  components/ui/             모든 화면이 함께 쓰는 부품
-    Icon.tsx(선 아이콘)  Button.tsx(Button, IconButton)  Sheet.tsx(아래 판과 Choice)
-    motion.ts(들어옴 움직임)  useDialog.ts(Escape, 포커스 가두기와 돌려주기)
+  app/index.tsx              entry; reopens the saved game_id if there is one
+  screens/Title.tsx          title: resume, story shelf
+  screens/Start.tsx          hero creation
+  screens/Play.tsx           play screen layout
+  logic/useGame.ts           server state, command lifecycle, recovery (section 3)
+  logic/reveal.ts            reveal timeline (pure function)
+  logic/useLog.ts            chat history (stored per game on this device)
+  services/api.ts            the only HTTP and NDJSON boundary
+  components/ui/             parts shared by every screen
+    Icon.tsx(line icons)  Button.tsx(Button, IconButton)  Sheet.tsx(bottom sheet and Choice)
+    motion.ts(enter motion)  useDialog.ts(Escape, focus trap and return)
   components/game/
-    Row.tsx(아이콘 줄, Item, Pill)  Header.tsx  Clocks.tsx  Self.tsx  Scene.tsx  Boxes.tsx
-    Narration.tsx(대화)  CommandBar.tsx
+    Row.tsx(icon row, Item, Pill)  Header.tsx  Clocks.tsx  Self.tsx  Scene.tsx  Boxes.tsx
+    Narration.tsx(chat)  CommandBar.tsx
     RollCard.tsx  Dice.tsx
     ClarifyCard.tsx  ConfirmCard.tsx  GrowthCard.tsx  Menu.tsx  Ending.tsx
-  design/                    색, 간격, 글꼴, 움직임 시간의 토큰
-  locale/ko.ts               화면이 만드는 문장
+  design/                    tokens for color, spacing, type and motion timing
+  locale/ko.ts               sentences the client composes
 ```
 
-## 1. 원칙
+## 1. Principles
 
-| 원칙 | 뜻 |
+| Principle | Meaning |
 |---|---|
-| 누르지 않고 다 보인다 | 지금 판단에 필요한 것은 모두 한 화면에 늘 보임. 쪽 넘김, 탭, 펼치기, 누르면 보이는 이름, 가로 넘김, 겹쳐 여는 판이 없음. 올려 보는 것은 대화 영역의 지난 내역뿐 |
-| 화면은 규칙을 모른다 | 목표 수, 합, 결과, 결정적 보정, 대가, 후보는 서버가 줌. 화면은 받은 값을 그리고 움직임만 계산함 |
-| 서버의 응답이 상태다 | 응답의 `view`를 그대로 받음. 낙관적 움직임은 주사위 구름(4.4) 하나뿐이고 값을 정하지 않음 |
-| 그림이 없다 | 주사위, 칸, 고리는 도형과 글자로 그리는 UI 요소 |
-| 서버의 문장은 그대로 | 서버가 만든 한국어를 고치거나 자르지 않음. 화면의 문장은 `locale/ko.ts` |
-| 글보다 아이콘과 넛지 | 설명 문구와 이름표 대신 아이콘, 색, 칸, 점으로 읽힘. 할 수 있는 일은 문장으로 가르치지 않고 누르면 문장이 시작되는 이름으로 보임 |
-| 한 벌의 부품 | 버튼, 아이콘 버튼, 아래 판, 줄은 `components/ui`와 `Row.tsx`의 것 하나씩이고 모양(둥근 정도, 높이, 눌림)이 같음 |
+| Everything visible without a tap | Everything needed for the current decision is always on one screen. No pages, tabs, expanders, tap-to-reveal names, horizontal scrolling or stacked panels. The only thing you scroll up to see is past history in the chat log |
+| The UI does not know the rules | Target number, total, result, decisive modifiers, costs and candidates come from the server. The UI draws the values it receives and computes only motion |
+| The server's response is the state | The response's `view` is adopted as is. The only optimistic motion is the dice tumble (4.4), and it decides no value |
+| No illustrations | Dice, boxes and rings are UI elements drawn with shapes and text |
+| Server sentences verbatim | Korean composed by the server is never edited or truncated. Client sentences live in `locale/ko.ts` |
+| Icons and nudges over text | Things read through icons, color, boxes and dots instead of explanatory copy and labels. What you can do is not taught in sentences; it shows as names that start a sentence when tapped |
+| One set of parts | Buttons, icon buttons, bottom sheets and rows each come from one component in `components/ui` and `Row.tsx`, with the same shape (corner radius, height, pressed state) |
 
-누르는 것은 결정(명령, 기댈 것, 굴림)뿐입니다. 정보를 보려고 누르는 일은 없고, 연출을 건너뛰는 누름(4.5)은 있지만 누르지 않아도 같은 끝 상태에 닿습니다.
+The only taps are decisions (commands, helps, rolls). Nothing is tapped just to see information. There is a tap that skips the animation (4.5), but without it you reach the same end state.
 
-주사위의 재미는 둘입니다. **굴리는 느낌**: 결과가 정해지는 순간을 플레이어가 직접 일으키고 그 순간에 긴장이 모입니다. **내 결정이 반영된다는 느낌**: 내가 쓴 문장, 고른 방식, 아껴 둔 특성이 화면의 숫자와 결과를 바꾸었다는 것이 보입니다. 주사위 값은 서버가 `roll(seed, t)`로 정하고, 연출은 이 값이 미리 정해졌는지 숨기지도 증명하지도 않습니다. 공정함은 정해진 값이 아니라 규칙이 보인 대로 적용된다는 것(미리보기 = 실행, rule.md 3.4)에서 옵니다.
+The fun of dice is twofold. **The feel of rolling**: the player personally triggers the moment the outcome is decided, and tension gathers in that moment. **The feel that my decisions count**: you can see that the sentence you wrote, the approach you chose and the trait you saved changed the numbers and the result on screen. The server sets dice values with `roll(seed, t)`, and the animation neither hides nor proves that the value was fixed in advance. Fairness comes not from the fixed value but from the rules being applied exactly as shown (preview = execution, rule.md 3.4).
 
-## 2. 배치
+## 2. Layout
 
-### 2.1 플레이 화면
+### 2.1 Play screen
 
-높이는 보이는 창의 높이로 고정하고 영역은 위에서 아래로 쌓습니다. 대화 영역만 남은 높이를 받고 나머지는 내용의 높이입니다.
+Height is fixed to the visible window height, and regions stack from top to bottom. Only the chat log takes the remaining height; everything else is as tall as its content.
 
 ```
 ┌──────────────────────────────┐
-│ 1장 등대에 오르다         ●● 👤 ≡│ 머리줄: 장 번호(금색)와 제목, 체력 점과 주인공
-│ ⚑ 해가 지기 전에 등불실에 오르세요.  │ 목표: `chapter.aim`
-│ ⚠ 몰려오는 폭풍 ■■□□ 해가 진다 ■□□ │ 위험: 위험 시계, 마감, 위협, 갈림
-│ ⌖ 등대 앞 (→ 마을) (→ 부두) (🔒 등불실)│ 장소와 갈 곳(막힌 곳은 자물쇠와 흐림)
-│ ◉ (도해) (기름통) (녹슨 문) ■□     │ 장면: 인물·물건·장애물·장면 태그(없으면 줄 없음)
+│ 1장 등대에 오르다         ●● 👤 ≡│ Header: chapter number (gold) and title, health dots and hero
+│ ⚑ 해가 지기 전에 등불실에 오르세요.  │ Aim: `chapter.aim`
+│ ⚠ 몰려오는 폭풍 ■■□□ 해가 진다 ■□□ │ Danger: risk clocks, deadlines, threats, forks
+│ ⌖ 등대 앞 (→ 마을) (→ 부두) (🔒 등불실)│ Place and exits (blocked ones with a lock, dimmed)
+│ ◉ (도해) (기름통) (녹슨 문) ■□     │ Scene: people, things, obstacles, scene tags (no row if empty)
 │                              │
-│ 전제 / 서술               │ 대화 영역: 남은 높이 전부,
-│               [당신의 문장] │   위에서 아래로 쌓이고 올려서
-│ ⚂⚅ 완력 성공 10/8            │   지난 내역을 봄
+│ premise / narration          │ Chat log: all remaining height,
+│            [your sentence]   │   stacks top to bottom; scroll up
+│ ⚂⚅ 완력 성공 10/8            │   to see past history
 │ · · ·                        │
-│ (녹슨 등대 문을 어떻게 할까요?  ↑) │ 입력줄(장면의 첫 대상으로 묻는 본보기)
+│ (녹슨 등대 문을 어떻게 할까요?  ↑) │ Input bar (example prompt about the scene's first target)
 └──────────────────────────────┘
 ```
 
-- **줄마다 아이콘이 있습니다.** 왼쪽 20px 열의 아이콘이 그 줄의 갈래이고(목표 ⚑, 위험 ⚠, 장소 ⌖, 주변 ◉), 갈래는 서로 겹치지 않습니다. 글 이름표는 화면에 없고 읽기 도구에만 줍니다(`accessibilityLabel`). 비는 줄은 그리지 않습니다. 아이콘 열은 머리줄 아래부터 주인공 판까지 같은 자리이고, 줄은 선 없이 이어집니다.
-- **이름은 문장의 시작입니다.** 갈 곳, 인물, 물건, 장애물은 둥근 알약이고, 누르면 입력줄에 문장 앞부분이 채워지고 입력줄로 포커스가 갑니다: 갈 곳은 "등대 앞으로 간다", 인물은 "도해에게 ", 물건과 장애물은 "녹슨 등대 문을 ". 갈 곳은 그대로 보내면 되고, 나머지는 플레이어가 이어 씁니다. 명령이 열려 있지 않으면 누를 수 없습니다. 막힌 갈 곳을 누르면 그 길을 막는 장애물로 문장이 시작되어("녹슨 등대 문을 ") 무엇을 넘어야 하는지 가리킵니다. 막는 것이 아직 보이지 않으면 누를 수 없습니다. 설명 없이 "이름을 누르면 문장이 된다"를 겪어서 알게 하는 넛지입니다.
-- **칸의 색은 누구 편인지입니다.** 장애물의 칸은 금색(내가 이뤄 가는 것), 위험 줄의 칸과 이름은 모두 빨강(다가오는 나쁜 일, 위험 시계·마감·위협을 가리지 않음)입니다. 칸이 하나뿐인 장애물은 칸을 그리지 않습니다(한 번의 성공으로 열림). 넘긴 장애물은 장면에 남되 ✓와 흐림으로 보이고 누를 수 없습니다. 박자는 화면에 보이지 않습니다. 장면 안의 시간과 장면 사이의 시간이 두 겹으로 보이면 읽히지 않기 때문이고, 박자가 다 차서 장면이 끝나면 위험 줄의 칸이 차는 것으로만 드러납니다. 체력만 점입니다. 막힌 갈 곳은 화살표 대신 자물쇠 아이콘과 흐림으로 보입니다.
-- **입력줄이 문장의 본보기입니다.** 추천 버튼이 없으므로 빈 입력줄은 장면의 첫 대상으로 묻습니다: 다 차지 않은 장애물이 있으면 "녹슨 등대 문을 어떻게 할까요?", 없으면 첫 인물에게 "도해에게 무엇을 할까요?", 그다음 첫 물건, 아무것도 없으면 "무엇을 할까요?".
-- **서술은 대화처럼 쌓입니다.** 첫 줄은 `story.premise`이고, 보낸 문장은 오른쪽 말풍선, 서술은 왼쪽 글로 위에서 아래로 이어집니다. 굴린 단계마다 서술 바로 위에 굴림 줄을 둡니다: 작은 주사위 눈, 방식, 결과 낱말(성공은 금색, 실패는 위험 색), 흐린 합과 작은 고리 안의 목표 수("⚂⚅ 완력 성공 10 ⑧"). 고리는 굴림 카드의 목표 고리와 같은 모양이라 분수로 읽히지 않습니다. 새 항목은 8px 아래에서 떠오르며 나타나고(220ms), 새 글이 붙으면 맨 아래로 따라 내려가고, 올리면 지난 내역을 봅니다. 대화 영역의 위 끝은 잘리지 않고 20px에 걸쳐 바탕색으로 흐려집니다. 기다리는 동안은 글 없이 세 점이 차례로 밝아졌다 흐려집니다. 한국어 줄은 앱 전체에서 낱말 사이에서만 끊습니다(`global.css`의 `word-break: keep-all`).
-- **색 하나는 뜻 하나입니다.** 아래 아홉 뜻은 색상이 서로 겹치지 않아(가장 가까운 둘도 색상환에서 30° 넘게 떨어짐) 모양을 보지 않고 색만으로 갈립니다. 모두 바탕(`canvas.default`) 위에서 명암비 8:1 이상입니다.
+- **Every row has an icon.** The icon in the 20px left column is the row's category (aim ⚑, danger ⚠, place ⌖, around ◉), and categories never overlap. There are no text labels on screen; they go only to screen readers (`accessibilityLabel`). Empty rows are not drawn. The icon column stays in the same place from below the header down to the hero panel, and rows run on without dividers.
+- **Names start sentences.** Exits, people, things and obstacles are round pills. Tapping one fills the start of a sentence into the input bar and moves focus there: an exit gives "등대 앞으로 간다" ("go to the lighthouse front"), a person "도해에게 " ("to Dohae …"), a thing or obstacle "녹슨 등대 문을 " ("the rusty lighthouse door …" as object). An exit can be sent as is; for the rest the player keeps writing. Pills cannot be tapped unless commands are open. Tapping a blocked exit starts the sentence with the obstacle blocking that way ("녹슨 등대 문을 "), pointing at what must be overcome. If the blocker is not yet visible, the exit cannot be tapped. It is a nudge: without explanation, the player learns by doing that "tapping a name makes a sentence".
+- **Box color says whose side it is on.** Obstacle boxes are gold (something I am achieving); boxes and names in the danger row are all red (something bad approaching, whether risk clock, deadline or threat). An obstacle with only one box draws no boxes (one success opens it). An overcome obstacle stays in the scene, shown with ✓ and dimmed, and cannot be tapped. Beats are not shown. Two layers of time, within a scene and between scenes, would not read, so when the beats fill and the scene ends it shows only as danger-row boxes filling. Only health uses dots. A blocked exit shows a lock icon and dimming instead of an arrow.
+- **The input bar is the model sentence.** With no suggestion buttons, the empty input bar asks about the scene's first target: if there is an obstacle not yet full, "녹슨 등대 문을 어떻게 할까요?" ("What will you do with the rusty lighthouse door?"); otherwise the first person, "도해에게 무엇을 할까요?" ("What will you do to Dohae?"); then the first thing; and with nothing at all, "무엇을 할까요?" ("What will you do?").
+- **Narration stacks like a chat.** The first line is `story.premise`; sent sentences are right-hand bubbles and narration is left-hand text, running top to bottom. Each rolled step puts a roll line directly above its narration: small dice pips, the approach, the result word (success in gold, failure in the danger color), a dimmed total and the target number in a small ring ("⚂⚅ 완력 성공 10 ⑧", "force success 10 ⑧"). The ring has the same shape as the roll card's target ring, so it does not read as a fraction. New items float up from 8px below (220ms); when new text arrives the log follows to the bottom, and scrolling up shows past history. The top edge of the chat log is not cut off but fades into the background over 20px. While waiting, three dots light up and dim in turn, with no text. Korean lines break only between words across the whole app (`word-break: keep-all` in `global.css`).
+- **One color, one meaning.** The nine meanings below have hues that do not overlap (even the closest two are more than 30° apart on the color wheel), so they can be told apart by color alone without looking at shape. All have a contrast ratio of at least 8:1 on the background (`canvas.default`).
 
-  | 뜻 | 토큰 | 색 |
+  | Meaning | Token | Color |
   |---|---|---|
-  | 이뤄 가는 것(장애물의 칸, 성공, 좋은 태그, 장 번호) | `gold` | 금 `#e5bd76` |
-  | 다가오는 나쁜 일(위험 줄, 실패, 나쁜 태그, 높은 위험) | `danger` | 빨강 `#f19a8d` |
-  | 체력(♡와 점) | `health` | 초록 `#9fd69a` |
-  | 인물 | `kind.person` | 하늘 `#80c1e8` |
-  | 물건(장면과 소지) | `kind.thing` | 청록 `#86d0c4` |
-  | 장애물 | `kind.obstacle` | 보라 `#d2a9ec` |
-  | 능력치 보정(그리고 주인공 판의 능력치 값) | `chip.stat` | 남보라 `#aaacf2` |
-  | 기댈 것의 보정(그리고 굴림 카드의 라디오) | `chip.help` | 연두 `#bfd884` |
-  | 방해 보정 | `chip.hinder` | 분홍 `#eb9ccd` |
+  | Things being achieved (obstacle boxes, success, good tags, chapter number) | `gold` | gold `#e5bd76` |
+  | Bad things approaching (danger row, failure, bad tags, high risk) | `danger` | red `#f19a8d` |
+  | Health (♡ and dots) | `health` | green `#9fd69a` |
+  | People | `kind.person` | sky `#80c1e8` |
+  | Things (in the scene and carried) | `kind.thing` | teal `#86d0c4` |
+  | Obstacles | `kind.obstacle` | purple `#d2a9ec` |
+  | Stat modifier (and stat values in the hero panel) | `chip.stat` | indigo `#aaacf2` |
+  | Help modifier (and the roll card's radios) | `chip.help` | lime `#bfd884` |
+  | Hinder modifier | `chip.hinder` | pink `#eb9ccd` |
 
-- **종류는 색으로 가릅니다.** 인물, 물건, 장애물은 저마다 `colors.kind`의 색이고 이름만 씁니다(태도는 줄에 적지 않음). 함께 다니는 인물(`with`)은 알약 앞에 사람 아이콘을 둡니다. 좋은 태그는 금색, 나쁜 태그는 위험 색입니다.
-- **늘 보이는 것과 펼치는 것.** 매 턴 바뀌거나 다음 문장에 바로 쓰는 것(목표, 체력, 위험, 장면)은 늘 보입니다. 체력은 위험 시계의 칸과 헷갈리지 않게 칸이 아니라 점으로 그립니다. 주인공 아이콘(♡와 체력 점과 한 버튼)을 누르면 머리줄 아래로 판이 떠서 내려오고(아래 줄을 밀지 않고 덮음), 쓰는 일이 잦은 차례로 이름, 체력(♡ 줄에 점만), 상태(태그, 없으면 줄 없음), 능력(⚡), 특성(☆), 소지, 기록(약속과 믿음)이 아이콘 줄로 있습니다. 판은 `idle`에서만 열리고, Escape나 바깥을 누르면 닫히며, 메뉴를 열면 닫힙니다. 성장할 수 있으면 아이콘에 금색 점이 붙고, 판의 이름 줄 오른쪽에 금색 성장 알약(✲ 1)이 있습니다.
-- **추천 버튼은 없습니다.** 행동은 늘 입력줄에 문장으로 씁니다. 서버의 `view.buttons`는 남지만 화면은 쓰지 않습니다.
+- **Kinds are told apart by color.** People, things and obstacles each have their `colors.kind` color and show only their name (attitudes are not written in the row). A person traveling with you (`with`) gets a person icon before the pill. Good tags are gold, bad tags the danger color.
+- **Always visible versus opened.** What changes every turn or feeds straight into the next sentence (aim, health, danger, scene) is always visible. Health is drawn as dots, not boxes, so it is not confused with danger-clock boxes. Tapping the hero icon (one button with ♡ and the health dots) drops a panel down below the header (covering the rows below rather than pushing them). In order of how often they are used, it holds icon rows for name, health (dots only on the ♡ row), state (tags; no row if none), abilities (⚡), traits (☆), carried items, and journal (promises and beliefs). The panel opens only in `idle`, closes with Escape or a tap outside, and closes when the menu opens. When growth is available, the icon gets a gold dot and the right end of the panel's name row has a gold growth pill (✲ 1).
+- **No suggestion buttons.** Actions are always written as sentences in the input bar. The server's `view.buttons` remains, but the UI does not use it.
 
-- **줄은 감싸서 늘어납니다.** 칩이 한 줄에 넘치면 다음 줄로 내려가고 대화 영역이 그만큼 줄어듭니다. 이름을 줄이거나 자르지 않습니다.
-- **대화 내역은 이 기기에 남습니다.** `useLog`가 판마다 `trpg.log.<game_id>`에 최근 300개를 두고(다른 판의 내역은 지움), 항목 id가 턴을 담아 다시 열어도 겹치지 않습니다. 서버에는 보내지 않습니다. 내역이 없는 기기에서 이어하면 전제부터 다시 쌓입니다.
-- **기록**(주인공 판의 마지막 줄)은 `journal` 가운데 지금 걸린 것을 보입니다: 지키지 않은 약속과 신세 전부, 그리고 믿는 것 중 지금 장면의 개체를 말하는 것. 갈림의 선택은 결말 판(5.4)에 모입니다.
-- **카드**(되묻기, 확인, 성장)는 `Sheet`입니다: 아래에서 24px 떠오르며 올라와 내용의 높이만큼만 덮고, 머리에 아이콘과 제목, 오른쪽에 닫기(✕)가 있습니다. 그 위의 목표와 장면은 보이는 채로 둡니다. 굴림 카드만 플레이 화면 전체를 덮는 판입니다(4.2). 카드 안도 같은 원칙으로 모두가 한 번에 보입니다.
-- **메뉴**는 머리줄 오른쪽 아이콘(≡)으로 엽니다. 명령이 열린 상태(`idle`, `card`)에서만 누를 수 있고, 아이콘 아래로 작은 드롭다운이 내려와 화면의 나머지는 그대로 보입니다. 항목은 처음으로 하나이고, Escape나 바깥을 누르면 닫힙니다. 카드 위에 열리면 Escape는 메뉴만 닫습니다. 타이틀로 가도 `trpg.game_id`와 받은 `view`는 그대로라서 타이틀의 이어하기가 같은 판의 갈 곳으로 돌아옵니다. 서버에는 아무것도 보내지 않습니다.
-- 데스크톱에서도 같은 폭(412px)의 틀을 가운데 둡니다.
+- **Rows wrap and grow.** If chips overflow a row they wrap to the next line and the chat log shrinks by that much. Names are never shortened or truncated.
+- **Chat history stays on this device.** `useLog` keeps the latest 300 items per game in `trpg.log.<game_id>` (deleting other games' history), and item ids include the turn so reopening does not duplicate them. Nothing is sent to the server. Resuming on a device without history rebuilds it from the premise.
+- **Journal** (the last row of the hero panel) shows the parts of `journal` that matter now: every unkept promise and debt, plus beliefs about entities in the current scene. Fork choices are gathered on the ending panel (5.4).
+- **Cards** (clarify, confirm, growth) are a `Sheet`: they rise floating up 24px from the bottom, cover only as much as their content needs, and have an icon and title in the head with close (✕) on the right. The aim and scene above stay visible. Only the roll card is a panel covering the whole play screen (4.2). Inside a card the same principle holds: everything is visible at once.
+- **The menu** opens from the icon (≡) at the right of the header. It can be tapped only while commands are open (`idle`, `card`), and a small dropdown comes down below the icon, leaving the rest of the screen visible. Its only item is to-title, and it closes with Escape or a tap outside. Opened over a card, Escape closes only the menu. Going to the title keeps `trpg.game_id` and the received `view`, so resume on the title returns to the same game's destination. Nothing is sent to the server.
+- On desktop, the same width frame (412px) is centered.
 
-### 2.2 크기 예산
+### 2.2 Size budget
 
-320×568에서도 대화 영역에 서술 한 턴(200자)이 넘기지 않고 보여야 합니다(px).
+Even at 320×568, one turn of narration (200 characters) must show in the chat log without scrolling (values in px).
 
-| 영역 | 320×568과 412×915 |
+| Region | 320×568 and 412×915 |
 |---|---|
-| 머리줄 | 40 |
-| 목표, 위험, 장소, 주변 | 줄마다 한 줄 28, 두 줄 54 |
-| 입력줄 | 62 (알약 44) |
-| 대화 | 나머지, 최소 232 |
+| Header | 40 |
+| Aim, danger, place, around | per row: 28 for one line, 54 for two |
+| Input bar | 62 (pill 44) |
+| Chat | the rest, at least 232 |
 
-줄의 글자는 이미 12px이고 줄이지 않습니다. 원고에 따라 예산을 넘는 장면이 생기면 넘치는 서술은 대화 영역 안에서 올려 읽습니다. 뼈대 이야기에서 가장 붐비는 장면(위험 셋, 갈 곳 두 줄)의 대화 영역은 320×568에서 296입니다(qa_test/runs/ui-2). QA는 뼈대 이야기에서 칩이 가장 많은 장면을 이 크기로 확인합니다(6.2).
+Row text is already 12px and does not shrink. If a story produces a scene over budget, the overflowing narration is read by scrolling inside the chat log. In the skeleton story's busiest scene (three dangers, exits on two lines), the chat log is 296 at 320×568 (qa_test/runs/ui-2). QA checks the skeleton story's scene with the most chips at this size (6.2).
 
-## 3. 상태 기계
+## 3. State machine
 
-`useGame.ts`는 화면의 모든 서버 상태와 명령의 생애를 가집니다. 화면은 이 기계의 상태만 보고 그립니다.
+`useGame.ts` owns all server state on screen and the lifecycle of commands. Screens draw from this machine's state alone.
 
 ```
-loading ─► start (game_id 없음) ─► creating ─► 갈 곳
-loading ─► restoring ─► 갈 곳 | narrating | blocked
+loading ─► start (no game_id) ─► creating ─► destination
+loading ─► restoring ─► destination | narrating | blocked
 
-idle ─ 명령 ─► sending ─┬─► 갈 곳                     (refused: reason을 입력줄 위에 보임)
-                        ├─► 갈 곳                     (steps 없음: 카드)
-                        └─► revealing ─► narrating ─► 갈 곳   (steps 있음)
-card(roll) ─ 놓음 ─► rolling ─┬─► revealing ─► narrating ─► 갈 곳
-                              └─► 갈 곳                (refused: 주사위가 값 없이 사라지고 reason을 보임)
-card ─ 답 / 그만두기 ─► sending
-sending | rolling ─ 응답 없음(30초) ─► stuck ─ 같은 명령 다시 ─► sending | rolling
-sending | rolling ─ 409(view) ─► 갈 곳                409(incompatible) ─► blocked
-sending | rolling ─ 404 ─► start                      422 ─► 갈 곳 (refused와 같게. 화면의 버그)
-narrating ─ 스트림 오류 ─► narration_error ─ 다시 ─► narrating
-idle | card ─ 메뉴: 처음으로 ─► start ─ 이어하기 ─► 갈 곳   (view가 있고 결말이 아닐 때)
+idle ─ command ─► sending ─┬─► destination             (refused: show reason above the input bar)
+                           ├─► destination             (no steps: card)
+                           └─► revealing ─► narrating ─► destination   (with steps)
+card(roll) ─ release ─► rolling ─┬─► revealing ─► narrating ─► destination
+                                 └─► destination       (refused: dice vanish with no value, reason shown)
+card ─ answer / cancel ─► sending
+sending | rolling ─ no response (30s) ─► stuck ─ same command again ─► sending | rolling
+sending | rolling ─ 409(view) ─► destination          409(incompatible) ─► blocked
+sending | rolling ─ 404 ─► start                      422 ─► destination (same as refused; a client bug)
+narrating ─ stream error ─► narration_error ─ retry ─► narrating
+idle | card ─ menu: to title ─► start ─ resume ─► destination   (when there is a view and it is not an ending)
 ```
 
-**갈 곳**은 받아들인 `view`로 늘 같은 차례로 정합니다: `ending`이 있으면 `ending`, `card`가 있으면 `card`, `growth`가 있으면 `card(growth)`, 아니면 `idle`. 409의 `view`와 다시 열기도 같습니다.
+The **destination** is always decided from the adopted `view` in the same order: `ending` if there is an `ending`, `card` if there is a `card`, `card(growth)` if there is a `growth`, otherwise `idle`. The same holds for a 409's `view` and for reopening.
 
-| 상태 | 명령 | 화면 |
+| State | Commands | Screen |
 |---|---|---|
-| `idle` | 열림 | 기본 |
-| `sending` | 잠김 | 입력줄에 보낸 문장, 작은 진행 표시 |
-| `card` | 카드의 답과 그만두기, 또는 새 문장(카드를 버림) | 카드 |
-| `rolling` | 잠김 | 주사위가 구름 |
-| `revealing` | 잠김. 누르면 끝 상태로 | 드러남(4.5) |
-| `narrating` | 잠김 | 세 점, 받은 글이 차례로 나타남 |
-| `stuck` | 같은 명령 다시 보내기 버튼만 | "응답을 받지 못했습니다."와 다시 보내기(↻). 주사위는 값 없이 접시에 멈춤 |
-| `narration_error` | 다시 받기 버튼만 | "서술을 받지 못했습니다." 드러남의 끝 상태는 그대로 |
-| `blocked` | 처음으로만 | 가운데에 "이 판은 더 이어할 수 없습니다."와 처음으로 버튼. 입력줄 없음. `trpg.game_id`는 지우지 않음 |
-| `ending` | 새 게임만 | 결말 판(5.4) |
+| `idle` | open | default |
+| `sending` | locked | the sent sentence in the input bar, a small progress indicator |
+| `card` | the card's answers and cancel, or a new sentence (discards the card) | card |
+| `rolling` | locked | dice tumbling |
+| `revealing` | locked; a tap jumps to the end state | reveal (4.5) |
+| `narrating` | locked | three dots, received text appears in turn |
+| `stuck` | only the resend-same-command button | "응답을 받지 못했습니다." ("No response received.") and resend (↻). The dice stop on the tray with no value |
+| `narration_error` | only the retry button | "서술을 받지 못했습니다." ("Narration not received.") The reveal's end state stays |
+| `blocked` | to-title only | centered "이 판은 더 이어할 수 없습니다." ("This game can no longer continue.") and a to-title button. No input bar. `trpg.game_id` is not cleared |
+| `ending` | new game only | ending panel (5.4) |
 
-- **카드 앞의 단계**: 계획의 앞 단계를 실행하고 카드로 멈춘 응답은 `steps`와 `turn`이 있고 `view.card`도 있습니다. 화면은 그 단계들을 드러내고 서술을 받은 뒤 카드를 엽니다.
-- **명령의 생애**: 명령마다 `request_id`를 하나 만들고 본문과 함께 기억합니다. 30초 안에 응답이 없으면 `stuck`이고, 같은 `request_id`와 본문으로만 다시 보냅니다. 서버의 영수증이 같은 결과를 돌려주므로 두 번 실행되지 않습니다. 다시 보내면 주사위가 다시 구르고 600ms와 30초를 다시 재며, 먼저 보낸 요청의 응답이 뒤늦게 와도 같은 응답이므로 먼저 온 것을 씁니다. 게임 만들기도 같습니다.
-- **revision**: 응답의 `view.revision`을 다음 명령에 씁니다. 409에 `view`가 있으면 그것을 받아들이고, 구르던 주사위는 값 없이 사라지며, "상태가 바뀌어 다시 보였습니다"를 입력줄 위에 한 줄 보입니다. `view` 없이 `incompatible`이면 `blocked`입니다.
-- **저장하는 것**: 브라우저에는 `trpg.game_id`와 대화 내역(`trpg.log.<game_id>`)만 둡니다. 다시 열기에 실패해도 지우지 않습니다. 404일 때만 지우고 시작 화면으로 갑니다.
-- **다시 열기**: `view.last`의 단계 기록을 움직임 없이 끝 상태로 그리고, 서술이 캐시되어 있으면 받아서 바로 보이며, 없으면 `narrating`으로 받습니다. 그 턴이 이미 대화 내역에 있으면 다시 쓰지 않고 받는 즉시 끝냅니다. `view.card`가 있으면 카드를 엽니다. 드러남을 다시 연출하지 않습니다.
+- **Steps before a card**: a response that ran the plan's earlier steps and stopped at a card has `steps` and `turn` as well as `view.card`. The UI reveals those steps, fetches their narration, then opens the card.
+- **Command lifecycle**: each command gets one `request_id`, remembered together with its body. With no response within 30 seconds the state is `stuck`, and the command is resent only with the same `request_id` and body. The server's receipt returns the same result, so nothing runs twice. On resend the dice tumble again and the 600ms and 30-second timers restart; if the earlier request's response arrives late it is the same response, so whichever comes first is used. Game creation works the same way.
+- **revision**: the response's `view.revision` goes on the next command. If a 409 carries a `view`, it is adopted, tumbling dice vanish with no value, and one line, "상태가 바뀌어 다시 보였습니다" ("The state changed and was shown again"), appears above the input bar. `incompatible` without a `view` means `blocked`.
+- **What is stored**: the browser keeps only `trpg.game_id` and chat history (`trpg.log.<game_id>`). A failed reopen does not clear them. Only a 404 clears them and goes to the start screen.
+- **Reopening**: the step records in `view.last` are drawn in their end state without motion; cached narration is fetched and shown at once, otherwise it is fetched in `narrating`. If that turn is already in the chat history, it is not written again and finishes as soon as it arrives. If there is a `view.card`, the card opens. The reveal is not replayed.
 
-## 4. 굴림
+## 4. Roll
 
-### 4.1 다섯 순간
+### 4.1 Five moments
 
-굴림이 있는 단계(`try(x ≠ player)`와 굴리는 `talk`)마다 플레이어는 다섯 순간을 지납니다. 그 뒤에 서술이 이 결과를 이야기로 씁니다. 서술은 숫자를 다시 말하지 않고 숫자가 만든 상황을 씁니다.
+For each step with a roll (`try(x ≠ player)` and a rolled `talk`), the player goes through five moments. Narration then writes this result into the story. Narration does not repeat the numbers; it writes the situation the numbers created.
 
-| 순간 | 플레이어가 보는 것 | 플레이어가 하는 것 | 겨누는 재미(fun.md) |
+| Moment | What the player sees | What the player does | Target fun (fun.md) |
 |---|---|---|---|
-| 1. 걸린 것 | 하려는 것(행동 이름 `λ`, 칸이 둘 이상인 대상이면 그 칸), 닿아야 할 목표 수 | 읽음 | 긴장 |
-| 2. 결정 | 출처가 붙은 보정(`솜씨 +2`, `젖은 발 −1`), 기댈 것들(`열쇠 +1`) | 기댈 것을 누르거나 다시 눌러 뺌 | 주체성 |
-| 3. 굴림 | 손 안에서 흔들리는 주사위 둘 | 누르고 있다가 놓음 | 긴장 |
-| 4. 드러남 | 주사위가 하나씩 멈추고, 보정이 차례로 더해지고, 합이 목표에 닿거나 못 미쳐 "성공"이나 "실패"가 찍히고, 결정적 칩에 이름이 붙음 | 봄 | 결과, 주체성 |
-| 5. 치름 | 칸이 차는 장애물과 시계, 위기, 실패의 복잡화 | 봄 | 결과 |
+| 1. Stakes | What they are attempting (action name `λ`, and the target's boxes if it has two or more), the target number to reach | reads | tension |
+| 2. Decision | Modifiers with their sources (`솜씨 +2` "finesse +2", `젖은 발 −1` "Wet feet −1"), helps (`열쇠 +1` "Key +1") | taps a help, or taps again to remove it | agency |
+| 3. Roll | Two dice shaking in the hand | holds, then releases | tension |
+| 4. Reveal | The dice stop one by one, modifiers add in turn, the total reaches or falls short of the target and "성공" (success) or "실패" (failure) is stamped, and the decisive chip gets a label | watches | outcome, agency |
+| 5. Cost | Obstacles and clocks whose boxes fill, crises, complications on failure | watches | outcome |
 
-모든 값은 카드의 `preview`와 단계 기록에서 옵니다. 방식과 대상은 카드에서 바꾸지 않습니다. 문장이 방식을 말하지 않으면 엔진이 가장 높은 능력치를 고르고 묻지 않습니다(engine.md 3.4). 그것은 문장이 정한 것이고 바꾸려면 카드를 닫고 다시 말합니다. 높음의 확인 카드는 따로 없고 굴림 카드가 그 역할을 합니다.
+Every value comes from the card's `preview` and the step records. The approach and target are not changed on the card. If the sentence names no approach, the engine picks the highest stat without asking (engine.md 3.4). That was decided by the sentence; to change it, close the card and say it again. There is no separate confirm card for high risk; the roll card plays that role.
 
-### 4.2 굴림 카드
+### 4.2 Roll card
 
-발더스 게이트 3의 판정 화면을 빌렸습니다. 걸린 것은 목표 수 하나로 읽히고, 굴림이 그 수에 닿는지가 긴장의 전부입니다.
+Borrowed from Baldur's Gate 3's check screen. The stakes read as a single target number, and whether the roll reaches it is the whole of the tension.
 
 ```
 ┌──────────────────────────────┐
-│     녹슨 등대 문에 솜씨로 맞선다    ✕ │ 하려는 것: 행동 이름(해법이면 그 label), 닫기
-│            ( 8 )⚠              │ 목표 수, 고리 안의 숫자. 높음이면 ⚠ 표
-│            ▢  ▢                │ 주사위: 눈 없이 금색 테두리, 숨 쉬듯 커졌다 작아짐
-│     솜씨 +2  물보라 −1           │ 고정 보정(stat, 방해. 0인 것은 뺌). 테두리 없는 글
-│     ○ 뱃사람 +1 · 1번 남음        │ 기댈 것: 한 줄에 하나, 하나만 고르는 원
-│     ◉ 등대 열쇠 +1               │ 누르면 고르고, 고른 것을 누르면 뺌
+│     녹슨 등대 문에 솜씨로 맞선다    ✕ │ Attempt: action name (its label for a solution), close
+│            ( 8 )⚠              │ Target number in a ring. ⚠ mark for high risk
+│            ▢  ▢                │ Dice: blank faces, gold outline, swelling and shrinking like breath
+│     솜씨 +2  물보라 −1           │ Fixed modifiers (stat, hinder; zeros omitted). Borderless text
+│     ○ 뱃사람 +1 · 1번 남음        │ Helps: one per line, single-choice circles
+│     ◉ 등대 열쇠 +1               │ Tap to choose, tap the chosen one to remove
 └──────────────────────────────┘
 ```
 
-- 카드는 플레이 화면 전체를 흐린 막으로 덮고 그 가운데에 판으로 놓입니다. 짧게 나타나며 커집니다(0.96 → 1, 220ms). 그만두기는 글 버튼이 아니라 머리의 닫기(✕)와 Escape이고, 굴린 뒤에는 사라집니다.
-- 카드의 값은 모두 `card.options`에서 고른 것의 `preview`에서 옵니다. 처음 고른 것은 `card.selected`입니다. 목표 수는 `preview.dc`이고, 위험이 높음이면 고리와 숫자가 위험 색이고 고리 오른쪽 위에 ⚠ 표가 붙습니다("되돌릴 수 없는 대가"는 읽기 도구에만). 고리는 그 밖에는 흐린 선입니다. 결과가 나면 성공은 고리가 금색으로 차고 금색 고리 하나가 부드럽게 퍼지며 사라지고(800ms), 실패는 고리가 위험 색이 됩니다. 대상의 칸은 칸이 둘 이상일 때만 그립니다(한 번의 성공으로 넘는 대상에 칸 하나는 군더더기). 위험 등급은 따로 적지 않습니다.
-- 기댈 것은 한 줄에 하나씩 작은 원(하나만 고르므로 라디오)과 이름으로 놓이고(원은 가장 긴 줄에 맞춰 한 세로줄로 섬), 누르면 그것을 고르고, 고른 것을 다시 누르면 빼서 기대지 않는 선택지로 돌아갑니다. "기대지 않음" 항목은 없습니다. 고른 것도 금색 테두리 없이 원 안에 점이 생기는 것으로만 보입니다. 여럿을 고르는 특성(5.5)은 네모 체크 칸입니다. 고른 것이 바뀌면 그 `preview`로 다시 그립니다.
-- 카드가 열리면 포커스는 판 자체로 갑니다. 첫 컨트롤로 보내면 문장을 보낸 Enter 때문에 그 컨트롤에 포커스 테두리가 그려지기 때문입니다. Tab은 첫 컨트롤부터 돕니다.
-- 확률, 결과 줄, 대가 줄, 문장의 메아리는 없습니다. 문장은 이미 대화에 있습니다.
-- 쓰면 사라지는 것(태그, 특성)은 기호가 아니라 같은 글 하나로 적습니다("1번 남음"). 누르지 않고 읽혀야 하기 때문입니다.
-- 320×568에서도 판은 화면 안에 다 들어갑니다. 기댈 것이 많으면 글자를 12px로 줄입니다.
+- The card covers the whole play screen with a dimmed scrim and sits as a panel in its center. It appears briefly while growing (0.96 → 1, 220ms). Cancel is not a text button but close (✕) in the head and Escape, and it disappears after the roll.
+- All card values come from the `preview` of the chosen entry in `card.options`. The initial choice is `card.selected`. The target number is `preview.dc`; if risk is high, the ring and number are in the danger color and a ⚠ mark sits at the ring's upper right ("되돌릴 수 없는 대가" ("an irreversible cost") goes to screen readers only). Otherwise the ring is a dim line. When the result lands, on success the ring fills gold and one gold ring spreads softly and fades (800ms); on failure the ring turns the danger color. The target's boxes are drawn only when it has two or more (one box for a target cleared by a single success is clutter). The risk tier is not written out.
+- Helps sit one per line as a small circle (a radio, since only one can be chosen) and a name (the circles align in one column, sized to the longest line). Tapping one chooses it; tapping the chosen one again removes it, returning to the no-help option. There is no "no help" item. The chosen one shows only as a dot inside the circle, with no gold outline. Traits that allow several choices (5.5) use square checkboxes. When the choice changes, the card redraws from that `preview`.
+- When the card opens, focus goes to the panel itself. Sending it to the first control would draw a focus ring on that control because of the Enter that sent the sentence. Tab cycles from the first control.
+- No probability, outcome line, cost line or echo of the sentence. The sentence is already in the chat.
+- Things that are used up (tags, traits) are written as the same one piece of text, not a symbol ("1번 남음", "1 use left"), because they must read without a tap.
+- Even at 320×568 the panel fits on screen. With many helps, text shrinks to 12px.
 
-### 4.3 칩
+### 4.3 Chips
 
-굴림 카드는 카드와 드러남에서 같은 보정 줄을 그립니다. 보정은 테두리 없는 글이고 `mods` 한 항목(이름과 부호 있는 값)이고 종류(`stat`, `help`, `hinder`)마다 `colors.chip`의 색이 다르고(2.1의 표), 셋 다 금색과 위험 색, 종류의 색과 겹치지 않습니다. 방해는 서버가 이미 하나로 묶어 줍니다. 카드의 `preview.mods`와 단계 기록의 `mods`는 같은 목록이라 번호로 짝지어 같은 보정이 카드에서 드러남으로 그대로 옮겨 갑니다. 장면 줄의 이름 알약은 `Row.tsx`의 `Pill`입니다.
+The roll card draws the same modifier row on the card and in the reveal. A modifier is borderless text, one `mods` entry (name and signed value), colored per kind (`stat`, `help`, `hinder`) from `colors.chip` (the table in 2.1); none of the three overlaps gold, the danger color or the kind colors. The server already merges hinders into one. The card's `preview.mods` and the step record's `mods` are the same list, paired by index, so each modifier carries over unchanged from the card to the reveal. Name pills in the scene row are `Pill` from `Row.tsx`.
 
-### 4.4 주사위
+### 4.4 Dice
 
-- `Dice.tsx`는 둥근 사각형과 눈으로 그린 주사위 둘입니다. `react-native-reanimated`로 기울기, 회전, 튀김을 움직입니다.
-- **기다림**: 굴릴 수 있는 동안 주사위는 눈이 없는 빈 면에 금색 테두리이고 숨 쉬듯 천천히 커졌다 작아집니다(1.05배, 900ms). 눈이 보이면 이미 굴린 결과로 읽히기 때문에 비워 두고, "눌러서 굴리기" 같은 글 없이 누를 것임을 보입니다.
-- **누름**: 누르는 동안 작게 흔들리고 오래 누를수록 흔들림이 커집니다(1.5초에서 더 커지지 않음). 지원하면 짧은 진동(`navigator.vibrate(10)`)을 줍니다. 짧게 누르기만 해도 굴립니다.
-- **놓음**: 굴림 요청 `{card, pick}`을 보내고 주사위가 돌며(420ms 한 바퀴) 면이 70ms마다 무작위로 바뀝니다. 유일한 낙관적 움직임이고 값을 정하지 않습니다. 굴린 뒤 카드의 결정 영역은 잠깁니다.
-- **멈춤**: 응답이 왔고 놓은 뒤 600ms가 지났으면(늦은 쪽) `d1`, `d2`가 차례로 서버의 값에 내려앉습니다(바로 서며 1.12배에서 1배로). 값은 `steps[0]`(수락한 단계)의 `roll`입니다.
-- **막힘**: `steps[0].result`가 `blocked`면 1~5단계가 없습니다. 주사위가 멈추지 않고 300ms 동안 흐려지며 사라지고, 드러난 것(`changes`의 `reveal`)의 이름이 그 자리에 나옵니다. 그 뒤 카드가 흐려지며 사라지고(200ms) 장면 줄에 그 장애물이 생깁니다(150ms). 대화에 굴림 줄은 남지 않습니다. 그 뒤는 서술입니다. 숨은 것은 해 봐야 안다는 규칙을 그대로 겪게 합니다.
-- **응답 없음**: 주사위는 값 없이 접시에 멈추고 `stuck`이 됩니다. 같은 굴림을 다시 보내면 같은 결과가 옵니다.
+- `Dice.tsx` is two dice drawn as rounded squares with pips. `react-native-reanimated` animates tilt, spin and bounce.
+- **Waiting**: while a roll is possible, the dice are blank faces with no pips and a gold outline, slowly swelling and shrinking like breath (1.05×, 900ms). Pips would read as a result already rolled, so the faces stay blank; this shows they are to be pressed without text like "tap to roll".
+- **Hold**: while held, they shake slightly, and the longer the hold the bigger the shake (capped at 1.5 seconds). Where supported, a short vibration (`navigator.vibrate(10)`). A short tap also rolls.
+- **Release**: sends the roll request `{card, pick}`, and the dice spin (one turn per 420ms) with faces changing randomly every 70ms. This is the only optimistic motion and it decides no value. After the roll, the card's decision area locks.
+- **Stop**: once the response has arrived and 600ms have passed since release (whichever is later), `d1` and `d2` settle in turn on the server's values (standing upright, 1.12× to 1×). The values are the `roll` of `steps[0]` (the accepted step).
+- **Blocked**: if `steps[0].result` is `blocked`, moments 1–5 do not happen. The dice do not stop but fade out over 300ms, and the name of what was revealed (the `reveal` in `changes`) appears in their place. Then the card fades out (200ms) and that obstacle appears in the scene row (150ms). No roll line remains in the chat. Narration follows. The player lives the rule that hidden things are found only by trying.
+- **No response**: the dice stop on the tray with no value and the state becomes `stuck`. Resending the same roll returns the same result.
 
-### 4.5 드러남
+### 4.5 Reveal
 
-드러남은 결과를 한 번에 보이지 않고 **결정이 결과를 어떻게 바꾸었는지**가 보이도록 나눠서 보입니다. `logic/reveal.ts`의 `timeline(steps, motion, reduced) → Beat[]`이 단계 기록들을 시간표로 바꾸는 순수 함수이고, 화면은 시간표를 차례로 그립니다. 시간 값은 `design/`의 움직임 토큰입니다.
+The reveal does not show the result all at once; it splits it up so you can see **how your decisions changed the result**. `timeline(steps, motion, reduced) → Beat[]` in `logic/reveal.ts` is a pure function that turns step records into a timeline, and the UI draws the timeline in order. Timing values are the motion tokens in `design/`.
 
-| # | 비트 | 보이는 것 | 시간 |
+| # | Beat | What is shown | Time |
 |---|---|---|---|
-| 0 | | 놓음부터 응답까지 구름 | 최소 600ms |
-| 1 | `die` | `d1`, `d2`가 차례로 멈춤 | 각 250ms, `d2`는 `d1`이 시작하고 120ms 뒤에 시작 |
-| 2 | `line` | 고리 아래에 합이 `d1 + d2`로 뜸 | 200ms |
-| 3 | `chip` | 칩이 제자리에서 합으로 날아가고 합이 그 값만큼 바뀜. 차례는 `mods`의 차례 | 칩마다 180ms |
-| 4 | `settle` | 합이 `total`에 멈추고 목표에 닿거나 못 미침. 닿으면 "성공"(금색), 못 미치면 "실패"(위험 색)가 합 옆에서 400ms 동안 조용히 떠오름(합은 남음). 커지거나 빛나거나 흔들리지 않음. 결과를 읽을 시간을 둠 | 2200ms |
-| 5 | `decisive` | `decisive`의 보정이 굵어지고 표시가 붙음. `stat`과 `help`는 "덕분에", `hinder`는 "때문에" | 150ms |
-| 6 | `box` | `changes` 가운데 `fill`은 카드 머리의 대상 칸에서, `clock`·`crisis`·`arrival`은 위험 줄에서(위기면 시계가 비며 시계 이름 옆에 "위기"가 뜸). 차는 칸은 잠깐 커졌다 돌아옴 | 칸 하나 150ms |
-| 7 | `fold` | 카드가 흐려지며 사라지고 대화에 굴림 줄(2.1)이 남음 | 200ms |
-| 8 | `change` | 남은 `changes`(태그, 상처, 흉터, 드러남, 이동, 관계, 약속, 장 전환, 결말)가 제자리에서 차례로 바뀜 | 항목마다 150ms |
+| 0 | | tumble from release until the response | at least 600ms |
+| 1 | `die` | `d1`, `d2` stop in turn | 250ms each; `d2` starts 120ms after `d1` starts |
+| 2 | `line` | the total appears below the ring as `d1 + d2` | 200ms |
+| 3 | `chip` | each chip flies from its place into the total and the total changes by its value, in `mods` order | 180ms per chip |
+| 4 | `settle` | the total stops at `total` and reaches or falls short of the target. If it reaches, "성공" (success, gold); if not, "실패" (failure, danger color) quietly floats up beside the total over 400ms (the total stays). No growing, glowing or shaking. Leaves time to read the result | 2200ms |
+| 5 | `decisive` | the `decisive` modifier turns bold and gets a tag: "덕분에" ("thanks to") for `stat` and `help`, "때문에" ("because of") for `hinder` | 150ms |
+| 6 | `box` | from `changes`, `fill` in the target's boxes in the card head, `clock`·`crisis`·`arrival` in the danger row (on a crisis the clock empties and "위기" ("crisis") appears beside the clock's name). Filling boxes briefly grow and settle back | 150ms per box |
+| 7 | `fold` | the card fades out and a roll line (2.1) remains in the chat | 200ms |
+| 8 | `change` | the remaining `changes` (tags, wounds, scars, reveals, moves, relationships, promises, chapter changes, endings) change in place in turn | 150ms per item |
 
-- 단계는 겹치지 않고 차례로 이어집니다(`d1`과 `d2`만 겹침). 단계 기록이 여럿이면 `steps` 차례로, 굴린 단계만 1~8을 하고 굴리지 않은 단계는 6과 8만 합니다. `choose`의 턴도 6과 8만 합니다.
-- 응답의 `view`는 받는 즉시 상태가 되지만, 6과 8이 움직이는 줄은 그 비트까지 `from` 값을 보입니다. 지난 턴의 서술은 대화 내역에 남습니다.
-- 결과 이름은 `locale/ko.ts`의 낱말(성공, 실패)입니다.
-- 보정 칩이 둘이면 2초 안팎입니다. 어디를 눌러도 남은 연출을 건너뛰고 끝 상태(`view` 그대로)로 갑니다.
-- `prefers-reduced-motion`이면 구름, 날아감, 칸 차기의 움직임 없이 각 단계의 끝 상태를 차례로 100ms씩 보입니다.
-- 결정적 칩은 서버가 정해 주므로 화면은 "없었다면"을 계산하지 않습니다.
+- Beats never overlap; they run in order (only `d1` and `d2` overlap). With several step records, they go in `steps` order; only rolled steps do 1–8, and unrolled steps do only 6 and 8. A `choose` turn also does only 6 and 8.
+- The response's `view` becomes the state as soon as it arrives, but rows that 6 and 8 animate show their `from` values until that beat. Past turns' narration stays in the chat history.
+- Result names are the words in `locale/ko.ts` (성공, 실패).
+- With two modifier chips it takes about 2 seconds. A tap anywhere skips the remaining animation and goes to the end state (the `view` as is).
+- Under `prefers-reduced-motion`, there is no tumble, flight or box-filling motion; each beat's end state shows in turn for 100ms.
+- The server decides the decisive chip, so the UI never computes "what if it had been absent".
 
-### 4.6 하지 않는 것
+### 4.6 What it does not do
 
-이동, 살펴보기, 집기, 건네기, 잡담, 공짜 화제, 선택, 장면 넘김에는 주사위가 나오지 않습니다. 결과가 정해진 행동에 주사위를 보이면 주사위가 뜻을 잃기 때문입니다.
+Moving, looking around, picking up, handing over, small talk, free topics, choices and moving on from a scene show no dice. Showing dice for an action whose outcome is settled would strip the dice of meaning.
 
-| 하지 않는 것 | 이유 |
+| Not done | Reason |
 |---|---|
-| 다시 굴리기, 굴림을 사는 것 | 주사위가 가볍게 여겨지고 실패가 상황을 바꾸지 못함 |
-| 확률과 결과 줄을 보이는 것 | 목표 수와 보정이 걸린 것을 다 말하고, 긴장은 합이 그 수에 닿는 순간에 모임 |
-| 서술이 숫자를 말하는 것 | 숫자는 드러남이 이미 보였음 |
-| 카드에서 방식과 대상을 바꾸는 것 | 4.1 |
-| 주사위 값을 미리 증명하는 장치 | 공정함은 규칙의 적용에서 옴 |
+| Rerolls, buying rolls | The dice feel cheap and failure cannot change the situation |
+| Showing probabilities and outcome lines | The target number and modifiers already say everything at stake, and tension gathers at the moment the total reaches that number |
+| Narration stating numbers | The reveal already showed the numbers |
+| Changing approach and target on the card | 4.1 |
+| Devices that prove dice values in advance | Fairness comes from how the rules are applied |
 
-## 5. 그 밖의 화면
+## 5. Other screens
 
-### 5.1 서술
+### 5.1 Narration
 
-- 서술 요청은 명령의 응답을 받자마자 시작하고, 드러남이 끝날 때까지 받은 글을 쥐고 있습니다. 드러나는 동안 모델이 씁니다.
-- 글이 오기 전까지는 대화 끝에 세 점만 보입니다. 스트림의 `stage`와 `attempt`는 쓰지 않습니다.
-- `text`가 오면 글자가 차례로 나타납니다(초당 60자, 누르면 바로 다 보임). 글이 다 보이고 `done`을 받으면 `narrating`이 끝납니다.
-- `error`는 드러남이 끝난 뒤에 보이고, 고정 문구 아래 서버의 `message`를 작게 둡니다. 스트림이 끊기거나 2xx가 아니면 `message` 없는 `error`와 같습니다. 화면 쪽 시간 제한은 없습니다(상한은 서버의 것, engine.md 8절).
-- 장 전환이나 결말의 턴은 서술 아래에 되돌아보기(`/chapters/{k}/recap`, api.md 4절의 `k`)를 이어 보입니다. 서술의 `done` 뒤에 요청하고(그동안도 `narrating`), 실패하면 서술과 같은 `narration_error`입니다.
-- `done`의 태그 이름으로 나 줄과 칩의 이름을 바꿉니다.
+- The narration request starts as soon as the command's response arrives, and holds the received text until the reveal ends. The model writes while the reveal plays.
+- Until text arrives, only three dots show at the end of the chat. The stream's `stage` and `attempt` are not used.
+- When `text` arrives, characters appear in turn (60 per second; a tap shows it all at once). When all the text is shown and `done` has arrived, `narrating` ends.
+- `error` shows after the reveal ends, with the server's `message` in small type under the fixed copy. A dropped stream or a non-2xx status counts as an `error` without `message`. The client has no timeout (the limit is the server's, engine.md section 8).
+- A chapter-change or ending turn continues with a recap (`/chapters/{k}/recap`, `k` from api.md section 4) below the narration. It is requested after the narration's `done` (still in `narrating`), and a failure is the same `narration_error` as for narration.
+- Tag names in `done` rename the hero row and the chips.
 
-### 5.2 되묻기, 확인, 이동
+### 5.2 Clarify, confirm, move
 
-셋 다 `Sheet`이고 주사위가 없으며, 그만두기는 닫기(✕)입니다. `MoveCard`는 → 머리와 "어디로 갈까요?" 아래 갈 곳마다 `Choice` 한 줄이고, 문장이 고른 곳이 맨 위의 금색(`primary`) 줄입니다. 줄 아래 작은 글은 동행이 함께 가는지 남는지("윤슬과 함께")입니다. 한 번 누르면 떠납니다. `ClarifyCard`는 선택지(많아야 셋)를 오른쪽 화살표가 있는 줄(`Choice`)로, `ConfirmCard`는 ⚠ 머리 아래 고를 것의 효과를 점 목록으로 두고 "고른다" 버튼 하나를 둡니다. 되묻기는 보낸 문장을 되풀이하지 않습니다(이미 대화에 있음).
+All three are a `Sheet` with no dice, and cancel is close (✕). `MoveCard` has a → head and, under "어디로 갈까요?" ("Where to?"), one `Choice` row per exit; the place the sentence chose is the gold (`primary`) row at the top. Small text under a row says whether companions come along or stay ("윤슬과 함께", "with Yunseul"). One tap leaves. `ClarifyCard` shows options (at most three) as rows with a right arrow (`Choice`); `ConfirmCard` puts a bulleted list of the choice's effects under a ⚠ head and has one "고른다" ("Choose") button. Clarify does not repeat the sent sentence (it is already in the chat).
 
-### 5.3 성장
+### 5.3 Growth
 
-`view.growth`가 있으면 서술이 끝난 뒤 `GrowthCard`(✲ 성장)가 열립니다. 성장은 종류(`kind`)마다 주인공 판과 같은 아이콘으로 묶입니다: 능력치 올리기(⚡)는 두 칸씩 놓인 "완력 1→2" 타일, 특성 바꾸기(☆)와 흉터 지우기는 한 줄에 하나("뱃사람 → 토박이"). 묶음 제목 글은 없습니다. 닫기(✕)가 "나중에"이고, 닫혀 있는 동안 주인공 아이콘의 금색 점과 판의 성장 알약으로 다시 엽니다. 성장은 결정이라 누름이 있습니다.
+If there is a `view.growth`, `GrowthCard` (✲ growth) opens after narration ends. Growth is grouped by kind (`kind`) under the same icons as the hero panel: raising a stat (⚡) as tiles two per row like "완력 1→2" ("force 1→2"), and changing a trait (☆) and erasing a scar one per row ("뱃사람 → 토박이", "sailor → islander"). There is no group title text. Close (✕) means "later"; while closed, it reopens from the gold dot on the hero icon and the growth pill in the panel. Growth is a decision, so it takes a tap.
 
-### 5.4 결말
+### 5.4 Ending
 
-`view.ending`이 놓이면 결말 서술과 되돌아보기 뒤에 머리줄 아래 전부를 결말 판으로 바꿉니다. ☆ 아래 결말의 제목(명조, 금색)과 금색 선, 장마다 되돌아보기(`view.recaps`의 장마다 하나, 100자 이하, 차례로 떠오름), 갈림의 선택 목록(`journal`, 갈림은 →, 그 밖은 태그 아이콘)이 들어가고 맨 아래에 새 게임 버튼이 있습니다. 결말 판은 대화 영역의 자리를 이어받으므로, 장이 많으면 그 안에서 올려 읽습니다(새 게임 버튼은 고정). 새 게임은 새로 만들고 `trpg.game_id`를 바꿉니다.
+Once `view.ending` is set, after the ending narration and recap, everything below the header becomes the ending panel. It holds the ending's title under ☆ (serif, gold) and a gold rule, a recap per chapter (one per chapter in `view.recaps`, at most 100 characters, floating up in turn), and the list of fork choices (`journal`; forks with →, others with the tag icon), with a new-game button at the bottom. The ending panel takes over the chat log's space, so with many chapters you scroll within it (the new-game button stays fixed). New game creates a new game and replaces `trpg.game_id`.
 
-### 5.5 시작
+### 5.5 Start
 
-시작은 두 화면입니다. **타이틀**(`Title.tsx`): 주사위 두 개(도형), 제목과 그 아래 금색 선이 떠오르며 나타납니다. 아래에 이야기 한 장(제목과 전제, 여럿이면 ‹ ›로 넘김), 그 아래 그 이야기로 할 일: 저장된 판이 이 이야기이고 결말이 아니면 이어하기(이름, 장, 장소. 주 버튼), 그리고 새로 시작(이어하기가 없으면 주 버튼). 처음 보이는 이야기는 저장된 판의 이야기입니다. 새로 시작은 **만들기**(`Start.tsx`)로 갑니다. 맨 아래에 버전 한 줄. 만들기: 머리줄에 둥근 뒤로 버튼과 이름 알약(👤, 10자까지, 비우면 플레이스홀더인 "주인공", 쓰는 동안 금색 테두리), 능력치(⚡ 머리, 오른쪽에 쓴 만큼 찬 점 — 숫자 "n/합" 대신. 방식이 한 줄에 하나씩 이름과 짧은 설명, 0에서 시작해 − 값 +로 나눠 줌. 합을 넘거나 원고의 가장 큰 값을 넘으면 +가 꺼짐), 특성(☆ 머리와 고른 만큼 찬 점, 한 줄에 하나씩 이름과 글, 고르면 줄이 금색으로 물들고 오른쪽 네모 칸에 체크), 맨 아래 시작하기. 모든 줄은 같은 높이(40)이고 320×568에서 스크롤 없이 들어갑니다. 전제는 타이틀에서 이미 보였으므로 되풀이하지 않습니다. 능력치를 다 쓰고 특성을 `pick`개 고르면 시작하기가 열리고, 누르면 `POST /games`를 보내고 플레이 화면으로 갑니다.
+Starting takes two screens. **Title** (`Title.tsx`): two dice (shapes), the title and a gold rule below it float up into view. Below is one story card (title and premise; ‹ › to flip through if there are several), and below that what you can do with that story: resume, if the saved game is this story and not at an ending (name, chapter, place; primary button), and start new (primary button when there is no resume). The story shown first is the saved game's story. Start new goes to **Creation** (`Start.tsx`). At the very bottom, one line with the version. Creation: a header with a round back button and a name pill (👤, up to 10 characters, placeholder "주인공" ("hero") when empty, gold outline while typing); stats (⚡ head, with dots on the right filled by how much is spent, instead of a number like "n/total"; one approach per row with its name and a short description, starting at 0 and distributed with − value +; + turns off once the total or the story's maximum value would be exceeded); traits (☆ head with dots filled by how many are chosen; one per row with name and text; choosing one tints the row gold and checks the square box on the right); and Start at the bottom. Every row is the same height (40) and fits at 320×568 without scrolling. The premise was already shown on the title, so it is not repeated. Once all stat points are spent and `pick` traits are chosen, Start becomes available; tapping it sends `POST /games` and goes to the play screen.
 
-## 6. 검사
+## 6. Checks
 
-### 6.1 자동 테스트
+### 6.1 Automated tests
 
-| 대상 | 테스트 |
+| Subject | Tests |
 |---|---|
-| `useGame` | 전이: 카드, 카드 앞의 단계, 굴림, 409(view 있음, incompatible), 응답 없음 뒤 같은 `request_id`, 다시 열기에서 `trpg.game_id` 유지 |
-| `reveal.ts` | 단계 기록 → 시간표: 칩 차례, 성공·실패, 결정적 표시, 막힘, 굴리지 않은 단계, 움직임 줄이기 |
-| `useLog` | 새 판은 전제로 시작, 같은 id는 한 번만 남음, 저장된 내역을 되살림 |
-| `api.ts` | NDJSON 조각이 줄 경계에서 나뉘어 와도 같은 사건 |
-| 카드 | 기댈 것을 누르면 고르고 다시 누르면 뺌, 그 미리보기를 그림, `selected`가 처음 고른 것, 높음이면 위험 색 목표 |
+| `useGame` | transitions: card, steps before a card, roll, 409 (with view, incompatible), same `request_id` after no response, `trpg.game_id` kept on reopen |
+| `reveal.ts` | step records → timeline: chip order, success and failure, decisive tag, blocked, unrolled steps, reduced motion |
+| `useLog` | a new game starts with the premise, the same id is kept only once, saved history is restored |
+| `api.ts` | the same events even when NDJSON chunks split across line boundaries |
+| Cards | tapping a help chooses it and tapping again removes it, its preview is drawn, `selected` is the initial choice, high risk gives a danger-colored target |
 
-화면 테스트는 가짜 `api`로 돕니다. 규칙이 화면에 없으므로 결과나 목표 수를 화면에서 계산하는 테스트는 없습니다.
+UI tests run against a fake `api`. Since the rules are not in the UI, no test computes results or target numbers in the UI.
 
-### 6.2 실제 화면
+### 6.2 Real UI
 
-두 모델을 켠 서버와 함께 412×915, 데스크톱 폭, 320×568에서 다음을 직접 해 보고, 번호를 붙인 턴과 스크린숏을 `qa_test/runs/<run>/`에 남깁니다.
+With a server running both models, play through the following at 412×915, desktop width and 320×568, and keep numbered turns and screenshots in `qa_test/runs/<run>/`.
 
-| 흐름 | 확인할 것 |
+| Flow | What to check |
 |---|---|
-| 한 화면 | 매 턴의 스크린숏에 대화 영역 밖의 스크롤, 잘린 글, 겹침이 없음. 새 글이 오면 대화가 맨 아래로 따라감. 칩이 가장 많은 장면과 기댈 것이 가장 많은 카드 |
-| 자유 문장 | 굴림 카드의 방식 · 대상이 문장과 맞음 |
-| 굴림 | 기댈 것 고르기와 빼기, 누름과 놓음, 드러남의 차례, 성공·실패 표시, 결정적 칩, 대화의 굴림 줄 |
-| 연쇄 | 굴리지 않는 단계의 드러남과 서술 뒤에 굴림 카드 |
-| 막힘 | 숨은 막힘이 주사위 대신 드러남(숨은 장애물이 있는 원고로) |
-| 위기와 도착 | 시계가 차서 비고, 위협이 도착함 |
-| 되묻기, 확인, 이동 | 갈림의 선택에서 확인 카드, 문장으로 간 곳에서 이동 카드(동행 표시, 다른 곳 고르기) |
-| 성장, 결말 | 장 전환의 되돌아보기, 성장 카드, 결말 판 |
-| 복구 | 굴림 중 새로 고침, 응답이 사라진 뒤 다시 보내기, 서술 중 새로 고침 |
+| One screen | No scrolling outside the chat log, clipped text or overlap in any turn's screenshot. The chat follows to the bottom when new text arrives. The scene with the most chips and the card with the most helps |
+| Free sentence | The roll card's approach and target match the sentence |
+| Roll | Choosing and removing helps, hold and release, reveal order, success and failure marks, decisive chip, the roll line in the chat |
+| Chain | A roll card after the reveal and narration of unrolled steps |
+| Blocked | A hidden blocker revealed instead of dice (with a story that has a hidden obstacle) |
+| Crisis and arrival | A clock fills and empties, a threat arrives |
+| Clarify, confirm, move | A confirm card on a fork choice, a move card at a place reached by sentence (companion note, choosing another place) |
+| Growth, ending | Chapter-change recap, growth card, ending panel |
+| Recovery | Refresh during a roll, resend after a lost response, refresh during narration |
 
-통과한 테스트는 재미를 보여 주지 않습니다. 굴림이 재미있는지는 fun.md의 지표로 봅니다.
+Passing tests do not show fun. Whether rolling is fun is judged by the metrics in fun.md.

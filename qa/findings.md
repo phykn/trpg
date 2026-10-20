@@ -1,7 +1,7 @@
-# 열린 문제
+# Open problems
 
-- **"윤슬아 여기서 기다려" → 장면 넘기기.** 결정 모델이 `cut` 0.91로 확신. 일상 말투 세트의 머물게 하기 문장 3개도 같음. `cut`에 두 모델의 합의를 요구하면 고쳐지지만 "우리 같이 기다리자"가 대화로 읽혀 득실이 같아 두었음(qa_test/runs/misread-1/REPORT.md).
-- **"부두로 간다"(선착장에서) → "이미 선착장에 있습니다".** 같은 곳의 다른 이름을 지금 있는 곳으로 읽음(misread-1).
-- **"바다 쪽으로 내려간다"(마을에서) → 등대 앞.** 이동 카드에서 선착장을 고를 수 있어 잘못 가지는 않음(move-1 턴 7).
-- **취소한 카드의 문장이 대화에 남음.** 이동 카드를 닫고 같은 문장을 다시 보내면 같은 말풍선이 두 번 보임(move-1 턴 2~3).
-- **피하는 곳에 동행이 남는 장면은 화면으로 보지 않음.** 규칙 테스트로만 확인(`test_a_companion_goes_along_until_a_place_it_avoids`).
+- **"윤슬아 여기서 기다려" ("Yunseul, wait here") → skips the scene.** The decision model is confident in `cut` at 0.91. The same goes for the three sentences in the casual-speech set that ask someone to stay. Requiring both models to agree on `cut` fixes it, but then "우리 같이 기다리자" ("let's wait together") reads as talk, so the gains and losses even out and it was left as is (qa_test/runs/misread-1/REPORT.md).
+- **"부두로 간다" ("go to the pier", while at 선착장) → "이미 선착장에 있습니다".** Another name for the same place is read as the current place (misread-1).
+- **"바다 쪽으로 내려간다" ("head down toward the sea", from the village) → in front of the lighthouse.** The move card lets you pick 선착장, so you never end up in the wrong place (move-1 turn 7).
+- **A cancelled card's sentence stays in the chat.** Closing the move card and sending the same sentence again shows the same bubble twice (move-1 turns 2–3).
+- **A companion staying behind at a place it avoids has not been seen on screen.** Only checked by a rule test (`test_a_companion_goes_along_until_a_place_it_avoids`).
