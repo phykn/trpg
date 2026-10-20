@@ -102,7 +102,8 @@ def body_hash(body: dict) -> str:
 
 def fresh_presentation(created: str) -> dict:
     return {"revision": 0, "turns": [], "requests": [], "card": None, "card_seq": 0, "narration": {},
-            "recap": {}, "tags": [], "choices": [], "receipts": {}, "created": created, "ending": None}
+            "recap": {}, "tags": [], "choices": [], "receipts": {}, "created": created, "ending": None,
+            "relevance": {}}
 
 
 class GameService:
@@ -319,8 +320,8 @@ class GameService:
                     p["card_seq"] += 1
                     cid = f"c{p['card_seq']}"
                     make = roll_card if rolling else confirm_card
-                    extra = {"selected": a.get("rely") or st.get("rely"),
-                             "relies": await self._relies(u, o, p, a, text)} if rolling else {}
+                    named = a.get("rely") or st.get("rely")
+                    extra = {"selected": named, "relies": await self._relies(u, o, p, a, named, text)} if rolling else {}
                     p["card"] = make(u, o, p, a, rest, labels, step_echo, cid, **extra)
                     self._opened(p, origin)
                     unfinished = p["card"]["public"]["plan"]["step"]["label"]
@@ -354,11 +355,11 @@ class GameService:
             return self._refused(u, g, already or why or "candidate")
         return self._result(u, g, "card" if p["card"] else "turn", turn, records)
 
-    async def _relies(self, u, o, p, a, text: str | None) -> list[str]:
+    async def _relies(self, u, o, p, a, named: str | None, text: str | None) -> list[str]:
         values = rely_options(u, o, a.with_(rely=None))
         if self.interpreter is None or not values:
             return values
-        return await self.interpreter.relevant(u, o, p, a.with_(rely=None), values, text)
+        return await self.interpreter.relevant(u, o, p, a.with_(rely=None), values, named, text)
 
     @staticmethod
     def _opened(p: dict, origin: str) -> None:
@@ -482,14 +483,17 @@ class GameService:
         came = [c for r in turn["steps"] for c in r["changes"] if c["kind"] in ("crisis", "arrival")]
         struck = tuple(dict.fromkeys(c["name"] for c in came if not c["id"].startswith("deadline.")))
         missed = tuple(dict.fromkeys(c["name"] for c in came if c["id"].startswith("deadline.")))
+        # A blocked step rolls nothing, so nothing was leaned on (rule.md 3.4).
         relied = tuple(dict.fromkeys(rely_label(u, p, o.facts, x) for r in turn["steps"]
-                                     if (x := parse(r["action"]).get("rely"))))
+                                     if r["result"] != "blocked" and (x := parse(r["action"]).get("rely"))))
+        looked = tuple(dict.fromkeys(r["action"].split(":")[1] for r in turn["steps"]
+                                     if r["action"].startswith("look:") and r["result"] != "blocked"))
         size = {"sentences": GROWN_SENTENCES, "chars": GROWN_CHARS} if grown else \
             {"chars": SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars}
         return Job(u, o, p, happened, delta, {PLAYER, here, *people, *ids}, text=turn["text"], tags=tags,
                    previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers, left=left,
                    joined=joined, unfinished=turn.get("unfinished"), grown=grown, progress=progress, blocked=blocked,
-                   relied=relied, struck=struck, missed=missed, **size)
+                   relied=relied, looked=looked, struck=struck, missed=missed, **size)
 
     def _recap_job(self, u: Universe, g: Game, k: int) -> Job | None:
         p = g.presentation

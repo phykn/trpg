@@ -97,9 +97,9 @@ Everything is built from `Obs` and the presentation layer.
 | `story` | `{id, title, premise}` of this game's story. The first turn shows `premise` where the narration would go |
 | `chapter` | `{k, title, aim}`: chapter number, title, aim sentence |
 | `scene` | Place name, sensory cues, visible people (name, attitude word, `with` if a companion), things, obstacles (name, boxes, what they block), exits |
-| `player` | Name (`creation.name`; an empty string in old saves), the four approaches, traits (name, whether used this chapter), tags (slot, kind, lifetime, name), wounds/boxes, beats/`B`, growth |
+| `player` | Name (`creation.name`; an empty string in old saves), the four approaches, traits (name, whether used this chapter), tags (slot, kind, lifetime, name), things carried (name, whether used this chapter), wounds/boxes, beats/`B`, growth |
 | `clocks` | Risk clocks in play, deadlines, active threats and forks (name, `fill`, boxes, kind) |
-| `journal` | Beliefs (sentences in `B`, the order they were learned, whether they refer to something in the current scene), promises and debts (`owes`), relations per person, fork choices (name, chapter) |
+| `journal` | Beliefs (sentences in `B`, the order they were learned, whether they refer to something in the current scene, whether used this chapter), promises and debts (`owes`), relations per person, fork choices (name, chapter) |
 | `buttons` | Suggestions (rule.md 9): action id, label, whether it rolls |
 | `growth` | Growth actions `[{action, label, kind, name, text}]` (when growth is 1 or more). `kind` is `approach`, `trait` or `scar`, and `name` is a short name written under that branch ("뱃사람 → 토박이", sailor → islander). `text` is the new trait's description for a trait swap, otherwise empty |
 | `card` | The pending card (below), or none |
@@ -114,12 +114,12 @@ Cards (engine.md 4):
   "echo": {"text": "열쇠로 살살 돌려 본다", "slots": [{"slot": "approach", "label": "솜씨"}, {"slot": "strain", "label": "자연스럽게"}]},
   "plan": {"step": {"action": "try:door:finesse", "label": "녹슨 등대 문을 솜씨로 다룬다", "target": {"id": "door", "name": "녹슨 등대 문", "fill": 0, "boxes": 3}},
            "rest": ["등대 꼭대기로 간다"]},
-  "options": [{"id": "try:door:finesse;rely=thing:key", "label": "등대 열쇠", "consumed": false, "note": null, "preview": {…}},
+  "options": [{"id": "try:door:finesse;rely=thing:key", "label": "등대 열쇠", "consumed": true, "note": "이번 장 1번", "preview": {…}},
               {"id": "try:door:finesse", "label": "기대지 않음", "consumed": false, "note": null, "preview": {…}}],
   "selected": "try:door:finesse;rely=thing:key" }
 ```
 
-A clarification card's `options` are `{id: action id, label}`, and confirm and move cards' `options` are `[{id: action id, label, effects: [name]}]`. None of the three has a `preview`. A move card's `selected` is the destination the sentence chose, and it is the first option; when the sentence named that place alone it is the only option (engine.md 4.4). A roll card option's `consumed` says relying on it uses it up, and `note` is the text for that ("1번 남음", 1 use left, for tags and traits); its `preview` holds the fields from rule.md 3.4.
+A clarification card's `options` are `{id: action id, label}`, and confirm and move cards' `options` are `[{id: action id, label, effects: [name]}]`. None of the three has a `preview`. A move card's `selected` is the destination the sentence chose, and it is the first option; when the sentence named that place alone it is the only option (engine.md 4.4). A roll card option's `consumed` says relying on it uses it up, and `note` is the text for that ("1번 남음", 1 use left, for a tag; "이번 장 1번", once this chapter, for a trait, thing or belief); its `preview` holds the fields from rule.md 3.4.
 
 ```
 { "risk": "normal",

@@ -47,27 +47,24 @@ def chapter_to(ctx: Ctx, k: int, extra, late: bool = False) -> None:
     w = ctx.work
     w.set_("flag", ("chapter",), k)
     w.expire("chapter")
-    for g, h, _ in sorted(ctx.promises):
-        s = w.state()
-        if s.has("owes", g, h, "promise"):
-            close_promise(ctx, h, promise_kept(ctx, h, s))
+    w.expire("scene")
+    w.set_("stat", (PLAYER, "beats"), 0)
     w.clear_spent(PLAYER)
     w.retire(f"clock.{k - 1}")
     w.retire(f"deadline.{k - 1}")
     w.move(f"clock.{k}", PLAYER)
     w.move(f"deadline.{k}", PLAYER)
-    # A chapter its deadline ended costs time: without it a missed goal changed nothing (qa_test/runs/play-1-*).
+    # A missed goal costs time and opens no growth: with growth it looked like success (qa_test/runs/play-1-*,
+    # play-4-explorer 29, 41).
     if late and ctx.u.boxes(f"deadline.{k}") > 1:
         w.set_("fill", (f"deadline.{k}",), "+1")
-    w.set_("stat", (PLAYER, "growth"), "+1")
+    if not late:
+        w.set_("stat", (PLAYER, "growth"), "+1")
     apply(ctx, extra)
 
 
 def end(ctx: Ctx, e: str) -> None:
-    w = ctx.work
-    w.set_("flag", ("ending",), e)
-    for h in player_promises(w.state()):
-        close_promise(ctx, h, promise_kept(ctx, h, w.state()))
+    ctx.work.set_("flag", ("ending",), e)
 
 
 # Engine triggers are level-fired, in this order.

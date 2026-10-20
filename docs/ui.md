@@ -173,8 +173,8 @@ Borrowed from Baldur's Gate 3's check screen. The stakes read as a single target
 │            ( 8 )⚠              │ Target number in a ring. ⚠ mark for high risk
 │            ▢  ▢                │ Dice: blank faces, gold outline, swelling and shrinking like breath
 │     솜씨 +2  물보라 −1           │ Fixed modifiers (stat, hinder; zero chips not drawn). Borderless text
-│     ○ 뱃사람 +1 · 1번 남음        │ Helps: one per line, single-choice circles
-│     ◉ 등대 열쇠 +1               │ Tap to choose, tap the chosen one to remove
+│     ○ 뱃사람 +1 · 이번 장 1번     │ Helps: one per line, single-choice circles
+│     ◉ 등대 열쇠 +1 · 이번 장 1번  │ Tap to choose, tap the chosen one to remove
 └──────────────────────────────┘
 ```
 
@@ -183,7 +183,7 @@ Borrowed from Baldur's Gate 3's check screen. The stakes read as a single target
 - Helps sit one per line as a small circle (a radio, since only one can be chosen) and a name (the circles align in one column, sized to the longest line). Tapping one chooses it; tapping the chosen one again removes it. The server's "기대지 않음" (rely on nothing) option is not drawn; it is what is chosen when no circle is. The chosen one shows only as a dot inside the circle, with no gold outline. When the choice changes, the card redraws from that `preview`.
 - When the card opens, focus goes to the panel itself. Sending it to the first control would draw a focus ring on that control because of the Enter that sent the sentence. Tab cycles from the first control.
 - No probability, outcome line or cost line (4.6): `preview.stakes` and `preview.gain` are not drawn. No echo of the sentence either; it is already in the chat.
-- Things that are used up (tags, traits) carry the option's `note` ("1번 남음", "1 use left") as text, not a symbol, because they must read without a tap.
+- Things that are used up carry the option's `note` as text, not a symbol, because they must read without a tap: a tag "1번 남음" ("1 use left"), a trait, thing or belief "이번 장 1번" ("once this chapter"). In the hero panel a trait, thing or belief already leaned on this chapter is dimmed.
 - Even at 320×568 the panel fits on screen. With many helps, text shrinks to 12px.
 
 ### 4.3 Chips

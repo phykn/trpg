@@ -10,7 +10,7 @@ Fun cannot be proven. This document breaks fun into elements, separates out whic
 | **Tension** | Outcomes are uncertain and the stakes are visible | 2d6, risk, risk clocks, threats, deadlines, roll cards |
 | **Consequence** | Failures and choices change the situation, and those changes come back into play later | Costs, complications, forks, scars, history patterns |
 | **Relationships** | People treat the player differently depending on what the player has done | Trust and fear, favors, promises, bonds |
-| **Growth** | The protagonist and the player get better with each chapter | Growth, what was relied on, declarations |
+| **Growth** | The protagonist and the player get better with each chapter goal they reach | Growth, what was relied on, declarations |
 | **Rhythm** | Tension and release alternate, and the story ends without dragging | Beats and scenes, deadlines, rest |
 
 ## 2. Premises the rules guarantee
@@ -23,7 +23,7 @@ These hold as properties, so play does not measure them again. What play measure
 | Agency | No sentence gains more than a small advantage, so judging the situation, not eloquence, decides the outcome | rule.md bounded advantage, engine.md bounded misreading |
 | Tension | A roll card's risk, target number and modifiers match execution, and hidden things never change the risk | rule.md risk independence, preview = execution |
 | Consequence | A roll always changes something visible, and a failure changes a risk clock | rule.md rolls move forward |
-| Relationships | A favor's promise ends as kept or broken by the next chapter change at the latest | rule.md 5.2 |
+| Relationships | A favor's promise ends only by what the player does (its `keep` or `break`); one still open at the ending is left owed, not broken | rule.md 5.2 |
 | Rhythm | Time passes with every action that has a check, and a threat whose `fill` the story never lowers arrives or retreats within `n · B` steps | rule.md time moves forward |
 | Rhythm | The ending is reachable from wherever the player is | rule.md guaranteed ending |
 
@@ -75,7 +75,7 @@ Every metric is computed offline from the saved log `L` (each event's `a`, `r`, 
 | F5 | Crisis spacing (위기의 간격) | Rolls between `τ_risk` (risk clock crises) | 4–8 | Risk clock boxes (3.2) |
 | F6 | Threat response (위협 반응) | Share of threats that appeared whose `fill` the player lowered, or that the player drove back, before they arrived | 30–70% | Threat boxes, number of solutions |
 | F7 | Consequence reuse (결과의 재사용) | Share of scars, declarations and fork choices that fall in a history pattern (extracted statically from the story) read by a condition evaluated later (ending, complication, topic) | 50% or more | The story's patterns and ending conditions |
-| F8 | Relationship change (관계의 변화) | Per play, the number of people whose `regards` differ from the start, and the share of favor promises that end kept | 2 or more people, 40–80% | People's desires and favors |
+| F8 | Relationship change (관계의 변화) | Per play, the number of people whose `regards` differ from the start, and the share of favor promises made that the player kept | 2 or more people, 40–80% | People's desires and favors |
 | F9 | Ending spread (결말의 분산) | Entropy of the ending distribution over several plays of the same story, divided by its maximum | 0.5 or more | Forks and ending conditions |
 | F10 | Chapter length (장의 길이) | Beat-raising steps per chapter, and the share of chapters ended by a deadline | 20–40 steps, 50% or less | `B`, deadline boxes |
 | F11 | Dropout (이탈) | Share of games abandoned before an ending, and the chapter they were in | 20% or less in chapter 1 | Length of the first chapter and the steps before the first roll |

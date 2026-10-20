@@ -65,6 +65,7 @@ class Job:
     struck: tuple[str, ...] = ()     # clocks and threats that came to pass this turn
     missed: tuple[str, ...] = ()     # deadlines that ran out this turn
     relied: tuple[str, ...] = ()     # what this turn's rolls leaned on
+    looked: tuple[str, ...] = ()     # things and obstacles this turn looked at
 
 
 def sentences_of(text: str) -> list[str]:
@@ -299,6 +300,11 @@ def steering(job: Job, lines) -> list[str]:
     # A leaned-on letter never appeared in the prose (qa_test/runs/play-4-talker 6, play-4-odd 4).
     for x in job.relied:
         out.append(ko.fill(ko.NOW["relied"], rely=x))
+    # A letter was read and none of its words were told; its look sat among every other entity's (qa_test/runs/
+    # play-5-talker 35).
+    for x in job.looked:
+        if text := (u.things[x].look if x in u.things else u.obstacles[x].look if x in u.obstacles else ""):
+            out.append(ko.fill(ko.NOW["looked"], name=u.name(x), text=text))
     # The player's sentence reaches the narrator whole, so a look before a roll card was told as the lamp already lit
     # (qa_test/runs/play-3-odd 18, play-3-explorer 41).
     if job.unfinished is not None:

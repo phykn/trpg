@@ -25,7 +25,6 @@ from src.interpret import Interpreter  # noqa: E402
 from src.locale import ko  # noqa: E402
 from src.narrate import Narrator, change_lines  # noqa: E402
 from src.onto.atoms import APPROACHES  # noqa: E402
-from src.rules.roll import chance  # noqa: E402
 from src.service import GameService  # noqa: E402
 from src.story.validate import load_all  # noqa: E402
 
@@ -54,7 +53,13 @@ class Run:
                 f.write(json.dumps(response, ensure_ascii=False) + "\n")
 
 
-RISK = {"low": "낮음", "normal": "보통", "high": "높음"}
+LIFE = {"scene": "이번 장면", "chapter": "이번 장"}      # client/locale/ko.ts tagLife
+
+
+def tags(items: list[dict]) -> str:
+    """Tags of one kind, life and name once, with when they end, as the web screen draws them (Row.tsx TagItems)."""
+    names = dict.fromkeys((t["kind"], t["life"], t["name"]) for t in items)
+    return ", ".join(name + (f" · {LIFE[life]}" if life in LIFE else "") for _, life, name in names)
 
 
 def screen(v: dict, before: list[str] | None = None) -> str:
@@ -75,21 +80,27 @@ def state(v: dict) -> list[str]:
     if s["things"]:
         lines.append("물건: " + ", ".join(t["name"] for t in s["things"]))
     for o in s["obstacles"]:
-        lines.append(f"장애물: {o['name']} {o['fill']}/{o['boxes']}" + (f" (막음: {', '.join(o['blocks'])})" if o["blocks"] else ""))
+        # An overcome obstacle stays in the scene, checked and blocking nothing, as on the web screen (ui.md 2).
+        done = o["fill"] >= o["boxes"]
+        lines.append(f"장애물: {o['name']} {o['fill']}/{o['boxes']}" + (" ✓" if done else "")
+                     + (f" (막음: {', '.join(o['blocks'])})" if o["blocks"] and not done else ""))
     if s["exits"]:
         lines.append("길: " + ", ".join(e["name"] + (" (막힘)" if e["blocked"] else "") for e in s["exits"]))
     if s["tags"]:
-        lines.append("표시: " + ", ".join(t["name"] for t in s["tags"]))
+        lines.append("표시: " + tags(s["tags"]))
     for c in v["clocks"]:
-        lines.append(f"시계: {c['name']} {c['fill']}/{c['boxes']}")
+        # The web screen fills the next box of a deadline, threat or fork by the scene's time spent (ui.md 2).
+        part = f", 다음 칸 {me['beats']}/{me['beats_max']}" if c["kind"] != "clock" and c["fill"] < c["boxes"] else ""
+        lines.append(f"시계: {c['name']} {c['fill']}/{c['boxes']}{part}")
     lines.append(f"나: 상처 {me['wounds']}/{me['wound_boxes']}, 성장 {me['growth']}, "
                  + ", ".join(f"{a['name']} {a['value']}" for a in me["approaches"])
                  + "".join(f", {t['name']}" + ("(씀)" if t["spent"] else "") for t in me["traits"])
-                 + (", 가진 것: " + ", ".join(t["name"] for t in me["things"]) if me["things"] else "")
-                 + (", 표시: " + ", ".join(t["name"] for t in me["tags"]) if me["tags"] else ""))
+                 + (", 가진 것: " + ", ".join(t["name"] + ("(씀)" if t["spent"] else "") for t in me["things"])
+                    if me["things"] else "")
+                 + (", 표시: " + tags(me["tags"]) if me["tags"] else ""))
     j = v["journal"]
     if j["beliefs"]:
-        lines.append("아는 것: " + " / ".join(b["text"] for b in j["beliefs"]))
+        lines.append("아는 것: " + " / ".join(b["text"] + ("(씀)" if b["spent"] else "") for b in j["beliefs"]))
     for o in j["owes"]:      # client/locale/ko.ts promise, kindness
         lines.append(f"빚: {o['name']}에게 " + (o["promise"] if o["kind"] == "promise" else "신세"))
     return lines
@@ -110,13 +121,15 @@ def card(c: dict) -> str:
     head = c.get("question") or (c["plan"]["step"] or {}).get("label", "")
     rest = c["plan"]["rest"]
     lines = [f"카드({c['kind']}): {head}" + (f" → 다음: {' → '.join(rest)}" if rest else "")]
+    if c["kind"] == "roll":
+        # What the web roll card shows: the target number, high risk, the fixed modifiers (ui.md 4.2).
+        pv = c["options"][-1]["preview"]
+        fixed = "".join(f", {m['label']} {m['value']:+d}" for m in pv["mods"] if m["value"] and m["kind"] != "help")
+        lines.append(f"  목표 {pv['dc']}" + (" ⚠ 되돌릴 수 없는 대가" if pv["risk"] == "high" else "") + fixed)
     for i, o in enumerate(c["options"], 1):
         extra = []
         if "preview" in o:
-            pv = o["preview"]
-            extra.append(f"성공 {chance(pv['z'], pv['dc']):.0%}, 위험 {RISK[pv['risk']]}")
-            if pv["clock"]:
-                extra.append(f"실패하면 {pv['clock']['name']} +{pv['stakes']['clock']}")
+            extra += [f"{m['value']:+d}" for m in o["preview"]["mods"] if m["kind"] == "help" and m["value"]]
         if o.get("effects"):
             extra.append(" · ".join(o["effects"]))
         if o.get("note"):

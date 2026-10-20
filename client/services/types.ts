@@ -50,12 +50,12 @@ export type GameView = {
     name: string;
     approaches: { id: string; name: string; value: number }[];
     traits: { id: string; name: string; spent: boolean }[];
-    tags: Tag[]; things: { id: string; name: string }[];
+    tags: Tag[]; things: { id: string; name: string; spent: boolean }[];
     wounds: number; wound_boxes: number; beats: number; beats_max: number; growth: number;
   };
   clocks: (Box & { kind: string })[];
   journal: {
-    beliefs: { id: string; text: string; order: number; here: boolean }[];
+    beliefs: { id: string; text: string; order: number; here: boolean; spent: boolean }[];
     owes: { debtor: string; creditor: string; kind: 'promise' | 'kindness'; name: string; promise: string }[];
     relations: { id: string; name: string; attitude: string }[];
     choices: { kind: 'cost' | 'fork'; name: string; chapter: number }[];

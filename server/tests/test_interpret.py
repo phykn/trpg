@@ -285,25 +285,32 @@ async def test_the_narration_model_picks_target_and_approach_over_a_sure_kev(tmp
 
 async def test_the_roll_card_keeps_only_the_reliances_the_model_sees_helping(tmp_path):
     decision = FakeDecision({"s1": {"try": 0.9}, "strain": {"natural": 0.9},
-                             "approach": {"finesse": 0.9}, "rely": {"r1": 0.8, "r2": 0.05, "none": 0.15}})
+                             "approach": {"finesse": 0.9}, "rely": {"r0": 0.05, "r1": 0.8, "none": 0.15}})
     svc, gid, view = await game(tmp_path, decision, moves=["go:village", "go:yard"])
     out = await say(svc, gid, view, "기계공 솜씨로 문을 비집어 연다")
     card = out["view"]["card"]
-    assert [o["label"] for o in card["options"]] == ["기계공", "기대지 않음"]
+    # The named trait is kept without asking; the model kept the letter and dropped 뱃사람.
+    assert [o["label"] for o in card["options"]] == ["기계공", "아들의 편지", "기대지 않음"]
     assert card["selected"] == "try:door:finesse;rely=trait:tinker"
     state, qs = decision.asked[-1]
-    assert "기계공 솜씨로" in state and list(qs["rely"]["criteria"]) == ["r0", "r1", "r2", "none"]
+    assert "기계공 솜씨로" in state and list(qs["rely"]["criteria"]) == ["r0", "r1", "none"]
+    # The same attempt in other words keeps what was offered and asks only about 뱃사람 again.
+    out = await say(svc, gid, out["view"], "문을 살살 비집어 연다", "s2")
+    assert [o["label"] for o in out["view"]["card"]["options"]] == ["기계공", "아들의 편지", "기대지 않음"]
+    state, qs = decision.asked[-1]
+    assert "살살" in state and list(qs["rely"]["criteria"]) == ["r0", "none"]
 
 
-async def test_story_links_skip_the_question_and_a_silent_model_hides_nothing(tmp_path):
+async def test_story_links_and_edges_skip_the_question_and_a_silent_model_hides_nothing(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeDecision())
     u, g = await svc.load(gid)
     o, p, a = observe(u, g.state, g.log), g.presentation, parse("try:lamp:wits")
-    values = ["trait:sailor", "thing:letter", "thing:oil", "tag:lamp:1"]
+    values = ["trait:sailor", "thing:letter", "thing:oil", "tag:lamp:1", "tag:player:2"]
     sure = FakeDecision({"rely": {"none": 1.0}})
-    assert await Interpreter(sure).relevant(u, o, p, a, values, None) == ["thing:oil", "tag:lamp:1"]
+    # an edge is offered wherever in reach it lies
+    assert await Interpreter(sure).relevant(u, o, p, a, values, None, None) == ["thing:oil", "tag:lamp:1", "tag:player:2"]
     assert list(sure.asked[0][1]["rely"]["criteria"]) == ["r0", "r1", "none"]
-    assert await Interpreter(FakeDecision(fail=True)).relevant(u, o, p, a, values, None) == values
+    assert await Interpreter(FakeDecision(fail=True)).relevant(u, o, p, a, values, None, None) == values
 
 
 async def test_a_fork_in_the_scene_lends_its_choices_as_the_examples_of_choose():

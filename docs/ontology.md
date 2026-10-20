@@ -62,7 +62,7 @@ Atom = tuple[str, ...]          # ("at", "key", "dohae"), ("fill", "door", 2)
 | `owes(g, h, k)` | `("owes", g, h, k)` | what `g` owes `h`. `k` is `promise` (a promise tied to `h`'s favor) or `kindness` (goodwill received) |
 | `follows(h, g)` | `("follows", h, g)` | agent `h` travels with `g` (the player). When `g` moves, `h` moves along |
 | `due(g, c)` | `("due", g, c)` | a cost to choose under an old rule. It stays in the index only so saves from before this rule still load, and nothing creates it |
-| `spent(g, s)` | `("spent", g, s)` | trait `s`, already leaned on this chapter |
+| `spent(g, s)` | `("spent", g, s)` | trait, thing or proposition `s`, already leaned on this chapter |
 
 `blocks(o, x)` ("o blocks x") is a derived atom and is never stored. It holds for each `x` in `o`'s story `blocks` list while `at(o, ·)` exists and `fill(o) < boxes`. Condition evaluation and observation compute it over the atom set they receive.
 

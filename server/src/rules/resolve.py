@@ -25,8 +25,7 @@ class Step:
 
 
 def resolve(u, s: State, h: frozenset, a: Action, r: tuple[int, int, int] | None) -> Step:
-    promises = frozenset(row for row in s.rows("owes") if row[0] == PLAYER and row[2] == "promise")
-    ctx = Ctx(u, s, h, a, r, Work(u, s), promises=promises)
+    ctx = Ctx(u, s, h, a, r, Work(u, s))
     start_true = [holds(t.when, s, h) for t in u.triggers]
     delta0(ctx)
     ctx.hstar = h | hits(u.patterns, format(a), ctx.result)

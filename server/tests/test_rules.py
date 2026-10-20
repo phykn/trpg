@@ -196,6 +196,23 @@ def test_favor_promise_is_kept_by_giving_back(play):
     assert not play.s.rows("owes") and play.s.regards("dohae", PLAYER, "trust") == 1
 
 
+def test_an_open_promise_outlives_chapters_and_the_ending(u, play):
+    """A promise has no hidden due: lighting the lamp broke the borrowed key's promise with no moment to keep it
+    (qa_test/runs/play-4-talker 47)."""
+    from src.narrate import legacy
+    for aid, r in (("go:village", None), ("talk:dohae:chat", None), ("try:hound:wits", (6, 6, 0)),
+                   ("talk:dohae:favor", (6, 6, 0)), ("go:yard", None), ("try:door:finesse;rely=thing:key", (6, 6, 0)),
+                   ("go:lamp_room", None)):
+        play.do(aid, r)
+    trust = play.s.regards("dohae", PLAYER, "trust")
+    assert play.s.flag("chapter") == 2 and play.s.has("owes", PLAYER, "dohae", "promise")
+    play.do("choose:g_oil:all_in")
+    play.do("try:lamp:wits", (6, 6, 0))
+    assert ended(play.s) and play.s.has("owes", PLAYER, "dohae", "promise")
+    assert play.s.regards("dohae", PLAYER, "trust") == trust and not play.s.marks(PLAYER)
+    assert ("owes", PLAYER, "dohae", "promise") in legacy(u, play.obs)
+
+
 def test_deceit_is_caught_by_a_contrary_belief(play):
     play.do("go:village")
     play.do("talk:dohae:chat")
@@ -248,6 +265,46 @@ def test_chapter_change_opens_growth(u, creation):
     play.do("grow:trait:sailor:islander")
     assert s.stat(PLAYER, "sailor") == 1 and play.s.stat(PLAYER, "sailor") is None
     assert play.s.stat(PLAYER, "islander") == 1 and play.s.stat(PLAYER, "growth") == 0
+    assert play.s.stat(PLAYER, "beats") == 0              # growth is picked on a card, not spent in the scene
+
+
+def test_a_new_chapter_is_a_new_scene(u, creation):
+    """The yard's spray stayed on into the lamp room and the next chapter (play-5-bold 6, 8)."""
+    play = Play(u, creation)
+    steps = path_steps(u, 0)
+    for st in steps[:-1]:
+        aid, r = (st["do"], tuple(st["roll"])) if isinstance(st, dict) else (st, None)
+        play.do(aid, r)
+    assert play.s.stat(PLAYER, "beats") and any(life == "scene" for _, _, life in play.s.marks(PLAYER))
+    play.do(steps[-1])
+    assert play.s.flag("chapter") == 2 and play.s.stat(PLAYER, "beats") == 0
+    assert not any(life == "scene" for _, _, life in play.s.marks(PLAYER))
+
+
+def test_an_edge_on_a_carried_thing_goes_along(u, play):
+    """Readying the oil won an edge that could only help a roll on the oil itself (play-5-explorer 34, 38, 40)."""
+    play.do("try:letter:finesse", (6, 6, 0))
+    assert [kind for _, kind, _ in play.s.marks("letter")] == ["edge"]
+    play.do("go:village")
+    play.do("go:yard")
+    step = play.do("try:door:finesse;rely=tag:letter:1", (6, 6, 0))
+    assert ("mark", "letter", "edge", "scene", 1) in step.mods and not play.s.marks("letter")
+
+
+def test_a_thing_leaned_on_is_spent_until_the_chapter_changes(u, creation):
+    """A free letter gave +1 to every roll and no trait was ever leaned on (play-5-odd 25)."""
+    from src.rules.candidates import rely_values
+    from src.story.validate import Run
+    run = Run(u, creation)
+    for a in ("go:village", "go:yard"):
+        run.step(parse(a))
+    assert "thing:letter" in rely_values(u, run.obs.facts, "door")
+    run.step(parse("try:door:finesse;rely=thing:letter"), (1, 1, 0))
+    assert run.s.has("spent", PLAYER, "letter") and "thing:letter" not in rely_values(u, run.obs.facts, "door")
+    assert not admits(u, run.obs, parse("try:door:finesse;rely=thing:letter"))
+    while run.s.flag("chapter") in (None, 1):
+        run.step(parse("cut:pass"))
+    assert not run.s.has("spent", PLAYER, "letter")
 
 
 def pick(rng, k):
@@ -343,26 +400,36 @@ def test_a_companion_goes_along_until_a_place_it_avoids(u, play):
     play.do("give:letter:dohae")                                        # trust 1: dohae comes without a roll
     assert not rolls(u, facts_of(u, play.s, PLAYER), play.log.hist, parse("talk:dohae:come"))
     play.do("talk:dohae:come")
-    play.do("go:yard")                                                  # dohae avoids the yard
-    assert play.s.where("yunseul") == "yard" and play.s.where("dohae") == "village"
-    assert not play.s.has("follows", "dohae", PLAYER) and conforms(u, play.s) == []
-    seen = play.log.seen[PLAYER][-1]
-    assert [c["state"] for c in changes(u, {"tags": []}, seen, parse("go:yard"), None) if c["kind"] == "follow"] == ["stop"]
+    play.do("go:yard")
+    assert play.s.where("yunseul") == play.s.where("dohae") == "yard"
+    # Someone at the player's side helps any roll but one aimed at them (play-4-talker 17).
+    door = [format(a) for a in candidates(u, play.obs) if format(a).startswith("try:door:force;rely=with:")]
+    assert door == ["try:door:force;rely=with:dohae", "try:door:force;rely=with:dohae;strain=forced",
+                    "try:door:force;rely=with:yunseul", "try:door:force;rely=with:yunseul;strain=forced"]
+    assert preview(u, play.obs, parse(door[0])).z == preview(u, play.obs, parse("try:door:force")).z + 1
+    assert not any("rely=with:yunseul" in format(a) for a in candidates(u, play.obs)
+                   if a.schema == "talk" and a.intent[0] == "yunseul")
     play.do("talk:yunseul:stay")
-    play.do("go:village")
-    assert play.s.where("yunseul") == "yard" and not play.s.rows("follows")
+    play.do("try:door:finesse", (6, 6, 0))
+    play.do("go:lamp_room")                                             # dohae fears climbing the lighthouse
+    assert play.s.where("yunseul") == play.s.where("dohae") == "yard"
+    assert not play.s.rows("follows") and conforms(u, play.s) == []
+    seen = play.log.seen[PLAYER][-1]
+    stops = [c["id"] for c in changes(u, {"tags": []}, seen, parse("go:lamp_room"), None) if c["kind"] == "follow"]
+    assert stops == ["dohae"]
 
 
-def test_a_chapter_its_deadline_ended_starts_the_next_deadline_a_box_closer(u, creation):
+def test_a_missed_goal_costs_time_and_opens_no_growth(u, creation):
     from src.story.validate import Run
     late = Run(u, creation)
     while late.s.flag("chapter") in (None, 1):
         late.step(parse("cut:pass"))
-    assert late.s.fill("deadline.2") == 1
+    assert late.s.fill("deadline.2") == 1 and not late.s.stat(PLAYER, "growth")
     on_time = Run(u, creation)
     for a, r in (("go:village", None), ("go:yard", None), ("try:door:finesse", (6, 6, 0)), ("go:lamp_room", None)):
         on_time.step(parse(a), r)
     assert on_time.s.flag("chapter") == 2 and on_time.s.fill("deadline.2") == 0
+    assert on_time.s.stat(PLAYER, "growth") == 1
 
 
 def test_an_attempt_names_its_target_and_approach(u, s0):
@@ -381,3 +448,15 @@ def test_a_fork_choice_says_where_a_thing_goes(u):
     assert effect_names(u, [("set", "fill", ("lamp",), "+2"), ("move", "oil", "lamp_room")]) == \
         ["꺼진 등불 +2칸", "기름통을 등불실에 둠"]
     assert effect_names(u, [("move", "oil", "yunseul")]) == ["기름통이 윤슬에게 감"]
+
+
+def test_every_help_chip_carries_its_option_name(u, play):
+    """The roll card draws a help's value beside the option of the same name (ui.md 4.2)."""
+    from src.cards import roll_card
+    play.do("talk:yunseul:come", (6, 6, 0))
+    play.do("go:yard")
+    card = roll_card(u, play.obs, {"tags": []}, parse("try:door:force"), [], [], {}, "c1")["public"]
+    helped = [o for o in card["options"] if o["label"] != "기대지 않음"]
+    assert "윤슬의 도움" in [o["label"] for o in helped]
+    for o in helped:
+        assert [m["label"] for m in o["preview"]["mods"] if m["kind"] == "help"] == [o["label"]]

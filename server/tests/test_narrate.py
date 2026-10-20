@@ -239,6 +239,14 @@ async def test_a_blocked_step_and_what_a_roll_leaned_on_are_steered(tmp_path):
     assert "가로막혀" not in messages(job)[1]["content"]
 
 
+async def test_what_a_look_found_is_steered_to_be_shown(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD), moves=("look:letter",))
+    job = svc._turn_job(*svc.games[gid], 1)
+    assert job.looked == ("letter",)
+    now = messages(replace(job, looked=("letter", "dohae")))[1]["content"].split(ko.HEAD["now"])[1]
+    assert "당신이 살펴본 아들의 편지: 젖지 않게 기름종이로 싼 편지." in now and "살펴본 도해" not in now
+
+
 async def test_what_came_to_pass_is_steered_to_be_told(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
     job = svc._turn_job(*svc.games[gid], 1)
@@ -347,10 +355,10 @@ async def test_a_companion_who_will_not_go_everywhere_says_so_when_joining(tmp_p
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
     u, g = svc.games[gid]
     come = {"kind": "follow", "id": "dohae", "name": "도해", "state": "start"}
-    assert change_line(u, come) == "도해가 당신과 함께 다니기로 했지만 등대 앞, 등불실에는 가지 않습니다"
+    assert change_line(u, come) == "도해가 당신과 함께 다니기로 했지만 등불실에는 가지 않습니다"
     assert change_line(u, {**come, "state": "stop"}) == "도해는 이제 당신을 따라다니지 않습니다"
     now = messages(replace(svc._turn_job(u, g, 1), joined=("dohae",)))[1]["content"].split(ko.HEAD["now"])[1]
-    assert "도해는 등대 앞, 등불실에는 따라가지 않습니다" in now and u.agents["dohae"].fear.rstrip(".") in now
+    assert "도해는 등불실에는 따라가지 않습니다" in now and u.agents["dohae"].fear.rstrip(".") in now
 
 
 def test_a_tag_on_someone_takes_ege(u):

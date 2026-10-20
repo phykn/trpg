@@ -152,7 +152,7 @@ Starting possessions are the `things` with `at: player`. Beats, wounds and growt
 | `favor` | `{label, effects, promise: {name, keep, break}}`. At most one per character; once granted, it cannot be chosen again | `keep`, `break`: world |
 | `clue`, `hidden`, `complications` | 2.5, 3.6 | |
 
-Both the roll decision and the screen evaluate `free_when` on visible state (V3 makes the visible and world values equal). An absent `break` is false. A promise that is neither kept nor broken is settled by `keep` at the first chapter transition or ending after the step it was made in (rule.md 5.2).
+Both the roll decision and the screen evaluate `free_when` on visible state (V3 makes the visible and world values equal). An absent `break` is false. A promise that is neither kept nor broken stays owed: chapter changes and the ending do not settle it (rule.md 5.2). A due date goes into the promise's `name` and `break`.
 
 ### 3.5 Things
 
@@ -232,7 +232,7 @@ The engine wires story triggers in this order: threat and fork appearances, `tri
 
 ### 3.12 Action ids
 
-The action ids used by witnesses, receipts, buttons and patterns are `schema:intent arguments`, with judgment arguments appended as `;key=value`. An omitted judgment argument takes its default `ν₀`. A `rely` value is prefixed with the kind of thing it points to: `thing:<id>`, `prop:<id>`, `trait:<id>`, `bond:<id>`, `tag:<entity>:<slot>` (rule.md 2). A solution's `rely` field holds only the id; the story determines the kind.
+The action ids used by witnesses, receipts, buttons and patterns are `schema:intent arguments`, with judgment arguments appended as `;key=value`. An omitted judgment argument takes its default `ν₀`. A `rely` value is prefixed with the kind of thing it points to: `thing:<id>`, `prop:<id>`, `trait:<id>`, `bond:<id>`, `with:<id>`, `tag:<entity>:<slot>` (rule.md 2). A solution's `rely` field holds only the id; the story determines the kind.
 
 ```
 go:village   look:door   take:oil   give:letter:dohae   declare:l_baek   cut:pass   cut:rest

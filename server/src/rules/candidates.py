@@ -31,34 +31,51 @@ def traits_of(u, facts: State) -> list[str]:
     return [t for t in u.traits if facts.stat(PLAYER, t) == 1]
 
 
+def reach(u, facts: State, target: str) -> list[str]:
+    """Whose tags count in a roll (rule.md 2, 3.2). What the player carries goes along: an edge won by readying the
+    oil could only help a roll on the oil itself (qa_test/runs/play-5-explorer 34, 38, 40)."""
+    return list(dict.fromkeys((target, facts.where(PLAYER), PLAYER,
+                               *(t for t in u.things if facts.where(t) == PLAYER))))
+
+
+# What the player has is spent until the chapter changes once leaned on; people are not, and a tag is removed instead
+# (rule.md 2).
+SPENDS = ("trait:", "thing:", "prop:")
+
+
 def rely_atom(u, facts: State, rely: str, target: str):
     kind, _, rest = rely.partition(":")
     if kind == "tag":
         x, _, slot = rest.rpartition(":")
-        if x not in (target, facts.where(PLAYER), PLAYER) or slot not in ("1", "2", "3"):
+        if x not in reach(u, facts, target) or slot not in ("1", "2", "3"):
             return None
         mark = facts.mark_.get((x, int(slot)))
         return ("mark", x, "edge", mark[1], int(slot)) if mark and mark[0] == "edge" else None
     if kind == "trait":
         ok = facts.stat(PLAYER, rest) == 1 and rest in u.traits and not facts.has("spent", PLAYER, rest)
         return ("stat", PLAYER, rest, 1) if ok else None
+    if kind in ("thing", "prop") and facts.has("spent", PLAYER, rest):
+        return None
     if kind == "thing":
         return ("at", rest, PLAYER) if rest in u.things and facts.where(rest) == PLAYER else None
     if kind == "prop":
         return ("believes", PLAYER, rest) if facts.has("believes", PLAYER, rest) else None
     if kind == "bond":
         return ("regards", rest, PLAYER, "trust", 3) if rest in u.agents and facts.regards(rest, PLAYER, "trust") == 3 else None
+    if kind == "with":
+        return ("follows", rest, PLAYER) if rest != target and facts.has("follows", rest, PLAYER) else None
     return None
 
 
 def rely_values(u, facts: State, target: str) -> list[str]:
     out = []
-    for x in dict.fromkeys((target, facts.where(PLAYER), PLAYER)):
+    for x in reach(u, facts, target):
         out += [f"tag:{x}:{i}" for i, kind, _ in facts.marks(x) if kind == "edge"]
     out += [f"trait:{t}" for t in traits_of(u, facts) if not facts.has("spent", PLAYER, t)]
-    out += [f"thing:{t}" for t in u.things if facts.where(t) == PLAYER]
-    out += [f"prop:{p}" for p in u.props if facts.has("believes", PLAYER, p)]
+    out += [f"thing:{t}" for t in u.things if facts.where(t) == PLAYER and not facts.has("spent", PLAYER, t)]
+    out += [f"prop:{p}" for p in u.props if facts.has("believes", PLAYER, p) and not facts.has("spent", PLAYER, p)]
     out += [f"bond:{h}" for h in u.agents if facts.regards(h, PLAYER, "trust") == 3]
+    out += [f"with:{h}" for h in u.agents if h != target and facts.has("follows", h, PLAYER)]
     return out
 
 

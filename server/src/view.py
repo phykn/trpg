@@ -53,7 +53,7 @@ def rely_label(u, p: dict, facts: State, rely: str) -> str:
         return u.name(rest)
     if kind == "prop":
         return prop_label(u, rest)
-    return ko.fill("{h}{와}의 유대", h=u.name(rest))
+    return ko.fill(ko.HELPER if kind == "with" else ko.BOND, h=u.name(rest))
 
 
 def atom_label(u, p: dict, atom) -> str:
@@ -66,9 +66,14 @@ def atom_label(u, p: dict, atom) -> str:
         return u.name(atom[1])
     if k == "believes":
         return prop_label(u, atom[2])
+    # A help chip carries the roll card option's name, so the card can show its value beside it.
+    if k == "regards" and atom[3] == "trust" and atom[4] == 3:
+        return ko.fill(ko.BOND, h=u.name(atom[1]))
     if k == "regards":
         word = ko.TRUST_WORDS.get(atom[4], "") if atom[3] == "trust" else ko.UNAFRAID if atom[4] < 0 else ko.FEAR_WORD
         return f"{u.name(atom[1])} {word}"
+    if k == "follows":
+        return ko.fill(ko.HELPER, h=u.name(atom[1]))
     return str(atom)
 
 
@@ -372,7 +377,8 @@ def _player(u, o: Obs, p: dict) -> dict:
                    for t in u.traits if f.stat(PLAYER, t) == 1],
         "tags": [{"slot": i, "kind": kind, "life": life, "name": tag_name(u, p, ("mark", PLAYER, kind, life, i))}
                  for i, kind, life in f.marks(PLAYER)],
-        "things": [{"id": x, "name": u.name(x)} for x in sorted(o.seen, key=u.rank) if x in u.things and f.where(x) == PLAYER],
+        "things": [{"id": x, "name": u.name(x), "spent": f.has("spent", PLAYER, x)}
+                   for x in sorted(o.seen, key=u.rank) if x in u.things and f.where(x) == PLAYER],
         "wounds": f.stat(PLAYER, "wounds") or 0, "wound_boxes": u.wound_boxes,
         "beats": f.stat(PLAYER, "beats") or 0, "beats_max": u.beats,
         "growth": f.stat(PLAYER, "growth") or 0,
@@ -386,7 +392,7 @@ def _journal(u, g, o: Obs, p: dict, here: str) -> dict:
     for n, pid in enumerate(o.beliefs):
         prop = u.props[pid]
         holders = [a.id for a in u.agents.values() if any(t.prop == pid for t in a.topics)]
-        beliefs.append({"id": pid, "text": prop.text, "order": n,
+        beliefs.append({"id": pid, "text": prop.text, "order": n, "spent": f.has("spent", PLAYER, pid),
                         "here": bool(near & set(prop.about)) or bool(near & set(holders))})
     owes = []
     for gg, h, k in sorted(f.rows("owes")):

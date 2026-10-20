@@ -77,7 +77,7 @@ export function HeroSheet({ player, journal, onGrowth, onClose }: {
         </Row>
         {player.things.length ? (
           <Row inset icon="bag" label={ko.row.carried}>
-            {player.things.map((x) => <Item key={x.id} color={colors.kind.thing}>{x.name}</Item>)}
+            {player.things.map((x) => <Item key={x.id} dim={x.spent} color={colors.kind.thing}>{x.name}</Item>)}
           </Row>
         ) : null}
         {owes.length || beliefs.length ? (
@@ -87,7 +87,7 @@ export function HeroSheet({ player, journal, onGrowth, onClose }: {
                 {o.kind === 'promise' ? ko.promise(o.name, o.promise) : ko.kindness(o.name)}
               </Item>
             ))}
-            {beliefs.map((b) => <Item key={b.id} color={colors.fg.muted}>{b.text}</Item>)}
+            {beliefs.map((b) => <Item key={b.id} dim={b.spent} color={colors.fg.muted}>{b.text}</Item>)}
           </Row>
         ) : null}
       </View>

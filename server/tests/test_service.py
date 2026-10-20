@@ -23,7 +23,7 @@ class FakeInterpreter:
     async def fill(self, u, g, st):
         return st
 
-    async def relevant(self, u, o, p, a, values, text):
+    async def relevant(self, u, o, p, a, values, named, text):
         return values
 
 
@@ -105,7 +105,7 @@ async def test_roll_card_preview_is_the_step(svc):
     assert ids[-1] == "try:door:finesse" and "try:door:finesse;rely=trait:tinker" in ids
     pick = next(o for o in card["options"] if o["id"] == "try:door:finesse;rely=trait:tinker")
     assert [m["value"] for m in pick["preview"]["mods"]] == [2, 1, -1]
-    assert pick["note"] == "1번 남음" and pick["preview"]["risk"] == "normal"
+    assert pick["note"] == "이번 장 1번" and pick["preview"]["risk"] == "normal"
     bad = await cmd(svc, gid, out["view"], "r4", card=card["id"], pick="try:door:force")
     assert bad["kind"] == "refused"
     done = await cmd(svc, gid, out["view"], "r5", card=card["id"], pick=pick["id"])
@@ -123,6 +123,16 @@ async def test_a_blocked_step_reaches_the_narration(svc):
     assert out["steps"][0]["result"] == "blocked"
     job = svc._turn_job(*svc.games[gid], out["turn"])
     assert job.blocked == (out["steps"][0]["label"],) and not job.relied
+
+
+async def test_a_blocked_roll_leans_on_nothing(svc):
+    gid, view = await new(svc)
+    _, view = await press(svc, gid, view, "go:village", "r1")
+    out = await cmd(svc, gid, view, "r2", action="talk:dohae:favor")
+    card = out["view"]["card"]
+    done = await cmd(svc, gid, out["view"], "r3", card=card["id"], pick="talk:dohae:favor;rely=thing:letter")
+    assert done["steps"][0]["result"] == "blocked"
+    assert not svc._turn_job(*svc.games[gid], done["turn"]).relied
 
 
 async def test_card_cancel_and_stale_card(svc):

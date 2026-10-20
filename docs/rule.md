@@ -78,11 +78,14 @@ Judgment arguments multiply onto the actions above.
 
 | `rely` value | Condition | Help atom | Consumed |
 |---|---|---|---|
-| `tag:<x>:<slot>` | `x` is the target, `here` or the player, and `mark(x, edge, ·, slot) ∈ F` | that `mark` | `untag` after the roll |
+| `tag:<x>:<slot>` | `x` is in reach (3.2), and `mark(x, edge, ·, slot) ∈ F` | that `mark` | `untag` after the roll |
 | `trait:<id>` | a trait the player has, with `spent(player, id) ∉ F` | `stat(player, id, 1)` | `insert(spent(player, id))` after the roll, whatever the result |
-| `thing:<id>` | `at(id, player) ∈ F` | that `at` | nothing |
-| `prop:<id>` | `id ∈ B` | `believes(player, id)` | nothing |
+| `thing:<id>` | `at(id, player) ∈ F`, with `spent(player, id) ∉ F` | that `at` | `insert(spent(player, id))` after the roll, whatever the result |
+| `prop:<id>` | `id ∈ B`, with `spent(player, id) ∉ F` | `believes(player, id)` | `insert(spent(player, id))` after the roll, whatever the result |
 | `bond:<h>` | `regards(h, player, trust, 3) ∈ F` (a bond) | that `regards` | nothing |
+| `with:<h>` | `follows(h, player) ∈ F` (a companion), and `h` is not the target | that `follows` | nothing |
+
+What the player has (a trait, a thing, a belief) is spent until the chapter changes once leaned on; who stands with the player (a bond, a companion) is not, and an edge tag is removed instead. Things and beliefs used to cost nothing: one letter gave +1 to any roll, the relying share (fun.md F13) was 0.67–1.0, and four games leaned on the letter 13 times, the oil 5 and a trait never, because a trait used up for the chapter lost to a free letter every time (play-5-bold 9, play-5-odd 25).
 
 **Once an ending is set**, the candidates are empty and the game is over. `try(player, ·)` is always a candidate, so `K ≠ ∅` before the ending (progress).
 
@@ -137,11 +140,13 @@ The atoms of the **modifiers** become the event's `mods`, in this order.
 |---|---|---|
 | `stat` | the value of `stat(player, approach)` | that `stat` atom |
 | help | 1 with a `rely`, otherwise 0 | one atom from the table in section 2 |
-| hinder | 1 if any atom below exists, otherwise 0 | every `snag` `mark` on the target, `here` and the player. In `talk`, a `regards` in which the other party's relevant axis toward the player (`fear` for `threaten`, otherwise `trust`) is negative |
+| hinder | 1 if any atom below exists, otherwise 0 | every `snag` `mark` in reach. In `talk`, a `regards` in which the other party's relevant axis toward the player (`fear` for `threaten`, otherwise `trust`) is negative |
 
 Help and hinder are each 0 or 1 however many atoms there are, so a roll's `help − hinder` is −1, 0 or +1 (bounded advantage). The client shows them as chips (api.md 3).
 
-`modifiers` reads only the atoms passed in `facts`. `R` passes `S`; the preview passes `F`. Every atom the modifiers read is either a `mark`, `stat` or `regards` about an entity in `E` (the target, `here`, the player, the other party present) or an atom of `F` or `B` that `rely` points to. So for a rolling action `a ∈ K(O)`, `modifiers(U, S, a) = modifiers(U, F, a)`.
+Tags count when they are **in reach**: on the target, `here`, the player, or a thing the player carries. A carried thing used to be out of reach, so an edge won by readying the oil helped only a roll on the oil itself and expired unused through three rolls on the lamp (play-5-explorer 34, 38, 40).
+
+`modifiers` reads only the atoms passed in `facts`. `R` passes `S`; the preview passes `F`. Every atom the modifiers read is either a `mark`, `stat` or `regards` about an entity in `E` (the target, `here`, the player, a carried thing, the other party present) or an atom of `F` or `B` that `rely` points to. So for a rolling action `a ∈ K(O)`, `modifiers(U, S, a) = modifiers(U, F, a)`.
 
 `outcome`, `chance` and the step record's `dc` (api.md 3) all come from the one `DC`.
 
@@ -194,7 +199,7 @@ For a rolling action `a ∈ K(O)`, this computes from the observation alone what
 
 ### 4.1 Beats and scenes
 
-**Beats** `stat(player, beats, n)`, `0 ≤ n ≤ B`. Every step except `try(player, ·)` and `cut` adds `beats +1` in `Δ₀`.
+**Beats** `stat(player, beats, n)`, `0 ≤ n ≤ B`. Every step except `try(player, ·)`, `grow` and `cut` adds `beats +1` in `Δ₀`. Growth is picked on a card, not done in the scene; when it spent a beat, levelling up read as a penalty for pressing the button (play-5-bold 7).
 
 **Scene end** `scene_end`: `expire(scene)`, `beats = 0`, and `fill +1` on each active threat (a threat, fork or deadline with `at(w, player)`). Risk clocks are not included. `go` does not expire scene tags.
 
@@ -212,15 +217,16 @@ A **deadline** `deadline.k` is a threat, one per chapter, whose arrival effect u
 
 `chapter_to(k)` is a single sequence of operations.
 
-1. `set(flag, chapter, k)`, `expire(chapter)`
-2. For each `owes(player, h, promise)` present when the step started: kept if `keep` is true in the world, otherwise broken (5.2). Promises made during that step carry over to the next chapter
-3. `clear_spent(player)`
-4. `retire(clock.k−1)`, `retire(deadline.k−1)`, `move(clock.k, player)`, `move(deadline.k, player)`
-5. `growth +1`, plus the story's `goal_effects` when the change comes from reaching the goal
+1. `set(flag, chapter, k)`, `expire(chapter)`, `expire(scene)`, `beats = 0`: a new chapter starts a new scene, without a scene end's threat ticks
+2. `clear_spent(player)`
+3. `retire(clock.k−1)`, `retire(deadline.k−1)`, `move(clock.k, player)`, `move(deadline.k, player)`
+4. When the change comes from reaching the goal: `growth +1` and the story's `goal_effects`
 
-When the change comes from the deadline's arrival instead (the goal was missed), step 4 also does `fill +1` on `deadline.k` if it has more than one box: being late costs time in the next chapter.
+A chapter used to begin inside the scene that ended the last one: the spray of the yard, shown as lasting "이번 장면", followed the player into the lamp room and the next chapter and still hindered a roll there, and the new chapter's clocks began with half a box spent (play-5-bold 6, 8).
 
-`end(e)` does `set(flag, ending, e)`, then settles all of the player's remaining promises as in step 2, and stops that step's trigger scan. When the chapter goal becomes true in `Δ₀`, story triggers are scanned before engine triggers, so even if the previous clock filled up in the same step, that clock retires without `τ_risk`.
+When the change comes from the deadline's arrival instead (the goal was missed), step 4 gives nothing, and step 3 also does `fill +1` on `deadline.k` if it has more than one box: being late costs time in the next chapter. Growth used to come with every chapter change. A missed goal then opened the same growth as a reached one, and the box it cost was a slightly fuller clock in the next chapter that nothing named, so testers saw no cost (play-2-explorer 33, play-2-talker 27, play-2-odd 33; play-4-explorer 29, 41).
+
+`end(e)` does `set(flag, ending, e)` and stops that step's trigger scan. Neither a chapter change nor an ending settles promises (5.2). When the chapter goal becomes true in `Δ₀`, story triggers are scanned before engine triggers, so even if the previous clock filled up in the same step, that clock retires without `τ_risk`.
 
 ## 5. People
 
@@ -236,7 +242,7 @@ The axes of `regards(g, h, axis, n)` are `trust` and `fear`. The **relationship*
 4. **Tone**: `threaten` gives `regards(h, player, fear) +1` and `trust −1` whatever the result. With `deceive`, if `h` believes the `claim`'s `against`, the lie is caught: `trust −2`, and a `snag` chapter tag on the player (default name "의심", "suspicion"). A claim that matches no story proposition remains only as text.
 5. **Favor count**: for each character the engine adds a pattern `favor:h` (action `talk:h:favor`, results `success` or `none`) to `Pat`. A step that grants the favor matches this pattern, and candidates offer no favor once `favor:h ∈ hᵥ`. Candidates read only `F` and `hᵥ`, so they use visible history instead of a story flag.
 
-**Companions**: a character with `follows(h, player)` moves along when the player moves (ontology.md 4, `move`). They do not follow into places in the story's `avoids` (story.md 3.4). If the player does `go` there, `h` stays behind and `follows` is removed. The player can bring someone along without a favor, but someone who does not yet trust the player has to be won over with charm.
+**Companions**: a character with `follows(h, player)` moves along when the player moves (ontology.md 4, `move`). They do not follow into places in the story's `avoids` (story.md 3.4). If the player does `go` there, `h` stays behind and `follows` is removed. The player can bring someone along without a favor, but someone who does not yet trust the player has to be won over with charm. A companion helps every roll not aimed at them (`with:<h>`, section 2). Before, a companion only walked along: pushing the door together gave the same odds as alone, and testers who had talked someone into coming found it changed nothing (play-4-talker 17, 33; play-2-talker 29–36).
 
 `give(x, h)` is `move(x, h)`; if `x ∈ wants(h)`, it also does `regards(h, player, trust) +1` and `insert(owes(h, player, kindness))`.
 
@@ -245,15 +251,17 @@ The axes of `regards(g, h, axis, n)` are `trust` and `fear`. The **relationship*
 `owes(g, h, k)`: `g` owes `h` a `k`. `k` is `promise` (a promise tied to `h`'s favor, whose `keep` and `break` conditions are read from `h`'s `favor.promise`) or `kindness` (a good turn). Each character has one favor, so `owes(player, h, promise)` pins down the promise. The player makes promises only through favors.
 
 - **Kept**: `retract(owes)`, `regards(h, player, trust) +1`.
-- **Broken**: `retract(owes)`, `trust −2`, and a `snag` chapter tag on the player (default name "약속을 어김", "broke a promise"). A broken-promise tag inside a chapter change is added after `expire(chapter)`, so it carries into the next chapter.
+- **Broken**: `retract(owes)`, `trust −2`, and a `snag` chapter tag on the player (default name "약속을 어김", "broke a promise"). A promise broken in a step that also changes the chapter is settled after the change, so its tag carries into the next chapter.
 
-`τ_promise` (section 8) settles promises whose condition has become true. The rest are settled by the first chapter change or ending after the step that made them. So a promise is settled at the next chapter change at the latest.
+`τ_promise` (section 8) settles a promise when its `keep` or `break` becomes true, and nothing else does. An open promise carries across chapter changes; at the ending it is still owed and becomes a legacy line (engine.md 5.5). A story that wants a promise due by some point writes that point into the promise's `name` and `break`, where the player can see it.
+
+Earlier, every chapter change and the ending settled open promises by `keep`. The due was on no screen, and the step that reached the goal was the one that changed the chapter, so a promise was broken in the very step the player succeeded: the key borrowed to light the lamp was "broken" when the lamp lit, after the bridge had cut the way back (play-4-talker 31, 40, 47). The player had promised to return it after the lamp was lit.
 
 ## 6. The protagonist
 
 - **Declaration** `declare(ℓ)`: `reveal(player, ℓ)`, `ℓ.effects`, held clock `+1`. When the player says "옛 친구가 이 마을에 산다" ("an old friend lives in this town"), it looks as if a fact is added to the world, but all that happens is that a latent the story placed from the start comes to light (the scope rule of story.md 3.10).
 - **Scar** `τ_fall`: `wounds = 0`, `tag(player, snag, scar)`, scene end. When picking a slot to overwrite, `tag` skips `scar` slots, and adds nothing if only those remain. If all the player's slots are `scar` at the end of that trigger's effects, `end(collapse)`. The story supplies the name and narration template of `collapse`.
-- **Growth** `grow(item)`: a candidate only when `growth ≥ 1`, and does `growth −1`. The item is one of: `+1` to one approach, a trait swap (remove one `stat` atom and add another), or `untag` of one scar. Chapter changes open up growth.
+- **Growth** `grow(item)`: a candidate only when `growth ≥ 1`, and does `growth −1`. The item is one of: `+1` to one approach, a trait swap (remove one `stat` atom and add another), or `untag` of one scar. Reaching a chapter's goal opens growth (4.3).
 
 ## 7. Schema results `Δ₀`
 
@@ -261,7 +269,7 @@ The axes of `regards(g, h, axis, n)` are `trust` and `fear`. The **relationship*
 
 | Schema | `Δ₀` |
 |---|---|
-| (all) | every step except `try(player, ·)` and `cut` does `beats +1` |
+| (all) | every step except `try(player, ·)`, `grow` and `cut` does `beats +1` |
 | `go(q)` | If a hidden obstacle blocks `q`, `reveal(player, o.hidden)` (`blocked`). Otherwise `retract(follows(h, player))` for each companion `h` with `q ∈ avoids(h)`, then `move(player, q)` (the remaining companions move along) |
 | `look(x)` | `reveal` each story proposition `p` with `x ∈ about(p)`, in story order |
 | `take(x)` | A hidden block is revealed. Otherwise `move(x, player)` |

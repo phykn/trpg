@@ -1,12 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from ..onto.atoms import PLAYER, State
 from ..onto.change import Work
 from ..onto.view import facts_of
 from .acts import Action
-from .candidates import active_threats, blockers, held_clock, talk_rolls, topic_of
+from .candidates import (
+    SPENDS,
+    active_threats,
+    blockers,
+    held_clock,
+    talk_rolls,
+    topic_of,
+)
 from .costs import settle
 from .roll import Mods, modifiers, outcome, risk
 
@@ -23,7 +30,6 @@ class Ctx:
     mods: Mods | None = None
     result: str = "none"
     risk: str = "low"
-    promises: frozenset = field(default_factory=frozenset)   # owes(player, h, promise) rows at the start
 
     @property
     def rolled(self) -> bool:
@@ -66,8 +72,8 @@ def pay_costs(ctx: Ctx, target: str) -> None:
     if rely and rely.startswith("tag:"):
         x, _, slot = rely[4:].rpartition(":")
         ctx.work.untag(x, int(slot))
-    elif rely and rely.startswith("trait:"):
-        ctx.work.insert(("spent", PLAYER, rely[6:]))
+    elif rely and rely.startswith(SPENDS):
+        ctx.work.insert(("spent", PLAYER, rely.partition(":")[2]))
     comp = settle(ctx.u, ctx.work, ctx.result, ctx.risk, ctx.r[2], target, ctx.h)
     if comp is not None:
         run(ctx, comp.effects)
@@ -76,7 +82,7 @@ def pay_costs(ctx: Ctx, target: str) -> None:
 def delta0(ctx: Ctx) -> None:
     a, w, u = ctx.a, ctx.work, ctx.u
     ctx.risk = risk(u, a)
-    quiet = a.schema == "cut" or (a.schema == "try" and a.intent[0] == PLAYER)
+    quiet = a.schema in ("cut", "grow") or (a.schema == "try" and a.intent[0] == PLAYER)
     if not quiet:
         w.set_("stat", (PLAYER, "beats"), "+1")
     globals()[f"_{a.schema}"](ctx, *a.intent)

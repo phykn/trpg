@@ -165,7 +165,7 @@ def f7(plays) -> dict:
 
 def f8(plays) -> dict:
     people: list[int] = []
-    kept = closed = 0
+    kept = made = 0
     for pl in plays:
         start = initial(pl.u, pl.data["creation"])
         def regard(s, h):
@@ -173,10 +173,10 @@ def f8(plays) -> dict:
         people.append(sum(1 for h in pl.u.agents if regard(start, h) != regard(pl.g.state, h)))
         for s in pl.steps:
             for c in s["changes"]:
-                if c["kind"] == "promise" and c["owes"] == "promise" and c["state"] in ("kept", "broken"):
-                    closed += 1
+                if c["kind"] == "promise" and c["owes"] == "promise":
+                    made += c["state"] == "made"
                     kept += c["state"] == "kept"
-    return {"people": mean(people), "kept": ratio(kept, closed), "promises_closed": closed}
+    return {"people": mean(people), "kept": ratio(kept, made), "promises_made": made}
 
 
 def f9(plays) -> dict:

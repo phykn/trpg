@@ -43,11 +43,11 @@ The frame table `𝔗` in `locale/ko.py` gives each predicate a **present frame*
 | `fill` | {o}: {n}/{boxes} | {o}이(가) {n}칸이 되었습니다 |
 | `regards` | {g}이(가) 당신을 {trust or fear word}합니다 | 마음이 움직였습니다 (axis and direction) |
 | `stat` | 당신의 {item}: {n} | {item}이(가) {n}이(가) 되었습니다 |
-| `owes` | 당신은 {h}에게 {promise name}을 약속했습니다 / {g}이(가) 당신에게 신세를 졌습니다 | 약속을 지켰습니다 / 어겼습니다 |
+| `owes` | 당신은 {h}에게 지킬 약속이 있습니다: {promise name} / {g}이(가) 당신에게 신세를 졌습니다 | 약속했습니다: {promise name} / 약속을 지켰습니다 / 어겼습니다 |
 | `follows` | {h}은(는) 당신과 함께 다닙니다 | 함께 다니기로 했습니다 (…했지만 {places}에는 가지 않습니다, for one who avoids places) / 이제 따라다니지 않습니다 |
 | `spent` | Screen only; not put in the context | |
 
-Particles are chosen by the final-consonant (받침) function in `locale/ko.py`. A tag name is the presentation-layer name (section 6), or else the story's default name or the engine's default name ("유리함" (advantage), "불리함" (disadvantage)).
+Particles are chosen by the final-consonant (받침) function in `locale/ko.py`. A tag name is the presentation-layer name (section 6), or else the story's default name or the engine's default name ("이점" (advantage), "불리함" (disadvantage); "유리함" was narrated as glass, 유리, play-5-odd 9).
 
 **Action names** `λ(a)` are one frame per schema: `go` "{q}(으)로 간다", `try` "{x}을 {approach}(으)로 다룬다" ("상대한다" for a person; "말한 대로 해 본다" for the player alone, which changes nothing), the story's `label` for a solution (kept under "무리해서" when forced), `talk` "{h}에게 {topic title}을 묻는다", and so on. Buttons, clarify cards, the decision model's options and step records all use `λ`.
 
@@ -203,7 +203,9 @@ If the plan's next step `a` is a rolled action, the engine stops just before exe
 | `selected` | The `rely` option layer 0 set; otherwise "rely on nothing" |
 | `echo` | The sentence or button name, plus the names of the slots layer 2 read (target, approach, strain, tone) |
 
-**Relevance.** The rules give +1 help to any roll for any allowed `rely` (rule.md 2), so before the card is placed only what is relevant to this roll is kept. What the story links is kept without asking: the `rely` values listed in the target obstacle's solutions, and the tags on the target. The rest goes to the decision model once. The context is the step's name, the target's appearance and the player's sentence; the single question is "이 시도를 실제로 돕는 것은 무엇입니까?" (What actually helps this attempt?); the options are a description of each remaining value (a trait's text, a thing's appearance, a known proposition's text, a tag or bond name) plus "아무것도 돕지 않음" (nothing helps). Only values whose probability is at least `θ_rely` (initially 0.1) are kept. Asked yes/no value by value, the small decision model gave the same answer for every value in a scene, so the values are laid out in one question to be compared. With no answer, nothing is filtered, so that a model failure does not take a choice away from the player. The filtered result is saved with the card, so resending the same request returns the same card.
+**Relevance.** The rules give +1 help to any roll for any allowed `rely` (rule.md 2), so before the card is placed only what is relevant to this roll is kept. Kept without asking: the `rely` values listed in the target obstacle's solutions, every edge tag in reach (rule.md 3.2), companions, the value layer 0 named, and whatever an earlier card for the same attempt offered. The rest goes to the decision model once. The context is the step's name, the target's appearance and the player's sentence; the single question is "이 시도를 실제로 돕는 것은 무엇입니까?" (What actually helps this attempt?); the options are a description of each remaining value (a trait's text, a thing's appearance, a known proposition's text, a bond name) plus "아무것도 돕지 않음" (nothing helps). Only values whose probability is at least `θ_rely` (initially 0.1) are kept. Asked yes/no value by value, the small decision model gave the same answer for every value in a scene, so the values are laid out in one question to be compared. With no answer, nothing is filtered, so that a model failure does not take a choice away from the player.
+
+What a card offers is kept in `P` per attempt (schema and intent arguments), so a help once offered for an attempt stays while it is allowed; what was dropped is asked again with the next sentence. Asked anew with each sentence, the same help came and went on identical attempts (play-2-explorer 14, 42; play-4-bold 8, 12, 15; play-4-odd 25, 31). Dropping the sentence from the question instead made every verdict fixed but cut exact answers on the decision-1 reliance items from 0.53 to 0.31: the sentence says how the attempt is made. An edge is kept unasked because its name, often the default "이점", is all the model would have to judge it by, and an edge exists to be spent.
 
 Acceptance is `{card, pick}`, where `pick` is one action id from `options`. The service executes only if the request's `revision` matches the current one, `card` is the id of the pending card, `pick` is one of that card's options, and `admits(U, Vₜ, pick)` holds. A stale `revision` gets 409, and a `pick` outside the options at the same `revision` gets `refused` (api.md). This acceptance confirms exactly that action, so a high-risk roll gets no separate confirm card. The risk and modifiers shown on the card equal the values at execution (rule.md 3.4).
 
@@ -258,7 +260,8 @@ Format rules:
 - An obstacle this turn moved forward is named in the steering: short of full, as a small visible change that must not read as done; full, as what changed before the player's eyes. The prose said the lamp pushed back the dark at 1/4 and the flame poured out at 3/4 (play-2-bold 6–7, play-4-odd 28).
 - A clock or threat that came to pass this turn, and a deadline that ran out, are named in the steering to be shown in one sentence each. A bridge collapse and a missed sunset went untold behind the turn's other changes (play-4-talker 28, 40; play-4-odd 29; play-4-explorer 29).
 - A step that something hidden blocked is named in the steering as not having happened: no one answers and nothing is done; the narration shows what stood in the way. A blocked talk was answered in full, so testers could not tell what the dog had stopped (play-4-explorer 10, play-4-talker 21).
-- What a roll leaned on is named in the steering as the resource the attempt drew on, to be shown once in use. A leaned-on letter never appeared in the prose (play-4-talker 6, play-4-odd 4).
+- What a roll leaned on is named in the steering as the resource the attempt drew on, to be shown once in use; a step something hidden blocked rolled nothing and leaned on nothing. A leaned-on letter never appeared in the prose (play-4-talker 6, play-4-odd 4).
+- What a look found is named in the steering: each thing or obstacle a look step reached, with its look text, to be shown. A letter was read and none of its words were told, because its look sat among every entity's public parameters (play-5-talker 35).
 - A turn that only spent growth gets two sentences and 100 characters and is told as the change settling in, without the place cue or a replay of the last scene. Told as a turn, a growth pick replayed taking the oil or listed the scenery again (play-3-talker 24, play-3-explorer 30, play-3-bold 7).
 - A turn that stopped before the rest of the sentence (at a card, after a failure, or at a step that could not be read) says which action has not happened yet, or that the rest has not, so the narration stops short of it. Given the whole sentence, the narration lit the lamp on the look before its roll card (play-3-odd 18, play-3-explorer 41).
 
@@ -299,6 +302,7 @@ A game is `G = (story, seed, S, L, P)`. `R`, `K`, conditions and observations do
 | `narration` | Turn `n` → accepted narration, attempt count, deleted sentence count |
 | `recap` | Chapter `k` → recap |
 | `tag_names` | `(atom, t)` → name |
+| `relevance` | Attempt → the `rely` values its roll cards have offered (4.2) |
 | `receipts` | Request id → (body hash, response) |
 
 ## 7. Turn protocol

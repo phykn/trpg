@@ -107,13 +107,18 @@ def rely_hint(u, o, p: dict, a, text: str) -> str | None:
     """The hint becomes the roll card's default (engine.md 4.2)."""
     if "rely" not in JUDGE.get(a.schema, ()):
         return None
-    hits = [v for v in rely_options(u, o, a.with_(rely=None)) if mentions(rely_label(u, p, o.facts, v), text) >= 0]
+    hits = [v for v in rely_options(u, o, a.with_(rely=None)) if mentions(rely_name(u, p, o.facts, v), text) >= 0]
     return hits[0] if len(hits) == 1 else None
+
+
+def rely_name(u, p: dict, facts, v: str) -> str:
+    kind, _, rest = v.partition(":")
+    return u.name(rest) if kind in ("bond", "with") else rely_label(u, p, facts, v)
 
 
 def rely_desc(u, p: dict, facts, v: str) -> str:
     kind, _, rest = v.partition(":")
-    name = u.name(rest) if kind == "bond" else rely_label(u, p, facts, v)
+    name = rely_name(u, p, facts, v)
     text = (u.traits[rest][1] if kind == "trait" else u.things[rest].look if kind == "thing"
             else u.props[rest].text if kind == "prop" else "")
     return ko.fill(ko.RELY_DESC[kind], name=name, text=text)
@@ -416,23 +421,29 @@ class Interpreter:
         focus = {PLAYER, o.facts.where(PLAYER), *(x for i in intents for x in i)}
         return render(context(u, o, focus, p)) + "\n\n" + self.sentence(text)
 
-    async def relevant(self, u, o, p, a, values: list[str], text: str | None) -> list[str]:
-        """The roll card's reliances: what the story ties to the target, and what the model sees helping."""
+    async def relevant(self, u, o, p, a, values: list[str], named: str | None, text: str | None) -> list[str]:
+        """The roll card's reliances (engine.md 4.2): what the story ties to the target, every edge in reach, who is at
+        the player's side, what was offered for this attempt before, and what the model sees helping it now."""
         x = a.intent[0]
         linked = {s.rely for s in u.obstacles[x].solutions} if x in u.obstacles else set()
-        ask = [v for v in values if v not in linked and not v.startswith(f"tag:{x}:")]
-        if not ask:
-            return values
-        # One choice over every reliance: asked one by one, the small model gives the same answer to all of them.
-        opts = {f"r{i}": rely_desc(u, p, o.facts, v) for i, v in enumerate(ask)}
-        state = "\n".join([ko.fill(ko.ATTEMPT, label=action_label(u, o, p, a)), *(ln.text for ln in about(u, o, x)),
-                           *([self.sentence(text)] if text else [])])
-        answer = (await self.ask(state, {"rely": choice(ko.RELY_QUESTION, {**opts, "none": ko.RELY_NONE})})).get("rely")
-        probs = getattr(answer, "probabilities", None)
-        if not probs:
-            return values               # a silent model takes no choice away from the player
-        drop = {v for i, v in enumerate(ask) if probs.get(f"r{i}", 0.0) < RELY_SHARE}
-        return [v for v in values if v not in drop]
+        # Once offered for an attempt, a reliance stays: asked anew with each sentence, the same one came and went
+        # (qa_test/runs/play-4-bold 8, 12, 15).
+        offered = p.setdefault("relevance", {}).setdefault(":".join((a.schema, *a.intent)), [])
+        keep = {*linked, *offered, named}
+        # An edge exists to be spent, and its name, often the default one, is all the model could judge it by.
+        ask = [v for v in values if v not in keep and not v.startswith(("tag:", "with:"))]
+        if ask:
+            # One choice over every reliance: asked one by one, the small model gives the same answer to all of them.
+            opts = {f"r{i}": rely_desc(u, p, o.facts, v) for i, v in enumerate(ask)}
+            state = "\n".join([ko.fill(ko.ATTEMPT, label=action_label(u, o, p, a)), *(ln.text for ln in about(u, o, x)),
+                               *([self.sentence(text)] if text else [])])
+            answer = (await self.ask(state, {"rely": choice(ko.RELY_QUESTION, {**opts, "none": ko.RELY_NONE})})).get("rely")
+            probs = getattr(answer, "probabilities", None)
+            # A silent model takes no choice away from the player.
+            drop = {v for i, v in enumerate(ask) if probs.get(f"r{i}", 0.0) < RELY_SHARE} if probs else set()
+            values = [v for v in values if v not in drop]
+        offered += [v for v in values if v not in offered]
+        return values
 
     def done(self, u, o, p, a, text, echo) -> dict:
         return {"action": str(a), "rely": rely_hint(u, o, p, a, text), "slots": echo}

@@ -68,7 +68,7 @@ characters:
     persona: ISTJ
     desire: 떠난 아들의 소식을 기다립니다.
     fear: 등대에 다시 오르는 것을 두려워합니다.
-    avoids: [yard, lamp_room]
+    avoids: [lamp_room]
     beliefs:
       b_no_keeper: 이 섬에 새 등대지기는 오지 않는다.
     wants: [letter]
@@ -298,7 +298,7 @@ witnesses:
     - reach: {ending: two_lights}
       after: 0
       steps:
-        - choose:g_oil:beacon                         # 박자 6 → 장면 끝
+        - choose:g_oil:beacon                         # 장이 바뀌어 새 장면, 박자 1
         - {do: "try:lamp:wits", roll: [6, 6, 0]}      # 13, 어울림 → 2칸
         - {do: "try:lamp:wits", roll: [6, 6, 0]}      # 4칸, 봉화를 고름 → 두 개의 불
     - reach: {ending: lone_light}

@@ -15,10 +15,10 @@ Does the world feel natural, and does it feel like a game? A tester plays one ga
 ```
 
 - Every `say`, `pick`, `cancel` and `press` is one command, numbered in the transcript; turn N in notes means command N. A sentence that opens a card and the pick that answers it are two commands.
-- Each command prints what the player sees: the action it was read as, the roll (`→ 성공`, `→ 실패`, or `→ 막힘` when something hidden blocked it), what changed, the narration, the scene, the suggested buttons and any open card. Scene lines marked `+` are new since the last command and `-` lines are gone, so a clock or companion that disappears shows up.
+- Each command prints what the player sees: the action it was read as, the roll (`→ 성공`, `→ 실패`, or `→ 막힘` when something hidden blocked it), what changed, the narration, the scene, the suggested buttons and any open card. Scene lines marked `+` are new since the last command and `-` lines are gone, so a clock or companion that disappears shows up. A clock that draws closer at scene ends shows the scene's time spent (`다음 칸 3/6`); when it reaches the end, those clocks each fill a box.
 - The indented lines under an action summarize what changed. The real screen shows them as icons and boxes, so their wording is not judged; the narration, dialogue and the screen's labels are.
 - A card asks before acting:
-  - `roll`: what to lean on, each with its chance of success, risk, and what failing costs. `기대지 않음` leans on nothing; `1번 남음` means leaning on it uses it up.
+  - `roll`: the target number two dice and the modifiers must reach (`⚠` when failing costs something that cannot be undone), the fixed modifiers, and what to lean on, each with its help. `기대지 않음` leans on nothing; `1번 남음` means leaning on it uses it up, and `이번 장 1번` means it is spent until the chapter changes (shown as `(씀)` in the state line). This is what the web roll card shows; it states no chance and no cost, which the result then shows.
   - `move`: where to go and who comes along.
   - `confirm` or `clarify`: asks you to confirm the action, or which of several meanings you meant.
 

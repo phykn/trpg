@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from ..onto.atoms import PLAYER, Atom, State
 from ..onto.view import Obs
 from .acts import Action
-from .candidates import held_clock, rely_atom, talk_rolls
+from .candidates import held_clock, reach, rely_atom, talk_rolls
 from .costs import TABLE
 
 RISKS = ("low", "normal", "high")
@@ -76,9 +76,8 @@ def modifiers(u, facts: State, a: Action) -> Mods:
     help_ = rely_atom(u, facts, rely, target) if rely else None
     if rely and help_ is None:
         raise ValueError(f"nothing to rely on: {rely}")
-    here = facts.where(PLAYER)
     hinder: list[Atom] = []
-    for x in dict.fromkeys((target, here, PLAYER)):
+    for x in reach(u, facts, target):
         hinder += [("mark", x, "snag", life, i) for i, kind, life in facts.marks(x) if kind == "snag"]
     if a.schema == "talk":
         axis = "fear" if a.get("tone") == "threaten" else "trust"

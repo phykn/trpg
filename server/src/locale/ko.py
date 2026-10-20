@@ -13,12 +13,16 @@ RESULTS = {"success": "성공", "fail": "실패", "none": "", "blocked": "막힘
 SHEET = {"beats": "박자", "wounds": "상처", "growth": "성장"}
 
 # Default tag names: by kind, and the "@" keys the rules give to the tags they place.
-TAG_DEFAULT = {"edge": "유리함", "snag": "불리함"}
+# "유리함" was narrated as glass, 유리 (qa_test/runs/play-5-odd 9).
+TAG_DEFAULT = {"edge": "이점", "snag": "불리함"}
 TAG_KEYS = {"@suspicion": "의심", "@broken_promise": "약속을 어김", "@scar": "흉터"}
 
 # How a person regards the player, by trust; fear above this shows instead. "무덤덤" at zero read as a mood that the
 # persona's cheer contradicted in every playtest (play-2-*, play-3-*), so zero names the stance.
 TRUST_WORDS = {-3: "적대", -2: "불신", -1: "경계", 0: "중립", 1: "호의", 2: "신뢰", 3: "유대"}
+# What a roll leans on in a person: a bond (trust 3) or a companion (rule.md 2).
+BOND = "{h}{와}의 유대"
+HELPER = "{h}의 도움"
 FEARFUL, FEAR_WORD = 2, "두려움"
 # A threat meets negative fear, so that chip names its absence.
 UNAFRAID = "겁 없음"
@@ -60,7 +64,7 @@ PARTING = ("남", "멈춰", "멈추", "머무", "머물", "기다", "배웅", "�
 AFAR = ("멀리", "먼 곳")
 MOVE_LEFT = "{name}{은} 남음: {fear}"
 # A tag goes for good and a trait returns next chapter, but on the card both are one use away from gone.
-CONSUMED = dict.fromkeys(("tag", "trait"), "1번 남음")
+CONSUMED = {"tag": "1번 남음", **dict.fromkeys(("trait", "thing", "prop"), "이번 장 1번")}
 # The roll card's relevance question (engine.md 4.2): one option per reliance, and none.
 ATTEMPT = "시도: {label}"
 RELY_QUESTION = "이 시도를 실제로 돕는 것은 무엇입니까?"
@@ -159,7 +163,7 @@ FRAME = {
     "fear": "{g}{은} 당신을 {word}",
     "stat": "당신의 {item}: {n}",
     "trait": "당신의 특성: {name}",
-    "promise": "당신은 {h}에게 {name}{을} 약속했습니다",
+    "promise": "당신은 {h}에게 지킬 약속이 있습니다: {name}",
     "kindness": "{g}{은} 당신에게 신세를 졌습니다",
     "follows": "{h}{은} 당신과 함께 다닙니다",
     "belief": "당신이 믿는 것: {text}",
@@ -308,7 +312,7 @@ CHANGE = {
     "between_close": "{a}{와} {b} 사이의 길이 끊겼습니다",
     "regards_up": "{name}의 마음이 당신 쪽으로 움직였습니다",
     "regards_down": "{name}의 마음이 당신에게서 멀어졌습니다",
-    "promise_made": "당신은 {name}에게 {promise}{을} 약속했습니다",
+    "promise_made": "당신은 {name}에게 약속했습니다: {promise}",
     "kindness_made": "{name}{이} 당신에게 신세를 졌습니다",
     "promise_kept": "당신은 {name}{와}의 약속을 지켰습니다",
     "promise_broken": "당신은 {name}{와}의 약속을 어겼습니다",
@@ -349,6 +353,7 @@ NOW = {"speaker": "{x}: {persona} 말투는 {voice}",
        "missed": "때가 다 된 일: {names}. 이번 장의 목표를 이루지 못했다는 것을 한 문장으로 꼭 보여 줍니다.",
        "blocked": "'{label}'는 무언가에 가로막혀 이루어지지 않았습니다. 상대가 대답하거나 그 일이 된 것처럼 쓰지 않고, 무엇이 가로막았는지 보여 줍니다.",
        "relied": "이번 시도는 {rely}{을} 밑천으로 삼았습니다. 그것이 어떻게 쓰였는지 한 번 보여 줍니다.",
+       "looked": "당신이 살펴본 {name}: {text}. 살펴서 알게 된 이 모습이나 글을 꼭 보여 줍니다.",
        "grown": "이번 일은 당신이 고른 성장뿐입니다. 앞 장면을 다시 쓰지 않고, 그 변화가 당신 안에 자리 잡는 짧은 순간만 손이나 숨, 시선으로 그립니다.",
        "waits": "플레이어 문장 가운데 '{label}'부터는 아직 하지 않았습니다. 그 앞에서 멈추고, 그 결과를 미리 쓰지 않습니다.",
        "waits_rest": "플레이어 문장의 나머지 행동은 아직 하지 않았습니다. [일어난 일]까지만 쓰고, 그 결과를 미리 쓰지 않습니다.",
