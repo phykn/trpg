@@ -1,4 +1,5 @@
 // Opens the Mac API to the deployed Worker: API, quick tunnel, and the tunnel URL in KV.
+// Keeps both sides current: server/story edits restart the API, client edits redeploy the Worker.
 const { spawn, spawnSync } = require('node:child_process');
 const path = require('node:path');
 const { tunnelBinary } = require('./tunnel.cjs');
@@ -84,6 +85,39 @@ function watchSources() {
   watch('scenarios', '.yaml');
 }
 
+let deploying = false;
+let deployAgain = false;
+
+// One build at a time; edits made during a build trigger exactly one more.
+function deployClient() {
+  if (stopping) return;
+  if (deploying) { deployAgain = true; return; }
+  deploying = true;
+  console.log('\n화면 코드가 바뀌어 배포합니다 (1분쯤).');
+  let log = '';
+  const child = track(spawn(process.execPath, [path.join(__dirname, 'deploy.cjs')], { cwd: client, stdio: ['ignore', 'pipe', 'pipe'] }), 'deploy');
+  child.stdout.on('data', (chunk) => { log += chunk; });
+  child.stderr.on('data', (chunk) => { log += chunk; });
+  child.on('exit', (code) => {
+    deploying = false;
+    if (stopping) return;
+    if (code === 0) console.log('화면 배포 완료. 새로고침하면 반영됩니다.');
+    else console.error(`화면 배포 실패:\n${log.trim().split('\n').slice(-15).join('\n')}`);
+    if (deployAgain) { deployAgain = false; deployClient(); }
+  });
+}
+
+function watchClient() {
+  let timer = null;
+  const skip = ['node_modules', 'dist', '.expo', '.wrangler', '__tests__', 'scripts'];
+  require('node:fs').watch(client, { recursive: true }, (_, file) => {
+    if (!file || skip.some((dir) => file.split(path.sep).includes(dir))) return;
+    if (!/\.(tsx?|jsx?|cjs|css|json|jsonc|png|ttf)$/.test(file) || file.startsWith('package-lock')) return;
+    clearTimeout(timer);
+    timer = setTimeout(deployClient, 2000);
+  });
+}
+
 // Each run of a quick tunnel gets a new URL, so a dropped tunnel is replaced and KV rewritten.
 async function runTunnel(binary) {
   while (!stopping) {
@@ -104,7 +138,7 @@ async function runTunnel(binary) {
         if (!ready) await sleep(2000);
       }
       if (ready && kv('put', 'origin', url)) {
-        console.log(`\n외부 접속 준비 완료: 배포한 workers.dev 주소 (1분쯤 뒤부터)\n터널: ${url}\n서버·스토리 코드를 바꾸면 API가 알아서 다시 시작합니다.\n종료: Ctrl+C\n`);
+        console.log(`\n외부 접속 준비 완료: 배포한 workers.dev 주소 (1분쯤 뒤부터)\n터널: ${url}\n코드를 바꾸면 알아서 반영합니다: 서버·스토리는 API 재시작, 화면은 자동 배포(1분쯤).\n종료: Ctrl+C\n`);
       } else {
         console.error('터널이 응답하지 않아 다시 엽니다.');
         tunnel.kill('SIGTERM');
@@ -123,6 +157,7 @@ async function main() {
   const binary = await tunnelBinary();
   await startApi();
   watchSources();
+  watchClient();
   await runTunnel(binary);
 }
 
