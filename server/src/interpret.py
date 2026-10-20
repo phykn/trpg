@@ -104,6 +104,10 @@ def choice(question: str, criteria: dict[str, str]) -> dict:
     return {"type": "choice", "instructions": question, "criteria": criteria}
 
 
+def listed(options: dict[str, str]) -> str:
+    return "\n".join(f"{i + 1}. {d}" for i, d in enumerate(options.values()))
+
+
 def ranked(answer, options) -> list[tuple[str, float]]:
     """Answers outside the options count 0 (engine.md 3)."""
     probs = getattr(answer, "probabilities", None) or {}
@@ -124,25 +128,36 @@ class Interpreter:
             k: dict(getattr(v, "probabilities", {})) for k, v in out.items()}})
         return out
 
-    async def read(self, text: str, options: dict[str, str]) -> list[str] | None:
-        """The narration model's reading: the sentence's actions in order, as option numbers, at most three."""
+    async def numbers(self, system: str, prompt: str) -> list[int] | None:
+        """The narration model's answer as option numbers, from 0; None when it gives none in time."""
         if self.llm is None:
             return None
-        keys = list(options)
-        listed = "\n".join(f"{i + 1}. {options[k]}" for i, k in enumerate(keys))
-        messages = [{"role": "system", "content": ko.READER},
-                    {"role": "user", "content": ko.fill(ko.READER_PROMPT, text=text, options=listed)}]
         try:
-            raw = await asyncio.wait_for(self.llm.pick(messages), self.timeout)
+            raw = await asyncio.wait_for(self.llm.pick([{"role": "system", "content": system},
+                                                        {"role": "user", "content": prompt}]), self.timeout)
         except (ModelUnavailable, TimeoutError, OSError):
             return None
+        return [int(m) - 1 for m in re.findall(r"\d+", raw)]
+
+    async def read(self, text: str, options: dict[str, str]) -> list[str] | None:
+        """The narration model's reading: the sentence's actions in order, at most three."""
+        keys = list(options)
+        got = await self.numbers(ko.READER, ko.fill(ko.READER_PROMPT, text=text, options=listed(options)))
+        if got is None:
+            return None
         steps = []
-        for m in re.findall(r"\d+", raw):
-            i = int(m) - 1
+        for i in got:
             # the same schema twice in a row is one action told in two clauses ("kneels and begs")
             if 0 <= i < len(keys) and (not steps or steps[-1] != keys[i]):
                 steps.append(keys[i])
         return steps[:3]
+
+    async def pick(self, state: str, question: str, options: dict[str, str]) -> str | None:
+        """The narration model's answer to an intent slot Kev was unsure of, with Kev's context and options."""
+        keys = list(options)
+        got = await self.numbers(ko.PICKER, ko.fill(ko.PICKER_PROMPT, state=state, question=question,
+                                                    options=listed(options)))
+        return keys[got[0]] if got and 0 <= got[0] < len(keys) else None
 
     async def plan(self, u, g, text: str) -> dict:
         self.calls = []
@@ -232,10 +247,13 @@ class Interpreter:
                 fixed["intent"] = ":".join(intents[0])
             else:
                 top = ranked(answers.get("intent"), labels)
-                if top[0][1] >= self.theta:
-                    fixed["intent"] = top[0][0]
-                else:
-                    return self.clarify(u, o, p, st, fixed, "intent", [w for w, _ in top[:3]], labels)
+                # Where Kev is unsure the narration model picks before the player is asked: on the bench it was
+                # right on 44 of 45 such intents, targets and approaches (qa_test/agency/decision-1).
+                w = top[0][0] if top[0][1] >= self.theta else await self.pick(state, qs["intent"]["instructions"],
+                                                                                 labels)
+                if w is None:
+                    return self.clarify(u, o, p, st, fixed, "intent", [x for x, _ in top[:3]], labels)
+                fixed["intent"] = w
         intent = tuple(fixed["intent"].split(":"))
         slot = slot_of[intent]
         judge_args = {}
@@ -265,7 +283,15 @@ class Interpreter:
             qs["approach"] = choice(ko.SLOT_QUESTION["approach"], approaches)
         if "strain" not in fixed:
             qs["strain"] = choice(ko.SLOT_QUESTION["strain"], strains)
-        answers = await self.ask(self.state(u, o, p, text, targets), qs) if qs else {}
+        state = self.state(u, o, p, text, targets)
+        # The narration model picks the target and approach even where Kev is sure: on the bench it was right on 48
+        # of 48 targets and 40 of 42 approaches to Kev's 33 and 25 (qa_test/agency/decision-1). Kev's answers stay
+        # for when it gives none, and both models are asked at once.
+        picking = [k for k in ("target", "approach") if k in qs]
+        answers, *got = await asyncio.gather(
+            self.ask(state, qs) if qs else asyncio.sleep(0, {}),
+            *(self.pick(state, qs[k]["instructions"], labels if k == "target" else approaches) for k in picking))
+        picks = dict(zip(picking, got))
         if "strain" not in fixed:
             w, pr = ranked(answers.get("strain"), strains)[0]
             fixed["strain"] = w if pr >= self.theta else "natural"
@@ -276,14 +302,15 @@ class Interpreter:
                 fixed["target"] = targets[0][0]
             else:
                 top = ranked(answers.get("target"), labels)
-                if top[0][1] < self.theta:
-                    return self.clarify(u, o, p, st, fixed, "target", [w for w, _ in top[:3]], labels)
-                fixed["target"] = top[0][0]
+                w = picks["target"] or (top[0][0] if top[0][1] >= self.theta else None)
+                if w is None:
+                    return self.clarify(u, o, p, st, fixed, "target", [x for x, _ in top[:3]], labels)
+                fixed["target"] = w
         if "approach" not in fixed:
             top = ranked(answers.get("approach"), approaches)
-            # An unclear approach falls to the player's strongest stat instead of a question.
-            fixed["approach"] = top[0][0] if top[0][1] >= self.theta else max(
-                APPROACHES, key=lambda ap: o.facts.stat(PLAYER, ap) or 0)
+            # With no answer at all, the player's strongest stat instead of a question.
+            fixed["approach"] = picks["approach"] or (top[0][0] if top[0][1] >= self.theta else max(
+                APPROACHES, key=lambda ap: o.facts.stat(PLAYER, ap) or 0))
         x, ap = fixed["target"], fixed["approach"]
         slot = next(s for s in slots if s.intent == (x, ap))
         strain = fixed["strain"] if fixed["strain"] in slot.values("strain") else None

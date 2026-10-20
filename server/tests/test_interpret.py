@@ -101,8 +101,7 @@ async def test_unsure_first_step_is_the_narration_models(tmp_path):
     decision = FakeDecision({"s1": {"look": 0.4, "go": 0.3}})
     svc, gid, view = await game(tmp_path, decision, FakeLLM("1"))
     out = await say(svc, gid, view, "음")
-    card = out["view"]["card"]                          # the narration model decides even against Kev's top answer
-    assert card["kind"] == "clarify" and all(o["label"].endswith("간다") for o in card["options"])
+    assert out["steps"][0]["action"].startswith("go:")  # the narration model decides even against Kev's top answer
     # an unreadable reading, or one whose first step cannot happen here, leaves the player idle
     for i, reply in enumerate(("?", "9")):
         decision = FakeDecision({"s1": {"look": 0.4, "go": 0.3}})
@@ -119,7 +118,7 @@ async def test_model_failure_is_all_zero_and_changes_nothing(tmp_path):
 
 
 async def test_unsure_intent_makes_a_clarify_card_and_a_pick_resumes(tmp_path):
-    decision = FakeDecision({"s1": {"look": 0.9}, "s2": {"end": 0.9}, "intent": {"dock": 0.3, "yunseul": 0.25, "letter": 0.2}})
+    decision = FakeDecision({"s1": {"look": 0.9}, "intent": {"dock": 0.3, "yunseul": 0.25, "letter": 0.2}})
     svc, gid, view = await game(tmp_path, decision)
     out = await say(svc, gid, view, "저걸 자세히 본다")
     card = out["view"]["card"]
@@ -130,8 +129,19 @@ async def test_unsure_intent_makes_a_clarify_card_and_a_pick_resumes(tmp_path):
     assert [s["action"] for s in done["steps"]] == ["look:yunseul"] and done["view"]["card"] is None
 
 
+async def test_the_narration_model_picks_an_unsure_intent_before_the_player_is_asked(tmp_path):
+    decision = FakeDecision({"s1": {"look": 0.9}, "intent": {"dock": 0.3, "yunseul": 0.25, "letter": 0.2}})
+    llm = FakeLLM("1")
+    svc, gid, view = await game(tmp_path, decision, llm)
+    out = await say(svc, gid, view, "저걸 자세히 본다")
+    assert out["steps"][0]["action"].startswith("look:") and out["view"]["card"] is None
+    state, qs = decision.asked[-1]
+    prompt = llm.prompts[0][1]["content"]
+    assert prompt.startswith(state) and qs["intent"]["instructions"] in prompt
+
+
 async def test_try_reads_cues_and_refuses_the_impossible(tmp_path):
-    decision = FakeDecision({"s1": {"try": 0.9}, "s2": {"end": 0.9}, "strain": {"natural": 0.9}})
+    decision = FakeDecision({"s1": {"try": 0.9}, "strain": {"natural": 0.9}})
     svc, gid, view = await game(tmp_path, decision, moves=["go:village", "go:yard"])
     out = await say(svc, gid, view, "기계공의 손으로 문의 자물쇠를 살살 따 본다")
     card = out["view"]["card"]
@@ -144,7 +154,7 @@ async def test_try_reads_cues_and_refuses_the_impossible(tmp_path):
 
 
 async def test_unsure_judgment_falls_back_to_neutral(tmp_path):
-    decision = FakeDecision({"s1": {"talk": 0.9}, "s2": {"end": 0.9}, "intent": {"yunseul:chat": 0.9},
+    decision = FakeDecision({"s1": {"talk": 0.9}, "intent": {"yunseul:chat": 0.9},
                    "tone": {"threaten": 0.4}})
     svc, gid, view = await game(tmp_path, decision)
     out = await say(svc, gid, view, "윤슬에게 말을 건다")
@@ -162,17 +172,29 @@ async def test_a_claim_is_asked_only_after_a_deceiving_tone(tmp_path):
     assert card["plan"]["step"]["action"] == "talk:dohae:chat;claim=c_keeper;tone=deceive"
 
 
-async def test_an_unclear_approach_takes_the_strongest_stat_without_asking(tmp_path):
-    decision = FakeDecision({"s1": {"try": 0.9}, "s2": {"end": 0.9}, "strain": {"natural": 0.9},
+async def test_an_unclear_approach_is_picked_or_takes_the_strongest_stat(tmp_path):
+    decision = FakeDecision({"s1": {"try": 0.9}, "strain": {"natural": 0.9},
                              "approach": {"force": 0.3, "wits": 0.3}})
     svc, gid, view = await game(tmp_path, decision, moves=["go:village", "go:yard"])
     out = await say(svc, gid, view, "문을 열어 본다")
     card = out["view"]["card"]
     assert card["kind"] == "roll" and card["plan"]["step"]["action"] == "try:door:finesse"
+    # with a narration model, its pick: force, finesse, wits, charm
+    svc, gid, view = await game(tmp_path / "b", decision, FakeLLM("3"), moves=["go:village", "go:yard"])
+    out = await say(svc, gid, view, "문을 열어 본다")
+    assert out["view"]["card"]["plan"]["step"]["action"] == "try:door:wits"
+
+
+async def test_the_narration_model_picks_target_and_approach_over_a_sure_kev(tmp_path):
+    decision = FakeDecision({"s1": {"try": 0.9}, "strain": {"natural": 0.9}, "target": {"player": 0.9},
+                             "approach": {"charm": 0.9}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("1"), moves=["go:village", "go:yard"])
+    out = await say(svc, gid, view, "문을 밀어 본다")
+    assert out["view"]["card"]["plan"]["step"]["action"] == "try:door:force"
 
 
 async def test_the_roll_card_keeps_only_the_reliances_the_model_sees_helping(tmp_path):
-    decision = FakeDecision({"s1": {"try": 0.9}, "s2": {"end": 0.9}, "strain": {"natural": 0.9},
+    decision = FakeDecision({"s1": {"try": 0.9}, "strain": {"natural": 0.9},
                              "approach": {"finesse": 0.9}, "rely": {"r1": 0.8, "r2": 0.05, "none": 0.15}})
     svc, gid, view = await game(tmp_path, decision, moves=["go:village", "go:yard"])
     out = await say(svc, gid, view, "기계공 솜씨로 문을 비집어 연다")
