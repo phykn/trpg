@@ -59,7 +59,7 @@ class Action:
 | `look(x)` | `x ∈ E`, `x ≠ player` |
 | `take(x)` | `x`가 물건이고 `at(x, here) ∈ F` |
 | `give(x, h)` | `at(x, player) ∈ F`인 물건 `x`, `at(h, here) ∈ F`인 인물 `h` |
-| `talk(h, 화제)` | `at(h, here) ∈ F`인 인물 `h`. 화제는 `h`의 화제들, `favor`(부탁이 있고, `favor:h ∉ hᵥ`이고, `owes(player, h, ·)`가 없음), `chat` |
+| `talk(h, 화제)` | `at(h, here) ∈ F`인 인물 `h`. 화제는 `h`의 화제들, `favor`(부탁이 있고, `favor:h ∉ hᵥ`이고, `owes(player, h, ·)`가 없음), `come`(`follows(h, player) ∉ F`), `stay`(`follows(h, player) ∈ F`), `chat` |
 | `try(x, 방식)` | `x = player`(판단 인자 모두 `ν₀`), 또는 `x ∈ E`인 `plain` 장애물로 `fill < 칸 수`(시계, 마감, 위협, 갈림은 대상이 아님), 또는 그 밖의 `x ∈ E`로 빈 태그 슬롯이나 `snag`이 있음 |
 | `declare(ℓ)` | `believes(player, ℓ) ∉ F`이고 `ℓ.when`이 보임에서 참 |
 | `cut(pass)` | 늘 |
@@ -229,10 +229,12 @@ def preview(U, O, a) -> Preview
 `talk(h, 화제, tone, claim, rely)`의 `Δ₀`는 이 차례로 만듭니다.
 
 1. **숨은 막힘**: `h`가 숨은 장애물에 막혔으면 드러내고 끝냅니다.
-2. **굴림 여부**(보임으로 판정하며, `R` 안에서는 `fact_rule`로 `S`에서 `F`를 만들어 같은 판정을 함): 화제가 이미 믿는 명제이거나, `free_when`이 참이거나, `chat`이거나, `owes(h, player, kindness)`가 있는 부탁이면 굴리지 않습니다. 그 밖의 화제와 부탁은 굴립니다.
-3. **결과**: 굴리지 않는 화제는 공개(`reveals: x`면 `x.hidden`, 아니면 화제 id), 호의로 들어주는 부탁은 부탁의 효과와 `retract(owes(h, player, kindness))`. 굴리면 `success`에서 공개, 또는 부탁의 효과와 `assert(owes(player, h, promise))`. 대가는 3.3입니다.
+2. **굴림 여부**(보임으로 판정하며, `R` 안에서는 `fact_rule`로 `S`에서 `F`를 만들어 같은 판정을 함): 화제가 이미 믿는 명제이거나, `free_when`이 참이거나, `chat`이거나, `stay`이거나, `owes(h, player, kindness)`가 있는 부탁이거나, `regards(h, player, trust) ≥ 1`인 `come`이면 굴리지 않습니다. 그 밖의 화제, 부탁, `come`은 굴립니다.
+3. **결과**: 굴리지 않는 화제는 공개(`reveals: x`면 `x.hidden`, 아니면 화제 id), 호의로 들어주는 부탁은 부탁의 효과와 `retract(owes(h, player, kindness))`. 굴리면 `success`에서 공개, 또는 부탁의 효과와 `assert(owes(player, h, promise))`. `come`은 굴리지 않거나 `success`일 때 `assert(follows(h, player))`, `stay`는 `retract(follows(h, player))`. 대가는 3.3입니다.
 4. **태도**: `threaten`은 결과와 무관하게 `regards(h, player, fear) +1`, `trust −1`. `deceive`이고 `claim`의 `against`를 `h`가 믿으면 들통: `trust −2`, 플레이어에게 `snag` 장 태그(기본 이름 "의심"). 원고 명제에 맞지 않는 주장은 문장으로만 남습니다.
 5. **부탁의 횟수**: 엔진은 인물마다 패턴 `favor:h`(행동 `talk:h:favor`, 결과 `success`·`none`)를 `Pat`에 더합니다. 들어준 단계가 이 패턴에 맞고, 후보는 `favor:h ∈ hᵥ`이면 부탁을 내지 않습니다. 후보는 `F`와 `hᵥ`만 읽으므로 원고 플래그 대신 보이는 이력을 씁니다.
+
+**동행**: `follows(h, player)`인 인물은 플레이어가 옮길 때 함께 옮깁니다(ontology.md 4절 `move`). 원고의 `avoids`(story.md 3.4)에 있는 장소로는 따라가지 않습니다. 플레이어가 그곳으로 `go`하면 `h`는 남고 `follows`가 빠집니다. 부탁 없이 사람을 데려갈 수 있지만, 아직 믿지 않는 사람은 말솜씨로 설득해야 합니다.
 
 `give(x, h)`는 `move(x, h)`이고, `x ∈ wants(h)`면 `regards(h, player, trust) +1`, `assert(owes(h, player, kindness))`.
 
@@ -258,7 +260,7 @@ def preview(U, O, a) -> Preview
 | 스키마 | `Δ₀` |
 |---|---|
 | (공통) | `try(player, ·)`와 `cut`을 뺀 모든 단계가 `beats +1` |
-| `go(q)` | 숨은 장애물이 `q`를 막으면 `reveal(player, o.hidden)`(`blocked`). 아니면 `move(player, q)` |
+| `go(q)` | 숨은 장애물이 `q`를 막으면 `reveal(player, o.hidden)`(`blocked`). 아니면 `q ∈ avoids(h)`인 동행 `h`마다 `retract(follows(h, player))`, 그다음 `move(player, q)`(남은 동행이 함께 옮김) |
 | `look(x)` | `x ∈ about(p)`인 원고 명제 `p`를 원고 차례로 `reveal` |
 | `take(x)` | 숨은 막힘이면 드러냄. 아니면 `move(x, player)` |
 | `give(x, h)` | 5.1 |

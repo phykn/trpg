@@ -18,14 +18,14 @@ export type Preview = {
   stakes: { clock: number; weight: string | null };
   clock: { id: string; name: string; boxes: number; fill: number } | null;
   gain: { kind: 'fill'; boxes: number; fit: number } | { kind: 'tag'; remove: string | null }
-    | { kind: 'topic' } | { kind: 'favor'; effects: string[] };
+    | { kind: 'topic' } | { kind: 'favor'; effects: string[] } | { kind: 'follow' };
 };
 export type Target = { id: string; name: string; fill?: number; boxes?: number } | null;
 export type CardOption = {
   id: string; label: string; consumed?: boolean; note?: string | null; preview?: Preview; effects?: string[];
 };
 export type Card = {
-  id: string; kind: 'roll' | 'clarify' | 'confirm';
+  id: string; kind: 'roll' | 'clarify' | 'confirm' | 'move';
   echo: { text: string; slots: { slot: string; label: string }[] };
   question?: string;
   plan: { step: { action: string; label: string; target: Target } | null; rest: string[] };
@@ -40,7 +40,7 @@ export type GameView = {
   chapter: { k: number; title: string; aim: string };
   scene: {
     place: { id: string; name: string; senses: string[] };
-    people: { id: string; name: string; attitude: string }[];
+    people: { id: string; name: string; attitude: string; with: boolean }[];
     things: { id: string; name: string }[];
     obstacles: (Box & { blocks: string[] })[];
     exits: { id: string; name: string; blocked: boolean }[];

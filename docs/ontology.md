@@ -36,7 +36,7 @@ Atom = tuple[str, ...]          # ("at", "key", "dohae"), ("fill", "door", 2)
 | 술어 | 색인 | 구조가 지키는 것 |
 |---|---|---|
 | `at` | `dict[x, y]` | C1 |
-| `link`, `believes`, `owes`, `due`, `spent` | `set[tuple]` | |
+| `link`, `believes`, `owes`, `follows`, `due`, `spent` | `set[tuple]` | |
 | `mark` | `dict[(x, slot), (kind, life)]` | C2 |
 | `regards` | `dict[(g, h, axis), n]` | C2 |
 | `fill` | `dict[o, n]` | C2 |
@@ -60,6 +60,7 @@ Atom = tuple[str, ...]          # ("at", "key", "dohae"), ("fill", "door", 2)
 | `stat(g, s, n)` | `("stat", g, s, n)` | 시트 항목. `s`는 방식 넷(`force`, `finesse`, `wits`, `charm`), `beats`, `wounds`, `growth`, 특성 id(값 1) |
 | `flag(f, v)` | `("flag", f, v)` | `chapter`, `ending`, 원고 플래그, 발동 플래그 `fired_*` |
 | `owes(g, h, k)` | `("owes", g, h, k)` | `g`가 `h`에게 진 것. `k`는 `promise`(`h`의 부탁에 걸린 약속) 또는 `kindness`(호의) |
+| `follows(h, g)` | `("follows", h, g)` | agent `h`가 `g`(플레이어)와 함께 다닌다. `g`가 옮기면 따라 옮긴다 |
 | `due(g, c)` | `("due", g, c)` | 옛 규칙의 고를 대가. 이 규칙 전의 저장을 읽도록 색인에만 남았고 아무것도 만들지 않음 |
 | `spent(g, s)` | `("spent", g, s)` | 이 장에서 이미 기댄 특성 `s` |
 
@@ -87,8 +88,9 @@ Atom = tuple[str, ...]          # ("at", "key", "dohae"), ("fill", "door", 2)
 - **C1 한 곳**: agent·thing·obstacle마다 `at(x, ·)`는 많아야 하나.
 - **C2 함수성**: `regards(g, h, 축, ·)`, `fill(o, ·)`, `stat(g, s, ·)`, `flag(f, ·)`, `mark(x, ·, ·, i)`는 각각 많아야 하나.
 - **C3 한도**: 모든 값이 1.3의 범위 안.
+- **C4 동행**: `follows(h, g)`가 있으면 `at(h, ·)`와 `at(g, ·)`의 장소가 같다.
 
-모두 "이런 원자 조합은 없다"는 문장이라 부분집합(`F`)에서도 성립합니다. "플레이어는 늘 장소 하나에 있다"는 존재 조건이라 `C`가 아니라 시작 상태(5.2)와 `move` 연산이 지킵니다. 무리(장소 없는 agent)는 두지 않습니다. `conforms(S)`는 C1~C3를 원자 집합 위에서 다시 검사하며, 퍼징(story.md V6)과 다시 만들기(6절)에서만 씁니다.
+모두 "이런 원자 조합은 없다"는 문장이라 부분집합(`F`)에서도 성립합니다. "플레이어는 늘 장소 하나에 있다"는 존재 조건이라 `C`가 아니라 시작 상태(5.2)와 `move` 연산이 지킵니다. 무리(장소 없는 agent)는 두지 않습니다. `conforms(S)`는 C1~C4를 원자 집합 위에서 다시 검사하며, 퍼징(story.md V6)과 다시 만들기(6절)에서만 씁니다.
 
 ## 2. 전이와 기록
 
@@ -165,7 +167,7 @@ class Obs:
 |---|---|
 | `at`, `link`, `mark`, `fill` | 개체 자리가 모두 `E` 안 |
 | `stat(g, ·)`, `believes(g, ·)`, `due(g, ·)`, `spent(g, ·)` | `g = o` |
-| `regards(g, h, ·)`, `owes(g, h, ·)` | `g = o` 또는 `h = o` |
+| `regards(g, h, ·)`, `owes(g, h, ·)`, `follows(g, h)` | `g = o` 또는 `h = o` |
 | `flag` | 보이지 않음 |
 
 3. **`B`** 믿음: `believes(o, p)`의 `p`들을 믿게 된 차례(기록에서 처음 더해진 사건, 시작부터면 원고 차례)로. 각 `text(p)`를 건네되 `⟦p⟧`를 `F`에 섞지 않습니다.
@@ -200,7 +202,7 @@ class Seen:
 
 | 연산 | 하는 일 |
 |---|---|
-| `move(x, y)` | `at[x] = y`. `x = player`면 `y`는 장소여야 하며 아니면 거부 |
+| `move(x, y)` | `at[x] = y`. `x = player`면 `y`는 장소여야 하며 아니면 거부하고, `follows(h, player)`인 `h`도 모두 `y`로 옮김. `x`가 누군가를 따라다니던 인물이면 그 `follows`를 뺌. 둘 다 C4를 지키기 위해서임 |
 | `set_(pred, key, v)` | `regards`·`fill`·`stat`·`flag`의 값. `v`가 `"+n"`·`"-n"`이면 지금 값에 더하고, 결과를 1.3의 범위에서 멈춤. 값이 같으면 아무것도 하지 않음 |
 | `reveal(g, p)` | `believes(g, p)`를 더함 |
 | `tag(x, kind, life)` | 빈 슬롯 중 가장 낮은 번호에. 다 찼으면 `scar`를 건너뛰고 가장 낮은 번호를 비우고 그 자리에. `scar`밖에 없으면 하지 않음 |
@@ -208,7 +210,7 @@ class Seen:
 | `link(p, q)`, `unlink(p, q)` | `link`를 더하거나 뺌 |
 | `retire(o)` | `at[o]`를 뺌. 위협·갈림이면 등장 방아쇠의 발동 플래그도 놓음 |
 | `expire(life)` | 그 수명의 `mark`를 모두 뺌 |
-| `assert_(atom)`, `retract(atom)` | `owes`, `spent` 원자 |
+| `assert_(atom)`, `retract(atom)` | `owes`, `spent`, `follows` 원자 |
 | `clear_spent(g)` | `g`의 `spent`를 모두 뺌 |
 
 원고의 효과(story.md 2.4)는 이 연산으로 그대로 번역됩니다. `{set: [regards, g, h, axis, v]}`는 `set_("regards", (g, h, axis), v)`, `{tag: [x, kind, life, 이름]}`은 `tag(x, kind, life)`와 함께 기본 이름을 표현층에 둡니다.

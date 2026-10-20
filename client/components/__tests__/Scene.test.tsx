@@ -34,3 +34,13 @@ test('an overcome obstacle takes no draft', async () => {
   const tree = await render(1, jest.fn());
   expect(pill(tree, '녹슨 등대 문')).toHaveLength(0);
 });
+
+test('a companion carries the person icon', async () => {
+  const withPeople = { ...scene(1), people: [
+    { id: 'yunseul', name: '윤슬', attitude: '', with: true }, { id: 'dohae', name: '도해', attitude: '', with: false },
+  ] } as unknown as GameView['scene'];
+  let tree: ReturnType<typeof renderer.create>;
+  await flush(async () => { tree = renderer.create(<Scene scene={withPeople} onDraft={jest.fn()} />); });
+  const icon = (name: string) => tree!.root.findAll((n: { props: Record<string, unknown> }) => n.props.label === name && 'icon' in n.props)[0].props.icon;
+  expect([icon('윤슬'), icon('도해')]).toEqual(['user', undefined]);
+});

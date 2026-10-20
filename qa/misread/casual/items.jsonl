@@ -1,0 +1,150 @@
+{"id": "casual-001", "genre": "fantasy", "scene": 0, "following": [], "text": "주인장, 요즘 고블린들 설친다던데 뭐 들은 거 없어요?", "steps": ["talk"], "detail": {"to": "마르타", "topic": "고블린 소문"}}
+{"id": "casual-002", "genre": "fantasy", "scene": 0, "following": [], "text": "음유시인에게 함께 길을 떠나자고 청한다", "steps": ["talk"], "detail": {"to": "리엔", "topic": "come"}}
+{"id": "casual-003", "genre": "fantasy", "scene": 0, "following": [], "text": "리엔이 어떤 차림인지 찬찬히 뜯어본다", "steps": ["look"], "detail": {"at": "리엔"}}
+{"id": "casual-004", "genre": "fantasy", "scene": 0, "following": [], "text": "오늘은 여기서 하룻밤 묵고 가자", "steps": ["cut"], "detail": {"kind": "rest"}}
+{"id": "casual-005", "genre": "fantasy", "scene": 0, "following": [], "text": "말 매어 둔 데로 가 보자", "steps": ["go"], "detail": {"to": "마구간"}}
+{"id": "casual-006", "genre": "fantasy", "scene": 0, "following": [], "text": "마르타 아줌마 저 모르겠어요? 몇 년 전에 매일 저녁 여기서 스튜 먹던 사람이잖아요", "steps": ["declare"], "detail": {"latent": "인연: 옛 단골"}}
+{"id": "casual-007", "genre": "fantasy", "scene": 0, "following": [], "text": "마을 광장으로 나간다", "steps": ["go"], "detail": {"to": "마을 광장"}}
+{"id": "casual-008", "genre": "fantasy", "scene": 1, "following": [], "text": "토르비, 따라와. 굴로 들어간다", "steps": ["talk", "go"], "detail": {"to": "토르비", "topic": "come"}}
+{"id": "casual-009", "genre": "fantasy", "scene": 1, "following": ["토르비"], "text": "토르비에게 회랑에 남아 있으라고 한다", "steps": ["talk"], "detail": {"to": "토르비", "topic": "stay"}}
+{"id": "casual-010", "genre": "fantasy", "scene": 1, "following": ["토르비"], "text": "토르비, 우리 여기서 조금만 더 기다려 보자", "steps": ["cut"], "detail": {"kind": "pass"}}
+{"id": "casual-011", "genre": "fantasy", "scene": 1, "following": [], "text": "밧줄 다리 한 발씩 살살 건너 본다", "steps": ["try"], "detail": {"target": "삐걱이는 밧줄 다리", "approach": "finesse"}}
+{"id": "casual-012", "genre": "fantasy", "scene": 1, "following": ["토르비"], "text": "토르비 숲길로 다시 나가자", "steps": ["go"], "detail": {"to": "폐허로 가는 숲길"}}
+{"id": "casual-013", "genre": "fantasy", "scene": 1, "following": [], "text": "돌문에 새겨진 문양을 자세히 들여다본다", "steps": ["look"], "detail": {"at": "봉인된 돌문"}}
+{"id": "casual-014", "genre": "fantasy", "scene": 2, "following": [], "text": "브란 실종된 사냥꾼들 소식은 아직이야?", "steps": ["talk"], "detail": {"to": "브란", "topic": "실종된 사냥꾼들"}}
+{"id": "casual-015", "genre": "fantasy", "scene": 2, "following": [], "text": "문지기 양반, 이따 밤에 내가 숲길로 빠져도 못 본 척 좀 해 주쇼", "steps": ["talk"], "detail": {"to": "브란", "topic": "favor"}}
+{"id": "casual-016", "genre": "fantasy", "scene": 2, "following": [], "text": "브란 손에 화주 한 병 쥐여 주고 숲길로 나간다", "steps": ["give", "go"], "detail": {"thing": "독한 화주", "to": "브란"}}
+{"id": "casual-017", "genre": "fantasy", "scene": 2, "following": [], "text": "저기 떨어진 뿔피리 좀 살펴보자", "steps": ["look"], "detail": {"at": "사냥꾼의 뿔피리"}}
+{"id": "casual-018", "genre": "fantasy", "scene": 2, "following": [], "text": "브란, 나랑 같이 가 줘. 혼자 숲에 들어가긴 영 찜찜해", "steps": ["talk"], "detail": {"to": "브란", "topic": "come"}}
+{"id": "casual-019", "genre": "fantasy", "scene": 2, "following": [], "text": "해 질 때까지 성문 옆에 앉아 기다린다", "steps": ["cut"], "detail": {"kind": "pass"}}
+{"id": "casual-020", "genre": "fantasy", "scene": 3, "following": [], "text": "한스 씨, 우두머리 놈 덩치가 어느 정도예요?", "steps": ["talk"], "detail": {"to": "한스", "topic": "고블린 우두머리"}}
+{"id": "casual-021", "genre": "fantasy", "scene": 3, "following": ["한스"], "text": "약초 한스한테 먹이고 열쇠꾸러미 챙겨서 여기서 나가자", "steps": ["give", "take", "go"], "detail": {"thing": "치유 약초", "to": "한스"}}
+{"id": "casual-022", "genre": "fantasy", "scene": 3, "following": ["한스"], "text": "한스, 넌 따라오지 말고 여기 꼭 숨어 있어", "steps": ["talk"], "detail": {"to": "한스", "topic": "stay"}}
+{"id": "casual-023", "genre": "fantasy", "scene": 3, "following": [], "text": "앞을 막은 고블린한테 냅다 달려들어 들이받는다", "steps": ["try"], "detail": {"target": "길을 막은 고블린", "approach": "force"}}
+{"id": "casual-024", "genre": "fantasy", "scene": 3, "following": [], "text": "보물은 마을 사람들 몫이야. 전부 돌려주자", "steps": ["choose"], "detail": {"fork": "고블린이 모은 보물", "option": "보물을 마을에 돌려준다"}}
+{"id": "casual-025", "genre": "fantasy", "scene": 3, "following": ["한스"], "text": "한스 씨, 왔던 길로 같이 빠져나가요", "steps": ["go"], "detail": {"to": "무너진 회랑"}}
+{"id": "casual-026", "genre": "horror", "scene": 0, "following": [], "text": "소라 씨, 친구분이랑은 어디서 헤어진 거예요?", "steps": ["talk"], "detail": {"to": "한소라", "topic": "사라진 친구"}}
+{"id": "casual-027", "genre": "horror", "scene": 0, "following": [], "text": "소화기를 챙겨 들고 지하로 내려간다", "steps": ["take", "go"], "detail": {"thing": "소화기"}}
+{"id": "casual-028", "genre": "horror", "scene": 0, "following": [], "text": "셔터 밑에 손 넣고 힘껏 들어 올린다", "steps": ["try"], "detail": {"target": "내려진 방화 셔터", "approach": "force"}}
+{"id": "casual-029", "genre": "horror", "scene": 0, "following": [], "text": "소라한테 진통제 건네", "steps": ["give"], "detail": {"thing": "진통제", "to": "한소라"}}
+{"id": "casual-030", "genre": "horror", "scene": 0, "following": [], "text": "로비를 한 바퀴 쭉 둘러본다", "steps": ["look"], "detail": {"at": "1층 로비"}}
+{"id": "casual-031", "genre": "horror", "scene": 0, "following": [], "text": "계단을 타고 위층으로 올라간다", "steps": ["go"], "detail": {"to": "4층 병동"}}
+{"id": "casual-032", "genre": "horror", "scene": 1, "following": [], "text": "아저씨, 그 열쇠 꾸러미 잠깐만 빌려주세요", "steps": ["talk"], "detail": {"to": "고만석", "topic": "favor"}}
+{"id": "casual-033", "genre": "horror", "scene": 1, "following": [], "text": "경비 아저씨도 같이 가요. 여기 혼자 계시면 위험해요", "steps": ["talk"], "detail": {"to": "고만석", "topic": "come"}}
+{"id": "casual-034", "genre": "horror", "scene": 1, "following": [], "text": "벽에 걸린 도끼 떼어 들고 사물함 내리찍어", "steps": ["take", "try"], "detail": {"thing": "소방 도끼"}}
+{"id": "casual-035", "genre": "horror", "scene": 1, "following": [], "text": "아저씨, 우리 여기서 잠깐만 쉬었다 가요", "steps": ["cut"], "detail": {"kind": "rest"}}
+{"id": "casual-036", "genre": "horror", "scene": 1, "following": [], "text": "복도 쪽 발소리에 귀를 기울여 본다", "steps": ["look"], "detail": {"at": "복도 끝에서 다가오는 질질 끄는 발소리"}}
+{"id": "casual-037", "genre": "horror", "scene": 1, "following": [], "text": "선임님! 저 모르시겠어요? 철원에서 선임님 밑에 있던 놈입니다", "steps": ["declare"], "detail": {"latent": "인연: 군대 선임"}}
+{"id": "casual-038", "genre": "horror", "scene": 1, "following": [], "text": "아래로 내려가 보자", "steps": ["go"], "detail": {"to": "지하 발전기실"}}
+{"id": "casual-039", "genre": "horror", "scene": 2, "following": [], "text": "간호사님, 407호 환자는 어떤 사람이에요?", "steps": ["talk"], "detail": {"to": "백수련", "topic": "407호 환자"}}
+{"id": "casual-040", "genre": "horror", "scene": 2, "following": [], "text": "여기서 혼자 버티신 거예요? 대단하시네요", "steps": ["talk"], "detail": {"to": "백수련", "topic": "chat"}}
+{"id": "casual-041", "genre": "horror", "scene": 2, "following": [], "text": "백수련 씨, 저랑 같이 여기서 나가요", "steps": ["talk"], "detail": {"to": "백수련", "topic": "come"}}
+{"id": "casual-042", "genre": "horror", "scene": 2, "following": [], "text": "쇠사슬 매듭을 하나씩 살살 풀어 본다", "steps": ["try"], "detail": {"target": "쇠사슬 감긴 병동 문", "approach": "finesse"}}
+{"id": "casual-043", "genre": "horror", "scene": 2, "following": [], "text": "당직실 들어가서 안을 둘러본다", "steps": ["go", "look"], "detail": {"to": "당직실"}}
+{"id": "casual-044", "genre": "horror", "scene": 2, "following": [], "text": "아래층으로 도로 내려가자", "steps": ["go"], "detail": {"to": "1층 로비"}}
+{"id": "casual-045", "genre": "horror", "scene": 2, "following": [], "text": "삐걱대는 침대 쪽으로 플래시 비춰 봐", "steps": ["look"], "detail": {"at": "복도 끝에서 삐걱대며 다가오는 이동식 침대"}}
+{"id": "casual-046", "genre": "horror", "scene": 3, "following": ["한소라"], "text": "소라야 넌 발전기실에서 기다리고 있어", "steps": ["talk"], "detail": {"to": "한소라", "topic": "stay"}}
+{"id": "casual-047", "genre": "horror", "scene": 3, "following": ["한소라"], "text": "소라야, 경비실 쪽으로 가자", "steps": ["go"], "detail": {"to": "경비실"}}
+{"id": "casual-048", "genre": "horror", "scene": 3, "following": ["한소라"], "text": "소라야 쉿. 우리 일단 여기서 조용히 기다리자", "steps": ["cut"], "detail": {"kind": "pass"}}
+{"id": "casual-049", "genre": "horror", "scene": 3, "following": [], "text": "전기는 병동 조명 쪽으로 돌리자", "steps": ["choose"], "detail": {"fork": "전력을 보낼 곳", "option": "병동 조명을 살린다"}}
+{"id": "casual-050", "genre": "horror", "scene": 3, "following": [], "text": "발전기 옆판을 발로 쾅쾅 걷어찬다", "steps": ["try"], "detail": {"target": "꺼져 가는 비상 발전기", "approach": "force"}}
+{"id": "casual-051", "genre": "horror", "scene": 3, "following": [], "text": "소라야, 위로 올라갈 건데 같이 갈래?", "steps": ["talk"], "detail": {"to": "한소라", "topic": "come"}}
+{"id": "casual-052", "genre": "horror", "scene": 3, "following": [], "text": "서둘러 발전기실을 빠져나간다", "steps": ["go"], "detail": {"to": null}}
+{"id": "casual-053", "genre": "joseon", "scene": 0, "following": [], "text": "보부상 양반, 나랑 관아에 좀 같이 가 주시오", "steps": ["talk"], "detail": {"to": "덕삼", "topic": "come"}}
+{"id": "casual-054", "genre": "joseon", "scene": 0, "following": [], "text": "주모, 여기 탁주 한 사발 더!", "steps": ["talk"], "detail": {"to": "월선", "topic": "chat"}}
+{"id": "casual-055", "genre": "joseon", "scene": 0, "following": [], "text": "평상 위에 놓인 부채를 집어 든다", "steps": ["take"], "detail": {"thing": "접부채"}}
+{"id": "casual-056", "genre": "joseon", "scene": 0, "following": [], "text": "날도 저물었으니 한숨 자야겠네", "steps": ["cut"], "detail": {"kind": "rest"}}
+{"id": "casual-057", "genre": "joseon", "scene": 0, "following": [], "text": "관아 마당으로 간다", "steps": ["go"], "detail": {"to": "관아 마당"}}
+{"id": "casual-058", "genre": "joseon", "scene": 0, "following": [], "text": "주막 안을 휘 둘러본다", "steps": ["look"], "detail": {"at": "장터 주막"}}
+{"id": "casual-059", "genre": "joseon", "scene": 1, "following": [], "text": "분이야, 네 오라비는 뭘 잘못해서 끌려간 게냐", "steps": ["talk"], "detail": {"to": "분이", "topic": "오라비의 죄목"}}
+{"id": "casual-060", "genre": "joseon", "scene": 1, "following": [], "text": "엽전 꾸러미를 이방 소매에 슬쩍 찔러 넣는다", "steps": ["give"], "detail": {"thing": "엽전 꾸러미", "to": "황구만"}}
+{"id": "casual-061", "genre": "joseon", "scene": 1, "following": [], "text": "나리, 환곡 장부 좀 잠깐 보여 주시지요", "steps": ["talk"], "detail": {"to": "황구만", "topic": "favor"}}
+{"id": "casual-062", "genre": "joseon", "scene": 1, "following": [], "text": "감옥 쪽으로 가 보세", "steps": ["go"], "detail": {"to": "옥사"}}
+{"id": "casual-063", "genre": "joseon", "scene": 1, "following": [], "text": "성난 장꾼들 앞에 나서서 조곤조곤 달래 본다", "steps": ["try"], "detail": {"target": "성난 장꾼들", "approach": "charm"}}
+{"id": "casual-064", "genre": "joseon", "scene": 1, "following": [], "text": "분이야, 여기 있지 말고 날 따라오너라", "steps": ["talk"], "detail": {"to": "분이", "topic": "come"}}
+{"id": "casual-065", "genre": "joseon", "scene": 1, "following": [], "text": "주막으로 돌아가세", "steps": ["go"], "detail": {"to": "장터 주막"}}
+{"id": "casual-066", "genre": "joseon", "scene": 2, "following": [], "text": "군졸 양반, 통금이 몇 시부터요?", "steps": ["talk"], "detail": {"to": "막동", "topic": "통금 시각"}}
+{"id": "casual-067", "genre": "joseon", "scene": 2, "following": [], "text": "순라군 대장 그 양반이 내 외삼촌일세", "steps": ["declare"], "detail": {"latent": "인연: 순라군 대장"}}
+{"id": "casual-068", "genre": "joseon", "scene": 2, "following": [], "text": "순라군 지나갈 때까지 잠자코 기다리세", "steps": ["cut"], "detail": {"kind": "pass"}}
+{"id": "casual-069", "genre": "joseon", "scene": 2, "following": [], "text": "빗장을 소리 안 나게 살살 빼 본다", "steps": ["try"], "detail": {"target": "빗장 지른 서문", "approach": "finesse"}}
+{"id": "casual-070", "genre": "joseon", "scene": 2, "following": [], "text": "여기서 얼른 벗어나자", "steps": ["go"], "detail": {"to": null}}
+{"id": "casual-071", "genre": "joseon", "scene": 2, "following": [], "text": "막동이, 자네도 같이 나서세", "steps": ["talk"], "detail": {"to": "막동", "topic": "come"}}
+{"id": "casual-072", "genre": "joseon", "scene": 3, "following": [], "text": "스님, 산 너머 역병이 그리 심합니까? 그렇다면 남은 약재는 모두 그쪽으로 보내지요", "steps": ["talk", "choose"], "detail": {"to": "혜각", "topic": "산 너머 역병"}}
+{"id": "casual-073", "genre": "joseon", "scene": 3, "following": ["혜각"], "text": "스님은 고개에서 기다려 주십시오. 소인이 먼저 아랫마을로 내려가 보겠습니다", "steps": ["talk", "go"], "detail": {"to": "혜각", "topic": "stay"}}
+{"id": "casual-074", "genre": "joseon", "scene": 3, "following": ["혜각"], "text": "스님, 함께 절로 올라가시지요", "steps": ["go"], "detail": {"to": "산사"}}
+{"id": "casual-075", "genre": "joseon", "scene": 3, "following": [], "text": "고목을 어깨로 밀어 길가로 굴려 버린다", "steps": ["try"], "detail": {"target": "길을 막은 고목", "approach": "force"}}
+{"id": "casual-076", "genre": "joseon", "scene": 3, "following": [], "text": "뒤돌아서 포졸들이 얼마나 따라붙었나 살핀다", "steps": ["look"], "detail": {"at": "산길을 뒤쫓아 오는 포졸들"}}
+{"id": "casual-077", "genre": "mystery", "scene": 0, "following": [], "text": "경위님, 사망 추정 시각 나왔어요?", "steps": ["talk"], "detail": {"to": "강지원", "topic": "사망 추정 시각"}}
+{"id": "casual-078", "genre": "mystery", "scene": 0, "following": [], "text": "명부 훑어보고 위층으로 올라가자", "steps": ["look", "go"], "detail": {"at": "방문객 명부"}}
+{"id": "casual-079", "genre": "mystery", "scene": 0, "following": [], "text": "강 경위님, 저랑 같이 좀 움직이시죠", "steps": ["talk"], "detail": {"to": "강지원", "topic": "come"}}
+{"id": "casual-080", "genre": "mystery", "scene": 0, "following": [], "text": "뜰로 나가 보자", "steps": ["go"], "detail": {"to": "정원"}}
+{"id": "casual-081", "genre": "mystery", "scene": 0, "following": [], "text": "응접실 쪽으로 가 볼까", "steps": ["go"], "detail": {"to": "응접실"}}
+{"id": "casual-082", "genre": "mystery", "scene": 0, "following": [], "text": "창밖으로 기자들이 얼마나 몰렸는지 내다본다", "steps": ["look"], "detail": {"at": "정문 앞에 몰려드는 기자들"}}
+{"id": "casual-083", "genre": "mystery", "scene": 1, "following": ["윤서하"], "text": "서하 씨는 여기서 기다려요. 순경 눈에 띄면 곤란해요", "steps": ["talk"], "detail": {"to": "윤서하", "topic": "stay"}}
+{"id": "casual-084", "genre": "mystery", "scene": 1, "following": [], "text": "머리핀 펴서 서재 문 자물쇠 따 본다", "steps": ["try"], "detail": {"target": "잠긴 서재 문", "approach": "finesse"}}
+{"id": "casual-085", "genre": "mystery", "scene": 1, "following": [], "text": "귀걸이 주워 들고 서하 씨한테 본 적 있냐고 물어본다", "steps": ["take", "talk"], "detail": {"thing": "진주 귀걸이"}}
+{"id": "casual-086", "genre": "mystery", "scene": 1, "following": ["윤서하"], "text": "서하 씨, 손님방 같이 가 봐요", "steps": ["go"], "detail": {"to": "손님방"}}
+{"id": "casual-087", "genre": "mystery", "scene": 1, "following": [], "text": "서하 씨 괜찮아요? 많이 놀라셨죠", "steps": ["talk"], "detail": {"to": "윤서하", "topic": "chat"}}
+{"id": "casual-088", "genre": "mystery", "scene": 1, "following": [], "text": "서하 표정을 가만히 살핀다", "steps": ["look"], "detail": {"at": "윤서하"}}
+{"id": "casual-089", "genre": "mystery", "scene": 1, "following": [], "text": "계단 내려가서 현관 쪽으로 가자", "steps": ["go"], "detail": {"to": "현관홀"}}
+{"id": "casual-090", "genre": "mystery", "scene": 2, "following": [], "text": "형사님, 감식 보고서 좀 볼 수 있을까요?", "steps": ["talk"], "detail": {"to": "강지원", "topic": "favor"}}
+{"id": "casual-091", "genre": "mystery", "scene": 2, "following": [], "text": "돋보기 대고 만년필 끝을 살핀다", "steps": ["look"], "detail": {"at": "만년필"}}
+{"id": "casual-092", "genre": "mystery", "scene": 2, "following": [], "text": "서재 안 물건들 보고 금고 비밀번호 추리해서 맞춰 본다", "steps": ["try"], "detail": {"target": "숨겨진 금고", "approach": "wits"}}
+{"id": "casual-093", "genre": "mystery", "scene": 2, "following": [], "text": "누가 오기 전에 빨리 빠져나가자", "steps": ["go"], "detail": {"to": null}}
+{"id": "casual-094", "genre": "mystery", "scene": 2, "following": [], "text": "형사님도 따라오세요", "steps": ["talk"], "detail": {"to": "강지원", "topic": "come"}}
+{"id": "casual-095", "genre": "mystery", "scene": 2, "following": [], "text": "문밖 발소리가 누구 건지 귀를 대 본다", "steps": ["look"], "detail": {"at": "서재로 다가오는 발소리"}}
+{"id": "casual-096", "genre": "mystery", "scene": 3, "following": [], "text": "윤서하 씨, 유언장 내용 미리 알고 계셨죠?", "steps": ["talk"], "detail": {"to": "윤서하", "topic": "유언장"}}
+{"id": "casual-097", "genre": "mystery", "scene": 3, "following": [], "text": "장갑을 강 경위에게 넘기고, 범인은 집사라고 못 박는다", "steps": ["give", "choose"], "detail": {"thing": "피 묻은 장갑", "to": "강지원"}}
+{"id": "casual-098", "genre": "mystery", "scene": 3, "following": [], "text": "찻잔 바닥에 남은 찌꺼기를 들여다본다", "steps": ["look"], "detail": {"at": "찻잔"}}
+{"id": "casual-099", "genre": "mystery", "scene": 3, "following": ["강지원"], "text": "경위님은 잠깐 응접실에 남아 주시겠어요?", "steps": ["talk"], "detail": {"to": "강지원", "topic": "stay"}}
+{"id": "casual-100", "genre": "mystery", "scene": 3, "following": [], "text": "주방 쪽으로 가 볼까", "steps": ["go"], "detail": {"to": "부엌"}}
+{"id": "casual-101", "genre": "mystery", "scene": 3, "following": [], "text": "소파에 기대서 잠깐 눈 좀 붙이자", "steps": ["cut"], "detail": {"kind": "rest"}}
+{"id": "casual-102", "genre": "postapoc", "scene": 0, "following": [], "text": "아저씨, 요즘 물값 얼마나 해요?", "steps": ["talk"], "detail": {"to": "탁무진", "topic": "물값"}}
+{"id": "casual-103", "genre": "postapoc", "scene": 0, "following": [], "text": "계수기 좀 빌려 줘요, 하루만", "steps": ["talk"], "detail": {"to": "탁무진", "topic": "favor"}}
+{"id": "casual-104", "genre": "postapoc", "scene": 0, "following": [], "text": "보리야, 너 우리랑 같이 다닐래?", "steps": ["talk"], "detail": {"to": "보리", "topic": "come"}}
+{"id": "casual-105", "genre": "postapoc", "scene": 0, "following": [], "text": "모래폭풍 얼마나 가까이 왔나 하늘 좀 봐", "steps": ["look"], "detail": {"at": "몰려오는 모래폭풍"}}
+{"id": "casual-106", "genre": "postapoc", "scene": 0, "following": [], "text": "정문 초소로 가 본다", "steps": ["go"], "detail": {"to": "정문 초소"}}
+{"id": "casual-107", "genre": "postapoc", "scene": 0, "following": [], "text": "폭풍 오기 전에 시장 뜨자", "steps": ["go"], "detail": {"to": null}}
+{"id": "casual-108", "genre": "postapoc", "scene": 1, "following": [], "text": "대장, 북쪽 약탈자들 규모가 어느 정도야? 그리고 정문 좀 열어 줘", "steps": ["talk", "talk"], "detail": {"to": "한여울", "topic": "북쪽 약탈자"}}
+{"id": "casual-109", "genre": "postapoc", "scene": 1, "following": [], "text": "피난민들 다 안으로 들이자", "steps": ["choose"], "detail": {"fork": "피난민 처리", "option": "피난민을 안으로 들인다"}}
+{"id": "casual-110", "genre": "postapoc", "scene": 1, "following": [], "text": "강두, 밤새 보초 서느라 고생 많다", "steps": ["talk"], "detail": {"to": "강두", "topic": "chat"}}
+{"id": "casual-111", "genre": "postapoc", "scene": 1, "following": [], "text": "강두, 너도 우리 따라나서", "steps": ["talk"], "detail": {"to": "강두", "topic": "come"}}
+{"id": "casual-112", "genre": "postapoc", "scene": 1, "following": [], "text": "도로로 나가자", "steps": ["go"], "detail": {"to": "황무지 도로"}}
+{"id": "casual-113", "genre": "postapoc", "scene": 1, "following": [], "text": "시장으로 돌아간다", "steps": ["go"], "detail": {"to": "고철 시장"}}
+{"id": "casual-114", "genre": "postapoc", "scene": 2, "following": ["염석"], "text": "영감님, 펌프장으로 갑시다", "steps": ["go"], "detail": {"to": "양수장"}}
+{"id": "casual-115", "genre": "postapoc", "scene": 2, "following": [], "text": "빠루를 잔해 틈에 쑤셔 넣고 힘껏 젖혀", "steps": ["try"], "detail": {"target": "무너진 잔해", "approach": "force"}}
+{"id": "casual-116", "genre": "postapoc", "scene": 2, "following": [], "text": "통조림 하나 따서 멀리 던져. 들개들 그쪽으로 꾀어내자", "steps": ["try"], "detail": {"target": "들개 무리", "approach": "wits"}}
+{"id": "casual-117", "genre": "postapoc", "scene": 2, "following": ["염석"], "text": "영감님은 무릎도 안 좋으신데 여기서 쉬고 계세요", "steps": ["talk"], "detail": {"to": "염석", "topic": "stay"}}
+{"id": "casual-118", "genre": "postapoc", "scene": 2, "following": [], "text": "천장 금 간 데 좀 올려다봐", "steps": ["look"], "detail": {"at": "다시 무너지려는 터널 천장"}}
+{"id": "casual-119", "genre": "postapoc", "scene": 2, "following": [], "text": "곡괭이 주워둬", "steps": ["take"], "detail": {"thing": "녹슨 곡괭이"}}
+{"id": "casual-120", "genre": "postapoc", "scene": 3, "following": [], "text": "윤채, 패킹 구해 왔어. 받아", "steps": ["give"], "detail": {"thing": "고무 패킹", "to": "윤채"}}
+{"id": "casual-121", "genre": "postapoc", "scene": 3, "following": ["윤채"], "text": "윤채야, 우리 교대로 눈 좀 붙이자", "steps": ["cut"], "detail": {"kind": "rest"}}
+{"id": "casual-122", "genre": "postapoc", "scene": 3, "following": [], "text": "계단 밑 대피소로 내려간다", "steps": ["go"], "detail": {"to": "지하 대피소"}}
+{"id": "casual-123", "genre": "postapoc", "scene": 3, "following": ["윤채"], "text": "윤채 넌 펌프 지키고 있어", "steps": ["talk"], "detail": {"to": "윤채", "topic": "stay"}}
+{"id": "casual-124", "genre": "postapoc", "scene": 3, "following": [], "text": "저수조 들여다보고, 물은 대피소 애들부터 주자고 정한다", "steps": ["look", "choose"], "detail": {"at": "말라 가는 저수조"}}
+{"id": "casual-125", "genre": "postapoc", "scene": 3, "following": [], "text": "터널 입구 쪽으로 다시 가자", "steps": ["go"], "detail": {"to": "무너진 터널 입구"}}
+{"id": "casual-126", "genre": "postapoc", "scene": 3, "following": [], "text": "나 예전에 이런 양수장 돌리던 기술자였어", "steps": ["declare"], "detail": {"latent": "과거: 양수장 기술자"}}
+{"id": "casual-127", "genre": "scifi", "scene": 0, "following": [], "text": "부함장님, 봉쇄 명령은 누가 내린 겁니까?", "steps": ["talk"], "detail": {"to": "강도윤", "topic": "봉쇄 명령"}}
+{"id": "casual-128", "genre": "scifi", "scene": 0, "following": [], "text": "콘솔 위 인식표 집어", "steps": ["take"], "detail": {"thing": "함장 인식표"}}
+{"id": "casual-129", "genre": "scifi", "scene": 0, "following": [], "text": "궤도 고도 수치 좀 확인해 보자", "steps": ["look"], "detail": {"at": "낮아지는 궤도"}}
+{"id": "casual-130", "genre": "scifi", "scene": 0, "following": [], "text": "도윤 씨, 같이 통신실로 가시죠", "steps": ["talk"], "detail": {"to": "강도윤", "topic": "come"}}
+{"id": "casual-131", "genre": "scifi", "scene": 0, "following": [], "text": "부함장 의심이 풀리게 차근차근 설득해 본다", "steps": ["try"], "detail": {"target": "부함장의 의심", "approach": "charm"}}
+{"id": "casual-132", "genre": "scifi", "scene": 0, "following": [], "text": "복도로 나가자", "steps": ["go"], "detail": {"to": "중앙 복도"}}
+{"id": "casual-133", "genre": "scifi", "scene": 1, "following": [], "text": "하율 씨, 원자로 지금 괜찮은 거예요?", "steps": ["talk"], "detail": {"to": "민하율", "topic": "원자로 상태"}}
+{"id": "casual-134", "genre": "scifi", "scene": 1, "following": [], "text": "새는 냉각관을 장갑 낀 손으로 꽉 틀어막아", "steps": ["try"], "detail": {"target": "새는 냉각관", "approach": "force"}}
+{"id": "casual-135", "genre": "scifi", "scene": 1, "following": ["민하율"], "text": "하율 씨 데리고 화물칸으로 간다", "steps": ["go"], "detail": {"to": "화물칸"}}
+{"id": "casual-136", "genre": "scifi", "scene": 1, "following": [], "text": "원자로는 긴급 정지하자. 출력 더 올리는 건 미친 짓이야", "steps": ["choose"], "detail": {"fork": "원자로 처리", "option": "원자로를 긴급 정지한다"}}
+{"id": "casual-137", "genre": "scifi", "scene": 1, "following": [], "text": "잠깐 기다렸다가 복도로 나가자", "steps": ["cut", "go"], "detail": {"kind": "pass"}}
+{"id": "casual-138", "genre": "scifi", "scene": 2, "following": [], "text": "드론 좀 잠깐 꺼 줄래?", "steps": ["talk"], "detail": {"to": "루멘", "topic": "favor"}}
+{"id": "casual-139", "genre": "scifi", "scene": 2, "following": ["루멘"], "text": "루멘은 복도에서 대기해", "steps": ["talk"], "detail": {"to": "루멘", "topic": "stay"}}
+{"id": "casual-140", "genre": "scifi", "scene": 2, "following": ["루멘"], "text": "루멘, 브리지로 가자", "steps": ["go"], "detail": {"to": "함교"}}
+{"id": "casual-141", "genre": "scifi", "scene": 2, "following": [], "text": "엔진룸부터 가 보자", "steps": ["go"], "detail": {"to": "기관실"}}
+{"id": "casual-142", "genre": "scifi", "scene": 2, "following": [], "text": "드론 뒤로 몸 낮추고 살금살금 지나간다", "steps": ["try"], "detail": {"target": "보안 드론", "approach": "finesse"}}
+{"id": "casual-143", "genre": "scifi", "scene": 2, "following": [], "text": "공기 새는 데가 어딘지 살펴보고 루멘한테 격벽 기록 물어봐", "steps": ["look", "talk"], "detail": {"at": "새어 나가는 공기"}}
+{"id": "casual-144", "genre": "scifi", "scene": 2, "following": [], "text": "의무실 가보자", "steps": ["go"], "detail": {"to": "의무실"}}
+{"id": "casual-145", "genre": "scifi", "scene": 3, "following": [], "text": "의무관님, 부상자들 상태 어때요?", "steps": ["talk"], "detail": {"to": "서은재", "topic": "부상자 상태"}}
+{"id": "casual-146", "genre": "scifi", "scene": 3, "following": ["서은재"], "text": "서은재와 함께 격납고로 향한다", "steps": ["go"], "detail": {"to": "탈출정 격납고"}}
+{"id": "casual-147", "genre": "scifi", "scene": 3, "following": [], "text": "서은재에게 함께 가자고 손을 내민다", "steps": ["talk"], "detail": {"to": "서은재", "topic": "come"}}
+{"id": "casual-148", "genre": "scifi", "scene": 3, "following": ["서은재"], "text": "은재 씨는 여기서 부상자들 돌보고 계세요", "steps": ["talk"], "detail": {"to": "서은재", "topic": "stay"}}
+{"id": "casual-149", "genre": "scifi", "scene": 3, "following": [], "text": "주사기 라벨 좀 읽어 보자", "steps": ["look"], "detail": {"at": "진정제 주사기"}}
+{"id": "casual-150", "genre": "scifi", "scene": 3, "following": [], "text": "중앙 복도로 돌아간다", "steps": ["go"], "detail": {"to": "중앙 복도"}}

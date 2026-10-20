@@ -30,7 +30,8 @@ def fact_line(u, p: dict, atom: Atom) -> str | None:
     if k == "link":
         return ko.fill(ko.FRAME["link"], p=u.name(atom[1]), q=u.name(atom[2]))
     if k == "mark":
-        return ko.fill(ko.FRAME["mark"], x=name(u, atom[1]), name=tag_name(u, p, atom))
+        frame = "mark_agent" if atom[1] == PLAYER or atom[1] in u.agents else "mark"
+        return ko.fill(ko.FRAME[frame], x=name(u, atom[1]), name=tag_name(u, p, atom))
     if k == "fill":
         return ko.fill(ko.FRAME["fill"], o=u.name(atom[1]), n=atom[2], boxes=u.boxes(atom[1]))
     if k == "regards" and atom[2] == PLAYER:
@@ -53,6 +54,8 @@ def fact_line(u, p: dict, atom: Atom) -> str | None:
             return ko.fill(ko.FRAME["promise"], h=u.name(h), name=u.agents[h].favor.promise)
         if kind == "kindness" and h == PLAYER:
             return ko.fill(ko.FRAME["kindness"], g=u.name(g))
+    if k == "follows":
+        return ko.fill(ko.FRAME["follows"], h=u.name(atom[1]))
     return None
 
 
@@ -86,9 +89,52 @@ def context(u, o: Obs, focus, p: dict) -> list[Line]:
 def _past(u, seen) -> str:
     result = ko.RESULTS.get(seen.result, "")
     head = seen.action.split(";")[0].split(":")
-    words = [u.name(w) if u.kind(w) else w for w in head[1:]]
-    text = f"{ko.SCHEMA_DESC.get(head[0], head[0])}({', '.join(words)})"
+    words = [w for w in (_word(u, a) for a in head[1:]) if w]
+    text = ko.SCHEMA_DESC.get(head[0], head[0]) + (f"({', '.join(words)})" if words else "")
     return f"{text}: {result}" if result else text
+
+
+def _word(u, a: str) -> str | None:
+    """An action argument in words; ids with no words (such as a bare chat) are left out."""
+    if a in u.props:
+        return prop_label(u, a)
+    if a == PLAYER or u.kind(a):
+        return name(u, a)
+    return ko.APPROACHES.get(a)
+
+
+def scene(u, o: Obs, focus, p: dict) -> list[Line]:
+    """The narrator's ρ (engine.md 2): only the people in the scene, the ways out of it, and words for numbers."""
+    x = set(focus) & set(o.seen)
+    out: list[Line] = []
+    for ln in context(u, o, focus, p):
+        a = ln.atom
+        if a is not None:
+            if any(isinstance(s, str) and s in u.agents and s not in x for s in a[1:]):
+                continue
+            if a[0] == "link" and a[1] not in x:
+                continue
+            # A neutral regard says nothing, and its wording reads as a temperament that fights the persona.
+            if a[0] == "regards" and a[4] == 0:
+                continue
+            if a[0] == "fill" and a[1] in u.obstacles and u.obstacles[a[1]].sub not in ("clock", "deadline"):
+                if a[2] == 0:
+                    continue
+                n, boxes = a[2], u.boxes(a[1])
+                word = ko.OVERCOME[2 if n >= boxes else 1 if n >= boxes - 1 else 0]
+                ln = Line("fact", ko.fill(ko.FRAME["pace"], o=u.name(a[1]), word=word), a)
+            if a[0] == "stat":
+                if a[2] == "wounds" and a[3] > 0:
+                    ln = Line("fact", ko.FRAME["wounded"], a)
+                elif a[2] not in u.traits:
+                    continue
+        out.append(ln)
+    for c in o.facts.held_by(PLAYER):
+        if c in u.obstacles and u.obstacles[c].sub in ("clock", "deadline") and c in o.seen:
+            n, boxes = o.facts.fill(c) or 0, u.boxes(c)
+            word = ko.PACE[0 if n == 0 else 2 if n >= boxes - 1 else 1]
+            out.append(Line("fact", ko.fill(ko.FRAME["pace"], o=u.name(c), word=word), ("fill", c, n)))
+    return out
 
 
 def about(u, o: Obs, x: str) -> list[Line]:
@@ -97,6 +143,7 @@ def about(u, o: Obs, x: str) -> list[Line]:
         out.append(Line("public", ko.fill(ko.FRAME["senses"], x=u.name(x), text=", ".join(u.places[x].senses))))
     elif x in u.agents:
         a = u.agents[x]
+        out.append(Line("public", ko.fill(ko.FRAME["persona"], x=a.name, type=a.persona, text=ko.PERSONAS[a.persona])))
         out += [Line("public", ko.fill(ko.FRAME[k], x=a.name, text=v))
                 for k, v in (("voice", a.voice), ("desire", a.desire), ("fear_of", a.fear))]
         if a.topics:
@@ -126,4 +173,4 @@ def render(lines: list[Line]) -> str:
     return "\n".join(out)
 
 
-__all__ = ["Line", "about", "context", "fact_line", "prop_label", "render"]
+__all__ = ["Line", "about", "context", "fact_line", "prop_label", "render", "scene"]

@@ -40,7 +40,7 @@ export function Choice({ label, sub, icon, primary, onPress }: {
       {icon ? <Icon name={icon} size={16} color={primary ? colors.fg['on-emphasis'] : colors.fg.muted} /> : null}
       <View className="min-w-0 flex-1">
         <Text className={`font-sans-semibold text-body ${primary ? 'text-fg-on-emphasis' : 'text-fg-default'}`}>{label}</Text>
-        {sub ? <Text className="font-sans text-panel text-fg-muted">{sub}</Text> : null}
+        {sub ? <Text className={`font-sans text-panel ${primary ? 'text-fg-on-emphasis opacity-80' : 'text-fg-muted'}`}>{sub}</Text> : null}
       </View>
       <Icon name="next" size={14} color={primary ? colors.fg['on-emphasis'] : colors.fg.subtle} />
     </Pressable>

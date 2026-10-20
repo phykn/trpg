@@ -21,7 +21,7 @@ from .validate import Run, _creation, _path, load
 def replay(u, at: dict) -> Run:
     paths = u.witnesses["paths"]
     run = Run(u, _creation(u, paths[at["path"]]))
-    for st in _path(u, paths, at["path"], "evals")[:at["step"]]:
+    for st in [*_path(u, paths, at["path"], "evals")[:at["step"]], *at.get("then", [])]:
         aid, dice = (st["do"], st["roll"]) if isinstance(st, dict) else (st, None)
         run.step(parse(aid), tuple(dice) if dice else (1, 1, 0))
     return run
@@ -39,6 +39,8 @@ async def interpret(it: Interpreter, u, run: Run, text: str) -> dict:
             it.calls = []
             st = await it.fill(u, g, st)
             calls += it.calls
+            if st.get("already"):
+                continue
             if st.get("refused"):
                 kind = "refused" if not steps else kind
                 break
@@ -56,12 +58,16 @@ async def interpret(it: Interpreter, u, run: Run, text: str) -> dict:
         steps.append(str(a) + (" (idle)" if st.get("idle") else ""))
         run.step(parse(st["action"]), (6, 6, 0))
         g.state, g.log = run.s, run.log
+    if not steps and kind == "plan":
+        kind = "refused"                # the service refuses a sentence that ran no step and opened no card
     return {"kind": kind, "steps": steps, "calls": calls}
 
 
 def score(expect, got: dict) -> bool:
     if expect in ("refused", "clarify"):
         return got["kind"] == expect
+    if isinstance(expect, str) and ":" not in expect:       # a schema: any action of it
+        return got["steps"][:1] != [] and got["steps"][0].split(":")[0] == expect
     want = expect if isinstance(expect, list) else [expect]
     return got["steps"][:len(want)] == want if isinstance(expect, list) else got["steps"][:1] == want
 

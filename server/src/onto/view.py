@@ -55,7 +55,7 @@ def fact_rule(o: str, seen: frozenset, atom: Atom) -> bool:
         return atom[1] in seen
     if p in ("stat", "believes", "due", "spent"):
         return atom[1] == o
-    if p in ("regards", "owes"):
+    if p in ("regards", "owes", "follows"):
         return atom[1] == o or atom[2] == o
     return False
 

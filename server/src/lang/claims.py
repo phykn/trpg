@@ -4,6 +4,7 @@ import re
 
 from ..locale import ko
 from ..onto.atoms import PLAYER, Atom, State
+from .polite import QUOTED
 
 JOSA = {"을": "(?:을|를)", "이": "(?:이|가)", "은": "(?:은|는)", "와": "(?:과|와)", "으로": "(?:으로|로)"}
 YOU = "당신"
@@ -78,16 +79,23 @@ def claims(u, sentence: str) -> list[tuple[bool, Atom]]:
                 out.append((True, ("at", g["x"], g["y"])))
             elif frame == "link":
                 out.append((True, ("link", g["p"], g["q"])))
-    here = mentioned(u, sentence)
-    if any(v in sentence for v in ko.OPENS):
+    # Event verbs inside a quote are a person's words about the world, not something happening now.
+    bare = QUOTED.sub(" ", sentence)
+    here = mentioned(u, bare)
+    if any(v in bare for v in ko.OPENS):
         out += [(True, ("fill", x, u.boxes(x))) for _, x in here
                 if x in u.obstacles and u.obstacles[x].sub == "plain"]
+    arrive = [m.start() for v in ko.ARRIVES for m in re.finditer(re.escape(v), bare)]
+    if arrive and (_subject(u, bare) or PLAYER) == PLAYER:
+        places = [x for at, x in here if u.kind(x) == "place" and at < min(arrive)]
+        if places:
+            out.append((True, ("at", PLAYER, places[-1])))
     things = [x for _, x in here if x in u.things]
     if things:
-        holder = _subject(u, sentence) or PLAYER
-        if any(v in sentence for v in ko.GETS):
+        holder = _subject(u, bare) or PLAYER
+        if any(v in bare for v in ko.GETS):
             out += [(True, ("at", x, holder)) for x in things]
-        if holder == PLAYER and any(v in sentence for v in ko.GIVES):
+        if holder == PLAYER and any(v in bare for v in ko.GIVES):
             out += [(False, ("at", x, PLAYER)) for x in things]
     return list(dict.fromkeys(out))
 

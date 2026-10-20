@@ -314,3 +314,28 @@ def test_a_broken_promise_reads_as_broken_even_at_lowest_trust(u):
 def test_a_threat_against_no_fear_names_the_missing_fear(u):
     assert atom_label(u, {}, ("regards", "dohae", PLAYER, "fear", -1)).endswith("겁 없음")
     assert atom_label(u, {}, ("regards", "dohae", PLAYER, "trust", -1)).endswith("경계")
+
+
+def test_a_companion_goes_along_until_a_place_it_avoids(u, play):
+    f = facts_of(u, play.s, PLAYER)
+    assert rolls(u, f, play.log.hist, parse("talk:yunseul:come"))         # no trust yet: a charm roll
+    assert play.do("talk:yunseul:come", (6, 6, 0)).result == "success"
+    ids = {format(a) for a in candidates(u, play.obs)}
+    assert "talk:yunseul:stay" in ids and "talk:yunseul:come" not in ids
+    play.do("go:village")
+    assert play.s.where("yunseul") == "village" and play.s.has("follows", "yunseul", PLAYER)
+    moved = changes(u, {"tags": []}, play.log.seen[PLAYER][-1], parse("go:village"), None)
+    assert [(c["id"], c["with"]) for c in moved if c["kind"] == "move"] == [("player", False), ("yunseul", True)]
+    play.do("talk:dohae:chat")                                          # reveals the hound
+    play.do("try:hound:wits", (6, 6, 0))
+    play.do("give:letter:dohae")                                        # trust 1: dohae comes without a roll
+    assert not rolls(u, facts_of(u, play.s, PLAYER), play.log.hist, parse("talk:dohae:come"))
+    play.do("talk:dohae:come")
+    play.do("go:yard")                                                  # dohae avoids the yard
+    assert play.s.where("yunseul") == "yard" and play.s.where("dohae") == "village"
+    assert not play.s.has("follows", "dohae", PLAYER) and conforms(u, play.s) == []
+    seen = play.log.seen[PLAYER][-1]
+    assert [c["state"] for c in changes(u, {"tags": []}, seen, parse("go:yard"), None) if c["kind"] == "follow"] == ["stop"]
+    play.do("talk:yunseul:stay")
+    play.do("go:village")
+    assert play.s.where("yunseul") == "yard" and not play.s.rows("follows")

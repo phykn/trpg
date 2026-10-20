@@ -139,6 +139,8 @@ def gain(u, o: Obs, a: Action) -> dict:
         h, topic = a.intent
         if topic == "favor":
             return {"kind": "favor", "effects": u.agents[h].favor.effects}
+        if topic == "come":
+            return {"kind": "follow"}
         return {"kind": "topic", "topic": topic}
     ob = u.obstacles.get(x)
     if ob is not None:

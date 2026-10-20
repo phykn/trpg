@@ -20,7 +20,10 @@ async def test_metrics_read_sentence_outcomes_card_origins_and_closed_cards(tmp_
     out = await cmd(svc, gid, view, "r3", action="go:village")               # a button
     out = await cmd(svc, gid, out["view"], "r4", action="talk:dohae:t_oil")  # a roll card, then closed
     out = await cmd(svc, gid, out["view"], "r5", card=out["view"]["card"]["id"], cancel=True)
-    await cmd(svc, gid, out["view"], "r6", text="back")
+    out = await cmd(svc, gid, out["view"], "r6", text="back")                # a move card, then taken
+    card = out["view"]["card"]
+    assert card["kind"] == "move" and card["selected"] == "go:dock"
+    await cmd(svc, gid, out["view"], "r7", card=card["id"], pick=card["selected"])
 
     m = measure(sorted(tmp_path.glob("*.json")), STORIES, now=0)
     assert m["games"] == 1 and m["F1"]["outcomes"] == {"accepted": 2}

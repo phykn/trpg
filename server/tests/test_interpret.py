@@ -25,12 +25,12 @@ class FakeDecision:
 
 
 class FakeLLM:
-    def __init__(self, reply):
-        self.reply, self.prompts = reply, []
+    def __init__(self, *replies):
+        self.replies, self.prompts = replies, []       # one per call, the last one again after that
 
     async def pick(self, messages):
         self.prompts.append(messages)
-        return self.reply
+        return self.replies[min(len(self.prompts), len(self.replies)) - 1]
 
 
 async def game(tmp_path, decision, llm=None, moves=()):
@@ -43,7 +43,13 @@ async def game(tmp_path, decision, llm=None, moves=()):
 
 
 async def say(svc, gid, view, text, rid="t1"):
-    return await svc.command(gid, {"request_id": rid, "revision": view["revision"], "text": text})
+    out = await svc.command(gid, {"request_id": rid, "revision": view["revision"], "text": text})
+    card = out["view"]["card"]
+    if card and card["kind"] == "move":     # leave for the way the sentence chose (engine.md 4.4)
+        go = await svc.command(gid, {"request_id": f"{rid}.go", "revision": out["view"]["revision"],
+                                     "card": card["id"], "pick": card["selected"]})
+        return {**go, "steps": out["steps"] + go["steps"]}
+    return out
 
 
 def test_layer0_text_helpers():
@@ -98,16 +104,61 @@ async def test_a_list_of_one_keeps_kevs_sure_step(tmp_path):
 
 
 async def test_unsure_first_step_is_the_narration_models(tmp_path):
-    decision = FakeDecision({"s1": {"look": 0.4, "go": 0.3}})
+    decision = FakeDecision({"s1": {"look": 0.6, "go": 0.3}, "n": {"1": 0.9}})     # under 0.7 is not sure
     svc, gid, view = await game(tmp_path, decision, FakeLLM("1"))
     out = await say(svc, gid, view, "음")
     assert out["steps"][0]["action"].startswith("go:")  # the narration model decides even against Kev's top answer
-    # an unreadable reading, or one whose first step cannot happen here, leaves the player idle
-    for i, reply in enumerate(("?", "9")):
+    # an unreadable reading leaves the player idle; one whose first step cannot happen here is refused
+    for i, (reply, kind) in enumerate((("?", "turn"), ("9", "refused"))):
         decision = FakeDecision({"s1": {"look": 0.4, "go": 0.3}})
         svc, gid, view = await game(tmp_path / str(i), decision, FakeLLM(reply))
         out = await say(svc, gid, view, "음")
-        assert [s["action"] for s in out["steps"]] == ["try:player:wits"] and len(decision.asked) == 1
+        assert out["kind"] == kind and len(decision.asked) == 1
+    assert out["reason"] == "지금은 할 수 없는 행동입니다." and out["view"]["revision"] == view["revision"]
+
+
+async def test_every_schema_is_offered_and_an_impossible_one_needs_both_readings(tmp_path):
+    # at the dock nothing lies to take, no fork waits and no tie can be recalled yet
+    decision = FakeDecision({"s1": {"take": 0.8}, "n": {"1": 0.9}})
+    llm = FakeLLM("7")
+    svc, gid, view = await game(tmp_path, decision, llm)
+    out = await say(svc, gid, view, "바닥의 돌멩이를 줍는다")
+    say_opts = list(decision.asked[0][1]["s1"]["criteria"])
+    assert sorted(say_opts) == sorted(("go", "look", "take", "give", "talk", "try", "declare", "cut", "choose"))
+    assert say_opts.index("take") > say_opts.index("cut")      # what can happen here comes first
+    assert len(llm.prompts) == 1                               # Kev sure of an impossible step is not enough
+    assert out["kind"] == "refused" and out["reason"] == "지금은 할 수 없는 행동입니다."
+    decision = FakeDecision({"s1": {"take": 0.8}, "n": {"1": 0.9}})
+    svc, gid, view = await game(tmp_path / "b", decision, FakeLLM("2"))
+    out = await say(svc, gid, view, "바닥을 살핀다")
+    assert out["steps"][0]["action"].startswith("look:")       # the reading names a step that can happen
+
+
+async def test_going_where_the_player_is_moves_nowhere(tmp_path):
+    # naming the dock, where the player stands, leaves the choice to both models: "to the dock" stays, "leaving it" goes
+    for i, (text, pick, first) in enumerate((("부두로 간다", "3", None), ("선착장을 떠난다", "1", "go:village"))):
+        decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}, "intent": {"dock": 0.9}})
+        svc, gid, view = await game(tmp_path / str(i), decision, FakeLLM(pick))
+        out = await say(svc, gid, view, text)
+        assert list(decision.asked[1][1]["intent"]["criteria"]) == ["village", "yard", "dock"]
+        assert [s["action"] for s in out["steps"]][:1] == ([first] if first else [])
+        if not first:
+            assert out["kind"] == "refused" and out["reason"] == "이미 선착장에 있습니다."
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}})
+    svc, gid, view = await game(tmp_path / "exit", decision)
+    out = await say(svc, gid, view, "선착장에서 마을로 간다")
+    assert [s["action"] for s in out["steps"]] == ["go:village"] and len(decision.asked) == 1
+
+
+async def test_the_place_the_player_is_in_is_a_destination_both_models_must_choose(tmp_path):
+    # Kev is sure of the dock, where the player stands; the narration model's pick (third option: dock) decides
+    for i, (pick, first) in enumerate((("3", "look:dock"), ("1", "go:village"))):
+        decision = FakeDecision({"s1": {"go": 0.9}, "n": {"2": 0.9}, "intent": {"dock": 0.8}})
+        llm = FakeLLM("1, 2", pick)
+        svc, gid, view = await game(tmp_path / str(i), decision, llm)
+        out = await say(svc, gid, view, "이 바닷가 앞마당으로 가서 둘러본다")
+        assert list(decision.asked[1][1]["intent"]["criteria"]) == ["village", "yard", "dock"]
+        assert len(llm.prompts) == 2 and out["steps"][0]["action"] == first   # staying runs the look at once
 
 
 async def test_model_failure_is_all_zero_and_changes_nothing(tmp_path):

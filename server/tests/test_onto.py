@@ -50,7 +50,7 @@ def test_random_operations_keep_conformance(u, s0):
     places, entities = list(u.places), ["letter", "key", "oil", "dohae", "yunseul"]
     for _ in range(400):
         w = Work(u, s)
-        op = rng.randrange(8)
+        op = rng.randrange(9)
         if op == 0:
             w.move(PLAYER, rng.choice(places))
         elif op == 1:
@@ -66,6 +66,12 @@ def test_random_operations_keep_conformance(u, s0):
             w.expire(rng.choice(["scene", "chapter"]))
         elif op == 6:
             w.set_("stat", (PLAYER, "wounds"), rng.choice(["+1", "+4", "-3"]))
+        elif op == 7:
+            h = rng.choice(["dohae", "yunseul"])
+            if s.where(h) == s.where(PLAYER):
+                w.insert(("follows", h, PLAYER))
+            else:
+                w.retract(("follows", h, PLAYER))
         else:
             w.retire(rng.choice(["t_bridge_fall", "door"]))
         s = w.state()
@@ -82,6 +88,18 @@ def test_tag_skips_scars_and_stops_when_all_slots_are_scars(u, s0):
     w.tag(PLAYER, "snag", "scene")
     w.tag(PLAYER, "edge", "chapter")
     assert w.tag(PLAYER, "edge", "scene") == 2
+
+
+def test_followers_move_with_the_player_and_a_lone_move_ends_following(u, s0):
+    w = Work(u, s0)
+    w.insert(("follows", "yunseul", PLAYER))
+    w.move(PLAYER, "village")
+    assert w.state().where("yunseul") == "village" and conforms(u, w.state()) == []
+    w.move("yunseul", "dock")
+    assert not w.state().rows("follows") and conforms(u, w.state()) == []
+    w.insert(("follows", "dohae", PLAYER))
+    w.at["dohae"] = "yard"
+    assert conforms(u, w.state()) == ["dohae follows player from another place"]
 
 
 def test_player_moves_only_to_places(u, s0):

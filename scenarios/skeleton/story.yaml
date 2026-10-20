@@ -63,9 +63,11 @@ characters:
     aliases: [등대지기, 노인]
     pronoun: 그
     at: village
-    voice: 말이 짧고, 기침이 섞입니다.
+    voice: '말이 짧고 하게체를 쓰며, 기침이 섞입니다. 예: "…볼일 있으면 말하게."'
+    persona: ISTJ
     desire: 떠난 아들의 소식을 기다립니다.
     fear: 등대에 다시 오르는 것을 두려워합니다.
+    avoids: [yard, lamp_room]
     beliefs:
       b_no_keeper: 이 섬에 새 등대지기는 오지 않는다.
     wants: [letter]
@@ -93,9 +95,11 @@ characters:
     aliases: [어부의 딸]
     pronoun: 그녀
     at: dock
-    voice: 빠르고 또렷하게, 바닷말을 섞어 말합니다.
+    voice: '빠르고 또렷한 해요체에, 가끔 바다 낱말을 섞습니다. 예: "우와, 오늘 바람 진짜 세죠? 이런 날은 갈매기도 안 날아요!"'
+    persona: ENFP
     desire: 아버지의 배가 무사히 돌아오기를 바랍니다.
     fear: 꺼진 등대를 무서워합니다.
+    avoids: [lamp_room]
     wants: [oil]
     topics:
       t_wall:
@@ -241,7 +245,8 @@ latents:
         name: 백
         aliases: [선술집 주인]
         pronoun: 그
-        voice: 느릿하고, 웃음이 섞입니다.
+        voice: '느릿한 반말에 웃음이 섞입니다. 예: "허허, 이게 누구야. 살아 있었구먼."'
+        persona: ESFJ
         desire: 옛 빚을 갚고 싶어 합니다.
         fear: 다시 배를 타는 것을 두려워합니다.
     effects:

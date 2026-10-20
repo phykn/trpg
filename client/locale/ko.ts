@@ -58,6 +58,7 @@ export const ko = {
   skip: '건너뛰기',
   cancel: '그만두기',
   choose: '고른다',
+  whereTo: '어디로 갈까요?',
   thanks: '덕분에',
   because: '때문에',
 } as const;

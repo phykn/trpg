@@ -10,7 +10,7 @@ The engine follows the design in docs/; the rebuild plan is finished and removed
 - **Story**: [scenarios/skeleton/](scenarios/skeleton/) (`story.yaml` with id `lighthouse`, and `evals.yaml` for interpretation) is the only story.
 - **Server** (`server/src/`): `onto/` (world, log, saves), `rules/` (pure rules), `story/` (loading, validation, evals), `interpret.py`, `narrate.py`, `cards.py`, `view.py`, `service.py`, `api.py`, `fun.py` (offline metrics).
 - **Client** (`client/`): `logic/useGame.ts` (state machine), `logic/reveal.ts`, `components/ui/` (shared icon, button, sheet, motion, dialog), `components/game/`, `screens/`.
-- Real-UI QA runs and interpretation evals live in ignored `qa_test/agency/` (`ui-1/turns.md` lists the open findings).
+- QA: [qa/](qa/) holds the test guide, the open findings and the bench scripts; their recordings and real-UI runs go to ignored `qa_test/runs/<run>/`.
 
 ## Models
 
@@ -38,7 +38,7 @@ Both models are required and run outside this repo. Never start or stop them (no
 cd client && npm run web                             # web UI on localhost:8090 (8081 is Kev)
 
 .venv/bin/python -m pytest -q
-cd server && ../.venv/bin/python -m src.story.evals ../scenarios/skeleton --out ../qa_test/agency/<run> [--decision malkuth --llm gemma4]   # needs the models
+cd server && ../.venv/bin/python -m src.story.evals ../scenarios/skeleton --out ../qa_test/runs/<run> [--decision malkuth --llm gemma4]   # needs the models
 cd server && ../.venv/bin/python -m src.fun ../saves/engine                                             # fun.md metrics
 .venv/bin/python -m ruff check server/
 
@@ -50,4 +50,4 @@ cd client && npm run web -- --clear                  # after token/Tailwind/Babe
 
 ## Verification
 
-Run focused tests first, then the checks for each boundary you touched. Validate any story you edit. For browser changes, operate the real UI at 320×568, 412×915 and desktop width, covering the affected flows. Record numbered turns and screenshots in ignored `qa_test/agency/<run>/` and cite turn numbers. Passing automated tests does not show the game is fun.
+Run focused tests first, then the checks for each boundary you touched. Validate any story you edit. For browser changes, operate the real UI at 320×568, 412×915 and desktop width, covering the affected flows. Record numbered turns and screenshots in ignored `qa_test/runs/<run>/` and cite turn numbers. Passing automated tests does not show the game is fun.

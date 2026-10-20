@@ -71,10 +71,12 @@ def topic_of(u, h: str, topic: str):
 
 def talk_rolls(u, facts: State, hist: frozenset, h: str, topic: str) -> bool:
     """rule.md 5.1 step 2, judged on the facts given (F, or F rebuilt from S inside R)."""
-    if topic == "chat":
+    if topic in ("chat", "stay"):
         return False
     if topic == "favor":
         return not facts.has("owes", h, PLAYER, "kindness")
+    if topic == "come":
+        return (facts.regards(h, PLAYER, "trust") or 0) < 1
     t = topic_of(u, h, topic)
     if facts.has("believes", PLAYER, t.prop):
         return False
@@ -119,6 +121,7 @@ def space(u, o: Obs) -> list[Slot]:
     for h in people:
         topics = [t.id for t in u.agents[h].topics]
         topics += ["favor"] if favor_open(u, f, hist, h) else []
+        topics += ["stay"] if f.has("follows", h, PLAYER) else ["come"]
         for topic in topics + ["chat"]:
             judge = [("tone", TONES), ("claim", claims)]
             if talk_rolls(u, f, hist, h, topic):

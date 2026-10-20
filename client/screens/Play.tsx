@@ -9,6 +9,7 @@ import { Ending } from '@/components/game/Ending';
 import { GrowthCard } from '@/components/game/GrowthCard';
 import { Header } from '@/components/game/Header';
 import { Menu } from '@/components/game/Menu';
+import { MoveCard } from '@/components/game/MoveCard';
 import { Chat } from '@/components/game/Narration';
 import { RollCard } from '@/components/game/RollCard';
 import { Scene } from '@/components/game/Scene';
@@ -97,6 +98,9 @@ export function Play({ game }: { game: Game }) {
         onCancel={() => game.command({ card: c.id, cancel: true })} />;
     } else if (c?.kind === 'confirm') {
       card = <ConfirmCard card={c} onPick={(pick) => game.command({ card: c.id, pick })}
+        onCancel={() => game.command({ card: c.id, cancel: true })} />;
+    } else if (c?.kind === 'move') {
+      card = <MoveCard card={c} onPick={(pick) => game.command({ card: c.id, pick })}
         onCancel={() => game.command({ card: c.id, cancel: true })} />;
     } else if (view.growth.length) {
       card = <GrowthCard growth={view.growth} onPick={(action) => game.command({ action })} onLater={game.laterGrowth} />;

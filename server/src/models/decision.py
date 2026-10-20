@@ -17,7 +17,7 @@ class Decision:
 
 # local-models kev.toml: every model serves the same API under the name kev-latest.
 # malkuth-2b with its own prompt settings reaches about 80% of kev-4b in 7GB instead of 16GB, which leaves room for a
-# larger narration model (qa_test/agency/decision-1/REPORT.md).
+# larger narration model (qa_test/runs/decision-1/REPORT.md).
 DECISION_MODELS = {
     "malkuth": Decision(run="dhtocks/malkuth-2b", min_confidence=0.5),
 }

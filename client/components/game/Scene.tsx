@@ -25,7 +25,10 @@ export function Scene({ scene, onDraft }: { scene: GameView['scene']; onDraft?: 
       </Row>
       {around ? (
         <Row icon="eye" label={ko.row.around}>
-          {scene.people.map((p) => <Pill key={p.id} label={p.name} color={colors.kind.person} onPress={draft(ko.draft.person(p.name))} />)}
+          {scene.people.map((p) => (
+            <Pill key={p.id} label={p.name} color={colors.kind.person} icon={p.with ? 'user' : undefined}
+              onPress={draft(ko.draft.person(p.name))} />
+          ))}
           {scene.things.map((x) => <Pill key={x.id} label={x.name} color={colors.kind.thing} onPress={draft(ko.draft.thing(x.name))} />)}
           {scene.obstacles.map((o) => {
             // An overcome obstacle stays in the scene but reads as done, since a single box is never drawn.

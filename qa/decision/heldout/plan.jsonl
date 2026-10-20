@@ -1,0 +1,120 @@
+{"id": "fantasy-h01", "genre": "fantasy", "scene": 0, "text": "카운터에 팔꿈치를 걸치고 마르타에게 요즘 마을에 별일 없냐고 슬쩍 물어본다", "steps": ["talk"]}
+{"id": "fantasy-h02", "genre": "fantasy", "scene": 0, "text": "외투 깃을 여미고 뒷문을 밀고 나가서 마구간 쪽으로 걸어갑니다.", "steps": ["go"]}
+{"id": "fantasy-h03", "genre": "fantasy", "scene": 0, "text": "오늘은 그냥 여기서 자야겠다.", "steps": ["cut"]}
+{"id": "fantasy-h04", "genre": "fantasy", "scene": 0, "text": "빵 한 덩이 집어서 리엔한테 건네주고 마을 광장으로 나가자", "steps": ["take", "give", "go"]}
+{"id": "fantasy-h05", "genre": "fantasy", "scene": 0, "text": "생각해 보니 몇 해 전 겨울에 여기 묵으면서 마르타 일을 거들었었지. 마르타한테 요즘 손님은 좀 드냐고 물어봐야겟다", "steps": ["declare", "talk"]}
+{"id": "fantasy-h06", "genre": "fantasy", "scene": 1, "text": "밧줄 난간을 양손으로 꽉 움켜쥐고, 발 디딜 곳을 하나하나 확인하며 삐걱이는 다리를 건너요.", "steps": ["try"]}
+{"id": "fantasy-h07", "genre": "fantasy", "scene": 1, "text": "횃불을 돌문 가까이 들이대고, 표면에 새겨진 문양을 손끝으로 더듬어 본다.", "steps": ["look"]}
+{"id": "fantasy-h08", "genre": "fantasy", "scene": 1, "text": "녹슨 검 줍기", "steps": ["take"]}
+{"id": "fantasy-h09", "genre": "fantasy", "scene": 1, "text": "어둠 속 북소리에 잠깐 귀를 기울였다가 봉인된 돌문을 힘으로 밀어 본다.", "steps": ["look", "try"]}
+{"id": "fantasy-h10", "genre": "fantasy", "scene": 1, "text": "토르비한테 굴 안에 뭐가 있냐고 물어보고 바로 고블린 굴로 들어갈게요", "steps": ["talk", "go"]}
+{"id": "fantasy-h11", "genre": "fantasy", "scene": 2, "text": "허리춤에 찬 화주 병을 풀어 마개까지 따서 브란에게 건넨다.", "steps": ["give"]}
+{"id": "fantasy-h12", "genre": "fantasy", "scene": 2, "text": "그러고 보니 경비대장 오스릭, 그 양반이랑은 옛날에 같은 용병대에서 등 맞대고 싸웠었지.", "steps": ["declare"]}
+{"id": "fantasy-h13", "genre": "fantasy", "scene": 2, "text": "늑대 울음소리에 귀를 기울입니다.", "steps": ["look"]}
+{"id": "fantasy-h14", "genre": "fantasy", "scene": 2, "text": "뿔피리 챙겨서 숲길로 감", "steps": ["take", "go"]}
+{"id": "fantasy-h15", "genre": "fantasy", "scene": 2, "text": "브란, 숲길 요즘 괜찮아? 묻고 나서 사냥용 단검을 넘겨준다", "steps": ["talk", "give"]}
+{"id": "fantasy-h16", "genre": "fantasy", "scene": 3, "text": "한참 망설이다가, 결국 고블린이 모은 보물은 마을에 돌려주기로 마음을 굳힌다.", "steps": ["choose"]}
+{"id": "fantasy-h17", "genre": "fantasy", "scene": 3, "text": "횃불을 앞으로 휘두르며 한 발씩 밀고 들어가 길을 막은 고블린을 몰아낸다.", "steps": ["try"]}
+{"id": "fantasy-h18", "genre": "fantasy", "scene": 3, "text": "한스한테 치유 약초 줄게", "steps": ["give"]}
+{"id": "fantasy-h19", "genre": "fantasy", "scene": 3, "text": "바닥에 떨어진 열쇠꾸러미를 주워 들고, 길 막은 고블린을 어깨로 밀쳐 낸 뒤 회랑 쪽으로 내뺀다.", "steps": ["take", "try", "go"]}
+{"id": "fantasy-h20", "genre": "fantasy", "scene": 3, "text": "보물은 내 몫이다 ㅋㅋ 이제 회랑으로 빠져나가자", "steps": ["choose", "go"]}
+{"id": "horror-h01", "genre": "horror", "scene": 0, "text": "손전등을 환풍구 쪽으로 비추고, 숨을 죽인 채 안에서 뭐가 움직이는지 지켜본다.", "steps": ["look"]}
+{"id": "horror-h02", "genre": "horror", "scene": 0, "text": "방화 셔터 아래에 손가락을 걸고 무릎까지 써 가며 한 뼘씩 밀어 올려요.", "steps": ["try"]}
+{"id": "horror-h03", "genre": "horror", "scene": 0, "text": "소라 씨는 로비에 남겨 둘게요.", "steps": ["choose"]}
+{"id": "horror-h04", "genre": "horror", "scene": 0, "text": "몇 년 전에 여기서 야간 청소부로 일했으니까 구조는 훤하지. 지하 발전기실로 내려가자.", "steps": ["declare", "go"]}
+{"id": "horror-h05", "genre": "horror", "scene": 0, "text": "소라한테 진통제 두 알 건네고 괜찮냐고 물어봐요", "steps": ["give", "talk"]}
+{"id": "horror-h06", "genre": "horror", "scene": 1, "text": "가만, 저 얼굴… 고만석이잖아. 내가 군에 있을 때 모시던 선임이다.", "steps": ["declare"]}
+{"id": "horror-h07", "genre": "horror", "scene": 1, "text": "사물함 경첩 쪽 나사를 손톱으로 하나씩 돌려 풀고, 문짝을 통째로 떼어 낸다.", "steps": ["try"]}
+{"id": "horror-h08", "genre": "horror", "scene": 1, "text": "고만석 씨에게 담배 한 개비 드립니다.", "steps": ["give"]}
+{"id": "horror-h09", "genre": "horror", "scene": 1, "text": "문틈으로 복도 끝을 내다보고 소방 도끼를 집어 든 다음 1층 로비로 뛰어나간다", "steps": ["look", "take", "go"]}
+{"id": "horror-h10", "genre": "horror", "scene": 1, "text": "고만석 씨한테 문 좀 지켜 달라고 부탁하고 잠깐 눈 붙일게요", "steps": ["talk", "cut"]}
+{"id": "horror-h11", "genre": "horror", "scene": 2, "text": "침대 발치에 걸린 환자 차트에 손전등을 비추고, 적힌 글씨를 한 줄씩 읽어 내려간다.", "steps": ["look"]}
+{"id": "horror-h12", "genre": "horror", "scene": 2, "text": "백수련 씨 앞에 쪼그려 앉아 눈을 맞추고, 여기서 무슨 일이 있었는지 천천히 물어봐요.", "steps": ["talk"]}
+{"id": "horror-h13", "genre": "horror", "scene": 2, "text": "당직실로 간다.", "steps": ["go"]}
+{"id": "horror-h14", "genre": "horror", "scene": 2, "text": "링거 거치대를 집어 들고, 그걸 지렛대 삼아 병동 문에 감긴 쇠사슬을 비틀어 끊는다.", "steps": ["take", "try"]}
+{"id": "horror-h15", "genre": "horror", "scene": 2, "text": "수련씨한테 진통제 주고 1층 로비로 내려가요", "steps": ["give", "go"]}
+{"id": "horror-h16", "genre": "horror", "scene": 3, "text": "발전기 덮개를 열고 손전등을 입에 문 채, 헐거워진 배선을 하나씩 다시 조인다.", "steps": ["try"]}
+{"id": "horror-h17", "genre": "horror", "scene": 3, "text": "엘리베이터냐 병동 조명이냐… 잠깐 고민하다가, 그래, 전력은 병동 조명 쪽으로 돌린다.", "steps": ["choose"]}
+{"id": "horror-h18", "genre": "horror", "scene": 3, "text": "공구함 가져가야지.", "steps": ["take"]}
+{"id": "horror-h19", "genre": "horror", "scene": 3, "text": "공구함 챙겨서 발전기 손보고, 살린 전기는 엘리베이터에 몰아준다", "steps": ["take", "try", "choose"]}
+{"id": "horror-h20", "genre": "horror", "scene": 3, "text": "환풍구 쪽에 귀를 대 보고 소라한테 방금 그 소리 들었냐고 묻는다.", "steps": ["look", "talk"]}
+{"id": "joseon-h01", "genre": "joseon", "scene": 0, "text": "평상에 걸터앉아 월선에게 요즘 관아 돌아가는 사정을 넌지시 묻는다.", "steps": ["talk"]}
+{"id": "joseon-h02", "genre": "joseon", "scene": 0, "text": "탁자 모서리에 걸쳐진 접부채를 손을 뻗어 집어 듭니다.", "steps": ["take"]}
+{"id": "joseon-h03", "genre": "joseon", "scene": 0, "text": "대장간 쇠돌이는 내가 예전에 부러진 팔을 고쳐 준 사람이오.", "steps": ["declare"]}
+{"id": "joseon-h04", "genre": "joseon", "scene": 0, "text": "덕삼에게 엽전 몇 닢을 쥐여 주고 관아 마당 뒷문이 언제 열리는지 묻습니다.", "steps": ["give", "talk"]}
+{"id": "joseon-h05", "genre": "joseon", "scene": 0, "text": "해 질 녘까지 주막에서 시간을 보내다가 장터 거리로 나선다", "steps": ["cut", "go"]}
+{"id": "joseon-h06", "genre": "joseon", "scene": 1, "text": "장꾼들이 서로 멱살 잡는 틈을 타, 사람들 등 뒤로 요리조리 비켜 지나간다.", "steps": ["try"]}
+{"id": "joseon-h07", "genre": "joseon", "scene": 1, "text": "품속 깊이 넣어 둔 어명 봉서를 꺼내 두 손으로 공손히 황구만에게 바친다.", "steps": ["give"]}
+{"id": "joseon-h08", "genre": "joseon", "scene": 1, "text": "분이야, 옥사에 누가 갇혀 있니?", "steps": ["talk"]}
+{"id": "joseon-h09", "genre": "joseon", "scene": 1, "text": "사또 윤 대감은 돌아가신 아버님의 서당 벗이셨지. 황구만에게 사또께 기별 좀 넣어 달라 부탁하고, 일단 장터 주막으로 물러간다.", "steps": ["declare", "talk", "go"]}
+{"id": "joseon-h10", "genre": "joseon", "scene": 1, "text": "분이한테 어디 아프냐고 묻고 약 주머니를 건네요", "steps": ["talk", "give"]}
+{"id": "joseon-h11", "genre": "joseon", "scene": 2, "text": "골목 어귀 쪽으로 고개를 빼고, 순라군 횃불이 어디쯤 오는지 눈으로 좇는다.", "steps": ["look"]}
+{"id": "joseon-h12", "genre": "joseon", "scene": 2, "text": "빗장 아래 어깨를 들이밀고, 끙 소리를 내며 통째로 들어 올려 본다.", "steps": ["try"]}
+{"id": "joseon-h13", "genre": "joseon", "scene": 2, "text": "초롱 하나 집어들자", "steps": ["take"]}
+{"id": "joseon-h14", "genre": "joseon", "scene": 2, "text": "막동이한테 막걸리 호리병 쥐여 주고, 순라군 오면 좀 막아 달라 한 뒤 객주 뒷골목으로 들어간다", "steps": ["give", "talk", "go"]}
+{"id": "joseon-h15", "genre": "joseon", "scene": 2, "text": "순라군 대장 강 초관… 포도청 시절 같이 도둑 쫓던 그 친구다. 여기서 그 사람이 지나가길 기다려 보자.", "steps": ["declare", "cut"]}
+{"id": "joseon-h16", "genre": "joseon", "scene": 3, "text": "약 주머니를 꼭 쥐고 잠시 망설이다, 남은 약재는 하나도 남김없이 역병 도는 마을로 보내기로 한다.", "steps": ["choose"]}
+{"id": "joseon-h17", "genre": "joseon", "scene": 3, "text": "고목 밑동에 등을 대고 두 발로 버티면서 길 밖으로 밀어낸다.", "steps": ["try"]}
+{"id": "joseon-h18", "genre": "joseon", "scene": 3, "text": "스님, 산사까지 얼마나 남았습니까?", "steps": ["talk"]}
+{"id": "joseon-h19", "genre": "joseon", "scene": 3, "text": "산사로 올라가서 경내를 한번 둘러봐요", "steps": ["go", "look"]}
+{"id": "joseon-h20", "genre": "joseon", "scene": 3, "text": "뒤를 돌아 포졸들이 얼마나 따라붙었는지 확인하고, 혜각 스님께 약 주머니를 맡긴다.", "steps": ["look", "give"]}
+{"id": "mystery-h01", "genre": "mystery", "scene": 0, "text": "홀 구석 의자에 털썩 앉아 팔짱을 끼고, 경찰 조사가 끝나기를 기다린다.", "steps": ["cut"]}
+{"id": "mystery-h02", "genre": "mystery", "scene": 0, "text": "강지원 경위… 내가 기자 하던 시절 자주 만나던 취재원이었지. 얼굴 보니 기억나네.", "steps": ["declare"]}
+{"id": "mystery-h03", "genre": "mystery", "scene": 0, "text": "손전등 챙길게요.", "steps": ["take"]}
+{"id": "mystery-h04", "genre": "mystery", "scene": 0, "text": "\"서재 열쇠는 누가 갖고 있죠?\" 문태호에게 물은 다음 곧장 2층 복도로 올라간다.", "steps": ["talk", "go"]}
+{"id": "mystery-h05", "genre": "mystery", "scene": 0, "text": "방문객 명부를 집어 들고 어젯밤 다녀간 사람 이름을 훑어본다.", "steps": ["take", "look"]}
+{"id": "mystery-h06", "genre": "mystery", "scene": 1, "text": "순경이 무전기에 정신 팔린 사이, 벽에 바싹 붙어 발소리를 죽이고 그 옆을 스쳐 지나간다.", "steps": ["try"]}
+{"id": "mystery-h07", "genre": "mystery", "scene": 1, "text": "무릎을 꿇고 앉아 카펫 위 진주 귀걸이를 손수건으로 감싸 조심스럽게 집어 올린다.", "steps": ["take"]}
+{"id": "mystery-h08", "genre": "mystery", "scene": 1, "text": "손님방으로 ㄱㄱ", "steps": ["go"]}
+{"id": "mystery-h09", "genre": "mystery", "scene": 1, "text": "윤서하… 대학 때 사진 동아리 후배잖아. 반갑게 인사부터 하고, 발치에 떨어진 귀걸이를 줍는다.", "steps": ["declare", "talk", "take"]}
+{"id": "mystery-h10", "genre": "mystery", "scene": 1, "text": "복도 끝에서 감식반 오는 소리가 나나 귀 기울이고, 머리핀으로 서재 문을 따 보자", "steps": ["look", "try"]}
+{"id": "mystery-h11", "genre": "mystery", "scene": 2, "text": "만년필 촉을 돋보기로 들여다보며, 잉크 색이 편지 글씨랑 같은지 비교해 본다.", "steps": ["look"]}
+{"id": "mystery-h12", "genre": "mystery", "scene": 2, "text": "금고 다이얼에 귀를 바짝 대고, 숫자를 한 칸씩 돌려 가며 딸깍 소리를 찾는다.", "steps": ["try"]}
+{"id": "mystery-h13", "genre": "mystery", "scene": 2, "text": "강 경위님한테 찢어진 편지 넘겨드림", "steps": ["give"]}
+{"id": "mystery-h14", "genre": "mystery", "scene": 2, "text": "피 묻은 장갑을 집어서 강지원 경위에게 증거로 건넵니다.", "steps": ["take", "give"]}
+{"id": "mystery-h15", "genre": "mystery", "scene": 2, "text": "발소리가 가까워지나? 문틈으로 잠깐 내다본 다음 2층 복도로 빠져나간다.", "steps": ["look", "go"]}
+{"id": "mystery-h16", "genre": "mystery", "scene": 3, "text": "자리에서 천천히 일어나, 손가락을 곧게 뻗어 집사를 범인으로 지목합니다.", "steps": ["choose"]}
+{"id": "mystery-h17", "genre": "mystery", "scene": 3, "text": "주머니에서 진주 귀걸이를 꺼내 윤서하의 손바닥 위에 올려놓는다.", "steps": ["give"]}
+{"id": "mystery-h18", "genre": "mystery", "scene": 3, "text": "찻잔 안을 들여다본다.", "steps": ["look"]}
+{"id": "mystery-h19", "genre": "mystery", "scene": 3, "text": "강 경위에게 피 묻은 장갑을 넘기고, 장갑 주인이 누군지 아냐고 물은 다음, 상속녀를 범인으로 지목한다.", "steps": ["give", "talk", "choose"]}
+{"id": "mystery-h20", "genre": "mystery", "scene": 3, "text": "돋보기로 장갑 손목 안쪽 자수를 살펴본다. 결론은 하나, 범인은 집사다.", "steps": ["look", "choose"]}
+{"id": "postapoc-h01", "genre": "postapoc", "scene": 0, "text": "탁무진 좌판 앞에 쭈그리고 앉아서 요즘 건전지 시세가 어떻게 되는지 물어봄", "steps": ["talk"]}
+{"id": "postapoc-h02", "genre": "postapoc", "scene": 0, "text": "모래폭풍이 몰려오는 쪽으로 손차양을 하고 서서, 먼지 기둥이 얼마나 가까운지 가늠해 본다.", "steps": ["look"]}
+{"id": "postapoc-h03", "genre": "postapoc", "scene": 0, "text": "쇠지렛대를 줍는다.", "steps": ["take"]}
+{"id": "postapoc-h04", "genre": "postapoc", "scene": 0, "text": "보리에게 통조림 하나 넘겨주고 쇠지렛대를 챙긴다", "steps": ["give", "take"]}
+{"id": "postapoc-h05", "genre": "postapoc", "scene": 0, "text": "모래폭풍 지나갈 때까지 기다렸다가, 탁무진한테 터널 쪽 길 아냐고 물어볼게요", "steps": ["cut", "talk"]}
+{"id": "postapoc-h06", "genre": "postapoc", "scene": 1, "text": "북쪽 약탈자 두목 쇠눈 말인데… 그놈 예전에 나랑 한 패거리에서 굴러먹던 놈이야.", "steps": ["declare"]}
+{"id": "postapoc-h07", "genre": "postapoc", "scene": 1, "text": "아이들까지 딸린 사람들을 차마 내칠 수가 없다. 피난민을 안으로 들이기로 한다.", "steps": ["choose"]}
+{"id": "postapoc-h08", "genre": "postapoc", "scene": 1, "text": "강두한테 방독면 준다", "steps": ["give"]}
+{"id": "postapoc-h09", "genre": "postapoc", "scene": 1, "text": "한여울에게 철문 좀 열어 달라 부탁하고 진통제 한 통을 건넨 뒤, 황무지 도로로 나간다.", "steps": ["talk", "give", "go"]}
+{"id": "postapoc-h10", "genre": "postapoc", "scene": 1, "text": "피난민은 돌려보낸다. 강두한테 그렇게 전하라고 해.", "steps": ["choose", "talk"]}
+{"id": "postapoc-h11", "genre": "postapoc", "scene": 2, "text": "잔해 더미를 위에서부터 하나씩 걷어 내며 사람 하나 지나갈 틈을 낸다.", "steps": ["try"]}
+{"id": "postapoc-h12", "genre": "postapoc", "scene": 2, "text": "배낭 맨 밑에 넣어 둔 통조림을 꺼내 뚜껑을 따서는 염석 손에 쥐여 준다.", "steps": ["give"]}
+{"id": "postapoc-h13", "genre": "postapoc", "scene": 2, "text": "양수장 가자", "steps": ["go"]}
+{"id": "postapoc-h14", "genre": "postapoc", "scene": 2, "text": "천장에 금 간 데 있나 올려다보고 녹슨 곡괭이를 집는다", "steps": ["look", "take"]}
+{"id": "postapoc-h15", "genre": "postapoc", "scene": 2, "text": "통조림을 멀리 던져 들개들 시선을 돌리고, 그 틈에 고철 시장 쪽으로 냅다 뛴다.", "steps": ["try", "go"]}
+{"id": "postapoc-h16", "genre": "postapoc", "scene": 3, "text": "펌프 뚜껑을 비틀어 열고, 삭은 패킹을 뜯어낸 자리에 새 고무 패킹을 끼워 넣습니다.", "steps": ["try"]}
+{"id": "postapoc-h17", "genre": "postapoc", "scene": 3, "text": "이 양수장… 붕괴 전엔 내가 여기서 펌프 돌리던 기술자였지. 손이 아직 기억한다.", "steps": ["declare"]}
+{"id": "postapoc-h18", "genre": "postapoc", "scene": 3, "text": "물은 대피소 애들부터 먼저 나눠 주자", "steps": ["choose"]}
+{"id": "postapoc-h19", "genre": "postapoc", "scene": 3, "text": "윤채에게 저수조 수위가 얼마나 남았냐고 묻고 직접 들여다본다.", "steps": ["talk", "look"]}
+{"id": "postapoc-h20", "genre": "postapoc", "scene": 3, "text": "빈 물통을 챙기고, 물은 시장에 팔아 물자를 사기로 정한 뒤 터널 입구 쪽으로 나간다.", "steps": ["take", "choose", "go"]}
+{"id": "scifi-h01", "genre": "scifi", "scene": 0, "text": "관제 화면 앞으로 몸을 숙이고, 고도 수치가 얼마나 빨리 떨어지는지 눈으로 좇는다.", "steps": ["look"]}
+{"id": "scifi-h02", "genre": "scifi", "scene": 0, "text": "주머니에서 항해 기록 칩을 꺼내 콘솔 너머로 밀어서 강도윤에게 넘긴다.", "steps": ["give"]}
+{"id": "scifi-h03", "genre": "scifi", "scene": 0, "text": "강도윤은 나랑 사관학교 같은 해 졸업한 동기다.", "steps": ["declare"]}
+{"id": "scifi-h04", "genre": "scifi", "scene": 0, "text": "함장 인식표를 집어 들고 강도윤한테 이거 어디서 났냐고 묻는다", "steps": ["take", "talk"]}
+{"id": "scifi-h05", "genre": "scifi", "scene": 0, "text": "몇 분만 기다려 보고 궤도 고도 수치를 다시 확인해요", "steps": ["cut", "look"]}
+{"id": "scifi-h06", "genre": "scifi", "scene": 1, "text": "장갑 낀 손으로 새는 이음매를 틀어쥐고, 밸브를 반대로 돌려 냉각관 압력을 낮춘다.", "steps": ["try"]}
+{"id": "scifi-h07", "genre": "scifi", "scene": 1, "text": "이 배는 조선소 시절 내 손으로 직접 용접해서 지은 배야. 구석구석 다 안다고.", "steps": ["declare"]}
+{"id": "scifi-h08", "genre": "scifi", "scene": 1, "text": "원자로를 긴급 정지시킵니다.", "steps": ["choose"]}
+{"id": "scifi-h09", "genre": "scifi", "scene": 1, "text": "조선소에서 이 배 지을 때 냉각 배관은 내가 다 깔았지. 새는 관부터 바로잡고, 출력은 끝까지 끌어올린다.", "steps": ["declare", "try", "choose"]}
+{"id": "scifi-h10", "genre": "scifi", "scene": 1, "text": "민하율한테 산소통 좀 써도 되냐고 묻고 하나 챙긴다", "steps": ["talk", "take"]}
+{"id": "scifi-h11", "genre": "scifi", "scene": 2, "text": "보안 드론 센서가 반대편을 훑는 순간, 몸을 바닥에 붙이고 사각지대를 따라 기어서 지나친다.", "steps": ["try"]}
+{"id": "scifi-h12", "genre": "scifi", "scene": 2, "text": "루멘의 광학 센서를 똑바로 올려다보며, 격벽 해제 코드를 알면 제발 알려 달라고 사정한다.", "steps": ["talk"]}
+{"id": "scifi-h13", "genre": "scifi", "scene": 2, "text": "공기 어디서 새는지 살펴봄", "steps": ["look"]}
+{"id": "scifi-h14", "genre": "scifi", "scene": 2, "text": "루멘에게 에너지 셀을 넘겨주고, 격벽 제어판을 뜯어 회로를 우회시킨다.", "steps": ["give", "try"]}
+{"id": "scifi-h15", "genre": "scifi", "scene": 2, "text": "루멘, 기관실 쪽은 아직 공기 있어? ㅋㅋ 아 몰라 일단 기관실로 간다", "steps": ["talk", "go"]}
+{"id": "scifi-h16", "genre": "scifi", "scene": 3, "text": "어깨에 멘 산소통 끈을 풀어서 서은재 등에 직접 메어 준다.", "steps": ["give"]}
+{"id": "scifi-h17", "genre": "scifi", "scene": 3, "text": "약품 카트 서랍을 열고 진정제 주사기 한 개를 꺼내 허리춤에 꽂는다.", "steps": ["take"]}
+{"id": "scifi-h18", "genre": "scifi", "scene": 3, "text": "여기서 잠깐 쉴게요.", "steps": ["cut"]}
+{"id": "scifi-h19", "genre": "scifi", "scene": 3, "text": "서은재에게 부상자가 몇 명이냐고 묻고, 탈출정에는 부상자들부터 태워 보낸다.", "steps": ["talk", "choose"]}
+{"id": "scifi-h20", "genre": "scifi", "scene": 3, "text": "탈출정은 그냥 남겨 둔다, 난 이 배를 지킬 거야. 중앙 복도로 돌아간다.", "steps": ["choose", "go"]}

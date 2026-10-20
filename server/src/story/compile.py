@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import replace as _replace
 
+from ..locale import ko
 from ..onto.atoms import APPROACHES, AXES, KINDS, PLAYER
 from ..onto.cond import TRUE, Cond, compile_cond, conj
 from ..onto.log import compile_pattern
@@ -26,7 +27,7 @@ from ..onto.universe import (
 from .load import StoryError
 
 ID = re.compile(r"[a-z0-9_]+")
-RESERVED = {"player", "chat", "favor", "pass", "rest", "chapter", "ending", "collapse", "promise",
+RESERVED = {"player", "chat", "favor", "come", "stay", "pass", "rest", "chapter", "ending", "collapse", "promise",
             "kindness", "full", "beats", "wounds", "growth", *APPROACHES}
 WEIGHTS = ("light", "heavy")
 STORY_RISKS = ("low", "normal")   # only a clash or forced strain makes a step high
@@ -491,17 +492,20 @@ class _Builder:
         return u
 
     def agent(self, cid, cv, w, latent) -> Agent:
-        cv = self.map(cv, w, {"name", "aliases", "pronoun", "voice", "desire", "fear", "at", "regards", "beliefs",
-                              "wants", "topics", "favor", "clue", "hidden", "complications"},
-                      ("name", "pronoun", "voice", "desire", "fear") + (("at",) if latent is None else ()))
+        cv = self.map(cv, w, {"name", "aliases", "pronoun", "voice", "desire", "fear", "persona", "at", "regards",
+                              "beliefs", "wants", "topics", "favor", "avoids", "clue", "hidden", "complications"},
+                      ("name", "pronoun", "voice", "desire", "fear", "persona") + (("at",) if latent is None else ()))
+        if cv["persona"] not in ko.PERSONAS:
+            self.fail(f"{w}.persona: one of {', '.join(ko.PERSONAS)}")
         if latent is not None and cv.get("at") is not None:
             self.fail(f"{w}.at: what a latent brings has no at")
         reg = self.map(cv.get("regards"), f"{w}.regards", set(AXES))
         return Agent(cid, self.text(cv["name"], w), self.texts(cv.get("aliases"), w), self.text(cv["pronoun"], w),
-                     self.text(cv["voice"], w), self.text(cv["desire"], w), self.text(cv["fear"], w),
+                     self.text(cv["voice"], w), self.text(cv["desire"], w), self.text(cv["fear"], w), cv["persona"],
                      self.ref(cv["at"], ("place",), f"{w}.at") if latent is None else None,
                      {ax: self.int(reg.get(ax, 0), f"{w}.regards.{ax}", -3, 3) for ax in AXES},
-                     tuple(self.map(cv.get("beliefs"), f"{w}.beliefs")), (), (), None, (), latent)
+                     tuple(self.map(cv.get("beliefs"), f"{w}.beliefs")), (), (), None, (), latent,
+                     tuple(self.ref(q, ("place",), f"{w}.avoids") for q in self.list(cv.get("avoids"), f"{w}.avoids")))
 
     def agent_parts(self, ag: Agent, cv, w) -> Agent:
         wants = tuple(self.ref(x, ("thing",), f"{w}.wants") for x in self.list(cv.get("wants"), f"{w}.wants"))

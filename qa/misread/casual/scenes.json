@@ -1,0 +1,1575 @@
+[
+ {
+  "genre": "fantasy",
+  "scene": 0,
+  "place": "은잔 여관",
+  "exits": [
+   "마을 광장",
+   "마구간"
+  ],
+  "people": [
+   {
+    "name": "마르타",
+    "aliases": [
+     "여관 주인",
+     "주인장"
+    ],
+    "topics": [
+     "폐허로 가는 길",
+     "고블린 소문"
+    ],
+    "favor": "치유 약초를 나눠 달라고 한다"
+   },
+   {
+    "name": "리엔",
+    "aliases": [
+     "음유시인"
+    ],
+    "topics": [
+     "봉인된 돌문의 전설"
+    ],
+    "favor": null
+   }
+  ],
+  "things": [
+   {
+    "name": "낡은 지도",
+    "aliases": [
+     "지도"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "류트 줄",
+    "aliases": [
+     "줄"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "치유 약초",
+    "aliases": [
+     "약초"
+    ],
+    "where": "마르타"
+   },
+   {
+    "name": "빵 한 덩이",
+    "aliases": [
+     "빵"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [],
+  "threats": [],
+  "forks": [],
+  "latents": [
+   "인연: 옛 단골"
+  ],
+  "rest": true
+ },
+ {
+  "genre": "fantasy",
+  "scene": 1,
+  "place": "무너진 회랑",
+  "exits": [
+   "폐허로 가는 숲길",
+   "고블린 굴"
+  ],
+  "people": [
+   {
+    "name": "토르비",
+    "aliases": [
+     "드워프",
+     "광부"
+    ],
+    "topics": [
+     "돌문의 봉인",
+     "북소리의 정체"
+    ],
+    "favor": "곡괭이를 빌려 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "녹슨 검",
+    "aliases": [
+     "검"
+    ],
+    "where": "here"
+   },
+   {
+    "name": "횃불",
+    "aliases": [],
+    "where": "player"
+   },
+   {
+    "name": "낡은 지도",
+    "aliases": [
+     "지도"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "곡괭이",
+    "aliases": [],
+    "where": "토르비"
+   }
+  ],
+  "obstacles": [
+   "봉인된 돌문",
+   "삐걱이는 밧줄 다리"
+  ],
+  "threats": [
+   "어둠 속에서 울리는 북소리"
+  ],
+  "forks": [],
+  "latents": [],
+  "rest": false
+ },
+ {
+  "genre": "fantasy",
+  "scene": 2,
+  "place": "마을 북문",
+  "exits": [
+   "마을 광장",
+   "폐허로 가는 숲길"
+  ],
+  "people": [
+   {
+    "name": "브란",
+    "aliases": [
+     "경비병",
+     "문지기"
+    ],
+    "topics": [
+     "폐허의 고블린",
+     "실종된 사냥꾼들"
+    ],
+    "favor": "밤에 숲길로 나가도 눈감아 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "독한 화주",
+    "aliases": [
+     "화주",
+     "술병"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "낡은 지도",
+    "aliases": [
+     "지도"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "사냥용 단검",
+    "aliases": [
+     "단검"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "사냥꾼의 뿔피리",
+    "aliases": [
+     "뿔피리"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [],
+  "threats": [
+   "숲에서 들려오는 늑대 울음"
+  ],
+  "forks": [],
+  "latents": [
+   "인연: 옛 전우"
+  ],
+  "rest": false
+ },
+ {
+  "genre": "fantasy",
+  "scene": 3,
+  "place": "고블린 굴",
+  "exits": [
+   "무너진 회랑"
+  ],
+  "people": [
+   {
+    "name": "한스",
+    "aliases": [
+     "사냥꾼",
+     "포로"
+    ],
+    "topics": [
+     "고블린 우두머리"
+    ],
+    "favor": "마을까지 길잡이를 서 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "치유 약초",
+    "aliases": [
+     "약초"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "횃불",
+    "aliases": [],
+    "where": "player"
+   },
+   {
+    "name": "고블린의 열쇠꾸러미",
+    "aliases": [
+     "열쇠꾸러미",
+     "열쇠"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "길을 막은 고블린"
+  ],
+  "threats": [
+   "굴 깊은 곳에서 깨어나는 고블린 우두머리"
+  ],
+  "forks": [
+   {
+    "name": "고블린이 모은 보물",
+    "options": [
+     "보물을 마을에 돌려준다",
+     "보물을 내 몫으로 삼는다"
+    ]
+   }
+  ],
+  "latents": [],
+  "rest": false
+ },
+ {
+  "genre": "horror",
+  "scene": 0,
+  "place": "1층 로비",
+  "exits": [
+   "경비실",
+   "4층 병동",
+   "지하 발전기실"
+  ],
+  "people": [
+   {
+    "name": "한소라",
+    "aliases": [
+     "생존자",
+     "소라"
+    ],
+    "topics": [
+     "사라진 친구",
+     "환풍구 소리"
+    ],
+    "favor": "망을 봐 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "손전등",
+    "aliases": [
+     "플래시"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "진통제",
+    "aliases": [
+     "약"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "담배",
+    "aliases": [
+     "담뱃갑"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "소화기",
+    "aliases": [],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "내려진 방화 셔터"
+  ],
+  "threats": [
+   "환풍구 속을 기어 다니는 무언가"
+  ],
+  "forks": [
+   {
+    "name": "소라와의 동행",
+    "options": [
+     "소라와 함께 다닌다",
+     "소라를 로비에 남겨 둔다"
+    ]
+   }
+  ],
+  "latents": [
+   "인연: 옛 일터"
+  ],
+  "rest": false
+ },
+ {
+  "genre": "horror",
+  "scene": 1,
+  "place": "경비실",
+  "exits": [
+   "1층 로비",
+   "지하 발전기실"
+  ],
+  "people": [
+   {
+    "name": "고만석",
+    "aliases": [
+     "경비원",
+     "경비 아저씨"
+    ],
+    "topics": [
+     "4층 병동",
+     "정전",
+     "사라진 환자들"
+    ],
+    "favor": "열쇠 꾸러미를 빌려 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "열쇠 꾸러미",
+    "aliases": [
+     "열쇠"
+    ],
+    "where": "고만석"
+   },
+   {
+    "name": "소방 도끼",
+    "aliases": [
+     "도끼"
+    ],
+    "where": "here"
+   },
+   {
+    "name": "손전등",
+    "aliases": [
+     "플래시"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "담배",
+    "aliases": [
+     "담뱃갑"
+    ],
+    "where": "player"
+   }
+  ],
+  "obstacles": [
+   "잠긴 철제 사물함"
+  ],
+  "threats": [
+   "복도 끝에서 다가오는 질질 끄는 발소리"
+  ],
+  "forks": [],
+  "latents": [
+   "인연: 군대 선임"
+  ],
+  "rest": true
+ },
+ {
+  "genre": "horror",
+  "scene": 2,
+  "place": "4층 병동",
+  "exits": [
+   "1층 로비",
+   "당직실"
+  ],
+  "people": [
+   {
+    "name": "백수련",
+    "aliases": [
+     "간호사"
+    ],
+    "topics": [
+     "407호 환자",
+     "회진 시간"
+    ],
+    "favor": "병동 문 쇠사슬을 풀어 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "환자 차트",
+    "aliases": [
+     "차트"
+    ],
+    "where": "here"
+   },
+   {
+    "name": "링거 거치대",
+    "aliases": [],
+    "where": "here"
+   },
+   {
+    "name": "손전등",
+    "aliases": [
+     "플래시"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "진통제",
+    "aliases": [
+     "약"
+    ],
+    "where": "player"
+   }
+  ],
+  "obstacles": [
+   "쇠사슬 감긴 병동 문"
+  ],
+  "threats": [
+   "복도 끝에서 삐걱대며 다가오는 이동식 침대"
+  ],
+  "forks": [],
+  "latents": [],
+  "rest": false
+ },
+ {
+  "genre": "horror",
+  "scene": 3,
+  "place": "지하 발전기실",
+  "exits": [
+   "1층 로비",
+   "경비실"
+  ],
+  "people": [
+   {
+    "name": "한소라",
+    "aliases": [
+     "생존자",
+     "소라"
+    ],
+    "topics": [
+     "사라진 친구",
+     "환풍구 소리"
+    ],
+    "favor": "망을 봐 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "손전등",
+    "aliases": [
+     "플래시"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "열쇠 꾸러미",
+    "aliases": [
+     "열쇠"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "공구함",
+    "aliases": [],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "꺼져 가는 비상 발전기"
+  ],
+  "threats": [
+   "환풍구 속을 기어 다니는 무언가"
+  ],
+  "forks": [
+   {
+    "name": "전력을 보낼 곳",
+    "options": [
+     "엘리베이터를 살린다",
+     "병동 조명을 살린다"
+    ]
+   }
+  ],
+  "latents": [],
+  "rest": false
+ },
+ {
+  "genre": "joseon",
+  "scene": 0,
+  "place": "장터 주막",
+  "exits": [
+   "장터 거리",
+   "관아 마당"
+  ],
+  "people": [
+   {
+    "name": "월선",
+    "aliases": [
+     "주모"
+    ],
+    "topics": [
+     "어젯밤 낯선 손님",
+     "이방의 뒷돈"
+    ],
+    "favor": "국밥 한 그릇을 외상으로 달라고 한다"
+   },
+   {
+    "name": "덕삼",
+    "aliases": [
+     "보부상",
+     "장돌뱅이"
+    ],
+    "topics": [
+     "산길 도적"
+    ],
+    "favor": null
+   }
+  ],
+  "things": [
+   {
+    "name": "약 주머니",
+    "aliases": [
+     "약낭",
+     "주머니"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "엽전 꾸러미",
+    "aliases": [
+     "엽전",
+     "꾸러미"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "접부채",
+    "aliases": [
+     "부채"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [],
+  "threats": [],
+  "forks": [],
+  "latents": [
+   "인연: 장터 대장장이"
+  ],
+  "rest": true
+ },
+ {
+  "genre": "joseon",
+  "scene": 1,
+  "place": "관아 마당",
+  "exits": [
+   "장터 주막",
+   "옥사"
+  ],
+  "people": [
+   {
+    "name": "황구만",
+    "aliases": [
+     "이방",
+     "이방 나리"
+    ],
+    "topics": [
+     "옥에 갇힌 선비"
+    ],
+    "favor": "환곡 장부를 보여 달라고 한다"
+   },
+   {
+    "name": "분이",
+    "aliases": [
+     "관비"
+    ],
+    "topics": [
+     "오라비의 죄목"
+    ],
+    "favor": null
+   }
+  ],
+  "things": [
+   {
+    "name": "어명 봉서",
+    "aliases": [
+     "봉서",
+     "밀지"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "엽전 꾸러미",
+    "aliases": [
+     "엽전",
+     "꾸러미"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "약 주머니",
+    "aliases": [
+     "약낭",
+     "주머니"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "환곡 장부",
+    "aliases": [
+     "장부"
+    ],
+    "where": "황구만"
+   }
+  ],
+  "obstacles": [
+   "성난 장꾼들"
+  ],
+  "threats": [
+   "수상한 낌새를 챈 사령들"
+  ],
+  "forks": [],
+  "latents": [
+   "인연: 사또 댁"
+  ],
+  "rest": false
+ },
+ {
+  "genre": "joseon",
+  "scene": 2,
+  "place": "성문 앞",
+  "exits": [
+   "장터 거리",
+   "객주 뒷골목"
+  ],
+  "people": [
+   {
+    "name": "막동",
+    "aliases": [
+     "문지기",
+     "군졸"
+    ],
+    "topics": [
+     "통금 시각"
+    ],
+    "favor": "쪽문을 잠깐 열어 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "막걸리 호리병",
+    "aliases": [
+     "호리병",
+     "막걸리"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "어명 봉서",
+    "aliases": [
+     "봉서",
+     "밀지"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "종이 초롱",
+    "aliases": [
+     "초롱"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "빗장 지른 서문"
+  ],
+  "threats": [
+   "골목을 돌아오는 순라군의 횃불"
+  ],
+  "forks": [],
+  "latents": [
+   "인연: 순라군 대장"
+  ],
+  "rest": false
+ },
+ {
+  "genre": "joseon",
+  "scene": 3,
+  "place": "서낭당 고개",
+  "exits": [
+   "아랫마을",
+   "산사"
+  ],
+  "people": [
+   {
+    "name": "혜각",
+    "aliases": [
+     "스님",
+     "탁발승"
+    ],
+    "topics": [
+     "산 너머 역병",
+     "봉서를 노리는 자들"
+    ],
+    "favor": "산사로 가는 샛길을 알려 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "약 주머니",
+    "aliases": [
+     "약낭",
+     "주머니"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "어명 봉서",
+    "aliases": [
+     "봉서",
+     "밀지"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "대나무 지팡이",
+    "aliases": [
+     "지팡이"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "길을 막은 고목"
+  ],
+  "threats": [
+   "산길을 뒤쫓아 오는 포졸들"
+  ],
+  "forks": [
+   {
+    "name": "남은 약재",
+    "options": [
+     "약재를 모두 역병 도는 마을에 보낸다",
+     "약재 절반을 한양 가는 길에 쓰려고 남긴다"
+    ]
+   }
+  ],
+  "latents": [],
+  "rest": false
+ },
+ {
+  "genre": "mystery",
+  "scene": 0,
+  "place": "현관홀",
+  "exits": [
+   "2층 복도",
+   "응접실",
+   "정원"
+  ],
+  "people": [
+   {
+    "name": "문태호",
+    "aliases": [
+     "집사",
+     "문 집사"
+    ],
+    "topics": [
+     "어젯밤 일정",
+     "늦게 온 손님"
+    ],
+    "favor": "서재 예비 열쇠를 빌려 달라고 한다"
+   },
+   {
+    "name": "강지원",
+    "aliases": [
+     "경위",
+     "강 경위",
+     "형사"
+    ],
+    "topics": [
+     "사망 추정 시각",
+     "현장 출입 통제"
+    ],
+    "favor": "감식 보고서를 보여 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "돋보기",
+    "aliases": [
+     "확대경"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "찢어진 편지",
+    "aliases": [
+     "편지",
+     "편지 조각"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "손전등",
+    "aliases": [
+     "전등"
+    ],
+    "where": "here"
+   },
+   {
+    "name": "방문객 명부",
+    "aliases": [
+     "명부"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [],
+  "threats": [
+   "정문 앞에 몰려드는 기자들"
+  ],
+  "forks": [],
+  "latents": [
+   "인연: 옛 취재원"
+  ],
+  "rest": false
+ },
+ {
+  "genre": "mystery",
+  "scene": 1,
+  "place": "2층 복도",
+  "exits": [
+   "현관홀",
+   "손님방"
+  ],
+  "people": [
+   {
+    "name": "윤서하",
+    "aliases": [
+     "상속녀",
+     "서하",
+     "아가씨"
+    ],
+    "topics": [
+     "아버지와의 다툼",
+     "유언장"
+    ],
+    "favor": "아버지의 일기장을 보여 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "돋보기",
+    "aliases": [
+     "확대경"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "머리핀",
+    "aliases": [
+     "핀"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "진주 귀걸이",
+    "aliases": [
+     "귀걸이"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "잠긴 서재 문",
+   "문 앞을 지키는 순경"
+  ],
+  "threats": [
+   "복도를 봉쇄하러 오는 감식반"
+  ],
+  "forks": [],
+  "latents": [
+   "인연: 대학 후배"
+  ],
+  "rest": false
+ },
+ {
+  "genre": "mystery",
+  "scene": 2,
+  "place": "서재",
+  "exits": [
+   "2층 복도"
+  ],
+  "people": [
+   {
+    "name": "강지원",
+    "aliases": [
+     "경위",
+     "강 경위",
+     "형사"
+    ],
+    "topics": [
+     "사망 추정 시각",
+     "현장 출입 통제"
+    ],
+    "favor": "감식 보고서를 보여 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "돋보기",
+    "aliases": [
+     "확대경"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "찢어진 편지",
+    "aliases": [
+     "편지",
+     "편지 조각"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "피 묻은 장갑",
+    "aliases": [
+     "장갑"
+    ],
+    "where": "here"
+   },
+   {
+    "name": "만년필",
+    "aliases": [],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "숨겨진 금고"
+  ],
+  "threats": [
+   "서재로 다가오는 발소리"
+  ],
+  "forks": [],
+  "latents": [],
+  "rest": false
+ },
+ {
+  "genre": "mystery",
+  "scene": 3,
+  "place": "응접실",
+  "exits": [
+   "현관홀",
+   "부엌"
+  ],
+  "people": [
+   {
+    "name": "문태호",
+    "aliases": [
+     "집사",
+     "문 집사"
+    ],
+    "topics": [
+     "어젯밤 일정",
+     "늦게 온 손님"
+    ],
+    "favor": "서재 예비 열쇠를 빌려 달라고 한다"
+   },
+   {
+    "name": "윤서하",
+    "aliases": [
+     "상속녀",
+     "서하",
+     "아가씨"
+    ],
+    "topics": [
+     "아버지와의 다툼",
+     "유언장"
+    ],
+    "favor": "아버지의 일기장을 보여 달라고 한다"
+   },
+   {
+    "name": "강지원",
+    "aliases": [
+     "경위",
+     "강 경위",
+     "형사"
+    ],
+    "topics": [
+     "사망 추정 시각",
+     "현장 출입 통제"
+    ],
+    "favor": "감식 보고서를 보여 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "돋보기",
+    "aliases": [
+     "확대경"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "피 묻은 장갑",
+    "aliases": [
+     "장갑"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "진주 귀걸이",
+    "aliases": [
+     "귀걸이"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "찻잔",
+    "aliases": [
+     "잔"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [],
+  "threats": [],
+  "forks": [
+   {
+    "name": "범인 지목",
+    "options": [
+     "집사를 범인으로 지목한다",
+     "상속녀를 범인으로 지목한다"
+    ]
+   }
+  ],
+  "latents": [],
+  "rest": true
+ },
+ {
+  "genre": "postapoc",
+  "scene": 0,
+  "place": "고철 시장",
+  "exits": [
+   "정문 초소",
+   "무너진 터널 입구"
+  ],
+  "people": [
+   {
+    "name": "탁무진",
+    "aliases": [
+     "고물상",
+     "장사꾼"
+    ],
+    "topics": [
+     "터널 너머 소문",
+     "물값"
+    ],
+    "favor": "가이거 계수기를 빌려 달라고 한다"
+   },
+   {
+    "name": "보리",
+    "aliases": [
+     "꼬마",
+     "아이"
+    ],
+    "topics": [
+     "들개 무리"
+    ],
+    "favor": "터널 입구까지 가는 샛길을 알려 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "통조림",
+    "aliases": [
+     "깡통"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "건전지",
+    "aliases": [
+     "배터리"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "가이거 계수기",
+    "aliases": [
+     "계수기"
+    ],
+    "where": "탁무진"
+   },
+   {
+    "name": "쇠지렛대",
+    "aliases": [
+     "빠루",
+     "지렛대"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [],
+  "threats": [
+   "몰려오는 모래폭풍"
+  ],
+  "forks": [],
+  "latents": [],
+  "rest": false
+ },
+ {
+  "genre": "postapoc",
+  "scene": 1,
+  "place": "정문 초소",
+  "exits": [
+   "고철 시장",
+   "황무지 도로"
+  ],
+  "people": [
+   {
+    "name": "한여울",
+    "aliases": [
+     "대장",
+     "민병대장"
+    ],
+    "topics": [
+     "터널 붕괴",
+     "북쪽 약탈자"
+    ],
+    "favor": "정문을 열어 달라고 한다"
+   },
+   {
+    "name": "강두",
+    "aliases": [
+     "보초",
+     "초병"
+    ],
+    "topics": [
+     "교대 시간"
+    ],
+    "favor": null
+   }
+  ],
+  "things": [
+   {
+    "name": "방독면",
+    "aliases": [
+     "마스크"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "진통제",
+    "aliases": [
+     "약"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "열쇠꾸러미",
+    "aliases": [
+     "열쇠"
+    ],
+    "where": "강두"
+   }
+  ],
+  "obstacles": [
+   "잠긴 철문"
+  ],
+  "threats": [
+   "북쪽에서 다가오는 약탈자 무리"
+  ],
+  "forks": [
+   {
+    "name": "피난민 처리",
+    "options": [
+     "피난민을 안으로 들인다",
+     "피난민을 돌려보낸다"
+    ]
+   }
+  ],
+  "latents": [
+   "인연: 약탈자 두목"
+  ],
+  "rest": false
+ },
+ {
+  "genre": "postapoc",
+  "scene": 2,
+  "place": "무너진 터널 입구",
+  "exits": [
+   "고철 시장",
+   "양수장"
+  ],
+  "people": [
+   {
+    "name": "염석",
+    "aliases": [
+     "광부",
+     "영감"
+    ],
+    "topics": [
+     "붕괴 당일"
+    ],
+    "favor": "무너진 구간의 지지대 위치를 알려 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "쇠지렛대",
+    "aliases": [
+     "빠루",
+     "지렛대"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "통조림",
+    "aliases": [
+     "깡통"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "녹슨 곡괭이",
+    "aliases": [
+     "곡괭이"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "무너진 잔해",
+   "들개 무리"
+  ],
+  "threats": [
+   "다시 무너지려는 터널 천장"
+  ],
+  "forks": [],
+  "latents": [],
+  "rest": false
+ },
+ {
+  "genre": "postapoc",
+  "scene": 3,
+  "place": "양수장",
+  "exits": [
+   "무너진 터널 입구",
+   "지하 대피소"
+  ],
+  "people": [
+   {
+    "name": "윤채",
+    "aliases": [
+     "정비공",
+     "수리공"
+    ],
+    "topics": [
+     "펌프 부품"
+    ],
+    "favor": "렌치를 빌려 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "고무 패킹",
+    "aliases": [
+     "패킹"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "휴대용 라디오",
+    "aliases": [
+     "라디오"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "쇠지렛대",
+    "aliases": [
+     "빠루",
+     "지렛대"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "빈 물통",
+    "aliases": [
+     "물통"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "녹슨 양수 펌프"
+  ],
+  "threats": [
+   "말라 가는 저수조"
+  ],
+  "forks": [
+   {
+    "name": "물 배급",
+    "options": [
+     "물을 시장에 팔아 물자를 산다",
+     "대피소 아이들에게 먼저 나눈다"
+    ]
+   }
+  ],
+  "latents": [
+   "과거: 양수장 기술자"
+  ],
+  "rest": true
+ },
+ {
+  "genre": "scifi",
+  "scene": 0,
+  "place": "함교",
+  "exits": [
+   "중앙 복도",
+   "통신실"
+  ],
+  "people": [
+   {
+    "name": "강도윤",
+    "aliases": [
+     "부함장",
+     "도윤"
+    ],
+    "topics": [
+     "충돌 사고",
+     "봉쇄 명령"
+    ],
+    "favor": "함교 보안 코드를 알려 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "항해 기록 칩",
+    "aliases": [
+     "기록 칩",
+     "칩"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "출입 카드",
+    "aliases": [
+     "카드"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "함장 인식표",
+    "aliases": [
+     "인식표"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "부함장의 의심"
+  ],
+  "threats": [
+   "낮아지는 궤도"
+  ],
+  "forks": [],
+  "latents": [
+   "인연: 사관학교 동기"
+  ],
+  "rest": false
+ },
+ {
+  "genre": "scifi",
+  "scene": 1,
+  "place": "기관실",
+  "exits": [
+   "중앙 복도",
+   "화물칸"
+  ],
+  "people": [
+   {
+    "name": "민하율",
+    "aliases": [
+     "기관사",
+     "하율"
+    ],
+    "topics": [
+     "원자로 상태",
+     "사고 직전의 기관실"
+    ],
+    "favor": "기관실 마스터 키를 빌려 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "응급 키트",
+    "aliases": [
+     "구급상자",
+     "키트"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "플라스마 절단기",
+    "aliases": [
+     "절단기",
+     "커터"
+    ],
+    "where": "here"
+   },
+   {
+    "name": "산소통",
+    "aliases": [
+     "산소 탱크"
+    ],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "새는 냉각관"
+  ],
+  "threats": [],
+  "forks": [
+   {
+    "name": "원자로 처리",
+    "options": [
+     "원자로를 긴급 정지한다",
+     "출력을 끝까지 끌어올린다"
+    ]
+   }
+  ],
+  "latents": [
+   "과거: 함선 건조"
+  ],
+  "rest": false
+ },
+ {
+  "genre": "scifi",
+  "scene": 2,
+  "place": "중앙 복도",
+  "exits": [
+   "함교",
+   "기관실",
+   "의무실"
+  ],
+  "people": [
+   {
+    "name": "루멘",
+    "aliases": [
+     "안드로이드"
+    ],
+    "topics": [
+     "격벽 봉쇄 기록"
+    ],
+    "favor": "보안 드론을 잠시 멈춰 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "출입 카드",
+    "aliases": [
+     "카드"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "에너지 셀",
+    "aliases": [
+     "셀",
+     "전지"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "소화기",
+    "aliases": [],
+    "where": "here"
+   }
+  ],
+  "obstacles": [
+   "봉쇄된 격벽",
+   "보안 드론"
+  ],
+  "threats": [
+   "새어 나가는 공기"
+  ],
+  "forks": [],
+  "latents": [],
+  "rest": false
+ },
+ {
+  "genre": "scifi",
+  "scene": 3,
+  "place": "의무실",
+  "exits": [
+   "중앙 복도",
+   "탈출정 격납고"
+  ],
+  "people": [
+   {
+    "name": "서은재",
+    "aliases": [
+     "의무관"
+    ],
+    "topics": [
+     "부상자 상태"
+    ],
+    "favor": "산소 마스크를 빌려 달라고 한다"
+   }
+  ],
+  "things": [
+   {
+    "name": "산소통",
+    "aliases": [
+     "산소 탱크"
+    ],
+    "where": "player"
+   },
+   {
+    "name": "진정제 주사기",
+    "aliases": [
+     "주사기"
+    ],
+    "where": "here"
+   },
+   {
+    "name": "출입 카드",
+    "aliases": [
+     "카드"
+    ],
+    "where": "player"
+   }
+  ],
+  "obstacles": [],
+  "threats": [
+   "줄어드는 비상 전력"
+  ],
+  "forks": [
+   {
+    "name": "마지막 탈출정",
+    "options": [
+     "부상자들을 먼저 태워 보낸다",
+     "탈출정을 남겨 두고 함선을 지킨다"
+    ]
+   }
+  ],
+  "latents": [],
+  "rest": true
+ }
+]

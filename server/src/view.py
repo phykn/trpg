@@ -113,6 +113,8 @@ def action_label(u, o: Obs, p: dict, a: Action) -> str:
             text = ko.fill(ko.ACTION["chat"], h=u.name(h))
         elif topic == "favor":
             text = ko.fill(ko.ACTION["favor"], h=u.name(h), label=u.agents[h].favor.label)
+        elif topic in ("come", "stay"):
+            text = ko.fill(ko.ACTION[topic], h=u.name(h))
         else:
             t = next(t for t in u.agents[h].topics if t.id == topic)
             text = ko.fill(ko.ACTION["talk"], h=u.name(h), title=t.title)
@@ -243,11 +245,12 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
     w0, w1 = value(rem, "stat", PLAYER, "wounds"), value(add, "stat", PLAYER, "wounds")
     if w0 is not None and w1 is not None:
         out.append({"kind": "wound", "from": w0, "to": w1})
+    went = value(add, "at", PLAYER)
     for at in sorted(add, key=str):
         if at[0] == "at" and u.kind(at[1]) in ("agent", "thing"):
             before = value(rem, "at", at[1])
             out.append({"kind": "move", "id": at[1], "name": name(u, at[1]), "to": at[2], "to_name": name(u, at[2]),
-                        "from": before})
+                        "from": before, "with": at[1] != PLAYER and u.kind(at[1]) == "agent" and at[2] == went})
         elif at[0] == "believes" and at[1] == PLAYER:
             pid = at[2]
             x = pid[:-len(".hidden")] if pid.endswith(".hidden") else None
@@ -264,6 +267,9 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
             if before is not None:
                 out.append({"kind": "regards", "id": at[1], "name": u.name(at[1]), "axis": at[3],
                             "from": before, "to": at[4]})
+    for at in sorted(add | rem, key=str):
+        if at[0] == "follows" and at[2] == PLAYER:
+            out.append({"kind": "follow", "id": at[1], "name": u.name(at[1]), "state": "start" if at in add else "stop"})
     for at in sorted(add | rem, key=str):
         if at[0] == "owes":
             g, h, k = at[1:]
@@ -335,7 +341,8 @@ def _scene(u, o: Obs, p: dict, here: str) -> dict:
     return {
         "place": {"id": here, "name": u.name(here), "senses": list(u.places[here].senses)},
         "people": [{"id": h, "name": u.name(h),
-                    "attitude": ko.attitude(f.regards(h, PLAYER, "trust") or 0, f.regards(h, PLAYER, "fear") or 0)}
+                    "attitude": ko.attitude(f.regards(h, PLAYER, "trust") or 0, f.regards(h, PLAYER, "fear") or 0),
+                    "with": f.has("follows", h, PLAYER)}
                    for h in people],
         "things": [{"id": x, "name": u.name(x)} for x in seen if x in u.things and f.where(x) == here],
         "obstacles": [{"id": x, "name": u.name(x), "fill": f.fill(x), "boxes": u.boxes(x),

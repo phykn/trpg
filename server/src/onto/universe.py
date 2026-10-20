@@ -78,6 +78,7 @@ class Agent:
     voice: str
     desire: str
     fear: str
+    persona: str                 # a key of ko.PERSONAS
     at: str | None
     regards: dict
     beliefs: tuple[str, ...]
@@ -86,6 +87,7 @@ class Agent:
     favor: Favor | None
     complications: tuple[Complication, ...]
     latent: str | None
+    avoids: tuple[str, ...] = ()   # places it will not follow the player into
 
 
 @dataclass(frozen=True)
@@ -320,4 +322,7 @@ def conforms(u: Universe, s: State) -> list[str]:
     for (x, i), (k, life) in s.mark_.items():
         if i not in (1, 2, 3) or k not in KINDS or life not in ("scene", "chapter", "scar"):
             problems.append(f"bad mark on {x}")
+    for h, g in s.rows("follows"):
+        if s.where(h) != s.where(g):
+            problems.append(f"{h} follows {g} from another place")
     return problems

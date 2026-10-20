@@ -58,7 +58,9 @@ async def events(svc, gid, n=1):
 
 
 def test_text_helpers():
-    assert sentences_of("하나입니다. 둘입니다! \"셋.\" 넷입니다") == ["하나입니다.", "둘입니다!", "\"셋.\"", "넷입니다"]
+    assert sentences_of("하나입니다. 둘입니다! \"셋.\" 넷입니다") == ["하나입니다.", "둘입니다!", "\"셋.\" 넷입니다"]
+    assert sentences_of("그가 웃습니다. \"돌아와. 꼭!\" 그가 말합니다.") == ["그가 웃습니다.", "\"돌아와. 꼭!\" 그가 말합니다."]
+    assert sentences_of("바람이 붑니다. 그가 대답합니다. \"그래. 가.\"") == ["바람이 붑니다.", "그가 대답합니다. \"그래. 가.\""]
     assert split("문이 열린다.\n태그: 젖은 발\n[문맥]\n- 사실") == ("문이 열립니다.", ["젖은 발"])
     assert split("등대 앞에 섰습니다. 태그: 흩날리는 물보라") == ("등대 앞에 섰습니다.", ["흩날리는 물보라"])
     assert polite("그가 \"간다\"고 말했다.") == "그가 \"간다\"고 말했습니다."
@@ -201,3 +203,49 @@ def test_a_lowered_threat_recedes_instead_of_approaching(u):
     up = {"kind": "clock", "id": "hound", "name": "사냥개", "from": 0, "to": 1}
     assert change_line(u, up).endswith("다가왔습니다")
     assert change_line(u, {**up, "from": 1, "to": 0}).endswith("물러났습니다")
+
+
+def test_event_verbs_in_a_quote_are_not_claims():
+    from src.lang.claims import claims
+    u = STORIES["lighthouse"]
+    assert any(a[0] == "fill" for _, a in claims(u, "녹슨 등대 문이 열렸습니다."))
+    assert not any(a[0] == "fill" for _, a in claims(u, "\"녹슨 등대 문은 예전에 열렸지.\" 그가 말합니다."))
+
+
+def test_arriving_somewhere_is_a_claim_on_where_you_are():
+    from src.lang.claims import claims
+    u = STORIES["lighthouse"]
+    assert (True, ("at", "player", "yard")) in claims(u, "당신은 선착장을 지나 등대 앞마당으로 발을 내디뎠습니다.")
+    assert not any(a[1] == "player" for _, a in claims(u, "윤슬이 등대 앞에 도착했습니다."))
+
+
+def test_the_narrators_context_has_only_the_scene_and_no_numbers():
+    from src.lang.context import render, scene
+    from src.onto.log import Log
+    from src.onto.universe import initial
+    from src.onto.view import observe
+    u = STORIES["lighthouse"]
+    o = observe(u, initial(u, CREATION), Log())
+    text = render(scene(u, o, {"player", "dock", "yunseul"}, {}))
+    assert "도해" not in text and not any(c.isdigit() for c in text)
+    assert "바닷가 마을에서 선착장으로" not in text and "선착장에서 바닷가 마을로" in text
+    assert f"{u.name('deadline.1')}: 아직 멀었습니다" in text
+    from src.onto.atoms import State
+    s0 = initial(u, CREATION)
+    yard = render(scene(u, observe(u, s0, Log()), {"player", "yard", "door"}, {}))
+    assert u.name("door") + ":" not in yard and not any(c.isdigit() for c in yard)
+    moved = {a for a in s0.atoms() if a[:2] not in (("fill", "door"), ("at", "player"))}
+    s1 = State.of(moved | {("fill", "door", u.boxes("door")), ("at", "player", "yard")})
+    assert f"{u.name('door')}: 풀렸습니다" in render(scene(u, observe(u, s1, Log()), {"player", "yard", "door"}, {}))
+
+
+def test_repetition_cues_and_address():
+    from src.narrate import ADDRESS, fresh_cue, repeated
+    before = ["거친 파도가 절벽을 때리며 차가운 물보라를 뿌립니다."]
+    assert repeated("거친 파도가 절벽을 때리며 흩어집니다.", before) == "거친파도가절벽을때리며"
+    assert repeated("파도가 높습니다.", before) is None
+    senses = ["젖은 밧줄 냄새", "말뚝에 부딪는 파도", "낮게 깔린 회색 구름"]
+    assert fresh_cue(senses, ["젖은 밧줄의 비릿한 냄새가 납니다."]) == "말뚝에 부딪는 파도"
+    assert fresh_cue(senses, []) == "젖은 밧줄 냄새"
+    assert fresh_cue(senses, ["젖은 밧줄의 냄새. 말뚝에 부딪히는 파도. 낮게 깔린 회색 구름."]) is None
+    assert ADDRESS.search("\"어머, 아저씨! 바다요?\"") and not ADDRESS.search("\"저 아저씨는 누구야?\"")

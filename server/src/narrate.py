@@ -5,9 +5,10 @@ import random
 import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 
 from .lang.claims import accepts, claims, mentioned, subjects
-from .lang.context import context, render
+from .lang.context import render, scene
 from .lang.polite import QUOTED, plain, polite
 from .locale import ko
 from .models.decision import ModelUnavailable
@@ -20,14 +21,18 @@ SHORT_CHARS, RECAP_CHARS, RECAP_SENTENCES = 160, 100, 2
 TAG_CHARS = 12
 MAX_TOKENS = 500
 THETA_N = 0.5
+REPEAT_CHARS = 10                    # about three words: shorter shared stretches are ordinary phrasing
 
 TAG_LINE = re.compile(r"['\"“]?태그\s*[:：]\s*([^\n'\"”]+?)['\"”]?\s*(?=$|\n)")
 ECHO = re.compile(r"^\s*\[[^\]\n]{1,20}\]")
+ADDRESS = re.compile("(?<![가-힣])(" + "|".join(ko.ADDRESS) + r")(?=\s*[,!?…~.\"”]|$)")
+PAREN = re.compile(r"[()（）]")
 LIST_LINE = re.compile(r"^\s*(?:[-•*]|\d+[.)]|[①-⑩])\s")
 HAN = re.compile(r"[㐀-鿿Ѐ-ӿ]|[A-Za-z]{2,}")
 DIGIT = re.compile(r"[0-9０-９]")
 SECOND = re.compile(r"(?<![가-힣])(너|너의|너는|너를|너에게|네가|그대|자네|플레이어)(?![가-힣])")
-SENTENCE = re.compile(r"[^.?!…]+(?:[.?!…]+[\"'”’]?|$)")
+# A quoted line stays inside its sentence, so dialogue counts, checks and drops as one sentence.
+SENTENCE = re.compile(r"(?:\"[^\"]*\"|“[^”]*”|[^.?!…])+(?:[.?!…]+[\"'”’]?|$)")
 
 
 @dataclass
@@ -46,10 +51,26 @@ class Job:
     chars: int = CHARS
     sentences: int = SENTENCES
     task: str | None = None          # a recap's task line instead of the turn
+    speakers: list[str] = field(default_factory=list)   # people here that this turn's actions name
 
 
 def sentences_of(text: str) -> list[str]:
-    return [s.strip() for s in SENTENCE.findall(" ".join(text.split())) if s.strip()]
+    out: list[str] = []
+    for s in SENTENCE.findall(" ".join(text.split())):
+        s = s.strip()
+        # A bare quoted line belongs to the sentence that says who speaks it.
+        if out and QUOTED.fullmatch(s):
+            out[-1] += " " + s
+        elif s:
+            out.append(s)
+    return out
+
+
+def repeated(sentence: str, previous: list[str]) -> str | None:
+    """The longest stretch, spaces aside, that this sentence copies from recent narration, if long enough."""
+    a, b = re.sub(r"\s+", "", sentence), re.sub(r"\s+", "", " ".join(previous))
+    m = SequenceMatcher(None, a, b, autojunk=False).find_longest_match(0, len(a), 0, len(b))
+    return a[m.a:m.a + m.size] if m.size >= REPEAT_CHARS else None
 
 
 def change_line(u, c: dict) -> str | None:
@@ -74,7 +95,9 @@ def change_line(u, c: dict) -> str | None:
             return ko.fill(ko.CHANGE["move_get"], to="당신" if to == PLAYER else c["to_name"], name=c["name"])
         if c["from"] == PLAYER:
             return ko.fill(ko.CHANGE["move_lose"], **{"from": "당신"}, name=c["name"])
-        return ko.fill(ko.CHANGE["move_place"], name=c["name"], to=c["to_name"])
+        return ko.fill(ko.CHANGE["move_with" if c.get("with") else "move_place"], name=c["name"], to=c["to_name"])
+    if k == "follow":
+        return ko.fill(ko.CHANGE[f"follow_{c['state']}"], name=c["name"])
     if k == "reveal":
         return ko.fill(ko.CHANGE["reveal"], text=c["text"]) if c.get("text") else \
             ko.fill(ko.CHANGE["reveal_hidden"], name=c["name"])
@@ -117,12 +140,37 @@ def absent(job: Job) -> set:
     return {x for x in u.agents if o.facts.where(x) != o.here or o.here is None} - named
 
 
+def fresh_cue(senses: list[str], previous: list[str]) -> str | None:
+    """The first sensory cue of the place that recent narration has not yet shown, if any."""
+    seen = [re.sub(r"\s+", "", t) for t in previous]
+
+    def shown(cue: str) -> bool:
+        c = re.sub(r"\s+", "", cue)
+        grams = {c[i:i + 2] for i in range(len(c) - 1)}
+        return any(sum(g in t for g in grams) * 2 >= len(grams) for t in seen)
+    return next((c for c in senses if not shown(c)), None)
+
+
+def steering(job: Job, lines) -> list[str]:
+    u, out = job.u, []
+    for x in job.speakers:
+        a = u.agents[x]
+        out.append(ko.fill(ko.NOW["speaker"], x=a.name, persona=ko.PERSONAS[a.persona], voice=a.voice))
+    here = job.o.facts.where(PLAYER)
+    cue = fresh_cue(list(u.places[here].senses), job.previous) if here in u.places else None
+    out.append(ko.fill(ko.NOW["cue"], cue=cue) if cue else ko.NOW["no_cue"])
+    pace = [ln.text for ln in lines if ln.atom and ln.atom[0] == "fill" and ln.atom[1] in u.obstacles
+            and u.obstacles[ln.atom[1]].sub in ("clock", "deadline")]
+    if pace:
+        out.append(ko.fill(ko.NOW["pace"], text=", ".join(pace)))
+    return [*(f"- {x}" for x in out), f"- {ko.NOW['close']}"]
+
+
 def messages(job: Job, draft: list[str] | None = None, problems: list[str] | None = None) -> list[dict]:
     u = job.u
     system = ko.fill(ko.NARRATOR, sentences=job.sentences, chars=job.chars)
-    if u.style:
-        system += f"\n\n{ko.STYLE}\n{u.style.strip()}"
-    blocks = [ko.HEAD["context"], render(context(u, job.o, job.focus, job.p))]
+    lines = scene(u, job.o, job.focus, job.p)
+    blocks = [ko.HEAD["context"], render(lines)]
     if job.task:
         blocks += ["", ko.HEAD["notable"], job.task, *(f"- {x}" for x in job.happened)]
     else:
@@ -135,6 +183,10 @@ def messages(job: Job, draft: list[str] | None = None, problems: list[str] | Non
             blocks += ["", ko.HEAD["ending"], ko.fill(ko.ENDING_FRAME, frame=job.ending)]
         if job.tags:
             blocks += ["", ko.HEAD["tags"], ko.fill(ko.NAMING, names=", ".join(t["name"] for t in job.tags))]
+    if u.style:
+        blocks += ["", ko.STYLE, u.style.strip()]
+    if not job.task:
+        blocks += ["", ko.HEAD["now"], *steering(job, lines)]
     if draft:
         blocks += ["", ko.HEAD["feedback"], ko.REWRITE, *(f"- {s}" for s in draft), *problems]
     return [{"role": "system", "content": system}, {"role": "user", "content": "\n".join(blocks)}]
@@ -184,6 +236,8 @@ class Narrator:
                 why.append(ko.FEEDBACK["list"])
             if DIGIT.search(s) or any(w in bare for w in ko.RULE_WORDS):
                 why.append(ko.FEEDBACK["number"])
+            if PAREN.search(s):
+                why.append(ko.FEEDBACK["paren"])
             if HAN.search(s):
                 why.append(ko.FEEDBACK["foreign"])
             hidden = [w for w in bad if w in s]
@@ -194,11 +248,19 @@ class Narrator:
                 why.append(ko.fill(ko.FEEDBACK["absent"], names=", ".join(u.name(x) for x in away)))
             wrong = [(pos, atom) for pos, atom in claims(u, s) if not accepts(facts, pos, atom)]
             for pos, atom in wrong:
-                if atom[0] == "at" and atom[1] in u.things and atom[2] == PLAYER:
+                if atom[0] == "at" and atom[1] == PLAYER:
+                    why.append(ko.fill(ko.FEEDBACK["where"], place=u.name(facts.where(PLAYER))))
+                elif atom[0] == "at" and atom[1] in u.things and atom[2] == PLAYER:
                     key = "unearned" if pos else "handed"
                     why.append(ko.fill(ko.FEEDBACK[key], names=u.name(atom[1])))
                 else:
                     why.append(ko.fill(ko.FEEDBACK["claim"], facts=s))
+            span = repeated(s, job.previous + [q for x in job.speakers for q in QUOTED.findall(u.agents[x].voice)])
+            if span:
+                why.append(ko.fill(ko.FEEDBACK["repeat"], span=span))
+            for q in QUOTED.findall(s):
+                for m in ADDRESS.finditer(q):
+                    why.append(ko.fill(ko.FEEDBACK["address"], word=m[1]))
             if why:
                 per[i] = why
         whole = []
@@ -218,7 +280,7 @@ class Narrator:
         return out
 
     async def judge(self, job: Job, said: list[str], skip: set[int]) -> dict[int, list[str]]:
-        state = render(context(job.u, job.o, job.focus, job.p))
+        state = render(scene(job.u, job.o, job.focus, job.p))
         if job.happened:
             state += "\n" + ko.HEAD["happened"] + "\n" + "\n".join(f"- {x}" for x in job.happened)
         qs = {}
@@ -262,7 +324,9 @@ class Narrator:
             per2 = await self.judge(job, said, set(per))
             for i, why in per2.items():
                 per.setdefault(i, []).extend(why)
-            last = (said, per, names)
+            # The kept draft is the one with the fewest bad sentences, so a worse rewrite cannot replace it.
+            if last is None or len(per) <= len(last[1]):
+                last = (said, per, names)
             if not per and not whole:
                 yield self.result(job, said, attempt, 0, names)
                 return

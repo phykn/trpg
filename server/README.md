@@ -66,7 +66,7 @@ A story folder holds `story.yaml` (format in [docs/story.md](../docs/story.md)) 
 
 ```bash
 cd server && ../.venv/bin/python -m src.story ../scenarios/<name>
-cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<name> --out ../qa_test/agency/<run>   # needs the models
+cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<name> --out ../qa_test/runs/<run>   # needs the models
 cd server && ../.venv/bin/python -m src.fun ../saves/engine                                           # fun.md metrics
 ```
 

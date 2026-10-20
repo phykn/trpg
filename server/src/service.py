@@ -7,7 +7,7 @@ import re
 import secrets
 from pathlib import Path
 
-from .cards import clarify_card, confirm_card, rely_options, roll_card
+from .cards import clarify_card, confirm_card, move_card, rely_options, roll_card
 from .locale import ko
 from .narrate import (
     RECAP_CHARS,
@@ -274,13 +274,16 @@ class GameService:
         if had_card and kind != "card":
             p["requests"].append({"kind": "discard", "card": prev["id"]})
         p["card"] = None
-        records, t0 = [], len(g.log)
+        records, t0, already = [], len(g.log), None
         for i, st in enumerate(plan):
             o = observe(u, g.state, g.log)
             rest = plan[i + 1:]
             labels = [self._label(u, o, p, s) for s in rest]
             if "action" not in st:
                 st = await self.interpreter.fill(u, g, st)
+                if st.get("already"):
+                    already = st["already"]     # going where the player is: done, on to the next step
+                    continue
                 if st.get("refused"):
                     if not records:
                         p["requests"].append({"kind": "refused", "text": text})
@@ -313,6 +316,12 @@ class GameService:
                     p["card"] = make(u, o, p, a, rest, labels, step_echo, cid, **extra)
                     self._opened(p, origin)
                     break
+                # A sentence picks a way by meaning, so the player sees where and with whom before leaving (engine.md 4.4).
+                if a.schema == "go" and kind == "text":
+                    p["card_seq"] += 1
+                    p["card"] = move_card(u, o, p, a, rest, labels, step_echo, f"c{p['card_seq']}")
+                    self._opened(p, origin)
+                    break
             records.append(self._step(u, g, a))
             s = g.state
             if ended(s) or records[-1]["result"] in ("fail", "blocked"):
@@ -325,7 +334,7 @@ class GameService:
         if records or p["card"] is not None or had_card:
             p["revision"] += 1
         if not records and p["card"] is None and not had_card:
-            return self._refused(u, g, "candidate")
+            return self._refused(u, g, already or "candidate")
         return self._result(u, g, "card" if p["card"] else "turn", turn, records)
 
     async def _relies(self, u, o, p, a, text: str | None) -> list[str]:
@@ -424,14 +433,17 @@ class GameService:
         if turn is None:
             return None
         o = self._at(u, g, turn["t1"])
-        happened, delta, ids = [], [], set()
+        happened, delta, ids, named = [], [], set(), []
         for r in turn["steps"]:
             lines, changes = step_lines(u, r)
             happened += lines
             delta += changes
             ids |= change_ids(r)
+            named += r["action"].split(";")[0].split(":")[1:]
+            named += [c["id"] for c in r["changes"] if c["kind"] == "follow" or c.get("with")]
         here = o.facts.where(PLAYER)
         people = {x for x in o.seen if x in u.agents and o.facts.where(x) == here}
+        speakers = [x for x in dict.fromkeys(named) if x in people]
         tags = [{"index": i, "slot": atom[4], "owner": atom[1], "name": name}
                 for i, (atom, t, name) in enumerate(p["tags"])
                 if turn["t0"] <= t <= turn["t1"] and o.facts.mark_.get((atom[1], atom[4])) == tuple(atom[2:4])]
@@ -440,7 +452,7 @@ class GameService:
         previous = [p["narration"][str(m)]["text"] for m in range(max(1, n - PREVIOUS_TURNS), n)
                     if str(m) in p["narration"]]
         return Job(u, o, p, happened, delta, {PLAYER, here, *people, *ids}, text=turn["text"], tags=tags,
-                   previous=previous, ending=u.endings[ending].frame if ending else None,
+                   previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers,
                    chars=SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars)
 
     def _recap_job(self, u: Universe, g: Game, k: int) -> Job | None:

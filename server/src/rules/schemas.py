@@ -86,6 +86,9 @@ def _go(ctx, q):
     if hidden_block(ctx, q):
         ctx.result = "blocked"
         return
+    for h, g in ctx.s.rows("follows"):
+        if g == PLAYER and q in ctx.u.agents[h].avoids:
+            ctx.work.retract(("follows", h, PLAYER))
     ctx.work.move(PLAYER, q)
 
 
@@ -126,6 +129,11 @@ def _talk(ctx, h, topic):
         elif won:
             run(ctx, favor.effects)
             w.insert(("owes", PLAYER, h, "promise"))
+    elif topic == "come":
+        if won:
+            w.insert(("follows", h, PLAYER))
+    elif topic == "stay":
+        w.retract(("follows", h, PLAYER))
     elif topic != "chat" and won:
         w.reveal(PLAYER, topic_of(u, h, topic).prop)
     if ctx.rolled:

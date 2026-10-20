@@ -28,10 +28,16 @@ class Work:
         self._frozen = None
 
     def move(self, x: str, y: str) -> None:
+        """Followers go along and a follower moved on its own stops following, both to keep C4."""
         if x == PLAYER and self.u.kind(y) != "place":
             raise ValueError(f"the player can only move to a place, not {y}")
         self._touch()
         self.at[x] = y
+        for h, g in list(self.sets["follows"]):
+            if g == x:
+                self.at[h] = y
+            elif h == x:
+                self.sets["follows"].discard((h, g))
 
     def set_(self, pred: str, key: tuple, v) -> None:
         index = {"regards": self.regards, "fill": self.fill, "stat": self.stat, "flag": self.flag}[pred]

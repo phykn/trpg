@@ -45,7 +45,7 @@ CommandResult
 ```
 
 - `kind`는 `steps`가 있어도 카드로 멈췄으면 `card`입니다. 화면은 `steps`의 유무로 드러남을, `view.card`로 카드를 정합니다.
-- `refused`: 0층의 거절, 후보 밖 `action`, 같은 `revision`에서 선택지 밖의 `pick`이나 낡은 카드 id. 상태와 `revision`은 바뀌지 않습니다.
+- `refused`: 0층의 거절, 지금 할 수 없는 행동을 묻는 문장, 이미 있는 곳으로 가는 문장(engine.md 3.2, 3.3), 후보 밖 `action`, 같은 `revision`에서 선택지 밖의 `pick`이나 낡은 카드 id. 상태와 `revision`은 바뀌지 않습니다.
 - 카드를 수락한 단계는 `steps[0]`입니다.
 
 ## 3. 단계 기록
@@ -67,7 +67,7 @@ CommandResult
 
 - `mods`는 칩의 목록입니다. `stat`, 도움, 방해 차례이고, 방해의 원자가 여럿이어도 방해 하나(값 −1, 이름을 `·`로 이어 씀)입니다. `stat` 칩은 값이 0이어도 있고, 도움과 방해는 0이면 칩이 없습니다. 카드의 `preview.mods`와 같은 모양, 같은 차례라 화면은 번호로 짝지어 칩을 옮깁니다.
 - `total`과 `decisive`는 서버(`view.py`)만 계산합니다. 결과는 `total ≥ dc`면 `success`, 아니면 `fail`이고, `decisive`는 빼면 `dc`에 대한 결과가 바뀌는 칩의 `mods` 안 번호(0부터)들입니다. 위 예에서 솜씨의 2가 없었다면 7로 목표 8에 못 미쳐 실패였습니다.
-- `changes`는 `δ`의 원자를 화면의 종류로 묶은 것이고 `from`, `to`는 보이는 값입니다. 종류: `fill`(장애물 칸, `fit`은 어울리는 방식으로 더 찬 칸 수), `clock`, `crisis`(`name`은 시계 이름), `tag_add`, `tag_remove`, `wound`, `scar`, `move`, `reveal`, `link`, `regards`, `promise`, `arrival`(`name`은 위협 이름), `chapter`(`from: k, to: k+1`), `ending`(`id`). 박자는 `view.player`로만 갑니다.
+- `changes`는 `δ`의 원자를 화면의 종류로 묶은 것이고 `from`, `to`는 보이는 값입니다. 종류: `fill`(장애물 칸, `fit`은 어울리는 방식으로 더 찬 칸 수), `clock`, `crisis`(`name`은 시계 이름), `tag_add`, `tag_remove`, `wound`, `scar`, `move`(동행이 플레이어와 함께 옮기면 `with: true`), `follow`(`state`: `start`·`stop`, 인물의 `id`·`name`), `reveal`, `link`, `regards`, `promise`, `arrival`(`name`은 위협 이름), `chapter`(`from: k, to: k+1`), `ending`(`id`). 박자는 `view.player`로만 갑니다.
 - 굴리지 않은 단계는 `dc: null`, `roll: null`, `mods: []`, `total: null`, `decisive: []`이고 `result`는 `none`입니다. 숨은 막힘은 `result: "blocked"`에 `changes`가 `[{kind: "reveal", id: <장애물 id>, name}]`입니다.
 - 주사위의 `u`와 `seed`는 보내지 않습니다. `u`는 복잡화를 고르는 수일 뿐 플레이어의 경험에 쓰이지 않습니다.
 
@@ -95,7 +95,7 @@ CommandResult
 | `revision` | 다음 명령에 넣을 값 |
 | `story` | `{id, title, premise}` 이 판의 이야기. 첫 턴의 서술 자리에는 `premise`를 보임 |
 | `chapter` | `{k, title, aim}` 장 번호, 제목, 목표 문장 |
-| `scene` | 장소 이름, 감각 단서, 보이는 인물(이름, 태도 낱말), 물건, 장애물(이름, 칸, 막는 것), 갈 곳 |
+| `scene` | 장소 이름, 감각 단서, 보이는 인물(이름, 태도 낱말, 동행이면 `with`), 물건, 장애물(이름, 칸, 막는 것), 갈 곳 |
 | `player` | 이름(`creation.name`, 옛 저장은 빈 글), 방식 넷, 특성(이름, 이번 장에 썼는지), 태그(슬롯, 종류, 수명, 이름), 상처/칸, 박자/`B`, 성장 |
 | `clocks` | 지닌 위험 시계, 마감, 활성 위협과 갈림(이름, `fill`, 칸 수, 종류) |
 | `journal` | 믿는 것(`B`의 문장, 믿게 된 차례, 지금 장면의 개체를 말하는지), 약속과 신세(`owes`), 인물별 관계, 갈림의 선택(이름, 장) |
@@ -109,7 +109,7 @@ CommandResult
 카드(engine.md 4절):
 
 ```
-{ "id": "c42", "kind": "roll" | "clarify" | "confirm",
+{ "id": "c42", "kind": "roll" | "clarify" | "confirm" | "move",
   "echo": {"text": "열쇠로 살살 돌려 본다", "slots": [{"slot": "approach", "label": "솜씨"}, {"slot": "strain", "label": "자연스럽게"}]},
   "plan": {"step": {"action": "try:door:finesse", "label": "녹슨 등대 문에 솜씨로 맞선다", "target": {"id": "door", "name": "녹슨 등대 문", "fill": 0, "boxes": 3}},
            "rest": ["등대 꼭대기로 간다"]},
@@ -118,7 +118,7 @@ CommandResult
   "selected": "try:door:finesse;rely=thing:key" }
 ```
 
-되묻기의 `options`는 `{id: 행동 id, label}`, 확인의 `options`는 `[{id: 행동 id, label, effects: [이름]}]`이고 둘 다 `preview`가 없습니다. 굴림 카드의 `preview`는 rule.md 3.4의 필드입니다.
+되묻기의 `options`는 `{id: 행동 id, label}`, 확인과 이동의 `options`는 `[{id: 행동 id, label, effects: [이름]}]`이고 셋 다 `preview`가 없습니다. 이동 카드의 `selected`는 문장이 고른 갈 곳이고 맨 앞 선택지입니다(engine.md 4.4). 굴림 카드의 `preview`는 rule.md 3.4의 필드입니다.
 
 ```
 { "risk": "normal",
@@ -127,5 +127,5 @@ CommandResult
   "stakes": {"clock": 1, "weight": "light" | "heavy" | null},
   "clock": {"id": "clock.1", "name": "몰려오는 폭풍", "boxes": 4, "fill": 1},
   "gain": {"kind": "fill", "boxes": 2, "fit": 1} | {"kind": "tag", "remove": "젖은 발" | null}
-        | {"kind": "topic"} | {"kind": "favor", "effects": ["등대 열쇠를 받음"]} }
+        | {"kind": "topic"} | {"kind": "favor", "effects": ["등대 열쇠를 받음"]} | {"kind": "follow"} }
 ```

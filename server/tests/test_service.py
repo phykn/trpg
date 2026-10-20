@@ -44,6 +44,13 @@ async def cmd(svc, gid, view, rid, **body):
     return await svc.command(gid, {"request_id": rid, "revision": view["revision"], **body})
 
 
+async def leave(svc, gid, out, rid):
+    """A sentence that goes somewhere stops at the move card; take the way it chose."""
+    card = out["view"]["card"]
+    assert card["kind"] == "move" and not out["steps"]
+    return await cmd(svc, gid, out["view"], rid, card=card["id"], pick=card["selected"])
+
+
 async def press(svc, gid, view, action, rid):
     out = await cmd(svc, gid, view, rid, action=action)
     return out, out["view"]
@@ -122,7 +129,7 @@ async def test_chain_stops_for_a_roll_card_after_its_first_step(tmp_path):
     svc = service(tmp_path, {"문으로": ["go:yard", "try:door:force"]})
     gid, view = await new(svc)
     _, view = await press(svc, gid, view, "go:village", "r1")
-    out = await cmd(svc, gid, view, "r2", text="문으로")
+    out = await leave(svc, gid, await cmd(svc, gid, view, "r2", text="문으로"), "r3")
     assert out["kind"] == "card" and [s["action"] for s in out["steps"]] == ["go:yard"]
     card = out["view"]["card"]
     assert card["kind"] == "roll" and card["options"][-1]["preview"]["risk"] == "high"
@@ -152,7 +159,7 @@ async def test_a_high_step_waits_for_a_confirm_card(tmp_path):
         view = res["view"]
         if (ob := view["scene"]["obstacles"][0])["fill"] == ob["boxes"]:
             break
-    out = await cmd(svc, gid, view, "c1", text="올라가 고른다")
+    out = await leave(svc, gid, await cmd(svc, gid, view, "c1", text="올라가 고른다"), "c1.go")
     assert [s["action"] for s in out["steps"]] == ["go:lamp_room"]
     assert any(c["kind"] == "chapter" for c in out["steps"][0]["changes"])
     card = out["view"]["card"]
@@ -227,3 +234,42 @@ async def test_http_routes(client):
         assert (await client.get("/games/g_" + "1" * 32)).status_code == 404
         r = await client.post("/games", json={"request_id": "x", "story": "nope", "creation": {**CREATION, "name": "a"}})
         assert r.status_code == 422
+
+
+async def test_a_sentence_move_waits_on_a_move_card_naming_who_comes(tmp_path):
+    plans = {"같이 가자": ["talk:yunseul:come"], "마을": ["go:village"]}
+    svc = GameService(STORIES, tmp_path, FakeInterpreter(plans), seeds=lambda: 3)
+    gid, view = await new(svc)
+    out = await cmd(svc, gid, view, "r1", text="같이 가자")
+    card = out["view"]["card"]
+    out = await cmd(svc, gid, out["view"], "r2", card=card["id"], pick=card["selected"])
+    assert out["steps"][0]["result"] == "success"     # seed 3 wins the charm roll
+    assert [p["with"] for p in out["view"]["scene"]["people"]] == [True]
+    out = await cmd(svc, gid, out["view"], "r3", text="마을")
+    card = out["view"]["card"]
+    assert card["kind"] == "move" and not out["steps"] and card["selected"] == "go:village"
+    assert card["options"][0] == {"id": "go:village", "label": "바닷가 마을", "effects": ["윤슬과 함께"]}
+    out = await cmd(svc, gid, out["view"], "r4", card=card["id"], pick="go:village")
+    assert out["view"]["scene"]["place"]["id"] == "village"
+    assert [p["id"] for p in out["view"]["scene"]["people"] if p["with"]] == ["yunseul"]
+
+
+async def test_a_move_card_can_take_another_way_or_be_closed(tmp_path):
+    svc = service(tmp_path, {"위로": ["go:yard"]})
+    gid, view = await new(svc)
+    _, view = await press(svc, gid, view, "go:village", "r1")
+    out = await cmd(svc, gid, view, "r2", text="위로")
+    card = out["view"]["card"]
+    assert [o["id"] for o in card["options"]][:1] == ["go:yard"] and "go:dock" in card["options"][1]["id"]
+    closed = await cmd(svc, gid, out["view"], "r3", card=card["id"], cancel=True)
+    assert closed["view"]["card"] is None and closed["view"]["scene"]["place"]["id"] == "village"
+    out = await cmd(svc, gid, closed["view"], "r4", text="위로")
+    card = out["view"]["card"]
+    out = await cmd(svc, gid, out["view"], "r5", card=card["id"], pick="go:dock")
+    assert [s["action"] for s in out["steps"]] == ["go:dock"]
+
+
+async def test_a_button_move_needs_no_card(svc):
+    gid, view = await new(svc)
+    out, view = await press(svc, gid, view, "go:village", "r1")
+    assert out["kind"] == "turn" and view["card"] is None and view["scene"]["place"]["id"] == "village"

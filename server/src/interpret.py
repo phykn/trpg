@@ -11,10 +11,13 @@ from .models.decision import ModelUnavailable
 from .onto.atoms import APPROACHES, PLAYER
 from .onto.view import observe
 from .rules.acts import JUDGE, make, parse
-from .rules.candidates import candidates, expand, solution_label, space
+from .rules.candidates import Slot, candidates, expand, solution_label, space
 from .view import action_label, rely_label
 
 THETA = 0.5
+# Layer 1's first step: from 0.5 to 0.7 Kev's sure answer was wrong where the narration model's reading was right 24
+# times to 4, above it 4 to 3 (qa_test/runs/misread-1).
+STEP_THETA = 0.7
 # A reliance stays on the roll card when it takes this share of the one relevance choice (engine.md 4.2).
 RELY_SHARE = 0.1
 TIMEOUT = 10.0
@@ -115,8 +118,10 @@ def ranked(answer, options) -> list[tuple[str, float]]:
 
 
 class Interpreter:
-    def __init__(self, decision, llm=None, theta: float = THETA, timeout: float = TIMEOUT):
+    def __init__(self, decision, llm=None, theta: float = THETA, timeout: float = TIMEOUT,
+                 step_theta: float = STEP_THETA):
         self.decision, self.llm, self.theta, self.timeout = decision, llm, theta, timeout
+        self.step_theta = step_theta
         self.calls: list[dict] = []          # the last sentence's questions and answers, for evals
 
     async def ask(self, state: str, questions: dict[str, dict]) -> dict:
@@ -167,23 +172,26 @@ class Interpreter:
         if out is not None:
             return out
         have = {s.schema for s in space(u, o)}
-        first = {σ: ko.SCHEMA_ASK[σ] for σ in SAY if σ in have}
-        if not first:
+        if not have & set(SAY):
             return {"plan": [self.idle()]}
-        qs = {"s1": choice(ko.STEP_QUESTION, first), "n": choice(ko.COUNT_QUESTION, ko.COUNT)}
+        # Every schema, those possible here first: offered only those, Kev put the weight of an impossible one (a
+        # talk to someone kept away) on another and was sure of it. An impossible first step stops the sentence
+        # (qa_test/runs/misread-1).
+        say = {σ: ko.SCHEMA_ASK[σ] for σ in sorted(SAY, key=lambda σ: σ not in have)}
+        qs = {"s1": choice(ko.STEP_QUESTION, say), "n": choice(ko.COUNT_QUESTION, ko.COUNT)}
         # Layer 1 options are scene-free, so Kev reads the sentence alone: on the skeleton evals the context
-        # ρ({player, here}) lowered accuracy from 80% to 71% (qa_test/agency/interp-2-ctx).
+        # ρ({player, here}) lowered accuracy from 80% to 71% (qa_test/runs/interp-2-ctx).
         answers = await self.ask(self.sentence(text), qs)
-        top, pr = ranked(answers.get("s1"), first)[0]
-        # a silent model gives every option 0, which ranks "1" first
-        sure, one = pr >= self.theta, ranked(answers.get("n"), ko.COUNT)[0][0] == "1"
+        top, pr = ranked(answers.get("s1"), say)[0]
+        # a silent model gives every option 0, which ranks "1" first; a refusal needs the narration model's reading too
+        sure, one = pr >= self.step_theta and top in have, ranked(answers.get("n"), ko.COUNT)[0][0] == "1"
         if sure and one:
             return {"plan": [self.partial(top, text)]}
         # Kev reads one sure action well and little else: unsure, it was wrong where the narration model was right
         # 22 times to 1, and it got 11 of 48 several-action sentences right to the narration model's 35, with
-        # one-action sentences even (qa_test/agency/decision-1). Later steps may happen elsewhere, so every schema.
-        steps = await self.read(text, first | {σ: ko.SCHEMA_ASK[σ] for σ in SAY if σ not in have})
-        if steps and steps[0] not in have:
+        # one-action sentences even (qa_test/runs/decision-1). Later steps may happen elsewhere, so every schema.
+        steps = await self.read(text, say)
+        if sure and steps and steps[0] not in have:
             steps = None
         if not one and steps and len(steps) > 1:
             return {"plan": [self.partial(σ, text) for σ in steps]}
@@ -206,19 +214,29 @@ class Interpreter:
         return {"schema": schema, "text": text, "fixed": {}}
 
     async def fill(self, u, g, st: dict) -> dict:
-        """Returning the step without "action" stops the plan."""
+        """Returning the step without "action" stops the plan; "already" skips it."""
         o = observe(u, g.state, g.log)
         p = g.presentation
         text, fixed = st["text"], dict(st.get("fixed", {}))
         slots = [s for s in space(u, o) if s.schema == st["schema"]]
         if not slots:
-            return st
+            return {"refused": ko.REFUSED["candidate"]}
         if st["schema"] == "try":
             return await self.fill_try(u, o, p, st, slots, text, fixed)
+        here = (o.facts.where(PLAYER),)
+        already = {"already": ko.fill(ko.ALREADY_HERE, place=u.name(here[0]))}
+        if st["schema"] == "go" and fixed.get("intent") == here[0]:
+            return already
         intents = self.narrow(u, o, text, [s.intent for s in slots], fixed)
         if not intents:
             return st
         slot_of = {s.intent: s for s in slots}
+        # The place the player is in, unless the sentence names a way out: offered only the ways out, Kev took one
+        # for a sentence naming this place (qa_test/runs/misread-1). Choosing it moves nowhere. Naming this place
+        # alone does not settle it: "to the dock" stays where "leaving the dock" goes.
+        if st["schema"] == "go" and "intent" not in fixed and not any(i[0] in named(u, o, text) for i in intents):
+            intents = [*intents, here]
+            slot_of[here] = Slot("go", here)
         labels = {":".join(i): action_label(u, o, p, expand(slot_of[i])[0]) for i in intents}
         qs, judge = {}, {}
         if len(intents) > 1 and "intent" not in fixed:
@@ -248,13 +266,16 @@ class Interpreter:
             else:
                 top = ranked(answers.get("intent"), labels)
                 # Where Kev is unsure the narration model picks before the player is asked: on the bench it was
-                # right on 44 of 45 such intents, targets and approaches (qa_test/agency/decision-1).
-                w = top[0][0] if top[0][1] >= self.theta else await self.pick(state, qs["intent"]["instructions"],
-                                                                                 labels)
+                # right on 44 of 45 such intents, targets and approaches (qa_test/runs/decision-1). Staying needs
+                # the narration model too, as a refusal does: Kev took the place of a door to go through it.
+                sure = top[0][1] >= self.theta and (st["schema"], top[0][0]) != ("go", here[0])
+                w = top[0][0] if sure else await self.pick(state, qs["intent"]["instructions"], labels)
                 if w is None:
                     return self.clarify(u, o, p, st, fixed, "intent", [x for x, _ in top[:3]], labels)
                 fixed["intent"] = w
         intent = tuple(fixed["intent"].split(":"))
+        if st["schema"] == "go" and intent == here:
+            return already
         slot = slot_of[intent]
         judge_args = {}
         if st["schema"] == "talk":
@@ -285,7 +306,7 @@ class Interpreter:
             qs["strain"] = choice(ko.SLOT_QUESTION["strain"], strains)
         state = self.state(u, o, p, text, targets)
         # The narration model picks the target and approach even where Kev is sure: on the bench it was right on 48
-        # of 48 targets and 40 of 42 approaches to Kev's 33 and 25 (qa_test/agency/decision-1). Kev's answers stay
+        # of 48 targets and 40 of 42 approaches to Kev's 33 and 25 (qa_test/runs/decision-1). Kev's answers stay
         # for when it gives none, and both models are asked at once.
         picking = [k for k in ("target", "approach") if k in qs]
         answers, *got = await asyncio.gather(

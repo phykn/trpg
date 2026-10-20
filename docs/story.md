@@ -17,7 +17,7 @@ scenarios/<폴더>/   폴더 이름은 자유. 이야기 id는 story.yaml의 id
 ### 2.1 파일
 
 - YAML 1.2의 부분집합으로 씁니다. 앵커, 별칭, 태그를 쓰지 않고, 스칼라는 스키마가 정한 종류로만 읽습니다(`no`, `on`은 문자열). **맵의 차례는 형식의 일부**이고 로더는 문서의 차례를 지킵니다. 방아쇠, 결말, 복잡화의 차례가 여기서 옵니다. 주석은 한국어로 씁니다.
-- **id는 맵의 키입니다.** id가 있는 것(장소, 인물, 물건, 장애물, 위협, 갈림, 해법, 복잡화, 화제, 믿음, 주장, 잠재, 선택지, 방아쇠, 결말, 특성)은 모두 맵의 키로 쓰고 따로 `id` 필드를 두지 않습니다. id는 소문자, 숫자, `_`이고 이야기 전체에서 서로 다릅니다. 예약 id는 `player`(`p★`), `chat`, `favor`, `pass`, `rest`, `chapter`, `ending`, `collapse`(결말 절에서만), `promise`, `kindness`, `full`, 그리고 `fired_`로 시작하는 것입니다.
+- **id는 맵의 키입니다.** id가 있는 것(장소, 인물, 물건, 장애물, 위협, 갈림, 해법, 복잡화, 화제, 믿음, 주장, 잠재, 선택지, 방아쇠, 결말, 특성)은 모두 맵의 키로 쓰고 따로 `id` 필드를 두지 않습니다. id는 소문자, 숫자, `_`이고 이야기 전체에서 서로 다릅니다. 예약 id는 `player`(`p★`), `chat`, `favor`, `come`, `stay`, `pass`, `rest`, `chapter`, `ending`, `collapse`(결말 절에서만), `promise`, `kindness`, `full`, 그리고 `fired_`로 시작하는 것입니다.
 - 장소, 인물, 물건, 장애물, 위협, 갈림마다 `name`을 두고 `aliases`는 선택입니다. 엔진의 틀 표가 이 이름으로 사실과 변화를 쓰고 읽습니다(engine.md 1절). 별칭은 이야기 전체에서 겹치지 않습니다.
 - 명제의 문장(2.5)을 뺀 모든 글은 **공개 매개변수**입니다: `premise`, `style`, 이름과 별칭, `senses`, `look`, `voice`, `desire`, `fear`, 특성의 `text`, 화제의 `title`, `label`, 복잡화·선택지·기본 선택지·약속·잠재·시계·마감의 `name`, 주장의 `text`, 결말의 `title`과 `frame`. 숨길 내용은 명제의 문장에만 씁니다.
 
@@ -107,7 +107,7 @@ scenarios/<폴더>/   폴더 이름은 자유. 이야기 id는 story.yaml의 id
 
 `S₀`에는 `flag(chapter, 1)`과 선언한 플래그의 시작 값이 있습니다.
 
-없어도 되는 것: 최상위의 `flags`, `impossible`, `threats`, `forks`, `claims`, `latents`, `triggers`(없으면 빈 것); 항목의 `aliases`, `clue`, `hidden`, `complications`; 주인공의 `traits`(없으면 특성 없음); 장소의 `rest`; 인물의 `regards`, `beliefs`, `wants`, `topics`, `favor`; 화제의 `free_when`(없으면 거짓); 장애물의 `risk`(기본 `normal`), `fits`, `clashes`, `blocks`; 해법의 `rely`, `when`; 장의 `goal_effects`; 마감의 `effects`와 `ending`(마지막 장의 `ending`은 필수); 잠재의 `brings`, `effects`; 그리고 `evals.yaml`. 그 밖의 필드는 필수입니다.
+없어도 되는 것: 최상위의 `flags`, `impossible`, `threats`, `forks`, `claims`, `latents`, `triggers`(없으면 빈 것); 항목의 `aliases`, `clue`, `hidden`, `complications`; 주인공의 `traits`(없으면 특성 없음); 장소의 `rest`; 인물의 `regards`, `beliefs`, `wants`, `topics`, `favor`, `avoids`; 화제의 `free_when`(없으면 거짓); 장애물의 `risk`(기본 `normal`), `fits`, `clashes`, `blocks`; 해법의 `rely`, `when`; 장의 `goal_effects`; 마감의 `effects`와 `ending`(마지막 장의 `ending`은 필수); 잠재의 `brings`, `effects`; 그리고 `evals.yaml`. 그 밖의 필드는 필수입니다.
 
 ### 3.2 주인공
 
@@ -133,8 +133,11 @@ scenarios/<폴더>/   폴더 이름은 자유. 이야기 id는 story.yaml의 id
 
 | 필드 | 뜻 | 평가 |
 |---|---|---|
-| `name`, `aliases`, `pronoun`, `voice`, `desire`, `fear` | 공개 매개변수 | |
+| `name`, `aliases`, `pronoun`, `desire`, `fear` | 공개 매개변수 | |
+| `voice` | 말투 한 줄. 끝에 그 인물다운 대사 한 마디를 `예: "…"`로 붙이면 서술 모델이 말씨를 그 예에 맞춥니다. 예시 대사에는 숨길 사실을 쓰지 않음 | |
+| `persona` | 성격 유형. 엔진이 정한 16가지 MBTI 유형(`ISTJ` … `ENTJ`) 중 하나이고, 서술 문맥에 그 유형의 성격 풀이가 함께 나감. 필수 | |
 | `at` | 시작 장소. 무대 밖에서 시작하는 인물은 잠재(3.10)가 데려옴 | |
+| `avoids` | 함께 다니다가도 들어가지 않는 장소들(rule.md 5.1 동행). 두려움(`fear`)과 맞추면 인물이 살아남. 없으면 어디든 따라감 | |
 | `regards` | 플레이어를 보는 시작 값 `{trust, fear}`, `−3…3`. 없으면 0 | |
 | `beliefs` | `{id: 문장}`. 시작부터 믿는 명제 | |
 | `wants` | 건네받으면 반기는 물건(rule.md 5.1 `give`). 화면과 프롬프트에는 그 물건이 플레이어에게 숨지 않은 동안만 나감 | |
@@ -282,7 +285,7 @@ witnesses:
 
 ## 6. 해석 평가
 
-`evals.yaml`은 해석 모델의 정확도를 재는 시험 자료이고 시작 시 검증에 들지 않습니다. 상태는 증인의 한 걸음 뒤로 가리킵니다.
+`evals.yaml`은 해석 모델의 정확도를 재는 시험 자료이고 시작 시 검증에 들지 않습니다. 상태는 증인의 한 걸음 뒤로 가리키고, 증인 길에 없는 상태는 `then`에 증인 걸음과 같은 꼴로 더 실행할 행동을 적습니다(`then: [{do: "talk:h:come", roll: [6, 6, 0]}]`).
 
 ```yaml
 - at: {path: 0, step: 2}
