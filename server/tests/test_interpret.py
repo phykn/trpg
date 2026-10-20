@@ -3,6 +3,8 @@ from types import SimpleNamespace
 from conftest import REPO
 from src.interpret import Interpreter, mentions, squeeze
 from src.models.decision import ModelUnavailable
+from src.onto.view import observe
+from src.rules.acts import parse
 from src.service import GameService
 from src.story.validate import load_all
 
@@ -66,15 +68,23 @@ async def test_exact_label_is_a_plan_without_a_model(tmp_path):
 
 
 async def test_sure_schema_and_named_place(tmp_path):
-    decision = FakeDecision({"s1": {"go": 0.9}, "s2": {"end": 0.8}})
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.7}, "s2": {"talk": 0.9}})
     svc, gid, view = await game(tmp_path, decision)
     out = await say(svc, gid, view, "마을 쪽으로 걸어가 봐야겠다")
-    assert [s["action"] for s in out["steps"]] == ["go:village"]
+    assert [s["action"] for s in out["steps"]] == ["go:village"]    # the count, not a sure s2, sets the length
     assert len(decision.asked) == 1                    # the named place fills the slot; no layer-2 call
+    assert set(decision.asked[0][1]) == {"s1", "s2", "s3", "n"} and "예:" in decision.asked[0][1]["s1"]["criteria"]["go"]
+
+
+async def test_a_repeated_schema_is_one_step(tmp_path):
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"2": 0.8}, "s2": {"go": 0.7}})
+    svc, gid, view = await game(tmp_path, decision)
+    out = await say(svc, gid, view, "마을 쪽으로 서둘러 걸어 내려간다")
+    assert [s["action"] for s in out["steps"]] == ["go:village"]
 
 
 async def test_two_steps_ask_the_second_slot_after_the_first_runs(tmp_path):
-    decision = FakeDecision({"s1": {"go": 0.9}, "s2": {"talk": 0.7}, "s3": {"end": 0.9}, "tone": {"friendly": 0.8},
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"2": 0.8}, "s2": {"talk": 0.7}, "tone": {"friendly": 0.8},
                    "intent": {"dohae:chat": 0.9}})
     svc, gid, view = await game(tmp_path, decision)
     out = await say(svc, gid, view, "마을로 가서 도해에게 말을 건다")
@@ -137,11 +147,12 @@ async def test_unsure_judgment_falls_back_to_neutral(tmp_path):
 
 
 async def test_a_claim_is_asked_only_after_a_deceiving_tone(tmp_path):
-    decision = FakeDecision({"s1": {"talk": 0.9}, "s2": {"end": 0.9}, "intent": {"dohae:chat": 0.9},
-                   "tone": {"deceive": 0.8}, "claim": {"c_keeper": 0.7}})
+    decision = FakeDecision({"s1": {"talk": 0.9}, "intent": {"dohae:chat": 0.9},
+                   "tone": {"deceive": 0.8}, "c_keeper": {"true": 0.7, "false": 0.3}})
     svc, gid, view = await game(tmp_path, decision, moves=["go:village"])
     out = await say(svc, gid, view, "도해에게 내가 새 등대지기라고 둘러댄다")
-    assert [set(q) for _, q in decision.asked[1:]] == [{"intent", "tone"}, {"claim"}]
+    assert [set(q) for _, q in decision.asked[1:]] == [{"intent", "tone"}, {"c_keeper"}]
+    assert decision.asked[-1][1]["c_keeper"]["type"] == "noul"
     card = out["view"]["card"]
     assert card["plan"]["step"]["action"] == "talk:dohae:chat;claim=c_keeper;tone=deceive"
 
@@ -153,3 +164,26 @@ async def test_an_unclear_approach_takes_the_strongest_stat_without_asking(tmp_p
     out = await say(svc, gid, view, "문을 열어 본다")
     card = out["view"]["card"]
     assert card["kind"] == "roll" and card["plan"]["step"]["action"] == "try:door:finesse"
+
+
+async def test_the_roll_card_keeps_only_the_reliances_the_model_sees_helping(tmp_path):
+    decision = FakeDecision({"s1": {"try": 0.9}, "s2": {"end": 0.9}, "strain": {"natural": 0.9},
+                             "approach": {"finesse": 0.9}, "rely": {"r1": 0.8, "r2": 0.05, "none": 0.15}})
+    svc, gid, view = await game(tmp_path, decision, moves=["go:village", "go:yard"])
+    out = await say(svc, gid, view, "기계공 솜씨로 문을 비집어 연다")
+    card = out["view"]["card"]
+    assert [o["label"] for o in card["options"]] == ["기계공", "기대지 않음"]
+    assert card["selected"] == "try:door:finesse;rely=trait:tinker"
+    state, qs = decision.asked[-1]
+    assert "기계공 솜씨로" in state and list(qs["rely"]["criteria"]) == ["r0", "r1", "r2", "none"]
+
+
+async def test_story_links_skip_the_question_and_a_silent_model_hides_nothing(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeDecision())
+    u, g = await svc.load(gid)
+    o, p, a = observe(u, g.state, g.log), g.presentation, parse("try:lamp:wits")
+    values = ["trait:sailor", "thing:letter", "thing:oil", "tag:lamp:1"]
+    sure = FakeDecision({"rely": {"none": 1.0}})
+    assert await Interpreter(sure).relevant(u, o, p, a, values, None) == ["thing:oil", "tag:lamp:1"]
+    assert list(sure.asked[0][1]["rely"]["criteria"]) == ["r0", "r1", "none"]
+    assert await Interpreter(FakeDecision(fail=True)).relevant(u, o, p, a, values, None) == values

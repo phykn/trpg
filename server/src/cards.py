@@ -8,7 +8,7 @@ from .rules.candidates import space
 from .rules.roll import preview
 from .view import action_label, chips, effect_names, rely_label, tag_name
 
-# A card is a function of (Vₜ, plan) and makes no event (engine.md 4).
+# A card is a function of (Vₜ, plan), plus the relevant reliances for a roll card, and makes no event (engine.md 4).
 
 
 def rely_options(u, o: Obs, a: Action) -> list[str]:
@@ -58,10 +58,10 @@ def _plan(u, o: Obs, p: dict, a: Action, rest_labels: list[str]) -> dict:
 
 
 def roll_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[str], echo: dict, card_id: str,
-              selected: str | None = None) -> dict:
+              selected: str | None = None, relies: list[str] | None = None) -> dict:
     base = a.with_(rely=None)
     options = []
-    for v in rely_options(u, o, base):
+    for v in rely_options(u, o, base) if relies is None else relies:
         av = base.with_(rely=v)
         kind = v.split(":", 1)[0]
         options.append({"id": str(av), "label": rely_label(u, p, o.facts, v), "consumed": kind in ko.CONSUMED,

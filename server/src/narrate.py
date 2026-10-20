@@ -223,11 +223,8 @@ class Narrator:
             state += "\n" + ko.HEAD["happened"] + "\n" + "\n".join(f"- {x}" for x in job.happened)
         qs = {}
         for i, s in enumerate(said):
-            if i in skip:
-                continue
-            for k, q in ko.CHECK.items():
-                qs[f"{k}.{i}"] = {"type": "noul", "instructions": f"{q}\n문장: {s}",
-                                  "criteria": {"true": ko.YES, "false": ko.NO}}
+            if i not in skip:
+                qs[str(i)] = {"type": "choice", "instructions": f"{ko.CHECK_QUESTION}\n문장: {s}", "criteria": ko.CHECK}
         if not qs:
             return {}
         try:
@@ -235,13 +232,15 @@ class Narrator:
         except (ModelUnavailable, TimeoutError):
             answers = {}
         out: dict[int, list[str]] = {}
-        for key in qs:
-            k, i = key.split(".")
-            a = answers.get(key)
+        for i in qs:
+            a = answers.get(i)
+            probs = dict(a.probabilities) if a is not None and a.probabilities else {}
             # An unreadable check answer cannot clear a sentence.
-            p_yes = float(a.probabilities.get("true", 0.0)) if a is not None else 1.0
-            if p_yes >= self.theta:
-                out.setdefault(int(i), []).append(ko.FEEDBACK[k])
+            if probs.get("fine", 0.0) > 1 - self.theta:
+                continue
+            flaws = [k for k in ("contradicts", "invents") if k in probs]
+            worst = max(flaws, key=lambda k: probs[k]) if flaws else None
+            out[int(i)] = [ko.FEEDBACK[worst]] if worst else [ko.FEEDBACK[k] for k in ("contradicts", "invents")]
         return out
 
     async def narrate(self, job: Job) -> AsyncIterator[dict]:

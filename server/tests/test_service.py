@@ -22,6 +22,9 @@ class FakeInterpreter:
     async def fill(self, u, g, st):
         return st
 
+    async def relevant(self, u, o, p, a, values, text):
+        return values
+
 
 def service(tmp_path, plans=None):
     return GameService(STORIES, tmp_path, FakeInterpreter(plans) if plans else None, seeds=lambda: 7)

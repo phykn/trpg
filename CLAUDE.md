@@ -16,7 +16,7 @@ The engine follows the design in docs/; the rebuild plan is finished and removed
 
 The server names both models in its config at startup (`DECISION_MODEL`, `LLM_MODEL`; see `server/README.md`) and stops if the servers run something else.
 
-- **Decision model** (`:8081`, `kev` or `malkuth`, `server/src/models/decision.py`) maps the sentence to closed options: legal candidate actions or `improvise`. It never invents anything.
+- **Decision model** (`:8081`, `malkuth` = malkuth-2b, `server/src/models/decision.py`) maps the sentence to closed options: legal candidate actions or `improvise`. It never invents anything.
 - **LLM** (`:8082`, `qwen`, `gemma4` or `minicpm`, `server/src/models/llm.py`) narrates only what changed. The decision model checks the text, with up to 2 rewrites. The LLM is always non-thinking (`enable_thinking: false` on every request).
 
 Both models are required and run outside this repo. Never start or stop them (no `kevctl`/`llmctl`); assume they are up. Do not add a mode without models or replace narration with authored text.

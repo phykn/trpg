@@ -79,7 +79,7 @@ def context(u, o: Obs, focus, p: dict) -> list[Line]:
         if names & x:
             out.append(Line("memory", ko.fill(ko.FRAME["memory"], label=_past(u, seen))))
     for e in sorted(x, key=u.rank):
-        out += _public(u, o, e)
+        out += about(u, o, e)
     return out
 
 
@@ -91,7 +91,7 @@ def _past(u, seen) -> str:
     return f"{text}: {result}" if result else text
 
 
-def _public(u, o: Obs, x: str) -> list[Line]:
+def about(u, o: Obs, x: str) -> list[Line]:
     out = []
     if x in u.places:
         out.append(Line("public", ko.fill(ko.FRAME["senses"], x=u.name(x), text=", ".join(u.places[x].senses))))
@@ -126,4 +126,4 @@ def render(lines: list[Line]) -> str:
     return "\n".join(out)
 
 
-__all__ = ["Line", "context", "fact_line", "prop_label", "render"]
+__all__ = ["Line", "about", "context", "fact_line", "prop_label", "render"]

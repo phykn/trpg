@@ -5,7 +5,7 @@ import re
 import unicodedata
 
 from .cards import rely_options
-from .lang.context import context, render
+from .lang.context import about, context, render
 from .locale import ko
 from .models.decision import ModelUnavailable
 from .onto.atoms import APPROACHES, PLAYER
@@ -15,9 +15,10 @@ from .rules.candidates import candidates, expand, solution_label, space
 from .view import action_label, rely_label
 
 THETA = 0.5
+# A reliance stays on the roll card when it takes this share of the one relevance choice (engine.md 4.2).
+RELY_SHARE = 0.1
 TIMEOUT = 10.0
 SAY = ("go", "look", "take", "give", "talk", "try", "declare", "cut", "choose")
-END = "end"
 FALLBACK_APPROACH = "wits"         # try(player) when layer 1 is unsure: no roll, no change, narration only
 
 
@@ -69,6 +70,14 @@ def rely_hint(u, o, p: dict, a, text: str) -> str | None:
     return hits[0] if len(hits) == 1 else None
 
 
+def rely_desc(u, p: dict, facts, v: str) -> str:
+    kind, _, rest = v.partition(":")
+    name = u.name(rest) if kind == "bond" else rely_label(u, p, facts, v)
+    text = (u.traits[rest][1] if kind == "trait" else u.things[rest].look if kind == "thing"
+            else u.props[rest].text if kind == "prop" else "")
+    return ko.fill(ko.RELY_DESC[kind], name=name, text=text)
+
+
 def rules(u, o, p: dict, text: str) -> dict | None:
     """Layer 0 decisions that need no model: a refusal or a whole plan."""
     flat = squeeze(text)
@@ -81,6 +90,14 @@ def rules(u, o, p: dict, text: str) -> dict | None:
                 (lab := solution_label(u, o, a)) and squeeze(lab) == flat):
             return {"plan": [{"action": str(a)}]}
     return None
+
+
+def noul(question: str) -> dict:
+    return {"type": "noul", "instructions": question, "criteria": {"true": ko.YES, "false": ko.NO}}
+
+
+def yes_share(answer) -> float:
+    return float((getattr(answer, "probabilities", None) or {}).get("true", 0.0))
 
 
 def choice(question: str, criteria: dict[str, str]) -> dict:
@@ -131,11 +148,12 @@ class Interpreter:
         if out is not None:
             return out
         have = {s.schema for s in space(u, o)}
-        first = {σ: ko.SCHEMA_DESC[σ] for σ in SAY if σ in have}
-        later = {**{σ: ko.SCHEMA_DESC[σ] for σ in SAY}, END: ko.END}
+        first = {σ: ko.SCHEMA_ASK[σ] for σ in SAY if σ in have}
+        later = {σ: ko.SCHEMA_ASK[σ] for σ in SAY}
         if not first:
             return {"plan": [self.idle()]}
         qs = {f"s{i}": choice(ko.STEP_QUESTION[i], first if i == 1 else later) for i in (1, 2, 3)}
+        qs["n"] = choice(ko.COUNT_QUESTION, ko.COUNT)
         # Layer 1 options are scene-free, so Kev reads the sentence alone: on the skeleton evals the context
         # ρ({player, here}) lowered accuracy from 80% to 71% (qa_test/agency/interp-2-ctx).
         answers = await self.ask(self.sentence(text), qs)
@@ -143,11 +161,14 @@ class Interpreter:
         if pr < self.theta and await self.second(text, first) != top:
             return {"plan": [self.idle(approach_cue(text))]}
         plan = [self.partial(top, text)]
-        for i in (2, 3):
-            σ, pr = ranked(answers.get(f"s{i}"), later)[0]
-            if pr < self.theta or σ == END:
-                break
-            plan.append(self.partial(σ, text))
+        n, _ = ranked(answers.get("n"), ko.COUNT)[0]
+        # the count sets the length; a silent model gives every option 0, which ranks "1" first
+        for i in range(2, int(n) + 1):
+            σ, _ = ranked(answers.get(f"s{i}"), later)[0]
+            # The same schema twice in a row is one action told in two clauses ("kneels and begs"); the count
+            # model splits those often and real repeats are rare (qa_test/agency/decision-1).
+            if σ != plan[-1]["schema"]:
+                plan.append(self.partial(σ, text))
         return {"plan": plan}
 
     @staticmethod
@@ -193,10 +214,12 @@ class Interpreter:
                 fixed[k] = w if pr >= self.theta else None
         claims = sorted({c for i in intents for c in slot_of[i].values("claim") if c})
         if fixed.get("tone") == "deceive" and claims and "claim" not in fixed:
-            opts = {"none": ko.NO_CLAIM, **{c: u.props[c].text for c in claims}}
-            w, pr = ranked((await self.ask(state, {"claim": choice(ko.SLOT_QUESTION["claim"], opts)})).get("claim"),
-                           opts)[0]
-            fixed["claim"] = w if pr >= self.theta else None
+            # One yes/no per claim: offered as one choice with "no claim", the model took "no claim" for every lie.
+            # What the sentence says needs only the sentence; the scene lowered every right answer.
+            got = await self.ask(self.sentence(text),
+                                 {c: noul(ko.fill(ko.CLAIM_QUESTION, text=u.props[c].text)) for c in claims})
+            yes = max(claims, key=lambda c: yes_share(got.get(c)))
+            fixed["claim"] = yes if yes_share(got.get(yes)) >= self.theta else None
         if "intent" not in fixed:
             if len(intents) == 1:
                 fixed["intent"] = ":".join(intents[0])
@@ -286,6 +309,24 @@ class Interpreter:
     def state(self, u, o, p, text, intents) -> str:
         focus = {PLAYER, o.facts.where(PLAYER), *(x for i in intents for x in i)}
         return render(context(u, o, focus, p)) + "\n\n" + self.sentence(text)
+
+    async def relevant(self, u, o, p, a, values: list[str], text: str | None) -> list[str]:
+        """The roll card's reliances: what the story ties to the target, and what the model sees helping."""
+        x = a.intent[0]
+        linked = {s.rely for s in u.obstacles[x].solutions} if x in u.obstacles else set()
+        ask = [v for v in values if v not in linked and not v.startswith(f"tag:{x}:")]
+        if not ask:
+            return values
+        # One choice over every reliance: asked one by one, the small model gives the same answer to all of them.
+        opts = {f"r{i}": rely_desc(u, p, o.facts, v) for i, v in enumerate(ask)}
+        state = "\n".join([ko.fill(ko.ATTEMPT, label=action_label(u, o, p, a)), *(ln.text for ln in about(u, o, x)),
+                           *([self.sentence(text)] if text else [])])
+        answer = (await self.ask(state, {"rely": choice(ko.RELY_QUESTION, {**opts, "none": ko.RELY_NONE})})).get("rely")
+        probs = getattr(answer, "probabilities", None)
+        if not probs:
+            return values               # a silent model takes no choice away from the player
+        drop = {v for i, v in enumerate(ask) if probs.get(f"r{i}", 0.0) < RELY_SHARE}
+        return [v for v in values if v not in drop]
 
     def done(self, u, o, p, a, text, echo) -> dict:
         return {"action": str(a), "rely": rely_hint(u, o, p, a, text), "slots": echo}

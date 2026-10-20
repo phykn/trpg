@@ -24,8 +24,9 @@ def llm_server(loaded: str | None) -> httpx.MockTransport:
 
 async def test_decision_check_accepts_the_configured_model_only():
     await DecisionClient("http://d", model="malkuth", transport=decision_server("dhtocks/malkuth-2b@37ae")).check()
-    with pytest.raises(ModelUnavailable, match="malkuth is configured"):
-        await DecisionClient("http://d", model="malkuth", transport=decision_server("jaredpalmer/kev-4b@v1.0")).check()
+    for other in ("jaredpalmer/kev-4b@v1.0", "jaredpalmer/kev-0.8b@v1.0"):
+        with pytest.raises(ModelUnavailable, match="malkuth is configured"):
+            await DecisionClient("http://d", model="malkuth", transport=decision_server(other)).check()
 
 
 def test_unknown_model_names_fail_at_construction():

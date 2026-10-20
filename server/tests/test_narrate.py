@@ -7,6 +7,7 @@ import httpx
 from conftest import REPO
 from run_api import build_app
 from src.lang.polite import polite
+from src.locale import ko
 from src.models.decision import ModelUnavailable
 from src.narrate import Narrator, change_line, sentences_of, split
 from src.service import GameService
@@ -34,12 +35,13 @@ class FakeLLM:
 
 
 class FakeDecision:
-    def __init__(self, yes=0.0):
-        self.yes, self.asked = yes, []
+    def __init__(self, bad=0.0):
+        self.bad, self.asked = bad, []
 
     async def decide(self, state, questions):
         self.asked.append((state, questions))
-        return {q: SimpleNamespace(probabilities={"true": self.yes, "false": 1 - self.yes}) for q in questions}
+        return {q: SimpleNamespace(probabilities={"fine": 1 - self.bad, "contradicts": self.bad, "invents": 0.0})
+                for q in questions}
 
 
 async def game(tmp_path, llm, decision=None, moves=("go:village",)):
@@ -90,11 +92,13 @@ async def test_unearned_possession_is_rejected(tmp_path):
 
 
 async def test_three_failures_drop_the_sentences_and_keep_delta(tmp_path):
-    decision = FakeDecision(yes=0.9)                       # the check rejects every sentence
+    decision = FakeDecision(bad=0.9)                       # the check rejects every sentence
     llm = FakeLLM(GOOD)
     svc, gid, _ = await game(tmp_path, llm, decision)
     got = await events(svc, gid)
     assert len(llm.calls) == 3 and got[-2]["type"] == "text" and got[-2]["text"]
+    feedback = llm.calls[1][1]["content"]
+    assert ko.FEEDBACK["contradicts"] in feedback and ko.FEEDBACK["invents"] not in feedback
     entry = svc.games[gid][1].presentation["narration"]["1"]
     assert entry["attempts"] == 3 and entry["dropped"] == 2
 
@@ -122,7 +126,7 @@ async def test_check_reads_only_the_view(tmp_path):
     await events(svc, gid)
     state, qs = decision.asked[0]
     assert "누렁이" not in state and "누렁이" not in json.dumps(qs, ensure_ascii=False)
-    assert set(qs) == {"contradicts.0", "invents.0", "contradicts.1", "invents.1"}
+    assert set(qs) == {"0", "1"} and all(set(q["criteria"]) == {"fine", "contradicts", "invents"} for q in qs.values())
 
 
 async def test_routes_stream_ndjson(tmp_path):

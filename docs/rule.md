@@ -74,7 +74,7 @@ class Action:
 | `tone` | `talk` | `polite`, `friendly`, `plead`, `threaten`, `deceive` |
 | `claim` | `talk`, `tone = deceive`일 때만 | 원고의 주장들. 주장은 거짓 명제라 정직한 태도로 말할 수 없음 |
 | `strain` | `try(x ≠ player)` | `natural`, `forced` |
-| `rely` | 굴리는 `talk`, `try(x ≠ player)` | 아래 표. 관련성은 묻지 않으며 허용되는 값이면 어떤 굴림에도 도움 1 |
+| `rely` | 굴리는 `talk`, `try(x ≠ player)` | 아래 표. 규칙은 관련성을 묻지 않고 허용되는 값이면 도움 1. 굴림 카드는 그중 이 굴림에 관련 있는 것만 내보임(engine.md 4.2) |
 
 | `rely` 값 | 조건 | 도움의 원자 | 소모 |
 |---|---|---|---|

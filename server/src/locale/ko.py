@@ -45,7 +45,14 @@ ACTION = {
 SWAP = "{old} → {new}"
 RELYING = "{rely}에 기대어 "
 NO_RELY = "기대지 않음"
-CONSUMED = {"tag": "쓰면 사라짐", "trait": "1번 남음"}
+# A tag goes for good and a trait returns next chapter, but on the card both are one use away from gone.
+CONSUMED = dict.fromkeys(("tag", "trait"), "1번 남음")
+# The roll card's relevance question (engine.md 4.2): one option per reliance, and none.
+ATTEMPT = "시도: {label}"
+RELY_QUESTION = "이 시도를 실제로 돕는 것은 무엇입니까?"
+RELY_NONE = "아무것도 이 시도를 돕지 않는다"
+RELY_DESC = {"tag": "유리한 점 '{name}'", "trait": "특성 '{name}': {text}", "thing": "지닌 물건 '{name}': {text}",
+             "prop": "아는 사실: {text}", "bond": "{name}{이} 당신을 깊이 믿는다"}
 
 # Effect names on confirm cards and favors.
 EFFECT = {
@@ -159,24 +166,40 @@ SCHEMA_DESC = {
     "cut": "기다리거나 쉬며 시간을 보낸다",
     "choose": "갈림길에서 하나를 고른다",
 }
-END = "더 하는 것이 없다"
-STEP_QUESTION = {1: "플레이어 문장이 맨 처음 하려는 일은 무엇입니까?",
+# Layer 1 options: what each schema covers, with story-free examples aimed at the model's confusions (persuading
+# and distracting are try, a decision is choose, a recalled tie is declare); decision-1 REPORT.
+SCHEMA_ASK = {
+    "go": "어딘가로 간다 (예: 북쪽 문으로 나간다, 위층으로 올라가자)",
+    "look": "무언가를 살피거나 읽어 보며, 그것이 어떤지 알아본다 (예: 상자 안을 들여다본다, 저건 뭐지?)",
+    "take": "무언가를 집는다 (예: 바닥의 칼을 줍는다)",
+    "give": "누군가에게 무언가를 건넨다 (예: 문지기에게 동전을 쥐여 준다)",
+    "talk": "누군가에게 묻거나, 부탁하거나, 겁을 주거나, 속이는 말을 한다 (예: 노인에게 길을 묻는다)",
+    "try": "무언가를 이루려고 힘, 솜씨, 꾀, 말솜씨로 맞선다 (예: 벽을 부순다, 매듭을 푼다, 미끼로 주의를 끈다, "
+           "적의를 품은 상대를 구슬려 마음을 돌린다, 몸을 단련한다)",
+    "declare": "자신의 과거나 인연을 새로 밝히거나 떠올린다 (예: 나는 이 마을 출신이다, 그는 내 옛 스승이다)",
+    "cut": "기다리거나 쉬며 시간을 보낸다 (예: 날이 밝을 때까지 기다린다, 잠깐 눈을 붙인다)",
+    "choose": "어떻게 할지 결정을 내린다 (예: 남은 돈은 고아원에 맡기기로 한다, 두 길 중 강 쪽을 택한다)",
+}
+STEP_QUESTION = {1: "플레이어 문장에서 가장 먼저 하는 행동은 무엇입니까? 뒤에 이어지는 행동은 보지 않습니다.",
                  2: "그 다음에 이어서 하는 일은 무엇입니까?",
                  3: "그 다음에 또 이어서 하는 일은 무엇입니까?"}
+# Asking the count beats an "end" option after each step: the model stops adding steps to one-action sentences.
+COUNT_QUESTION = "플레이어 문장은 서로 다른 행동을 몇 가지 차례로 합니까?"
+COUNT = {"1": "한 가지 행동만 한다", "2": "두 가지 행동을 차례로 한다", "3": "세 가지 이상의 행동을 차례로 한다"}
 SLOT_QUESTION = {
     "intent": "플레이어 문장에서 이 행동이 가리키는 것은 무엇입니까?",
     "target": "플레이어가 맞서거나 해 보려는 대상은 무엇입니까?",
     "approach": "플레이어는 어떤 방식으로 합니까?",
     "strain": "이 장면에서 그 행동은 어떻습니까?",
     "tone": "플레이어는 어떤 태도로 말합니까?",
-    "claim": "플레이어는 어떤 거짓 주장을 합니까?",
 }
+CLAIM_QUESTION = '플레이어는 이렇게 말합니까? "{text}"'
+YES, NO = "그렇다", "아니다"
 STRAIN_DESC = {"natural": "자연스럽게 할 수 있음", "forced": "할 수는 있지만 무리함", "impossible": "이 장면에서 할 수 없음"}
 TONE_DESC = {"polite": "정중하게 묻거나 부탁함", "friendly": "친근하게 말함", "plead": "간청하거나 호소함",
              "threaten": "겁을 주거나 위협함", "deceive": "거짓말을 하거나 속임"}
 APPROACH_DESC = {"force": "힘으로 밀어붙이거나 부수거나 버팀", "finesse": "손재주, 몸놀림, 몰래 움직임",
                  "wits": "관찰, 계획, 꾀, 시선 돌리기", "charm": "말이나 태도로 마음을 움직임"}
-NO_CLAIM = "거짓 주장이 없음"
 NOT_IN_WORLD = "이 세계에는 없는 것입니다."
 NOT_POSSIBLE = "이 장면에서는 할 수 없는 일입니다."
 META_REPLY = "이야기 속에서 당신이 하는 일을 적어 주세요. 저장은 저절로 됩니다."
@@ -259,9 +282,11 @@ FEEDBACK = {
     "invents": "문맥에 없는 사람, 물건, 길을 지어냈습니다.",
 }
 REWRITE = "아래 문장을 받지 않았습니다. 이유를 고쳐 처음부터 다시 쓰십시오."
-CHECK = {"contradicts": "이 문장은 문맥의 사실과 어긋납니까?",
-         "invents": "이 문장은 문맥에 없는 사람, 물건, 길을 지어냈습니까?"}
-YES, NO = "그렇다", "아니다"
+# One choice per sentence: two yes/no questions let the model answer "no" to both (decision-1 REPORT).
+CHECK_QUESTION = "이 문장은 문맥과 비교해 어떻습니까?"
+CHECK = {"fine": "문맥의 사실과 맞고, 문맥에 없는 것을 지어내지 않았다",
+         "contradicts": "문맥의 사실과 어긋난다",
+         "invents": "문맥에 없는 사람, 물건, 길을 지어냈다"}
 GETS = ("얻", "손에 넣", "집어 들", "집어", "주웠", "쥐었", "받았", "받아 들", "챙겼", "챙깁")
 GIVES = ("건넸", "건넵", "내주었", "내줍", "넘겼", "넘깁", "내밀었", "쥐여 주")
 RULE_WORDS = ("주사위", "판정", "굴림", "칸", "점수", "성공입니다", "실패입니다", "보정")

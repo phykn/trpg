@@ -104,7 +104,7 @@ def main() -> int:
     parser.add_argument("story", type=Path)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--theta", type=float, default=0.5)
-    parser.add_argument("--decision", default="malkuth", help="the decision model the server runs: kev or malkuth")
+    parser.add_argument("--decision", default="malkuth", help="the decision model the server runs: malkuth")
     parser.add_argument("--llm", default="gemma4", help="the loaded LLM: qwen, gemma4 or minicpm")
     args = parser.parse_args()
     return asyncio.run(main_async(args.story, args.out, args.theta, args.decision, args.llm))

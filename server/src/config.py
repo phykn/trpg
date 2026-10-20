@@ -26,7 +26,7 @@ class Settings:
     cors_origins: list[str]
     scenario_dir: Path
     save_dir: Path
-    decision_model: str           # kev or malkuth (models/decision.py)
+    decision_model: str           # malkuth (models/decision.py)
     decision_base_url: str
     decision_min_confidence: float | None
     decision_api_key: str

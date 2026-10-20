@@ -7,7 +7,7 @@ import re
 import secrets
 from pathlib import Path
 
-from .cards import clarify_card, confirm_card, roll_card
+from .cards import clarify_card, confirm_card, rely_options, roll_card
 from .locale import ko
 from .narrate import (
     RECAP_CHARS,
@@ -308,7 +308,8 @@ class GameService:
                     p["card_seq"] += 1
                     cid = f"c{p['card_seq']}"
                     make = roll_card if rolling else confirm_card
-                    extra = {"selected": a.get("rely") or st.get("rely")} if rolling else {}
+                    extra = {"selected": a.get("rely") or st.get("rely"),
+                             "relies": await self._relies(u, o, p, a, text)} if rolling else {}
                     p["card"] = make(u, o, p, a, rest, labels, step_echo, cid, **extra)
                     self._opened(p, origin)
                     break
@@ -326,6 +327,12 @@ class GameService:
         if not records and p["card"] is None and not had_card:
             return self._refused(u, g, "candidate")
         return self._result(u, g, "card" if p["card"] else "turn", turn, records)
+
+    async def _relies(self, u, o, p, a, text: str | None) -> list[str]:
+        values = rely_options(u, o, a.with_(rely=None))
+        if self.interpreter is None or not values:
+            return values
+        return await self.interpreter.relevant(u, o, p, a.with_(rely=None), values, text)
 
     @staticmethod
     def _opened(p: dict, origin: str) -> None:
