@@ -21,7 +21,7 @@ FORCED = ("pay", "grow")          # steps a card forces; neither a sentence nor 
 
 # fun.md 4: the first hypotheses, as (low, high); None is open.
 TARGETS = {
-    "F1": (0.85, None), "F2": (0.50, None), "F3": (2, None), "F4": (0.45, 0.75), "F5": (4, 8),
+    "F1": (0.85, None), "F2": (0.50, None), "F3": (2, None), "F4": (0.25, 0.50), "F5": (4, 8),
     "F6": (0.30, 0.70), "F7": (0.50, None), "F8_people": (2, None), "F8_kept": (0.40, 0.80),
     "F9": (0.50, None), "F10_steps": (20, 40), "F10_deadline": (None, 0.50), "F11_chapter1": (None, 0.20),
     "F13_relied": (0.30, 0.70),

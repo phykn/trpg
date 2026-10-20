@@ -6,16 +6,15 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-RES = Path(__file__).resolve().parents[2] / "qa_test" / "runs" / "decision-1" / "results"
 sys.path.insert(0, str(ROOT))
-from bench import RELY_SHARE, THETA, VARIANTS, rely_metrics  # noqa: E402
+from bench import RELY_SHARE, RUNS, THETA, VARIANTS, rely_metrics  # noqa: E402
 from src.interpret import approach_cue  # noqa: E402
 
 FAMS = ("s1", "s2", "s3", "intent", "target", "approach", "strain", "tone", "claim", "contradicts", "invents")
 
 
 def rows(model, variant):
-    f = RES / model / f"{variant}.jsonl"
+    f = RUNS / "results" / model / f"{variant}.jsonl"
     return [json.loads(x) for x in f.read_text().splitlines()] if f.exists() else []
 
 
@@ -56,7 +55,7 @@ def key(r):
 
 
 def models():
-    return sorted(p.name for p in RES.iterdir() if p.is_dir())
+    return sorted(p.name for p in (RUNS / "results").iterdir() if p.is_dir())
 
 
 def calls_ms(rs):

@@ -1,6 +1,6 @@
 """Interpretation of sentences at chosen states, with every model question and answer.
 
-  python probe.py CASES.yaml [--root CHECKOUT]
+  python probe.py CASES.yaml [--story ID] [--root CHECKOUT]
 
 A case: {at: {path, step}, then: [action ids run after the path], text, expect}. Like story evals, without cards.
 """
@@ -11,11 +11,9 @@ from pathlib import Path
 
 import yaml
 
-REPO = Path(sys.argv[sys.argv.index("--root") + 1]) if "--root" in sys.argv else Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "server"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import common  # noqa: E402
 from src.interpret import Interpreter  # noqa: E402
-from src.models.decision import DecisionClient  # noqa: E402
-from src.models.llm import LLMClient  # noqa: E402
 from src.rules.acts import parse  # noqa: E402
 from src.story.evals import interpret, replay, score  # noqa: E402
 from src.story.validate import load_all  # noqa: E402
@@ -35,9 +33,8 @@ class Logged(Interpreter):
 
 async def main():
     cases = yaml.safe_load(Path(sys.argv[1]).read_text())
-    u = load_all(REPO / "scenarios")["lighthouse"]
-    it = Logged(DecisionClient("http://127.0.0.1:8081", model="malkuth"),
-                LLMClient("http://127.0.0.1:8082/v1", model="gemma4"))
+    u = common.story(load_all(common.checkout() / "scenarios"))
+    it = Logged(*common.models())
     rows = []
     for c in cases:
         run = replay(u, c["at"])

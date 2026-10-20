@@ -15,17 +15,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 D1 = ROOT.parent / "decision"
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "server"))
+sys.path.insert(0, str(ROOT.parent))
 sys.path.insert(0, str(D1))
 import bench as B  # noqa: E402
+import common  # noqa: E402
 from src.interpret import Interpreter, choice, mentions, ranked  # noqa: E402
 from src.locale import ko  # noqa: E402
-from src.models.decision import DecisionClient  # noqa: E402
-from src.models.llm import LLMClient  # noqa: E402
 
 THETA = 0.5
 SAY = B.SAY
-OUT = Path(__file__).resolve().parents[2] / "qa_test" / "runs" / "misread-1" / "answers.jsonl"
+OUT = common.RUNS / "misread-1" / "answers.jsonl"
 REPLACEABLE = {"go", "take", "give", "talk", "declare", "choose"}   # look, try and cut are always possible
 
 
@@ -87,8 +86,8 @@ def narrow(names: dict, text):
 
 
 async def record():
-    kev = DecisionClient("http://127.0.0.1:8081", model="malkuth")
-    it = Interpreter(kev, LLMClient("http://127.0.0.1:8082/v1", model="gemma4"), timeout=60)
+    kev, llm = common.models()
+    it = Interpreter(kev, llm, timeout=60)
     done = {json.loads(x)["key"] for x in OUT.read_text().splitlines()} if OUT.exists() else set()
     f = OUT.open("a")
     n = 0

@@ -11,17 +11,14 @@ import sys
 import tempfile
 from pathlib import Path
 
-# --root: a checkout to run (its server and scenarios), so a baseline can run beside edits
-REPO = Path(sys.argv[sys.argv.index("--root") + 1]) if "--root" in sys.argv else Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "server"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import common  # noqa: E402
 from src.interpret import Interpreter  # noqa: E402
-from src.models.decision import DecisionClient  # noqa: E402
-from src.models.llm import LLMClient  # noqa: E402
 from src.narrate import Narrator  # noqa: E402
 from src.service import GameService  # noqa: E402
 from src.story.validate import load_all  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[2] / "qa_test" / "runs" / "narr-2"
+ROOT = common.RUNS / "narr-2"
 SCRIPT = [
     "주위를 천천히 둘러본다",
     "윤슬에게 안녕, 오늘 바다는 어때? 하고 말을 건다",
@@ -61,11 +58,10 @@ class Recording(Narrator):
 
 
 async def play(run: int, out: list):
-    decision = DecisionClient("http://127.0.0.1:8081", model="malkuth")
-    llm = LLMClient("http://127.0.0.1:8082/v1", model="gemma4")
+    decision, llm = common.models()
     narrator = Recording(llm, decision)
     tmp = Path(tempfile.mkdtemp())
-    svc = GameService(load_all(REPO / "scenarios"), tmp, Interpreter(decision, llm), narrator,
+    svc = GameService(load_all(common.checkout() / "scenarios"), tmp, Interpreter(decision, llm), narrator,
                       seeds=lambda: 7)
     made = await svc.create("r", "lighthouse", CREATION)
     gid, view = made["game_id"], made["view"]

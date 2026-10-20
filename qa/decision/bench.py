@@ -14,11 +14,12 @@ from pathlib import Path
 
 import httpx
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "server"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import common  # noqa: E402
 from src.locale import ko  # noqa: E402
 
 ROOT = Path(__file__).parent
-RUNS = Path(__file__).resolve().parents[2] / "qa_test" / "runs" / "decision-1"   # recordings stay out of git
+RUNS = common.RUNS / "decision-1"
 # The engine's strings when `base` was recorded; ko.py has moved on, `base` must not.
 OLD_END = "더 하는 것이 없다"
 OLD_STEP_QUESTION = {1: "플레이어 문장이 맨 처음 하려는 일은 무엇입니까?",
@@ -676,6 +677,8 @@ def score(models, by):
         print("| variant | " + " | ".join(fams) + " | rely exact (P/R) | ms/call |")
         print("|---|" + "---|" * (len(fams) + 2))
         for f in sorted((res / m).glob("*.jsonl"), key=lambda p: (p.stem != "base", p.stem)):
+            if "." in f.stem:       # `.prior` runs and the narration model's answers are not variants
+                continue
             rows = [json.loads(x) for x in f.read_text().splitlines()]
             v = f.stem
             changed = VARIANTS.get(v)
