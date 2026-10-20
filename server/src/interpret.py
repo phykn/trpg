@@ -124,21 +124,25 @@ class Interpreter:
             k: dict(getattr(v, "probabilities", {})) for k, v in out.items()}})
         return out
 
-    async def second(self, text: str, options: dict[str, str]) -> str | None:
-        """A second opinion from the narration model over the same numbered options."""
+    async def read(self, text: str, options: dict[str, str]) -> list[str] | None:
+        """The narration model's reading: the sentence's actions in order, as option numbers, at most three."""
         if self.llm is None:
             return None
         keys = list(options)
         listed = "\n".join(f"{i + 1}. {options[k]}" for i, k in enumerate(keys))
-        messages = [{"role": "system", "content": ko.CHOOSER},
-                    {"role": "user", "content": ko.fill(ko.CHOOSER_PROMPT, text=text, options=listed)}]
+        messages = [{"role": "system", "content": ko.READER},
+                    {"role": "user", "content": ko.fill(ko.READER_PROMPT, text=text, options=listed)}]
         try:
             raw = await asyncio.wait_for(self.llm.pick(messages), self.timeout)
         except (ModelUnavailable, TimeoutError, OSError):
             return None
-        m = re.search(r"\d+", raw)
-        i = int(m.group()) - 1 if m else -1
-        return keys[i] if 0 <= i < len(keys) else None
+        steps = []
+        for m in re.findall(r"\d+", raw):
+            i = int(m) - 1
+            # the same schema twice in a row is one action told in two clauses ("kneels and begs")
+            if 0 <= i < len(keys) and (not steps or steps[-1] != keys[i]):
+                steps.append(keys[i])
+        return steps[:3]
 
     async def plan(self, u, g, text: str) -> dict:
         self.calls = []
@@ -149,27 +153,30 @@ class Interpreter:
             return out
         have = {s.schema for s in space(u, o)}
         first = {σ: ko.SCHEMA_ASK[σ] for σ in SAY if σ in have}
-        later = {σ: ko.SCHEMA_ASK[σ] for σ in SAY}
         if not first:
             return {"plan": [self.idle()]}
-        qs = {f"s{i}": choice(ko.STEP_QUESTION[i], first if i == 1 else later) for i in (1, 2, 3)}
-        qs["n"] = choice(ko.COUNT_QUESTION, ko.COUNT)
+        qs = {"s1": choice(ko.STEP_QUESTION, first), "n": choice(ko.COUNT_QUESTION, ko.COUNT)}
         # Layer 1 options are scene-free, so Kev reads the sentence alone: on the skeleton evals the context
         # ρ({player, here}) lowered accuracy from 80% to 71% (qa_test/agency/interp-2-ctx).
         answers = await self.ask(self.sentence(text), qs)
         top, pr = ranked(answers.get("s1"), first)[0]
-        if pr < self.theta and await self.second(text, first) != top:
-            return {"plan": [self.idle(approach_cue(text))]}
-        plan = [self.partial(top, text)]
-        n, _ = ranked(answers.get("n"), ko.COUNT)[0]
-        # the count sets the length; a silent model gives every option 0, which ranks "1" first
-        for i in range(2, int(n) + 1):
-            σ, _ = ranked(answers.get(f"s{i}"), later)[0]
-            # The same schema twice in a row is one action told in two clauses ("kneels and begs"); the count
-            # model splits those often and real repeats are rare (qa_test/agency/decision-1).
-            if σ != plan[-1]["schema"]:
-                plan.append(self.partial(σ, text))
-        return {"plan": plan}
+        # a silent model gives every option 0, which ranks "1" first
+        sure, one = pr >= self.theta, ranked(answers.get("n"), ko.COUNT)[0][0] == "1"
+        if sure and one:
+            return {"plan": [self.partial(top, text)]}
+        # Kev reads one sure action well and little else: unsure, it was wrong where the narration model was right
+        # 22 times to 1, and it got 11 of 48 several-action sentences right to the narration model's 35, with
+        # one-action sentences even (qa_test/agency/decision-1). Later steps may happen elsewhere, so every schema.
+        steps = await self.read(text, first | {σ: ko.SCHEMA_ASK[σ] for σ in SAY if σ not in have})
+        if steps and steps[0] not in have:
+            steps = None
+        if not one and steps and len(steps) > 1:
+            return {"plan": [self.partial(σ, text) for σ in steps]}
+        if not sure:
+            if not steps:
+                return {"plan": [self.idle(approach_cue(text))]}
+            top = steps[0]
+        return {"plan": [self.partial(top, text)]}
 
     @staticmethod
     def sentence(text: str) -> str:

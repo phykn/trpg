@@ -59,7 +59,7 @@ class LLMClient:
         self.model = loaded[0]["id"]
         return self.model
 
-    async def pick(self, messages: list[dict[str, str]], max_tokens: int = 6) -> str:
+    async def pick(self, messages: list[dict[str, str]], max_tokens: int = 12) -> str:
         # Greedy for this call only: the narrator streams on the same client meanwhile.
         chunks = self.stream(messages, max_tokens, seed=1, sampling={"temperature": 0.0})
         return "".join([chunk async for chunk in chunks])

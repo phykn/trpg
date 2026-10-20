@@ -26,9 +26,10 @@ class FakeDecision:
 
 class FakeLLM:
     def __init__(self, reply):
-        self.reply = reply
+        self.reply, self.prompts = reply, []
 
     async def pick(self, messages):
+        self.prompts.append(messages)
         return self.reply
 
 
@@ -68,42 +69,46 @@ async def test_exact_label_is_a_plan_without_a_model(tmp_path):
 
 
 async def test_sure_schema_and_named_place(tmp_path):
-    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.7}, "s2": {"talk": 0.9}})
-    svc, gid, view = await game(tmp_path, decision)
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.7}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("1, 5"))
     out = await say(svc, gid, view, "마을 쪽으로 걸어가 봐야겠다")
-    assert [s["action"] for s in out["steps"]] == ["go:village"]    # the count, not a sure s2, sets the length
+    assert [s["action"] for s in out["steps"]] == ["go:village"]    # one sure action needs no reading
     assert len(decision.asked) == 1                    # the named place fills the slot; no layer-2 call
-    assert set(decision.asked[0][1]) == {"s1", "s2", "s3", "n"} and "예:" in decision.asked[0][1]["s1"]["criteria"]["go"]
+    assert set(decision.asked[0][1]) == {"s1", "n"} and "예:" in decision.asked[0][1]["s1"]["criteria"]["go"]
 
 
-async def test_a_repeated_schema_is_one_step(tmp_path):
-    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"2": 0.8}, "s2": {"go": 0.7}})
-    svc, gid, view = await game(tmp_path, decision)
+async def test_several_actions_are_the_narration_models_list(tmp_path):
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"2": 0.8}, "tone": {"friendly": 0.8},
+                             "intent": {"dohae:chat": 0.9}})
+    llm = FakeLLM("1, 1, 4")              # go, go (one action in two clauses), talk
+    svc, gid, view = await game(tmp_path, decision, llm)
+    out = await say(svc, gid, view, "마을로 가서 도해에게 말을 건다")
+    assert [s["action"] for s in out["steps"]] == ["go:village", "talk:dohae:chat;tone=friendly"]
+    state, qs = decision.asked[-1]                     # the second step's slots are asked after the first runs
+    assert set(qs) == {"intent", "tone"} and "도해의 말투" in state
+    assert all(k.startswith("dohae:") for k in qs["intent"]["criteria"])
+    assert llm.prompts[0][1]["content"].startswith("플레이어 문장: 마을로 가서")
+
+
+async def test_a_list_of_one_keeps_kevs_sure_step(tmp_path):
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"2": 0.8}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("2"))
     out = await say(svc, gid, view, "마을 쪽으로 서둘러 걸어 내려간다")
     assert [s["action"] for s in out["steps"]] == ["go:village"]
 
 
-async def test_two_steps_ask_the_second_slot_after_the_first_runs(tmp_path):
-    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"2": 0.8}, "s2": {"talk": 0.7}, "tone": {"friendly": 0.8},
-                   "intent": {"dohae:chat": 0.9}})
-    svc, gid, view = await game(tmp_path, decision)
-    out = await say(svc, gid, view, "마을로 가서 도해에게 말을 건다")
-    assert [s["action"] for s in out["steps"]] == ["go:village", "talk:dohae:chat;tone=friendly"]
-    state, qs = decision.asked[-1]
-    assert set(qs) == {"intent", "tone"} and "도해의 말투" in state
-    assert all(k.startswith("dohae:") for k in qs["intent"]["criteria"])
-
-
-async def test_unsure_first_step_takes_a_second_opinion(tmp_path):
+async def test_unsure_first_step_is_the_narration_models(tmp_path):
     decision = FakeDecision({"s1": {"look": 0.4, "go": 0.3}})
-    svc, gid, view = await game(tmp_path, decision, FakeLLM("2"))
-    out = await say(svc, gid, view, "주위를 둘러본다")
-    first = out["steps"][0]["action"] if out["steps"] else out["view"]["card"]
-    assert first != "try:player:wits"
-    decision2 = FakeDecision({"s1": {"look": 0.4, "go": 0.3}})
-    svc, gid, view = await game(tmp_path / "b", decision2, FakeLLM("1"))
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("1"))
     out = await say(svc, gid, view, "음")
-    assert [s["action"] for s in out["steps"]] == ["try:player:wits"] and len(decision2.asked) == 1
+    card = out["view"]["card"]                          # the narration model decides even against Kev's top answer
+    assert card["kind"] == "clarify" and all(o["label"].endswith("간다") for o in card["options"])
+    # an unreadable reading, or one whose first step cannot happen here, leaves the player idle
+    for i, reply in enumerate(("?", "9")):
+        decision = FakeDecision({"s1": {"look": 0.4, "go": 0.3}})
+        svc, gid, view = await game(tmp_path / str(i), decision, FakeLLM(reply))
+        out = await say(svc, gid, view, "음")
+        assert [s["action"] for s in out["steps"]] == ["try:player:wits"] and len(decision.asked) == 1
 
 
 async def test_model_failure_is_all_zero_and_changes_nothing(tmp_path):

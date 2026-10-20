@@ -180,9 +180,7 @@ SCHEMA_ASK = {
     "cut": "기다리거나 쉬며 시간을 보낸다 (예: 날이 밝을 때까지 기다린다, 잠깐 눈을 붙인다)",
     "choose": "어떻게 할지 결정을 내린다 (예: 남은 돈은 고아원에 맡기기로 한다, 두 길 중 강 쪽을 택한다)",
 }
-STEP_QUESTION = {1: "플레이어 문장에서 가장 먼저 하는 행동은 무엇입니까? 뒤에 이어지는 행동은 보지 않습니다.",
-                 2: "그 다음에 이어서 하는 일은 무엇입니까?",
-                 3: "그 다음에 또 이어서 하는 일은 무엇입니까?"}
+STEP_QUESTION = "플레이어 문장에서 가장 먼저 하는 행동은 무엇입니까? 뒤에 이어지는 행동은 보지 않습니다."
 # Asking the count beats an "end" option after each step: the model stops adding steps to one-action sentences.
 COUNT_QUESTION = "플레이어 문장은 서로 다른 행동을 몇 가지 차례로 합니까?"
 COUNT = {"1": "한 가지 행동만 한다", "2": "두 가지 행동을 차례로 한다", "3": "세 가지 이상의 행동을 차례로 한다"}
@@ -213,8 +211,9 @@ APPROACH_WORDS = {
 }
 TO_PERSON = ("에게", "한테", "께")
 CLARIFY_SLOT = {"intent": "무엇을 말씀하신 건가요?", "target": "무엇에 맞서나요?"}
-CHOOSER = """당신은 한국어 TRPG의 입력 분류기입니다. 플레이어 문장이 맨 처음 하려는 일을 선택지에서 번호 하나로 고릅니다. 번호만 답합니다."""
-CHOOSER_PROMPT = "플레이어 문장: {text}\n선택지:\n{options}\n번호:"
+READER = ("당신은 한국어 TRPG의 입력 분류기입니다. 플레이어 문장이 하는 행동을 일어나는 차례대로 선택지 번호로 적습니다. "
+          "한 행동을 여러 말로 풀어 쓴 것은 하나로 셉니다. 번호만 쉼표로 나누어 답합니다.")
+READER_PROMPT = "플레이어 문장: {text}\n선택지:\n{options}\n번호:"
 NO_TARGET = "특정한 대상 없이"
 
 
