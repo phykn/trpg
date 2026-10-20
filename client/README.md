@@ -31,6 +31,15 @@ npm run lint
 node --test scripts/dev-proxy.test.cjs
 ```
 
+## 외부 공개 (workers.dev)
+
+```bash
+npm run deploy           # 웹 빌드를 Cloudflare Worker(trpg)에 배포. 화면 코드를 바꿨을 때만
+npm run serve            # 맥에서 API+터널을 올리고 터널 주소를 Worker KV에 기록. 플레이할 때마다
+```
+
+Worker는 정적 화면을 내보내고 `/api/*`를 KV의 현재 터널 주소로 넘깁니다. 터널이 끊기면 `serve`가 새로 열고 KV를 다시 씁니다. KV 반영에 1분쯤 걸립니다. 처음 한 번 `npx wrangler login`이 필요하고, 두 모델이 켜져 있어야 합니다. `serve`를 끄면 화면은 열리지만 API는 502를 돌려줍니다.
+
 `dev` 명령은 `/api` 요청을 로컬 API에 전달하므로 휴대폰에서도 웹과 API가 같은 주소를 씁니다. 기존 로컬 API가 있으면 재사용합니다. `dev:public`의 주소는 실행마다 바뀌고, Windows에서는 검증된 공식 `cloudflared` 실행 파일을 `node_modules/.cache/`에 보관합니다.
 
 ## 다른 서버에 연결

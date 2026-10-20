@@ -10,6 +10,8 @@
     "ios": "dotenv -e .env.shared -e .env.dev -- expo start --ios",
     "web": "node scripts/web-local.cjs",
     "build:web": "node scripts/web-local.cjs --export",
+    "deploy": "node scripts/deploy.cjs",
+    "serve": "node scripts/serve.cjs",
     "lint": "expo lint",
     "test": "jest"
   },
@@ -50,7 +52,8 @@
     "eslint-config-expo": "~10.0.0",
     "jest": "^29.7.0",
     "jest-expo": "~54.0.17",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "wrangler": "^4.151.2"
   },
   "private": true
 }

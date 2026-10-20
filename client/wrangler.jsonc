@@ -1,0 +1,12 @@
+{
+  "name": "trpg",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  // Holds the current quick-tunnel URL of the Mac API; `npm run serve` writes it.
+  "kv_namespaces": [{ "binding": "TUNNEL", "id": "7257d372e7af4a64a9ea2b0a99c22af8" }]
+}
