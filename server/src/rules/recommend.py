@@ -57,10 +57,16 @@ def _forward(u, o: Obs) -> Action | None:
             if solution_holds(u, o, x, sol) and admits(u, o, a):
                 return a
     k = next((c.k for c in u.chapters if _chapter_is(o, c.k)), None)
-    goal = u.chapter_of(k).goal if k else None
-    if goal is None:
+    if k is None:
         return None
-    places = {leaf[2] for leaf in atoms_of(goal) if leaf[0] == "at" and leaf[1] == PLAYER}
+    goal = u.chapter_of(k).goal
+    if goal is not None:
+        places = {leaf[2] for leaf in atoms_of(goal) if leaf[0] == "at" and leaf[1] == PLAYER}
+    else:
+        # A chapter with no goal ends in an ending; head for the obstacles the endings fill, or the last chapter
+        # had no button at all away from them (qa_test/runs/play-3-talker 24).
+        places = {u.obstacles[leaf[1]].at for e in u.endings.values() if e.when for leaf in atoms_of(e.when)
+                  if leaf[0] == "fill" and leaf[1] in u.obstacles and u.obstacles[leaf[1]].at}
     here = f.where(PLAYER)
     if here in places:
         return None

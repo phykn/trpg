@@ -37,8 +37,8 @@ export function Pill({ label, color = colors.fg.default, icon, onPress, dim }: {
   label: string; color?: string; icon?: IconName; onPress?: () => void; dim?: boolean;
 }) {
   return (
-    <Pressable accessibilityRole={onPress ? 'button' : undefined} disabled={!onPress} onPress={onPress}
-      style={({ pressed }) => ({ opacity: dim ? 0.45 : pressed ? 0.6 : 1 })}
+    <Pressable accessibilityRole={onPress ? 'button' : undefined} accessibilityLabel={label} disabled={!onPress} onPress={onPress}
+      style={({ pressed: p }) => ({ opacity: dim ? 0.45 : p ? 0.7 : 1 })}
       className="h-[22px] flex-row items-center gap-1 rounded-full border border-border-default px-2">
       {icon ? <Icon name={icon} size={11} color={color} width={2.2} /> : null}
       <Text className="font-sans text-chip" style={{ color, lineHeight: 16 }}>{label}</Text>

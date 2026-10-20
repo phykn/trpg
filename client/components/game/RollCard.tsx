@@ -4,7 +4,7 @@ import Animated, {
   Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming,
 } from 'react-native-reanimated';
 
-import { IconButton } from '@/components/ui/Button';
+import { IconButton, pressed } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { useDialog } from '@/components/ui/useDialog';
 import { colors, fontFamily, motion } from '@/design/tokens';
@@ -113,7 +113,7 @@ export function RollCard({ card, onRoll, onCancel, step, frame, rolling }: {
             <Text className="text-center font-sans-semibold text-body text-fg-default">{card.plan.step?.label}</Text>
             {target?.boxes && target.boxes > 1 ? <Boxes fill={fill + gained} boxes={target.boxes} size={10} /> : null}
           </View>
-          <View className="w-9">{!locked ? <IconButton icon="close" label={ko.cancel} onPress={onCancel} /> : null}</View>
+          <View className="w-9">{!locked ? <IconButton icon="close" label={ko.close} onPress={onCancel} /> : null}</View>
         </View>
         <Target dc={p.dc} high={high} result={frame?.settled ?? null} />
         <Dice state={frame?.blocked ? 'gone' : step ? 'stopped' : rolling ? 'rolling' : 'ready'}
@@ -137,7 +137,8 @@ export function RollCard({ card, onRoll, onCancel, step, frame, rolling }: {
                 const on = o.id === pick;
                 return (
                   <Pressable key={o.id} accessibilityRole="radio" accessibilityState={{ checked: on, disabled: locked }}
-                    disabled={locked} onPress={() => setPick(on ? none.id : o.id)}
+                    accessibilityLabel={[o.label, chip ? signed(chip.value) : '', o.note ? `· ${o.note}` : ''].filter(Boolean).join(' ')}
+                    disabled={locked} onPress={() => setPick(on ? none.id : o.id)} style={pressed}
                     className="min-h-[32px] flex-row items-center gap-2 px-2">
                     <View className="h-4 w-4 items-center justify-center rounded-full border"
                       style={{ borderColor: on ? colors.chip.help : colors.border.strong }}>

@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { IconButton } from '@/components/ui/Button';
+import { IconButton, pressed } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { useEnter } from '@/components/ui/motion';
 import { useDialog } from '@/components/ui/useDialog';
@@ -52,7 +52,7 @@ export function HeroSheet({ player, journal, onGrowth, onClose }: {
         <View className="h-9 flex-row items-center px-3">
           <Text className="min-w-0 flex-1 font-sans-semibold text-body text-fg-default">{player.name || ko.hero}</Text>
           {onGrowth ? (
-            <Pressable accessibilityRole="button" accessibilityLabel={ko.growth} onPress={onGrowth}
+            <Pressable accessibilityRole="button" accessibilityLabel={ko.growth} onPress={onGrowth} style={pressed}
               className="h-7 flex-row items-center gap-1 rounded-full bg-gold-fg px-2.5">
               <Icon name="spark" size={12} color={colors.fg['on-emphasis']} width={2.2} />
               <Text className="font-sans-semibold text-chip text-fg-on-emphasis">{player.growth}</Text>

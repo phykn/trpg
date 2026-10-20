@@ -1,8 +1,11 @@
 from types import SimpleNamespace
 
 from conftest import REPO
-from src.interpret import Interpreter, mentions, squeeze
+from src.interpret import Interpreter, mentions, rules, shows, squeeze
+from src.locale import ko
 from src.models.decision import ModelUnavailable
+from src.onto.log import Log
+from src.onto.universe import initial
 from src.onto.view import observe
 from src.rules.acts import parse
 from src.service import GameService
@@ -62,9 +65,28 @@ async def test_impossible_and_meta_are_refused_without_a_model(tmp_path):
     decision = FakeDecision()
     svc, gid, view = await game(tmp_path, decision)
     out = await say(svc, gid, view, "휴대전화로 구조를 부른다")
-    assert out["kind"] == "refused" and out["reason"] == "이 세계에는 없는 것입니다."
+    assert out["kind"] == "refused" and out["reason"] == "이 이야기에는 그런 것이 없습니다."
     out = await say(svc, gid, view, "게임 저장해 줘", "t2")
     assert out["kind"] == "refused" and not decision.asked
+
+
+def test_story_words_that_contain_a_meta_word_stay_in_the_story():
+    u = STORIES["lighthouse"]
+    s = initial(u, CREATION)
+    o, p = observe(u, s, Log()), {}
+    for text in ("마을 저장고로 간다", "처음부터 차근차근 문을 살핀다", "규칙적으로 숨을 고른다"):
+        assert rules(u, o, p, text) is None, text
+    for text in ("저장해 줘", "처음부터 다시 할래", "게임 규칙 알려줘"):
+        assert rules(u, o, p, text) == {"refused": ko.META_REPLY}, text
+
+
+def test_typed_growth_points_to_its_card_only_when_there_is_growth():
+    from src.onto.atoms import PLAYER, State
+    u = STORIES["lighthouse"]
+    s = initial(u, CREATION)
+    assert rules(u, observe(u, s, Log()), {}, "성장? 재치 올릴래") is None
+    grown = State.of([*(a for a in s.atoms() if a[:3] != ("stat", PLAYER, "growth")), ("stat", PLAYER, "growth", 1)])
+    assert rules(u, observe(u, grown, Log()), {}, "성장? 재치 올릴래") == {"refused": ko.GROWTH_REPLY}
 
 
 async def test_exact_label_is_a_plan_without_a_model(tmp_path):
@@ -81,6 +103,17 @@ async def test_sure_schema_and_named_place(tmp_path):
     assert [s["action"] for s in out["steps"]] == ["go:village"]    # one sure action needs no reading
     assert len(decision.asked) == 1                    # the named place fills the slot; no layer-2 call
     assert set(decision.asked[0][1]) == {"s1", "n"} and "예:" in decision.asked[0][1]["s1"]["criteria"]["go"]
+
+
+async def test_showing_a_thing_is_talk_unless_it_is_handed_over(tmp_path):
+    assert shows("아들의 편지를 보여주며 누구에게 전해야 하는지 묻는다") and shows("편지 보여 드리고 물어본다")
+    assert not shows("윤슬에게 편지를 보여 주며 건넨다") and not shows("편지를 준다")
+    decision = FakeDecision({"s1": {"give": 0.9}, "n": {"1": 0.9}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("1"))
+    out = await say(svc, gid, view, "윤슬에게 아들의 편지를 보여주며 누구에게 전해야 하는지 묻는다")
+    assert out["view"]["card"]["plan"]["step"]["action"].startswith("talk:yunseul:")
+    out = await say(svc, gid, out["view"], "윤슬에게 편지를 보여 주며 건넨다", "t2")
+    assert [s["action"] for s in out["steps"]] == ["give:letter:yunseul"]
 
 
 async def test_several_actions_are_the_narration_models_list(tmp_path):
@@ -144,6 +177,11 @@ async def test_going_where_the_player_is_moves_nowhere(tmp_path):
         assert [s["action"] for s in out["steps"]][:1] == ([first] if first else [])
         if not first:
             assert out["kind"] == "refused" and out["reason"] == "이미 선착장에 있습니다."
+    # a walk about the place names no place, so the answer is where one can go (play-3-explorer 9)
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}, "intent": {"dock": 0.9}})
+    svc, gid, view = await game(tmp_path / "about", decision, FakeLLM("3"))
+    out = await say(svc, gid, view, "창고 뒤쪽으로 돌아가 본다")
+    assert out["kind"] == "refused" and out["reason"] == "선착장 안에서 따로 갈 곳은 없습니다. 갈 수 있는 곳은 바닷가 마을, 등대 앞입니다."
     decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}})
     svc, gid, view = await game(tmp_path / "exit", decision)
     out = await say(svc, gid, view, "선착장에서 마을로 간다")
@@ -309,7 +347,7 @@ async def test_a_way_an_obstacle_blocks_is_refused_with_its_reason(tmp_path):
     svc, gid, view = await game(tmp_path, decision, FakeLLM("1"), moves=["go:yard"])
     for i, text in enumerate(["등불 방으로 올라간다", "날아서 꼭대기 등불실로"]):
         out = await say(svc, gid, view, text, f"t{i}")
-        assert out["reason"] == "녹슨 등대 문이 등불 방으로 가는 길을 막고 있습니다."
+        assert out["reason"] == "녹슨 등대 문이 등불실로 가는 길을 막고 있습니다."
 
 
 async def test_giving_what_the_player_does_not_hold_says_so(tmp_path):

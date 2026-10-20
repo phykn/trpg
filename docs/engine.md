@@ -39,17 +39,17 @@ The frame table `𝔗` in `locale/ko.py` gives each predicate a **present frame*
 | `at(x, place)` | {x}은(는) {y}에 있습니다 | {x}이(가) {y}에 왔습니다 ("당신과 함께", with you, for a companion) / {x}이(가) {y}를 떠났습니다 |
 | `at(x, agent)` | {y}이(가) {x}을(를) 지니고 있습니다 | {y}이(가) {x}을(를) 얻었습니다 / {y}이(가) {x}을(를) 내주었습니다 |
 | `link(p, q)` | {p}에서 {q}(으)로 갈 수 있습니다 | 길이 열렸습니다 / 길이 끊겼습니다 |
-| `mark` | {x}에 {tag name}이(가) 있습니다 | 생겼습니다 / 사라졌습니다 |
+| `mark` | {x}에 {tag name}이(가) 있습니다 ({x}에게 for a person) | {x}에 (or {x}에게) {tag name}이(가) 생겼습니다 / 사라졌습니다 |
 | `fill` | {o}: {n}/{boxes} | {o}이(가) {n}칸이 되었습니다 |
 | `regards` | {g}이(가) 당신을 {trust or fear word}합니다 | 마음이 움직였습니다 (axis and direction) |
 | `stat` | 당신의 {item}: {n} | {item}이(가) {n}이(가) 되었습니다 |
 | `owes` | 당신은 {h}에게 {promise name}을 약속했습니다 / {g}이(가) 당신에게 신세를 졌습니다 | 약속을 지켰습니다 / 어겼습니다 |
-| `follows` | {h}은(는) 당신과 함께 다닙니다 | 함께 다니기로 했습니다 / 이제 따라다니지 않습니다 |
+| `follows` | {h}은(는) 당신과 함께 다닙니다 | 함께 다니기로 했습니다 (…했지만 {places}에는 가지 않습니다, for one who avoids places) / 이제 따라다니지 않습니다 |
 | `spent` | Screen only; not put in the context | |
 
 Particles are chosen by the final-consonant (받침) function in `locale/ko.py`. A tag name is the presentation-layer name (section 6), or else the story's default name or the engine's default name ("유리함" (advantage), "불리함" (disadvantage)).
 
-**Action names** `λ(a)` are one frame per schema: `go` "{q}(으)로 간다", `try` "{x}에 {approach}(으)로 맞선다", the story's `label` for a solution, `talk` "{h}에게 {topic title}을 묻는다", and so on. Buttons, clarify cards, the decision model's options and step records all use `λ`.
+**Action names** `λ(a)` are one frame per schema: `go` "{q}(으)로 간다", `try` "{x}을 {approach}(으)로 다룬다" ("상대한다" for a person; "말한 대로 해 본다" for the player alone, which changes nothing), the story's `label` for a solution (kept under "무리해서" when forced), `talk` "{h}에게 {topic title}을 묻는다", and so on. Buttons, clarify cards, the decision model's options and step records all use `λ`.
 
 ## 2. Context `ρ`
 
@@ -73,7 +73,7 @@ Narration and its check read `scene(U, O, X)`, which is `context` with these cha
 - Fact lines involving people outside the focus (their regard, debts, promises) are dropped. The narration model tries to move anyone the context mentions, so someone who is not present must not appear even as a line.
 - Ways out are included only from places in the focus.
 - Number lines are dropped. Approach values are for rolls, and narration may not state numbers. A wound is written only when there is one, as "당신은 다친 몸입니다" (you are wounded). A regard line at 0 says nothing yet reads as an attitude at odds with the persona ("덤덤하게", indifferently), so it is dropped.
-- Obstacle progress is dropped at 0 and otherwise written "{name}: 조금 풀렸습니다 · 거의 풀렸습니다 · 풀렸습니다" (loosened a little · almost undone · undone): the second when one box is left, the third when full.
+- Obstacle progress is dropped at 0 and otherwise written "{name}: 조금씩 뜻대로 되어 갑니다 · 거의 뜻대로 되었습니다 · 뜻대로 되었습니다" (coming along · nearly done · done): the second when one box is left, the third when full. "풀렸습니다" leaked into the prose as hinges and dogs coming loose.
 - The current chapter's risk clocks and deadlines go in without numbers, as "{name}: 아직 멀었습니다 · 다가오고 있습니다 · 코앞에 닥쳤습니다" (still far · drawing near · upon you). With no box filled it is the first; with one box left or all full, the third. The passage of time that the story's `style` describes (light, waves) follows this line. Their names are events ("배가 암초에 닿는다") that were narrated as happening, so the turn's steering repeats these lines and adds that what has not happened is not written as happened. Only the steering says it: in the context lines the check read "아직 일어나지 않았고" against ordinary sentences and called 13 of them contradictions in the narration bench, against 1 before (`narr-2/fix-2`). The turn's steering also lists up to three two-word phrases found in two of the last three narrations (names and place senses aside), to be said differently this time.
 
 ## 3. Interpretation
@@ -99,8 +99,9 @@ Decided without a model.
 
 | Rule | Result |
 |---|---|
-| The sentence contains one of the story's `impossible` phrases as a substring | Refuse ("이 세계에는 없는 것입니다", that does not exist in this world) |
-| A request about the game (`ko.META`: save, restart, questions about the rules, etc.) | Refuse with guidance |
+| The sentence contains one of the story's `impossible` phrases as a substring | Refuse ("이 이야기에는 그런 것이 없습니다", there is no such thing in this story) |
+| A request about the game (`ko.META`: whole phrases for save, restart, questions about the rules, etc., so "저장고" or "처음부터 차근차근" stays in the story) | Refuse with guidance |
+| "성장" (growth) while the player has growth to spend | Refuse, pointing to the growth card |
 | The sentence equals a candidate's `λ` or a solution's `label` (ignoring spacing and punctuation) | A plan of that one action |
 | An entity's name or alias appears | Fills that layer-2 slot with that entity (when the value is among the candidates) |
 | A name before `…에게` or `…한테` ("to") | The other party of `give` or `talk` |
@@ -122,6 +123,8 @@ The first matching row from the top applies.
 | Sure | Anything else | The decision model's first step |
 | Unsure | One or more steps | The first step read |
 | Unsure | None | `try(player)` |
+
+A `give` step becomes `talk` when the sentence shows something (`ko.SHOW_WORDS`: "보여 주며" …) without a word of handing it over (`ko.GIVE_WORDS`): read as giving, the player's only item was gone with no card (play-2-odd 3, play-3-talker 3).
 
 If layer 0 settled the plan, nothing is asked. Why the split and the thresholds:
 
@@ -151,7 +154,7 @@ Just before executing step `i`, its slots are asked together in one call, using 
 
 This also happens when the schema has values here but none of them is anything the sentence names. Otherwise the slot fell to another target: "도해의 아구창을 날린다", with 도해 behind a guard dog, became a try on the letter. A hidden obstacle is not a cause: it is not in the observation, so the step runs and is blocked, which reveals it. Players met the bare refusal in every playtest and could not tell a guard from a broken game (qa/findings.md).
 
-For the destination, the **current place** is offered along with the ways out, unless the sentence names a way out ("마당에서 마을로 간다", go from the yard to the village). Choosing it means the move is already done: that step is skipped, or, if no step has run, the sentence is refused with "이미 …에 있습니다" (you are already at …). Offered only the ways out, the decision model picked another way even when the sentence named the current place in other words; but it is also sometimes sure of the current place for sentences that pass through here and go on ("열린 문으로 들어가 꼭대기까지 오른다", go in through the open door and climb to the top). So, as with layer-1 refusals, the current place is accepted only when the narration model picks it too (qa_test/runs/misread-1).
+For the destination, the **current place** is offered along with the ways out, unless the sentence names a way out ("마당에서 마을로 간다", go from the yard to the village). Choosing it means the move is already done: that step is skipped, or, if no step has run, the sentence is refused with "이미 …에 있습니다" (you are already at …) when it names this place, and otherwise with "… 안에서 따로 갈 곳은 없습니다. 갈 수 있는 곳은 …입니다." (nowhere else to go inside …; the ways out are …), since a walk about the place asked where one can go (play-3-explorer 9). Offered only the ways out, the decision model picked another way even when the sentence named the current place in other words; but it is also sometimes sure of the current place for sentences that pass through here and go on ("열린 문으로 들어가 꼭대기까지 오른다", go in through the open door and climb to the top). So, as with layer-1 refusals, the current place is accepted only when the narration model picks it too (qa_test/runs/misread-1).
 
 ### 3.4 Acceptance `δ_θ`
 
@@ -253,6 +256,8 @@ Format rules:
 - A person spoken to or handed something answers directly, from where they stand, in double-quoted dialogue attributed to them and true to their persona and voice, without copying sample lines and without any form of address for you.
 - People know only what the context and what happened state; otherwise they say they do not know or change the subject.
 - A companion left behind this turn (their `avoids`) is shown parting, with their `fear` as the reason; after that they are not in the scene.
+- Someone who begins to follow the player this turn but avoids places says so: the change line names those places ("…함께 다니기로 했지만 …에는 가지 않습니다"), and the steering adds their `fear` and that they promise no farther. Agreeing out loud to the very trip they then refused read as a broken promise (play-3-talker 27, 32; play-3-explorer 21).
+- A turn that stopped before the rest of the sentence (at a card, after a failure, or at a step that could not be read) says which action has not happened yet, or that the rest has not, so the narration stops short of it. Given the whole sentence, the narration lit the lamp on the look before its roll card (play-3-odd 18, play-3-explorer 41).
 
 ### 5.3 Check
 
@@ -276,7 +281,7 @@ If any sentence is rejected, the narration is rewritten with that sentence and t
 
 Names from the `태그:` line are kept in the presentation layer, keyed by `(mark atom, t at creation)`. When a slot is rewritten, an old name does not attach to the new tag, and a name is shown only while its atom is in `F`. `R` and conditions do not read this table.
 
-In a turn where a chapter change or ending happens, a recap of the finished chapter `k` is written after the narration, in the same way. Instead of 5.1, its input is up to 5 notable events from that chapter's `M` (improvisations that raised `fill` by 2, claims, promises and how they ended, declarations, fork choices, scars, threat arrivals) rendered in change frames; the check is the same. `GET /games/{id}/chapters/{k}/recap` returns it in the same stream, and it is kept only in `P`. The ending's steering replaces the place cue, pace lines and usual close: it lists the legacy lines and asks for the change, then one legacy line, then the story's `frame` as the last sentence; with no legacy lines, the change and the frame. The legacy lines are what the player leaves behind, rendered as context facts. They are trust that moved from its start for someone the player met (a witness in `M`), debts to or from the player, things the player saw go to an agent that did not start there (from `M`), and companions. They also go into the check's context with the frame. Anyone not here appears only far off and gets no new event. Before this, the pace line and the usual close outweighed the frame: no ending told whether the boats came home, and none named a person (play-1-talker 46, play-2-talker 48). Re-narrating the round-2 endings gave the frame in 6 of 6 and a legacy line in 6 of 6, with one invented event for an absent person (`qa_test/runs/play-2-reending-3.txt`).
+In a turn where a chapter change or ending happens, a recap of the finished chapter `k` is written after the narration, in the same way. Instead of 5.1, its input is up to 5 notable events from that chapter's `M` (improvisations that raised `fill` by 2, obstacles overcome, claims, promises and how they ended, declarations, fork choices, scars, threat arrivals) rendered in change frames, the last always the step that closed the chapter; the check is the same. `GET /games/{id}/chapters/{k}/recap` returns it in the same stream, and it is kept only in `P`. The ending's steering replaces the place cue, pace lines and usual close: it lists the legacy lines and asks for the change, then one legacy line, then the story's `frame` as the last sentence; with no legacy lines, the change and the frame. The legacy lines are what the player leaves behind, rendered as context facts. They are trust that moved from its start for someone the player met (a witness in `M`), debts to or from the player, things the player saw go to an agent that did not start there (from `M`), and companions. They also go into the check's context with the frame. Anyone not here appears only far off and gets no new event. Before this, the pace line and the usual close outweighed the frame: no ending told whether the boats came home, and none named a person (play-1-talker 46, play-2-talker 48). Re-narrating the round-2 endings gave the frame in 6 of 6 and a legacy line in 6 of 6, with one invented event for an absent person (`qa_test/runs/play-2-reending-3.txt`).
 
 ## 6. Presentation layer `P`
 

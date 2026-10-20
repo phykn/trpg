@@ -3,7 +3,7 @@ import type { StepRecord } from '@/services/types';
 import { duration, frame, timeline } from '../reveal';
 
 const rolledStep: StepRecord = {
-  t: 2, action: 'try:door:finesse', label: '녹슨 등대 문에 솜씨로 맞선다', result: 'success', risk: 'normal', dc: 8,
+  t: 2, action: 'try:door:finesse', label: '녹슨 등대 문을 솜씨로 다룬다', result: 'success', risk: 'normal', dc: 8,
   roll: { d1: 3, d2: 6 }, total: 10, decisive: [0],
   mods: [{ kind: 'stat', label: 'finesse', value: 2 }, { kind: 'hinder', label: 'spray', value: -1 }],
   changes: [{ kind: 'fill', id: 'door', name: 'door', from: 0, to: 2, fit: 1 }, { kind: 'tag_add', owner: 'player', slot: 1 }],

@@ -4,7 +4,7 @@ import Animated from 'react-native-reanimated';
 
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
-import { IconButton } from './Button';
+import { IconButton, pressed } from './Button';
 import { Icon, type IconName } from './Icon';
 import { useEnter } from './motion';
 import { useDialog } from './useDialog';
@@ -35,7 +35,8 @@ export function Choice({ label, sub, icon, primary, onPress }: {
   label: string; sub?: string; icon?: IconName; primary?: boolean; onPress: () => void;
 }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+    <Pressable accessibilityRole="button" accessibilityLabel={sub ? `${label}, ${sub}` : label} onPress={onPress}
+      style={pressed}
       className={`min-h-[48px] flex-row items-center gap-3 rounded-xl px-4 py-2 ${primary ? 'bg-gold-fg' : 'border border-border-default bg-canvas-subtle'}`}>
       {icon ? <Icon name={icon} size={16} color={primary ? colors.fg['on-emphasis'] : colors.fg.muted} /> : null}
       <View className="min-w-0 flex-1">

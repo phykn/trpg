@@ -112,7 +112,7 @@ Cards (engine.md 4):
 ```
 { "id": "c42", "kind": "roll" | "clarify" | "confirm" | "move",
   "echo": {"text": "열쇠로 살살 돌려 본다", "slots": [{"slot": "approach", "label": "솜씨"}, {"slot": "strain", "label": "자연스럽게"}]},
-  "plan": {"step": {"action": "try:door:finesse", "label": "녹슨 등대 문에 솜씨로 맞선다", "target": {"id": "door", "name": "녹슨 등대 문", "fill": 0, "boxes": 3}},
+  "plan": {"step": {"action": "try:door:finesse", "label": "녹슨 등대 문을 솜씨로 다룬다", "target": {"id": "door", "name": "녹슨 등대 문", "fill": 0, "boxes": 3}},
            "rest": ["등대 꼭대기로 간다"]},
   "options": [{"id": "try:door:finesse;rely=thing:key", "label": "등대 열쇠", "consumed": false, "note": null, "preview": {…}},
               {"id": "try:door:finesse", "label": "기대지 않음", "consumed": false, "note": null, "preview": {…}}],

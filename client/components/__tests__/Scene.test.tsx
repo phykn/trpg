@@ -7,8 +7,8 @@ import type { GameView } from '@/services/types';
 const scene = (fill: number) => ({
   place: { id: 'yard', name: '등대 앞', senses: [] },
   people: [], things: [], tags: [],
-  obstacles: [{ id: 'door', name: '녹슨 등대 문', fill, boxes: 1, blocks: ['등불 방'] }],
-  exits: [{ id: 'dock', name: '선착장', blocked: false }, { id: 'lamp_room', name: '등불 방', blocked: fill < 1 }],
+  obstacles: [{ id: 'door', name: '녹슨 등대 문', fill, boxes: 1, blocks: ['등불실'] }],
+  exits: [{ id: 'dock', name: '선착장', blocked: false }, { id: 'lamp_room', name: '등불실', blocked: fill < 1 }],
 }) as unknown as GameView['scene'];
 
 // The pills a tap can start a sentence from, by name.
@@ -26,7 +26,7 @@ test('an open way drafts going there, a locked way drafts its lock', async () =>
   const onDraft = jest.fn();
   const tree = await render(0, onDraft);
   await flush(async () => { pill(tree, '선착장')[0].props.onPress?.(); });
-  await flush(async () => { pill(tree, '등불 방')[0].props.onPress?.(); });
+  await flush(async () => { pill(tree, '등불실')[0].props.onPress?.(); });
   expect(onDraft.mock.calls.map((c) => c[0])).toEqual(['선착장으로 간다', '녹슨 등대 문을 ']);
 });
 

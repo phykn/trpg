@@ -4,7 +4,8 @@ import { Pressable, Text, View } from 'react-native';
 import { colors } from '@/design/tokens';
 import { Icon, type IconName } from './Icon';
 
-const pressed = ({ pressed: p }: { pressed: boolean }) => ({ opacity: p ? 0.7 : 1 });
+// Every tappable part dims the same way while held.
+export const pressed = ({ pressed: p }: { pressed: boolean }) => ({ opacity: p ? 0.7 : 1 });
 
 // Primary is the one next step on a screen; secondary is any other choice.
 export function Button({ label, sub, icon, tone = 'primary', disabled, onPress }: {
@@ -13,8 +14,8 @@ export function Button({ label, sub, icon, tone = 'primary', disabled, onPress }
   const primary = tone === 'primary';
   const fg = primary ? colors.fg['on-emphasis'] : colors.fg.default;
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!disabled }} disabled={disabled} onPress={onPress}
-      style={pressed}
+    <Pressable accessibilityRole="button" accessibilityLabel={sub ? `${label}, ${sub}` : label}
+      accessibilityState={{ disabled: !!disabled }} disabled={disabled} onPress={onPress} style={pressed}
       className={`h-12 flex-row items-center justify-center gap-2 rounded-full px-5 ${primary ? 'bg-gold-fg' : 'border border-border-strong'} ${disabled ? 'opacity-40' : ''}`}>
       {icon ? <Icon name={icon} size={16} color={fg} width={2} /> : null}
       <Text className="font-sans-semibold text-body" style={{ color: fg }}>{label}</Text>

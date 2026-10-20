@@ -16,8 +16,9 @@ SHEET = {"beats": "박자", "wounds": "상처", "growth": "성장"}
 TAG_DEFAULT = {"edge": "유리함", "snag": "불리함"}
 TAG_KEYS = {"@suspicion": "의심", "@broken_promise": "약속을 어김", "@scar": "흉터"}
 
-# How a person regards the player, by trust; fear above this shows instead.
-TRUST_WORDS = {-3: "적대", -2: "불신", -1: "경계", 0: "무덤덤", 1: "호의", 2: "신뢰", 3: "유대"}
+# How a person regards the player, by trust; fear above this shows instead. "무덤덤" at zero read as a mood that the
+# persona's cheer contradicted in every playtest (play-2-*, play-3-*), so zero names the stance.
+TRUST_WORDS = {-3: "적대", -2: "불신", -1: "경계", 0: "중립", 1: "호의", 2: "신뢰", 3: "유대"}
 FEARFUL, FEAR_WORD = 2, "두려움"
 # A threat meets negative fear, so that chip names its absence.
 UNAFRAID = "겁 없음"
@@ -34,9 +35,11 @@ ACTION = {
     "come": "{h}에게 같이 가자고 한다",
     "stay": "{h}에게 여기서 기다려 달라고 한다",
     "claim": "{h}에게 {claim}",
-    "try_self": "{approach}{으로} 해 본다",
-    "try": "{x}에 {approach}{으로} 맞선다",
-    "try_agent": "{x}에게 {approach}{으로} 맞선다",
+    # Changes nothing and stands for whatever the sentence said; "재치로 해 본다" for a greeting said nothing
+    # (play-3-odd 1, 10).
+    "try_self": "말한 대로 해 본다",
+    "try": "{x}{을} {approach}{으로} 다룬다",
+    "try_agent": "{x}{을} {approach}{으로} 상대한다",
     "declare": "선언: {name}",
     "pass": "장면을 넘긴다",
     "rest": "쉬어 간다",
@@ -47,6 +50,9 @@ ACTION = {
 }
 SWAP = "{old} → {new}"
 RELYING = "{rely}에 기대어 "
+# Something known about a thing is named apart from the thing: the roll card listed both under the thing's name, and a
+# clue about an obstacle read as the obstacle helping against itself (qa_test/runs/play-3-explorer 13, 37; play-3-talker 30).
+CLUE = "{name} 단서"
 NO_RELY = "기대지 않음"
 MOVE_WITH = "{name}{와} 함께"
 # A sentence about someone left behind must tell the parting: stay, stop, wait, see off.
@@ -66,8 +72,9 @@ RELY_DESC = {"tag": "유리한 점 '{name}'", "trait": "특성 '{name}': {text}"
 EFFECT = {
     "move_player": "{y}{으로} 감",
     "gain": "{x}{을} 받음",
-    "move": "{x}: {y}",
-    "fill": "{o} {v}",
+    "move": "{x}{을} {y}에 둠",
+    "move_agent": "{x}{이} {y}에게 감",
+    "fill": "{o} {v}칸",
     "regards": "{g}의 마음이 움직임",
     "reveal": "새로 앎",
     "tag": "{name}",
@@ -81,7 +88,7 @@ REFUSED = {
     "candidate": "지금은 할 수 없는 행동입니다.",
     "card": "이 카드의 선택지가 아닙니다.",
     "ended": "이야기가 끝났습니다.",
-    "text": "아직 문장을 읽을 수 없습니다. 버튼을 눌러 주세요.",
+    "text": "지금은 문장을 읽을 수 없습니다.",
 }
 WHY = {
     "blocked": "{ob}{이} {x}{을} 막고 있습니다.",
@@ -185,8 +192,10 @@ PERSONAS = {
     "ENFJ": "따뜻하고 말에 힘이 있습니다. 상대를 북돋우며 이끕니다.",
     "ENTJ": "거침없고 결론부터 말합니다. 상대가 따르기를 바랍니다.",
 }
-# How near a carried clock or deadline is, in words, for prose that may not say numbers.
-OVERCOME = ("조금 풀렸습니다", "거의 풀렸습니다", "풀렸습니다")
+# How far an obstacle and how near a carried clock or deadline is, in words, for prose that may not say numbers.
+# Progress is told as going the player's way: "loosened" was narrated literally, as a lamp or a hound coming loose
+# (qa_test/runs/play-2-explorer 38, play-2-odd 30, play-3-bold 9).
+OVERCOME = ("조금씩 뜻대로 되어 갑니다", "거의 뜻대로 되었습니다", "뜻대로 되었습니다")
 PACE = ("아직 멀었습니다", "다가오고 있습니다", "코앞에 닥쳤습니다")
 TRUST_VERBS = {-3: "적대합니다", -2: "믿지 않습니다", -1: "경계합니다", 0: "덤덤하게 대합니다",
                1: "호의적으로 대합니다", 2: "신뢰합니다", 3: "깊이 신뢰합니다"}
@@ -242,20 +251,29 @@ TONE_DESC = {"polite": "정중하게 묻거나 부탁함", "friendly": "친근�
              "threaten": "겁을 주거나 위협함", "deceive": "거짓말을 하거나 속임"}
 APPROACH_DESC = {"force": "힘으로 밀어붙이거나 부수거나 버팀", "finesse": "손재주, 몸놀림, 몰래 움직임",
                  "wits": "관찰, 계획, 꾀, 시선 돌리기", "charm": "말이나 태도로 마음을 움직임"}
-NOT_IN_WORLD = "이 세계에는 없는 것입니다."
+NOT_IN_WORLD = "이 이야기에는 그런 것이 없습니다."
 NOT_POSSIBLE = "이 장면에서는 할 수 없는 일입니다."
 ALREADY_HERE = "이미 {place}에 있습니다."
+NO_FARTHER = "{place} 안에서 따로 갈 곳은 없습니다. 갈 수 있는 곳은 {ways}입니다."
 META_REPLY = "이야기 속에서 당신이 하는 일을 적어 주세요. 저장은 저절로 됩니다."
-META = ("저장", "다시 시작", "처음부터", "규칙", "도움말", "게임", "인공지능", "치트")
+GROWTH_WORD, GROWTH_REPLY = "성장", "성장은 주인공 화면의 '성장'에서 고릅니다."
+# Whole phrases, so a storehouse (저장고) or "처음부터 차근차근" stays in the story.
+META = ("저장해", "저장하", "저장은", "저장이", "세이브", "다시 시작", "처음부터 다시", "게임 규칙", "규칙이 뭐", "규칙 알려",
+        "도움말", "인공지능", "치트")
+# Showing a thing is talk unless the sentence also hands it over: read as giving, the player's only item was gone with
+# no card (play-2-odd 3, play-3-talker 3).
+SHOW_WORDS = ("보여주", "보여 주", "보여줘", "보여 줘", "보여드", "보여 드", "내보이", "보이며")
+GIVE_WORDS = ("건네", "건넨", "넘겨", "넘긴", "넘기", "맡겨", "맡긴", "맡기", "쥐여", "준다", "주고", "주며", "줘", "줄게",
+              "드린", "드리", "드려", "드릴")
 # Layer 0 cues for try's approach (engine.md 3.1). One matching approach fills the slot.
 APPROACH_WORDS = {
     "force": ("밀어", "밀치", "부수", "부숴", "때려", "힘껏", "들이받", "걷어차", "비틀", "버텨", "당겨"),
-    "finesse": ("몰래", "살금", "슬쩍", "조심스레", "살살", "재빨리", "기어", "타고", "넘어", "따고", "따서"),
+    "finesse": ("몰래", "살금", "슬쩍", "조심스레", "살살", "재빨리", "기어", "타고", "넘어", "따고", "따서", "비집"),
     "wits": ("살펴", "꾀", "재치", "속여", "유인", "시선을 돌", "던져", "계획", "궁리", "고쳐", "다듬"),
     "charm": ("달래", "설득", "부탁", "어르", "다독", "호소", "구슬"),
 }
 TO_PERSON = ("에게", "한테", "께")
-CLARIFY_SLOT = {"intent": "무엇을 말씀하신 건가요?", "target": "무엇에 맞서나요?"}
+CLARIFY_SLOT = {"intent": "무엇을 말씀하신 건가요?", "target": "무엇을 두고 하는 행동인가요?"}
 READER = ("당신은 한국어 TRPG의 입력 분류기입니다. 플레이어 문장이 하는 행동을 일어나는 차례대로 선택지 번호로 적습니다. "
           "한 행동을 여러 말로 풀어 쓴 것은 하나로 셉니다. 번호만 쉼표로 나누어 답합니다.")
 READER_PROMPT = "플레이어 문장: {text}\n선택지:\n{options}\n번호:"
@@ -266,15 +284,16 @@ NO_TARGET = "특정한 대상 없이"
 
 # Change frames of 𝔗 by step-record change kind; no numbers reach the narrator.
 CHANGE = {
-    "fill": "{name}{이} 조금 풀렸습니다",
-    "fill_done": "{name}{이} 다 풀렸습니다",
-    "fill_back": "{name}{이} 조금 되돌아갔습니다",
+    "fill": "{name}{이} 조금씩 당신 뜻대로 되어 갑니다",
+    "fill_done": "{name}{이} 마침내 당신 뜻대로 되었습니다",
+    "fill_back": "{name}{이} 다시 뜻대로 되지 않습니다",
     "clock": "{name}: 다가왔습니다",
     "crisis": "{name}: 끝내 닥쳤습니다",
     "recede": "{name}: 조금 물러났습니다",
     "arrival": "{name}: 들이닥쳤습니다",
     "deadline": "{name}: 목표를 이루지 못한 채 시간이 다 되었습니다",
     "tag_add": "{owner}에 {name}{이} 생겼습니다",
+    "tag_add_agent": "{owner}에게 {name}{이} 생겼습니다",
     "scar": "당신에게 {name}{이} 남았습니다",
     "tag_remove": "{owner}의 {name}{이} 사라졌습니다",
     "wound_up": "당신이 다쳤습니다",
@@ -284,6 +303,7 @@ CHANGE = {
     "move_place": "{name}{이} {to}에 왔습니다",
     "move_with": "{name}{이} 당신과 함께 {to}에 왔습니다",
     "follow_start": "{name}{이} 당신과 함께 다니기로 했습니다",
+    "follow_start_bounded": "{name}{이} 당신과 함께 다니기로 했지만 {places}에는 가지 않습니다",
     "follow_stop": "{name}{은} 이제 당신을 따라다니지 않습니다",
     "reveal": "당신은 새로 알게 되었습니다: {text}",
     "reveal_hidden": "{name}{이} 드러났습니다",
@@ -325,13 +345,16 @@ NOW = {"speaker": "{x}: {persona} 말투는 {voice}",
        "pace": "때: {text}. 하늘, 빛, 파도는 이 흐름만큼만 바뀌고, 아직 일어나지 않은 일은 일어난 것처럼 쓰지 않습니다.",
        "worn": "최근 서술에서 거듭 쓴 표현이니 이번에는 다른 말로 씁니다: {words}",
        "left": "{name}{은} {place}에 남았습니다. 까닭: {fear}. 이제 이 자리에 없으니 헤어지는 모습만 그리고 곁에 있는 것처럼 쓰지 않습니다.",
+       "bounded": "{name}{은} {places}에는 따라가지 않습니다. 까닭: {fear}. 그곳까지 함께 가겠다고 말하지 않습니다.",
+       "waits": "플레이어 문장 가운데 '{label}'부터는 아직 하지 않았습니다. 그 앞에서 멈추고, 그 결과를 미리 쓰지 않습니다.",
+       "waits_rest": "플레이어 문장의 나머지 행동은 아직 하지 않았습니다. [일어난 일]까지만 쓰고, 그 결과를 미리 쓰지 않습니다.",
        "close": "이번에 바뀐 것을 보여 주고, 마지막 문장은 인물의 반응이나 눈앞의 것으로 끝냅니다.",
        "legacy": "결말에 담을 수 있는 것: {items}",
        "ending": "이 서술로 이야기가 끝납니다. 이번에 바뀐 것을 보여 준 뒤, 마지막 문장은 이 결말을 그립니다: {frame}",
        "ending_legacy": "이 서술로 이야기가 끝납니다. 첫 문장은 이번에 바뀐 것, 다음 문장은 위의 담을 수 있는 것 가운데 하나입니다. 여기 없는 사람은 '멀리'라는 말과 함께, 그가 있는 곳에서 이 결말을 맞는 모습으로만 그리고 그에게 새 일을 만들지 않습니다. 마지막 문장은 이 결말입니다: {frame}"}
 NAMING = "이번에 생긴 태그마다 서술 뒤에 한 줄씩 '태그: 이름'을 적으십시오. 이름은 12자 이하의 짧은 말입니다. 기본 이름: {names}"
 ENDING_FRAME = "이 서술로 이야기가 끝납니다. 다음 틀로 마무리하고 다음 행동을 묻지 않습니다: {frame}"
-RECAP_TASK = "장 '{title}'이 끝났습니다. 아래 일들을 되짚는 짧은 문단 하나를 쓰십시오. {sentences}문장 이하, {chars}자 이하, 합니다체."
+RECAP_TASK = "'{title}' 장이 끝났습니다. 아래 일들을 되짚는 짧은 문단 하나를 쓰십시오. {sentences}문장 이하, {chars}자 이하, 합니다체."
 FEEDBACK = {
     "sentences": "문장이 너무 많습니다. {n}문장 이하로 줄이십시오.",
     "chars": "글이 너무 깁니다. {n}자 이하로 줄이십시오.",

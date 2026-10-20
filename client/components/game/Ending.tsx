@@ -46,7 +46,7 @@ export function Ending({ view, recaps, onNew }: { view: GameView; recaps: Record
           </View>
         ) : null}
       </ScrollView>
-      <Button icon="play" label={ko.newGame} onPress={onNew} />
+      <Button icon="plus" label={ko.begin} onPress={onNew} />
     </View>
   );
 }

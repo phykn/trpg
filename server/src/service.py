@@ -276,6 +276,7 @@ class GameService:
             p["requests"].append({"kind": "discard", "card": prev["id"]})
         p["card"] = None
         records, t0, already = [], len(g.log), None
+        unfinished = ""             # what of the sentence a turn that stops early has not done ("" when unnamed)
         for i, st in enumerate(plan):
             o = observe(u, g.state, g.log)
             rest = plan[i + 1:]
@@ -299,6 +300,7 @@ class GameService:
                 if "action" not in st:
                     break
             if kind == "text" and records and records[-1]["action"] == st["action"]:
+                unfinished = None
                 break                       # a sentence's later step that repeats the one before is the same act
             a = parse(st["action"])
             if not admits(u, o, a):
@@ -316,6 +318,7 @@ class GameService:
                              "relies": await self._relies(u, o, p, a, text)} if rolling else {}
                     p["card"] = make(u, o, p, a, rest, labels, step_echo, cid, **extra)
                     self._opened(p, origin)
+                    unfinished = p["card"]["public"]["plan"]["step"]["label"]
                     break
                 # A sentence picks a way by meaning, so the player sees where and with whom before leaving (engine.md 4.4).
                 if a.schema == "go" and kind == "text":
@@ -323,16 +326,22 @@ class GameService:
                     only = names_way(u, a.intent[0], ways(u, o), text)
                     p["card"] = move_card(u, o, p, a, rest, labels, step_echo, f"c{p['card_seq']}", only)
                     self._opened(p, origin)
+                    unfinished = p["card"]["public"]["plan"]["step"]["label"]
                     break
             records.append(self._step(u, g, a))
             s = g.state
             if ended(s) or records[-1]["result"] in ("fail", "blocked"):
+                unfinished = None if ended(s) or not rest else labels[0] if "action" in rest[0] else ""
                 break
+        else:
+            unfinished = None
         turn = None
         if records:
             turn = len(p["turns"]) + 1
             p["turns"].append({"n": turn, "kind": kind, "text": text, "t0": t0, "t1": len(g.log) - 1,
                                "steps": records, "origin": origin, "card": prev["id"] if kind == "card" else None})
+            if unfinished is not None:
+                p["turns"][-1]["unfinished"] = unfinished
         if records or p["card"] is not None or had_card:
             p["revision"] += 1
         if not records and p["card"] is None and not had_card:
@@ -447,8 +456,13 @@ class GameService:
         here = o.facts.where(PLAYER)
         people = {x for x in o.seen if x in u.agents and o.facts.where(x) == here}
         speakers = [x for x in dict.fromkeys(named) if x in people]
-        left = {c["id"]: o.facts.where(c["id"]) for r in turn["steps"] for c in r["changes"]
-                if c["kind"] == "follow" and c["state"] == "stop" and o.facts.where(c["id"]) != here}
+        # A companion who stayed is out of sight once the player has gone, so where they stayed is where the player
+        # left; reading it from the view gave None and broke the narration (qa_test/runs/play-3-talker 33).
+        went = next((c["from"] for r in turn["steps"] for c in r["changes"] if c["kind"] == "move" and c["id"] == PLAYER),
+                    None)
+        left = {c["id"]: q for r in turn["steps"] for c in r["changes"]
+                if c["kind"] == "follow" and c["state"] == "stop" and (q := o.facts.where(c["id"]) or went) and q != here}
+        joined = tuple(c["id"] for r in turn["steps"] for c in r["changes"] if c["kind"] == "follow" and c["state"] == "start")
         tags = [{"index": i, "slot": atom[4], "owner": atom[1], "name": name}
                 for i, (atom, t, name) in enumerate(p["tags"])
                 if turn["t0"] <= t <= turn["t1"] and o.facts.mark_.get((atom[1], atom[4])) == tuple(atom[2:4])]
@@ -458,24 +472,27 @@ class GameService:
                     if str(m) in p["narration"]]
         return Job(u, o, p, happened, delta, {PLAYER, here, *people, *ids}, text=turn["text"], tags=tags,
                    previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers, left=left,
-                   chars=SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars)
+                   joined=joined, unfinished=turn.get("unfinished"), chars=SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars)
 
     def _recap_job(self, u: Universe, g: Game, k: int) -> Job | None:
         p = g.presentation
-        chapter, notable, closing = 1, [], None
+        chapter, notable, closing, closer = 1, [], None, None
         for turn in p["turns"]:
             for r in turn["steps"]:
-                if chapter == k and notable_step(r):
+                if chapter == k and notable_step(u, r):
                     notable.append(r)
                 kinds = {c["kind"]: c for c in r["changes"]}
                 if chapter == k and ("chapter" in kinds or "ending" in kinds):
-                    closing = turn
+                    closing, closer = turn, r
                 if "chapter" in kinds:
                     chapter = kinds["chapter"]["to"]
         if closing is None:
             return None
         o = self._at(u, g, closing["t1"])
-        lines = [x for r in notable[-RECAP_NOTABLE:] for x in step_lines(u, r)[0]]
+        # The step that closed the chapter goes last: without it a recap credited the oil, not the punch that lit
+        # the lamp, and told the sky darkening at the ending (qa_test/runs/play-3-bold 21, ui-5).
+        steps = [*[r for r in notable if r is not closer][1 - RECAP_NOTABLE:], closer]
+        lines = [x for r in steps for x in step_lines(u, r)[0]]
         task = ko.fill(ko.RECAP_TASK, title=u.chapter_of(k).title, sentences=RECAP_SENTENCES, chars=RECAP_CHARS)
         return Job(u, o, p, lines, lines, {PLAYER, o.facts.where(PLAYER)}, chars=RECAP_CHARS,
                    sentences=RECAP_SENTENCES, task=task)
@@ -485,9 +502,11 @@ PREVIOUS_TURNS = 3
 RECAP_NOTABLE = 5
 
 
-def notable_step(r: dict) -> bool:
+def notable_step(u, r: dict) -> bool:
     schema = r["action"].split(":")[0]
     if schema in ("declare", "choose", "pay") or ";claim=" in r["action"]:
         return True
-    return any(c["kind"] in ("promise", "scar", "arrival") or (c["kind"] == "fill" and c["to"] - c["from"] >= 2)
+    # An obstacle overcome is the chapter's work; left out, a recap skipped the door the player broke (play-3-bold 6).
+    return any(c["kind"] in ("promise", "scar", "arrival")
+               or (c["kind"] == "fill" and (c["to"] - c["from"] >= 2 or c["to"] >= u.boxes(c["id"]) > c["from"]))
                for c in r["changes"])

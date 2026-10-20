@@ -54,6 +54,8 @@ class Job:
     task: str | None = None          # a recap's task line instead of the turn
     speakers: list[str] = field(default_factory=list)   # people here that this turn's actions name
     left: dict[str, str] = field(default_factory=dict)   # companions this turn left behind: person → place
+    joined: tuple[str, ...] = ()     # people who began to follow the player this turn
+    unfinished: str | None = None    # the sentence's next action when the turn stopped before it ("" when unnamed)
 
 
 def sentences_of(text: str) -> list[str]:
@@ -88,7 +90,8 @@ def change_line(u, c: dict) -> str | None:
         return ko.fill(ko.CHANGE[k], name=c["name"])
     if k in ("tag_add", "tag_remove"):
         owner = "당신" if c["owner"] == PLAYER else u.name(c["owner"])
-        return ko.fill(ko.CHANGE[k], owner=owner, name=c["name"])
+        agent = k == "tag_add" and (c["owner"] == PLAYER or u.kind(c["owner"]) == "agent")
+        return ko.fill(ko.CHANGE["tag_add_agent" if agent else k], owner=owner, name=c["name"])
     if k == "scar":
         return ko.fill(ko.CHANGE["scar"], name=c["name"])
     if k == "wound":
@@ -101,6 +104,11 @@ def change_line(u, c: dict) -> str | None:
             return ko.fill(ko.CHANGE["move_lose"], **{"from": "당신"}, name=c["name"])
         return ko.fill(ko.CHANGE["move_with" if c.get("with") else "move_place"], name=c["name"], to=c["to_name"])
     if k == "follow":
+        # Agreeing to come while still avoiding a place read as a broken promise at the next move card
+        # (play-3-talker 27, 32; play-3-explorer 21).
+        avoids = c["state"] == "start" and u.agents[c["id"]].avoids
+        if avoids:
+            return ko.fill(ko.CHANGE["follow_start_bounded"], name=c["name"], places=", ".join(map(u.name, avoids)))
         return ko.fill(ko.CHANGE[f"follow_{c['state']}"], name=c["name"])
     if k == "reveal":
         return ko.fill(ko.CHANGE["reveal"], text=c["text"]) if c.get("text") else \
@@ -224,6 +232,10 @@ def steering(job: Job, lines) -> list[str]:
         out.append(ko.fill(ko.NOW["speaker"], x=a.name, persona=ko.PERSONAS[a.persona], voice=a.voice))
     for x, q in job.left.items():
         out.append(ko.fill(ko.NOW["left"], name=u.name(x), place=u.name(q), fear=u.agents[x].fear.rstrip(".")))
+    for x in job.joined:
+        if avoids := u.agents[x].avoids:
+            out.append(ko.fill(ko.NOW["bounded"], name=u.name(x), places=", ".join(map(u.name, avoids)),
+                               fear=u.agents[x].fear.rstrip(".")))
     tired = worn(u, job.previous)
     if job.ending:
         # The usual cue, pace and close ("end on someone's reaction") outweighed the frame, so no ending told
@@ -243,6 +255,10 @@ def steering(job: Job, lines) -> list[str]:
             and u.obstacles[ln.atom[1]].sub in ("clock", "deadline")]
     if pace:
         out.append(ko.fill(ko.NOW["pace"], text=", ".join(pace)))
+    # The player's sentence reaches the narrator whole, so a look before a roll card was told as the lamp already lit
+    # (qa_test/runs/play-3-odd 18, play-3-explorer 41).
+    if job.unfinished is not None:
+        out.append(ko.fill(ko.NOW["waits"], label=job.unfinished) if job.unfinished else ko.NOW["waits_rest"])
     if tired:
         out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
     return [*(f"- {x}" for x in out), f"- {ko.NOW['close']}"]

@@ -18,16 +18,17 @@ export default function Index() {
     <View className="items-center bg-canvas-inset" style={{ height }}>
       <Head><title>{ko.brand}</title></Head>
       <View className="mobile-frame min-h-0 w-full max-w-mobile flex-1 border-x border-border-default bg-canvas-default">
-        {starting ? (
-          <Start stories={game.stories} busy={game.phase === 'sending'} onCreate={game.create}
-            saved={game.canResume ? game.view : null} onResume={game.resume} />
-        ) : game.view ? (
-          <Play game={game} />
-        ) : game.phase === 'blocked' ? (
+        {game.phase === 'blocked' ? (
           <View className="flex-1 items-center justify-center gap-5 px-5">
             <Text className="text-center font-sans text-body text-fg-muted">{ko.blocked}</Text>
             <Button icon="home" label={ko.toTitle} onPress={game.newGame} />
           </View>
+        ) : starting ? (
+          <Start stories={game.stories} busy={game.phase === 'sending'} onCreate={game.create}
+            saved={game.canResume ? game.view : null} onResume={game.resume}
+            again={game.view?.ending ? game.view.story.id : null} />
+        ) : game.view ? (
+          <Play game={game} />
         ) : (
           <View className="flex-1 items-center justify-center gap-4">
             <ActivityIndicator color={colors.gold.fg} />

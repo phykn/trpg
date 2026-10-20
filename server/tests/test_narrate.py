@@ -171,6 +171,11 @@ async def test_a_finished_chapter_has_a_recap(tmp_path):
     assert "160자" in llm.calls[-1][0]["content"]
     got = [e async for e in await svc.recap(gid, 1)]
     assert got[-2]["type"] == "text" and "되짚는" in llm.calls[-1][1]["content"]
+    # the move that closed the chapter is not notable on its own, yet the recap must end on it (play-3-bold 21)
+    # the door overcome and the move that closed the chapter, though neither is a +2 improvisation (play-3-bold 6, 21)
+    notable = llm.calls[-1][1]["content"].split(ko.HEAD["notable"])[1].split(ko.STYLE)[0]
+    assert "녹슨 등대 문이 마침내 당신 뜻대로 되었습니다" in notable
+    assert notable.rstrip().endswith("- 새 장이 시작됩니다: 불을 켜다") and "'등대에 오르다' 장이 끝났습니다" in notable
     assert (await svc.view(gid))["recaps"] == [1]
 
 
@@ -209,6 +214,16 @@ async def test_a_companion_left_behind_appears_only_parting(tmp_path):
     assert "윤슬은 선착장에 남았습니다" in prompt and u.agents["yunseul"].fear.rstrip(".") in prompt
 
 
+async def test_a_turn_that_stops_before_the_rest_of_the_sentence_says_so(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
+    u, g = svc.games[gid]
+    job = svc._turn_job(u, g, 1)
+    assert "아직 하지 않았습니다" not in messages(job)[1]["content"]
+    now = messages(replace(job, unfinished="녹슨 등대 문을 완력으로 다룬다"))[1]["content"].split(ko.HEAD["now"])[1]
+    assert "'녹슨 등대 문을 완력으로 다룬다'부터는 아직 하지 않았습니다" in now
+    assert ko.NOW["waits_rest"] in messages(replace(job, unfinished=""))[1]["content"]
+
+
 async def test_an_ending_picks_up_what_the_player_left_behind(tmp_path):
     from src.onto.log import Delta
     from src.onto.view import Seen
@@ -235,7 +250,7 @@ def test_a_lowered_threat_recedes_instead_of_approaching(u):
     # a full clock strikes and starts over; read as a fall, it said the storm receded (play-2-bold 23, play-2-odd 50)
     assert change_line(u, {**up, "kind": "crisis", "from": 3, "to": 0}).endswith("끝내 닥쳤습니다")
     lamp = {"kind": "fill", "id": "lamp", "name": "꺼진 등불", "from": 3, "to": 2}
-    assert change_line(u, lamp) == "꺼진 등불이 조금 되돌아갔습니다"
+    assert change_line(u, lamp) == "꺼진 등불이 다시 뜻대로 되지 않습니다"
     # a deadline's name is often a clause ("해가 진다"), so no particle follows it, and its arrival says the goal was missed
     assert change_line(u, {"kind": "arrival", "id": "deadline.1", "name": "해가 진다"}) == \
         "해가 진다: 목표를 이루지 못한 채 시간이 다 되었습니다"
@@ -272,7 +287,24 @@ def test_the_narrators_context_has_only_the_scene_and_no_numbers():
     assert u.name("door") + ":" not in yard and not any(c.isdigit() for c in yard)
     moved = {a for a in s0.atoms() if a[:2] not in (("fill", "door"), ("at", "player"))}
     s1 = State.of(moved | {("fill", "door", u.boxes("door")), ("at", "player", "yard")})
-    assert f"{u.name('door')}: 풀렸습니다" in render(scene(u, observe(u, s1, Log()), {"player", "yard", "door"}, {}))
+    assert f"{u.name('door')}: 뜻대로 되었습니다" in render(scene(u, observe(u, s1, Log()), {"player", "yard", "door"}, {}))
+
+
+async def test_a_companion_who_will_not_go_everywhere_says_so_when_joining(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
+    u, g = svc.games[gid]
+    come = {"kind": "follow", "id": "dohae", "name": "도해", "state": "start"}
+    assert change_line(u, come) == "도해가 당신과 함께 다니기로 했지만 등대 앞, 등불실에는 가지 않습니다"
+    assert change_line(u, {**come, "state": "stop"}) == "도해는 이제 당신을 따라다니지 않습니다"
+    now = messages(replace(svc._turn_job(u, g, 1), joined=("dohae",)))[1]["content"].split(ko.HEAD["now"])[1]
+    assert "도해는 등대 앞, 등불실에는 따라가지 않습니다" in now and u.agents["dohae"].fear.rstrip(".") in now
+
+
+def test_a_tag_on_someone_takes_ege(u):
+    spray = {"kind": "tag_add", "owner": "player", "name": "흩날리는 물보라"}
+    assert change_line(u, spray) == "당신에게 흩날리는 물보라가 생겼습니다"
+    assert change_line(u, {**spray, "owner": "dohae", "name": "굳은 입"}) == "도해에게 굳은 입이 생겼습니다"
+    assert change_line(u, {**spray, "owner": "village", "name": "마을 봉화"}) == "바닷가 마을에 마을 봉화가 생겼습니다"
 
 
 def test_repetition_cues_and_address():

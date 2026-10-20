@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { pressed } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { useEnter } from '@/components/ui/motion';
 import { useDialog } from '@/components/ui/useDialog';
@@ -17,7 +18,7 @@ export function Menu({ onClose, onTitle }: { onClose: () => void; onTitle: () =>
         <View ref={ref} accessibilityRole={'menu' as never}
           className="w-[168px] rounded-2xl border border-border-strong bg-canvas-floating p-1">
           <Pressable accessibilityRole={'menuitem' as never} onPress={onTitle}
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })} className="h-10 flex-row items-center gap-2.5 rounded-xl px-3">
+            style={pressed} className="h-10 flex-row items-center gap-2.5 rounded-xl px-3">
             <Icon name="home" size={16} />
             <Text className="font-sans-semibold text-panel text-fg-default">{ko.toTitle}</Text>
           </Pressable>

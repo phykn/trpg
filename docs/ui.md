@@ -143,7 +143,7 @@ The **destination** is always decided from the adopted `view` in the same order:
 
 - **Steps before a card**: a response that ran the plan's earlier steps and stopped at a card has `steps` and `turn` as well as `view.card`. The UI reveals those steps, fetches their narration, then opens the card.
 - **Command lifecycle**: each command gets one `request_id`, remembered together with its body. With no response within 30 seconds the state is `stuck`, and the command is resent only with the same `request_id` and body. The server's receipt returns the same result, so nothing runs twice. On resend the dice tumble again and the 600ms and 30-second timers restart; if the earlier request's response arrives late it is the same response, so whichever comes first is used. Game creation works the same way.
-- **revision**: the response's `view.revision` goes on the next command. If a 409 carries a `view`, it is adopted, tumbling dice vanish with no value, and one line, "상태가 바뀌어 다시 보였습니다" ("The state changed and was shown again"), appears above the input bar. `incompatible` without a `view` means `blocked`.
+- **revision**: the response's `view.revision` goes on the next command. If a 409 carries a `view`, it is adopted, tumbling dice vanish with no value, and one line, "게임 상태가 바뀌어 새로 불러왔습니다" ("The game state changed and was reloaded"), appears above the input bar. `incompatible` without a `view` means `blocked`.
 - **What is stored**: the browser keeps only `trpg.game_id` and chat history. `useLog` keeps the latest 300 items of the current game in `trpg.log.<game_id>` (deleting other games' history), with item ids that include the turn so reopening does not duplicate them; a device without history rebuilds it from the premise. A failed reopen clears nothing; only a 404 clears them and goes to the start screen.
 - **Reopening**: the step records in `view.last` are drawn in their end state without motion; cached narration is fetched and shown at once, otherwise it is fetched in `narrating`. If that turn is already in the chat history, it is not written again and finishes as soon as it arrives. If there is a `view.card`, the card opens. The reveal is not replayed.
 
@@ -169,7 +169,7 @@ Borrowed from Baldur's Gate 3's check screen. The stakes read as a single target
 
 ```
 ┌──────────────────────────────┐
-│     녹슨 등대 문에 솜씨로 맞선다    ✕ │ Attempt: action name (its label for a solution), close
+│     녹슨 등대 문을 솜씨로 다룬다    ✕ │ Attempt: action name (its label for a solution), close
 │            ( 8 )⚠              │ Target number in a ring. ⚠ mark for high risk
 │            ▢  ▢                │ Dice: blank faces, gold outline, swelling and shrinking like breath
 │     솜씨 +2  물보라 −1           │ Fixed modifiers (stat, hinder; zero chips not drawn). Borderless text
@@ -256,7 +256,7 @@ If there is a `view.growth`, `GrowthCard` (✲ growth) opens after narration end
 
 ### 5.4 Ending
 
-Once `view.ending` is set, after the ending narration and recap, everything below the header becomes the ending panel. It holds the ending's title under ☆ (serif, gold) and a gold rule, a recap per chapter (one per chapter in `view.recaps`, at most 100 characters, floating up in turn), and the list of fork choices (`journal`; forks with →, others with the tag icon), with a new-game button at the bottom. The ending panel takes over the chat log's space, so with many chapters you scroll within it (the new-game button stays fixed). New game creates a new game and replaces `trpg.game_id`.
+Once `view.ending` is set, after the ending narration and recap, everything below the header becomes the ending panel. It holds the ending's title under ☆ (serif, gold) and a gold rule, a recap per chapter (one per chapter in `view.recaps`, at most 100 characters, floating up in turn), and the list of fork choices (`journal`; forks with →, others with the tag icon), with a "새로 시작" ("start over") button at the bottom. The ending panel takes over the chat log's space, so with many chapters you scroll within it (the button stays fixed). The button opens Creation for the same story, skipping the title; creating there makes a new game and replaces `trpg.game_id`.
 
 ### 5.5 Start
 

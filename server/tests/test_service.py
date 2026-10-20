@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 
 import httpx
 import pytest
@@ -133,6 +134,9 @@ async def test_chain_stops_for_a_roll_card_after_its_first_step(tmp_path):
     assert out["kind"] == "card" and [s["action"] for s in out["steps"]] == ["go:yard"]
     card = out["view"]["card"]
     assert card["kind"] == "roll" and card["options"][-1]["preview"]["risk"] == "high"
+    # the walk is narrated, and the narrator learns the door is still ahead (play-3-odd 18, play-3-explorer 41)
+    job = svc._turn_job(*svc.games[gid], out["turn"])
+    assert job.unfinished == card["plan"]["step"]["label"] and job.unfinished
 
 
 async def test_a_roll_card_from_a_sentence_keeps_the_sentence_for_the_narrator(tmp_path):
@@ -253,6 +257,21 @@ async def test_a_sentence_move_waits_on_a_move_card_naming_who_comes(tmp_path):
     out = await cmd(svc, gid, out["view"], "r4", card=card["id"], pick="go:village")
     assert out["view"]["scene"]["place"]["id"] == "village"
     assert [p["id"] for p in out["view"]["scene"]["people"] if p["with"]] == ["yunseul"]
+
+
+async def test_a_companion_who_stays_is_narrated_where_they_stayed(tmp_path, monkeypatch):
+    u = STORIES["lighthouse"]
+    monkeypatch.setitem(u.agents, "yunseul", replace(u.agents["yunseul"], avoids=("village", "lamp_room")))
+    svc = GameService(STORIES, tmp_path, FakeInterpreter({"같이 가자": ["talk:yunseul:come"]}), seeds=lambda: 3)
+    gid, view = await new(svc)
+    out = await cmd(svc, gid, view, "r1", text="같이 가자")
+    card = out["view"]["card"]
+    out = await cmd(svc, gid, out["view"], "r2", card=card["id"], pick=card["selected"])
+    assert svc._turn_job(*svc.games[gid], out["turn"]).joined == ("yunseul",)
+    out, view = await press(svc, gid, out["view"], "go:village", "r3")
+    assert "yunseul" not in [p["id"] for p in view["scene"]["people"]]
+    job = svc._turn_job(*svc.games[gid], out["turn"])
+    assert job.left == {"yunseul": "dock"}
 
 
 async def test_a_move_card_can_take_another_way_or_be_closed(tmp_path):

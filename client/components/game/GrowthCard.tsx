@@ -1,5 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { pressed } from '@/components/ui/Button';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { colors } from '@/design/tokens';
@@ -17,7 +18,7 @@ const KINDS: { kind: Growth['kind']; icon: IconName }[] = [
 function Tile({ g, onPick }: { g: Growth; onPick: (action: string) => void }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={g.label} onPress={() => onPick(g.action)}
-      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+      style={pressed}
       className="h-11 flex-1 flex-row items-center justify-center rounded-xl border border-border-default bg-canvas-subtle">
       <Text className="font-sans-semibold text-body text-fg-default">{g.name}</Text>
     </Pressable>

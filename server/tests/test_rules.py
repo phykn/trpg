@@ -296,6 +296,18 @@ def test_recommend_walks_toward_a_goal_place_out_of_reach(play):
     assert [format(x) for x in recommend(play.u, play.obs)] == ["go:yard"]
 
 
+def test_recommend_heads_for_the_ending_obstacle_in_a_chapter_with_no_goal(u, creation):
+    """The last chapter ends in an ending; away from its obstacle no button was left (play-3-talker 24)."""
+    play = Play(u, creation)
+    for st in path_steps(u, 0):
+        aid, r = (st["do"], tuple(st["roll"])) if isinstance(st, dict) else (st, None)
+        play.do(aid, r or (1, 1, 0))
+    for aid in ("choose:g_oil:all_in", "go:yard", "go:dock"):
+        play.do(aid, (1, 1, 0))
+    assert u.chapter_of(2).goal is None
+    assert [format(x) for x in recommend(u, play.obs)] == ["talk:yunseul:t_wall", "go:yard"]
+
+
 def _closed(u, delta_add, delta_remove, tags=()):
     seen = Seen(0, "give:key:dohae", None, "none", (PLAYER,), Delta(frozenset(delta_add), frozenset(delta_remove)), ())
     return [c["state"] for c in changes(u, {"tags": list(tags)}, seen, parse("give:key:dohae"), None) if c["kind"] == "promise"]
@@ -353,8 +365,19 @@ def test_a_chapter_its_deadline_ended_starts_the_next_deadline_a_box_closer(u, c
     assert on_time.s.flag("chapter") == 2 and on_time.s.fill("deadline.2") == 0
 
 
-def test_an_attempt_on_a_person_takes_ege(u, s0):
+def test_an_attempt_names_its_target_and_approach(u, s0):
     from src.view import action_label
     o = observe(u, s0, Log())
-    assert action_label(u, o, {}, parse("try:dohae:charm")) == "도해에게 매력으로 맞선다"
-    assert action_label(u, o, {}, parse("try:door:charm")) == "녹슨 등대 문에 매력으로 맞선다"
+    assert action_label(u, o, {}, parse("try:dohae:charm")) == "도해를 매력으로 상대한다"
+    assert action_label(u, o, {}, parse("try:door:charm")) == "녹슨 등대 문을 매력으로 다룬다"
+    # forcing the story's own way keeps its words (play-3 real UI: "무리해서 녹슨 등대 문에 완력으로 맞선다")
+    assert action_label(u, o, {}, parse("try:door:force;strain=forced")) == "무리해서 어깨로 문을 들이받는다"
+    # an empty attempt stands for the sentence, not an approach (play-3-odd 1: "재치로 해 본다" for a greeting)
+    assert action_label(u, o, {}, parse("try:player:wits")) == "말한 대로 해 본다"
+
+
+def test_a_fork_choice_says_where_a_thing_goes(u):
+    from src.view import effect_names
+    assert effect_names(u, [("set", "fill", ("lamp",), "+2"), ("move", "oil", "lamp_room")]) == \
+        ["꺼진 등불 +2칸", "기름통을 등불실에 둠"]
+    assert effect_names(u, [("move", "oil", "yunseul")]) == ["기름통이 윤슬에게 감"]

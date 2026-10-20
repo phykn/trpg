@@ -49,7 +49,7 @@ Add one line to `notes.md` for each awkward moment: `- turn N [category] what wa
 |---|---|---|
 | misread | The sentence became a different action | "여기서 기다려" skipped the scene |
 | stuck | No idea what to do, or why something fails | The same refusal again with no reason |
-| contradiction | The narration disagrees with the screen or earlier narration | A person shown as 무덤덤 speaks "들뜬 목소리로" |
+| contradiction | The narration disagrees with the screen or earlier narration | A person shown as 경계 greets you like an old friend |
 | forgot | A person does not know what you did or said | Still asks about a letter you handed over |
 | repeat | The same description, line or reaction again | Grey clouds every turn |
 | wording | Awkward Korean in narration or dialogue, translationese, wrong particles | A fishing-village child says "오, 친애하는 이여" |

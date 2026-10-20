@@ -38,7 +38,7 @@ def prop_label(u, pid: str) -> str:
     if pid in u.latents:
         return u.latents[pid].name
     p = u.props[pid]
-    return u.name(p.about[0]) if p.about else p.text
+    return ko.fill(ko.CLUE, name=u.name(p.about[0])) if p.about else p.text
 
 
 def rely_label(u, p: dict, facts: State, rely: str) -> str:
@@ -124,12 +124,17 @@ def action_label(u, o: Obs, p: dict, a: Action) -> str:
     if s == "try":
         x, ap = i
         if x == PLAYER:
-            return ko.fill(ko.ACTION["try_self"], approach=ko.APPROACHES[ap])
+            return ko.ACTION["try_self"]
         sol = solution_label(u, o, a)
         if sol:
             return sol
+        forced = a.get("strain") == "forced"
+        # A forced way of the story's solution keeps its label: "무리해서 어깨로 문을 들이받는다".
+        sol = forced and solution_label(u, o, a.with_(strain=None))
+        if sol:
+            return f"{ko.STRAINS['forced']} {sol}"
         text = ko.fill(ko.ACTION["try_agent" if u.kind(x) == "agent" else "try"], x=u.name(x), approach=ko.APPROACHES[ap])
-        text = f"{ko.STRAINS['forced']} {text}" if a.get("strain") == "forced" else text
+        text = f"{ko.STRAINS['forced']} {text}" if forced else text
         return _relying(u, o, p, a) + text
     if s == "declare":
         return ko.fill(ko.ACTION["declare"], name=u.latents[i[0]].name)
@@ -169,7 +174,8 @@ def effect_names(u, effects) -> list[str]:
             elif e[2] == PLAYER:
                 out.append(ko.fill(ko.EFFECT["gain"], x=u.name(e[1])))
             else:
-                out.append(ko.fill(ko.EFFECT["move"], x=u.name(e[1]), y=u.name(e[2])))
+                key = "move_agent" if u.kind(e[2]) == "agent" else "move"
+                out.append(ko.fill(ko.EFFECT[key], x=u.name(e[1]), y=u.name(e[2])))
         elif k == "set" and e[1] == "fill":
             out.append(ko.fill(ko.EFFECT["fill"], o=u.name(e[2][0]), v=e[3]))
         elif k == "set" and e[1] == "regards":

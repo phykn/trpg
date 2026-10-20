@@ -310,7 +310,6 @@ export function useGame(reduced = false) {
     toTitle: () => { if (!pending.current && ['idle', 'card'].includes(phase)) { setNotice(null); setPhase('start'); } },
     canResume: phase === 'start' && !!view && !view.ending,
     resume: () => { const v = viewRef.current; if (phase === 'start' && v && !v.ending) setPhase(destination(v, growthRef.current)); },
-    dismissNotice: () => setNotice(null),
   };
 }
 

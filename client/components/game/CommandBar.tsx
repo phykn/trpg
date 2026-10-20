@@ -6,11 +6,11 @@ import { Icon } from '@/components/ui/Icon';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 
-type Mode = 'open' | 'locked' | 'sending' | 'stuck' | 'blocked';
+type Mode = 'open' | 'locked' | 'sending' | 'stuck';
 
-export function CommandBar({ mode, sent, notice, placeholder, text, onText, onSend, onResend, onNew, inputRef }: {
+export function CommandBar({ mode, sent, notice, placeholder, text, onText, onSend, onResend, inputRef }: {
   mode: Mode; sent: string | null; notice: string | null; placeholder: string; text: string;
-  onText: (t: string) => void; onSend: (text: string) => void; onResend: () => void; onNew: () => void;
+  onText: (t: string) => void; onSend: (text: string) => void; onResend: () => void;
   inputRef?: RefObject<TextInput | null>;
 }) {
   const submit = () => {
@@ -33,11 +33,6 @@ export function CommandBar({ mode, sent, notice, placeholder, text, onText, onSe
         <View className="flex-row items-center gap-3">
           <Text className="min-w-0 flex-1 font-sans text-panel text-fg-muted">{ko.stuck}</Text>
           <Button icon="retry" label={ko.resend} onPress={onResend} />
-        </View>
-      ) : mode === 'blocked' ? (
-        <View className="flex-row items-center gap-3">
-          <Text className="min-w-0 flex-1 font-sans text-panel text-danger-fg">{ko.blocked}</Text>
-          <Button tone="secondary" icon="home" label={ko.toTitle} onPress={onNew} />
         </View>
       ) : (
         <View className={`h-11 flex-row items-center rounded-full border bg-canvas-subtle pl-4 pr-1 ${focus ? 'border-gold-fg' : 'border-border-default'} ${mode === 'open' ? '' : 'opacity-60'}`}>

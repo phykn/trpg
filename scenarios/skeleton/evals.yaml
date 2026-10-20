@@ -8,6 +8,7 @@
 - {at: {path: 0, step: 0}, text: 등대 쪽으로 서둘러 걸어간다, expect: go:yard}
 - {at: {path: 0, step: 0}, text: 윤슬에게 등대 뒤 담장에 대해 물어본다, expect: talk:yunseul:t_wall}
 - {at: {path: 0, step: 0}, text: 윤슬에게 편지를 보여 주며 건넨다, expect: give:letter:yunseul}
+- {at: {path: 0, step: 0}, text: 윤슬에게 아들의 편지를 보여주며 이 편지를 누구에게 전해야 하는지 묻는다, expect: talk}
 - {at: {path: 0, step: 0}, text: 어부의 딸에게 반갑게 말을 건다, expect: "talk:yunseul:chat;tone=friendly"}
 - {at: {path: 0, step: 0}, text: 품속의 편지를 꺼내 다시 읽어 본다, expect: look:letter}
 - {at: {path: 0, step: 0}, text: 부두 주변을 천천히 둘러본다, expect: look:dock}
@@ -56,7 +57,7 @@
 - {at: {path: 0, step: 3}, text: 열린 문으로 들어가 꼭대기까지 오른다, expect: go:lamp_room}
 - {at: {path: 0, step: 3}, text: 안으로 들어간다, expect: go:lamp_room}
 
-# 등불 방: 꺼진 등불, 남은 기름
+# 등불실: 꺼진 등불, 남은 기름
 - {at: {path: 0, step: 5}, text: 렌즈를 닦고 불씨를 살린다, expect: try:lamp:finesse}
 - {at: {path: 0, step: 5}, text: 남은 기름을 몽땅 등불에 붓는다, expect: choose:g_oil:all_in}
 - {at: {path: 0, step: 5}, text: 기름 절반은 마을 봉화를 위해 남겨 둔다, expect: choose:g_oil:beacon}

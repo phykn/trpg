@@ -98,6 +98,13 @@ def addressee(u, o, text: str) -> str | None:
     return None
 
 
+def shows(text: str) -> bool:
+    rest = text
+    for w in ko.SHOW_WORDS:
+        rest = rest.replace(w, "")
+    return rest != text and not any(w in rest for w in ko.GIVE_WORDS)
+
+
 def approach_cue(text: str) -> str | None:
     hits = [ap for ap, words in ko.APPROACH_WORDS.items() if any(w in text for w in words)]
     return hits[0] if len(hits) == 1 else None
@@ -126,6 +133,9 @@ def rules(u, o, p: dict, text: str) -> dict | None:
         return {"refused": ko.NOT_IN_WORLD}
     if any(w in text for w in ko.META):
         return {"refused": ko.META_REPLY}
+    # Growth is picked on its own card; typed, it became an empty attempt (play-3-odd 10).
+    if ko.GROWTH_WORD in text and (o.facts.stat(PLAYER, "growth") or 0) >= 1:
+        return {"refused": ko.GROWTH_REPLY}
     for a in candidates(u, o):
         if squeeze(action_label(u, o, p, a)) == flat or (
                 (lab := solution_label(u, o, a)) and squeeze(lab) == flat):
@@ -252,7 +262,7 @@ class Interpreter:
 
     @staticmethod
     def partial(schema: str, text: str) -> dict:
-        return {"schema": schema, "text": text, "fixed": {}}
+        return {"schema": "talk" if schema == "give" and shows(text) else schema, "text": text, "fixed": {}}
 
     async def fill(self, u, g, st: dict) -> dict:
         """Returning the step without "action" stops the plan; "already" skips it."""
@@ -318,6 +328,11 @@ class Interpreter:
                 fixed["intent"] = w
         intent = tuple(fixed["intent"].split(":"))
         if st["schema"] == "go" and intent == here:
+            # Walking about the place ("오두막 뒤쪽으로 돌아가 본다") was told only where the player already was
+            # (play-3-explorer 9); the ways out answer what was asked.
+            if here[0] not in names and slots:
+                return {"already": ko.fill(ko.NO_FARTHER, place=u.name(here[0]),
+                                           ways=", ".join(u.name(s.intent[0]) for s in slots))}
             return already
         slot = slot_of[intent]
         judge_args = {}

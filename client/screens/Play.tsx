@@ -107,8 +107,7 @@ export function Play({ game }: { game: Game }) {
     }
   }
 
-  const mode = phase === 'idle' || phase === 'card' ? 'open' : phase === 'sending' ? 'sending'
-    : phase === 'stuck' ? 'stuck' : phase === 'blocked' ? 'blocked' : 'locked';
+  const mode = commandsOpen ? 'open' : phase === 'sending' ? 'sending' : phase === 'stuck' ? 'stuck' : 'locked';
 
   return (
     <View className="min-h-0 flex-1">
@@ -130,7 +129,7 @@ export function Play({ game }: { game: Game }) {
           </View>
           <CommandBar mode={mode} sent={game.sent} notice={game.notice} text={draft} onText={setDraft} inputRef={input}
             placeholder={hint(view.scene)}
-            onSend={(text) => { log.add({ id: `you:${Date.now()}`, kind: 'you', text }); game.command({ text }); }} onResend={game.resend} onNew={game.newGame} />
+            onSend={(text) => { log.add({ id: `you:${Date.now()}`, kind: 'you', text }); game.command({ text }); }} onResend={game.resend} />
           {card ? <View className="absolute bottom-0 left-0 right-0 max-h-full">{card}</View> : null}
         </View>
       )}
@@ -141,7 +140,7 @@ export function Play({ game }: { game: Game }) {
         </Pressable>
       ) : null}
       {sheetOpen ? (
-        <Pressable accessibilityLabel={ko.closeMenu} className="absolute bottom-0 left-0 right-0 top-0 z-10" onPress={() => setSheet(false)} />
+        <Pressable accessibilityLabel={ko.close} className="absolute bottom-0 left-0 right-0 top-0 z-10" onPress={() => setSheet(false)} />
       ) : null}
       {menuOpen ? <Menu onClose={() => setMenu(false)} onTitle={() => { setMenu(false); game.toTitle(); }} /> : null}
     </View>

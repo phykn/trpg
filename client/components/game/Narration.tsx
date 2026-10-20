@@ -135,7 +135,7 @@ export function Chat({ entries, live, roll, waiting, narration, hold, failed, on
           <View accessibilityRole="alert" className="items-start gap-2">
             <Text className="font-sans-semibold text-body text-danger-fg">{ko.narrationFailed}</Text>
             {narration.error ? <Text className="font-sans text-chip text-fg-subtle">{narration.error}</Text> : null}
-            <Button tone="secondary" icon="retry" label={ko.retryNarration} onPress={onRetry} />
+            <Button icon="retry" label={ko.retryNarration} onPress={onRetry} />
           </View>
         ) : null}
       </ScrollView>

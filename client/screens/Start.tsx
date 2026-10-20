@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
-import { Button, IconButton } from '@/components/ui/Button';
+import { Button, IconButton, pressed } from '@/components/ui/Button';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
@@ -28,12 +28,14 @@ function Section({ icon, label, used, of }: { icon: IconName; label: string; use
   );
 }
 
-export function Start({ stories, busy, saved, onCreate, onResume }: {
-  stories: Story[]; busy: boolean; saved: GameView | null; onCreate: (story: string, c: Creation) => void; onResume: () => void;
+// `again` opens creation for that story at once: starting over from an ending skips the title.
+export function Start({ stories, busy, saved, again, onCreate, onResume }: {
+  stories: Story[]; busy: boolean; saved: GameView | null; again: string | null;
+  onCreate: (story: string, c: Creation) => void; onResume: () => void;
 }) {
-  const [id, setId] = useState<string | null>(null);
+  const [id, setId] = useState<string | null>(again);
   const story = stories.find((s) => s.id === id);
-  const [placed, setPlaced] = useState<Record<string, number>>({});
+  const [placed, setPlaced] = useState<Record<string, number>>(() => (story ? zero(story) : {}));
   const [traits, setTraits] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [focus, setFocus] = useState(false);
@@ -81,8 +83,9 @@ export function Start({ stories, busy, saved, onCreate, onResume }: {
         {story.traits.map((t) => {
           const on = traits.includes(t.id);
           return (
-            <Pressable key={t.id} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => toggle(t.id)}
-              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+            <Pressable key={t.id} accessibilityRole="checkbox" accessibilityLabel={`${t.name}, ${t.text}`}
+              accessibilityState={{ checked: on }} onPress={() => toggle(t.id)}
+              style={pressed}
               className={`h-10 flex-row items-center gap-2 rounded-xl px-3 ${on ? 'bg-gold-muted' : 'bg-canvas-subtle'}`}>
               <Text className="w-[44px] font-sans-semibold text-panel text-fg-default">{t.name}</Text>
               <Text numberOfLines={1} className="min-w-0 flex-1 font-sans text-chip text-fg-muted">{t.text}</Text>
