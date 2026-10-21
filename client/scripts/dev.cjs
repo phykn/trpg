@@ -2,6 +2,7 @@ const { spawn, spawnSync } = require('node:child_process');
 const { networkInterfaces } = require('node:os');
 const { createConnection } = require('node:net');
 const path = require('node:path');
+const { health, localEnv } = require('./common.cjs');
 const { tunnelBinary } = require('./tunnel.cjs');
 
 const root = path.resolve(__dirname, '../..');
@@ -29,16 +30,9 @@ function start(command, args, cwd, env = process.env) {
 }
 
 async function apiRunning() {
-  try {
-    const response = await fetch('http://127.0.0.1:8000/health', { signal: AbortSignal.timeout(1000) });
-    if (!response.ok || (await response.json()).mode !== 'engine') {
-      throw new Error('Port 8000 is occupied by a different service.');
-    }
-    return true;
-  } catch (error) {
-    if (error.cause?.code === 'ECONNREFUSED') return false;
-    throw error;
-  }
+  const state = await health('http://127.0.0.1:8000', 1000);
+  if (state === 'other') throw new Error('Port 8000 is occupied by a different service.');
+  return state === 'engine';
 }
 
 async function main() {
@@ -70,14 +64,7 @@ async function main() {
     }
   }
   console.log('  PC: http://localhost:8090\n');
-  start(process.execPath, [require.resolve('expo/bin/cli'), 'start', '--web', '--host', 'lan', '--port', '8090', ...process.argv.slice(2).filter((arg) => arg !== '--public')], path.join(root, 'client'), {
-    ...process.env,
-    EXPO_NO_DOTENV: '1',
-    EXPO_PUBLIC_API_URL: '/api',
-    EXPO_PUBLIC_API_USER: 'local',
-    EXPO_PUBLIC_API_PASS: 'local',
-    TRPG_DEV_PROXY: '1',
-  });
+  start(process.execPath, [require.resolve('expo/bin/cli'), 'start', '--web', '--host', 'lan', '--port', '8090', ...process.argv.slice(2).filter((arg) => arg !== '--public')], path.join(root, 'client'), { ...localEnv('/api'), TRPG_DEV_PROXY: '1' });
   if (tunnel) {
     console.log('LTE 접속: 아래에 표시되는 https://…trycloudflare.com 주소를 엽니다.');
     start(tunnel, ['tunnel', '--no-autoupdate', '--url', 'http://127.0.0.1:8090'], root);

@@ -12,20 +12,16 @@ import { Menu } from '@/components/game/Menu';
 import { MoveCard } from '@/components/game/MoveCard';
 import { Chat } from '@/components/game/Narration';
 import { RollCard } from '@/components/game/RollCard';
-import { Scene } from '@/components/game/Scene';
+import { cleared, Scene } from '@/components/game/Scene';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
-import { frame as frameAt } from '@/logic/reveal';
+import { frame as frameAt, rolled as isRolled } from '@/logic/reveal';
 import type { Game } from '@/logic/useGame';
 import { useLog } from '@/logic/useLog';
-import type { GameView, StepRecord } from '@/services/types';
-
-function lastRolled(steps: StepRecord[] | undefined): StepRecord | null {
-  return [...(steps ?? [])].reverse().find((s) => s.roll && s.result !== 'blocked') ?? null;
-}
+import type { GameView } from '@/services/types';
 
 function hint(scene: GameView['scene']): string {
-  const open = scene.obstacles.find((o) => o.fill < o.boxes);
+  const open = scene.obstacles.find((o) => !cleared(o));
   if (open) return ko.askObject(open.name);
   if (scene.people.length) return ko.askPerson(scene.people[0].name);
   if (scene.things.length) return ko.askObject(scene.things[0].name);
@@ -43,8 +39,8 @@ export function Play({ game }: { game: Game }) {
   const log = useLog(game.gameId, view.story.premise);
   const turnNo = view.last?.turn ?? null;
   const live = turnNo !== null && !log.has(`story:${turnNo}`);
-  const rolled = lastRolled(view.last?.steps);
-  const roll = rolled?.roll ? {
+  const rolled = [...(view.last?.steps ?? [])].reverse().find(isRolled);
+  const roll = rolled ? {
     d1: rolled.roll.d1, d2: rolled.roll.d2, total: rolled.total ?? rolled.roll.d1 + rolled.roll.d2, result: rolled.result,
     dc: rolled.dc ?? 0, approach: rolled.mods.find((m) => m.kind === 'stat')?.label ?? '',
   } : null;
@@ -78,35 +74,23 @@ export function Play({ game }: { game: Game }) {
   const menuOpen = menu && commandsOpen;
   const sheetOpen = sheet && phase === 'idle';
   const growthLater = view.growth.length > 0 && game.growthLater;
+  const shown = rollOpen ? (revealing ? reveal?.card : view.card) : phase === 'card' ? view.card : null;
+  const pick = (id: string) => { if (shown) game.command({ card: shown.id, pick: id }); };
+  const cancel = () => { if (shown) game.command({ card: shown.id, cancel: true }); };
   let card = null;
   let roller = null;
-  if (rollOpen) {
-    const c = revealing ? reveal?.card : view.card;
-    if (c) {
-      // The same key as the open card's, so the card the player rolled stays as it was through to the reveal.
-      roller = (
-        <RollCard key={c.id} card={c} rolling={phase === 'rolling'} step={revealing ? step : undefined}
-          frame={revealing ? frame ?? undefined : undefined} onResend={game.lostRoll ? game.resend : undefined}
-          onRoll={(pick) => game.command({ card: c.id, pick })} onCancel={() => game.command({ card: c.id, cancel: true })} />
-      );
-    }
-  } else if (phase === 'card') {
-    const c = view.card;
-    if (c?.kind === 'roll') {
-      roller = <RollCard key={c.id} card={c} notice={game.notice} onRoll={(pick) => game.command({ card: c.id, pick })}
-        onCancel={() => game.command({ card: c.id, cancel: true })} />;
-    } else if (c?.kind === 'clarify') {
-      card = <ClarifyCard card={c} onPick={(pick) => game.command({ card: c.id, pick })}
-        onCancel={() => game.command({ card: c.id, cancel: true })} />;
-    } else if (c?.kind === 'confirm') {
-      card = <ConfirmCard card={c} onPick={(pick) => game.command({ card: c.id, pick })}
-        onCancel={() => game.command({ card: c.id, cancel: true })} />;
-    } else if (c?.kind === 'move') {
-      card = <MoveCard card={c} onPick={(pick) => game.command({ card: c.id, pick })}
-        onCancel={() => game.command({ card: c.id, cancel: true })} />;
-    } else if (view.growth.length) {
-      card = <GrowthCard growth={view.growth} onPick={(action) => game.command({ action })} onLater={game.laterGrowth} />;
-    }
+  if (shown?.kind === 'roll') {
+    // The same key as the open card's, so the card the player rolled stays as it was through to the reveal.
+    roller = (
+      <RollCard key={shown.id} card={shown} notice={phase === 'card' ? game.notice : undefined} rolling={phase === 'rolling'}
+        step={revealing ? step : undefined} frame={revealing ? frame ?? undefined : undefined}
+        onResend={game.lostRoll ? game.resend : undefined} onRoll={pick} onCancel={cancel} />
+    );
+  } else if (shown?.kind === 'clarify') card = <ClarifyCard card={shown} onPick={pick} onCancel={cancel} />;
+  else if (shown?.kind === 'confirm') card = <ConfirmCard card={shown} onPick={pick} onCancel={cancel} />;
+  else if (shown?.kind === 'move') card = <MoveCard card={shown} onPick={pick} onCancel={cancel} />;
+  else if (phase === 'card' && view.growth.length) {
+    card = <GrowthCard growth={view.growth} onPick={(action) => game.command({ action })} onLater={game.laterGrowth} />;
   }
 
   const mode = commandsOpen ? 'open' : phase === 'sending' ? 'sending' : phase === 'stuck' && !roller ? 'stuck' : 'locked';

@@ -13,7 +13,7 @@ async function listen(t, handler) {
 
 test('forwards an authenticated choice, query and receipt and preserves conflict responses', async (t) => {
   const api = await listen(t, async (req, res) => {
-    assert.equal(req.url, '/games/g_saved/act?source=phone');
+    assert.equal(req.url, '/games/g_saved/commands?source=phone');
     assert.equal(req.method, 'POST');
     assert.equal(req.headers.authorization, 'Basic bG9jYWw6bG9jYWw=');
     let body = '';
@@ -23,7 +23,7 @@ test('forwards an authenticated choice, query and receipt and preserves conflict
     res.end(JSON.stringify({ detail: 'stale choice' }));
   });
   const web = await listen(t, proxyApi(() => assert.fail('API request fell through'), api.address().port));
-  const response = await fetch(`http://127.0.0.1:${web.address().port}/api/games/g_saved/act?source=phone`, {
+  const response = await fetch(`http://127.0.0.1:${web.address().port}/api/games/g_saved/commands?source=phone`, {
     method: 'POST', headers: { Authorization: 'Basic bG9jYWw6bG9jYWw=', 'Content-Type': 'application/json' },
     body: JSON.stringify({ option_id: 'move:quay', revision: 3, request_id: 'same-receipt' }),
   });

@@ -310,7 +310,6 @@ def conforms(u: Universe, s: State) -> list[str]:
     for pred, index in (("regards", s.regards_), ("fill", {(o,): n for o, n in s.fill_.items()}),
                         ("stat", s.stat_), ("flag", {(f,): v for f, v in s.flag_.items()})):
         for key, v in index.items():
-            key = key if isinstance(key, tuple) else (key,)
             lim = u.limit(pred, key)
             if lim is None:
                 problems.append(f"{pred} {key} has no range")

@@ -77,7 +77,7 @@ class CommandBody(Strict):
         return {k: v for k, v in self.model_dump().items() if v is not None}
 
 
-def _error(e: Exception) -> JSONResponse:
+async def _error(request: Request, e: Exception) -> JSONResponse:
     if isinstance(e, Missing):
         return JSONResponse({"reason": ko.ERRORS["missing"]}, status_code=404)
     if isinstance(e, Incompatible):
@@ -87,7 +87,11 @@ def _error(e: Exception) -> JSONResponse:
     return JSONResponse({"reason": str(e) or ko.ERRORS["invalid"]}, status_code=422)
 
 
-HANDLED = (Missing, Incompatible, Conflict, Invalid)
+def add_error_handlers(app) -> None:
+    for e in (Missing, Incompatible, Conflict, Invalid):
+        app.add_exception_handler(e, _error)
+
+
 router = APIRouter(dependencies=[Depends(authenticate)])
 Service = Annotated[GameService, Depends(service)]
 
@@ -99,26 +103,17 @@ async def stories(game: Service) -> list[dict]:
 
 @router.post("/games")
 async def create(body: CreateBody, game: Service):
-    try:
-        return await game.create(body.request_id, body.story, body.creation.model_dump())
-    except HANDLED as e:
-        return _error(e)
+    return await game.create(body.request_id, body.story, body.creation.model_dump())
 
 
 @router.get("/games/{game_id}")
 async def get(game_id: str, game: Service):
-    try:
-        return await game.view(game_id)
-    except HANDLED as e:
-        return _error(e)
+    return await game.view(game_id)
 
 
 @router.post("/games/{game_id}/commands")
 async def command(game_id: str, body: CommandBody, game: Service):
-    try:
-        return await game.command(game_id, body.payload())
-    except HANDLED as e:
-        return _error(e)
+    return await game.command(game_id, body.payload())
 
 
 def _ndjson(events) -> StreamingResponse:
@@ -130,15 +125,9 @@ def _ndjson(events) -> StreamingResponse:
 
 @router.get("/games/{game_id}/turns/{n}/narration")
 async def narration(game_id: str, n: int, game: Service):
-    try:
-        return _ndjson(await game.narration(game_id, n))
-    except HANDLED as e:
-        return _error(e)
+    return _ndjson(await game.narration(game_id, n))
 
 
 @router.get("/games/{game_id}/chapters/{k}/recap")
 async def recap(game_id: str, k: int, game: Service):
-    try:
-        return _ndjson(await game.recap(game_id, k))
-    except HANDLED as e:
-        return _error(e)
+    return _ndjson(await game.recap(game_id, k))

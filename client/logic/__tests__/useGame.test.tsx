@@ -191,6 +191,16 @@ test('the menu goes to the start screen, which resumes the same game', async () 
   expect(getGame).toHaveBeenCalledTimes(1);
 });
 
+test('a game gone missing mid-play goes to the start screen with nothing to resume', async () => {
+  (sendCommand as jest.Mock).mockRejectedValueOnce(new ApiError(404, null, null));
+  await mount();
+  await run(() => game.command({ action: 'go:village' }));
+  expect(game.phase).toBe('start');
+  expect(clearGameId).toHaveBeenCalled();
+  expect(game.view).toBeNull();
+  expect(game.canResume).toBe(false);
+});
+
 test('commands stay locked while the turn is revealed and narrated', async () => {
   (sendCommand as jest.Mock).mockResolvedValue(turn(after()));
   await mount();

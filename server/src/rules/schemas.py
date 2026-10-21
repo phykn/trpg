@@ -39,6 +39,10 @@ class Ctx:
 def scene_end(u, w: Work) -> None:
     w.expire("scene")
     w.set_("stat", (PLAYER, "beats"), 0)
+    tick_threats(u, w)
+
+
+def tick_threats(u, w: Work) -> None:
     for o in active_threats(u, w.state()):
         w.set_("fill", (o,), "+1")
 
@@ -188,8 +192,7 @@ def _cut(ctx, how):
     scene_end(ctx.u, ctx.work)
     if how == "rest":
         ctx.work.set_("stat", (PLAYER, "wounds"), "-1")
-        for o in active_threats(ctx.u, ctx.work.state()):
-            ctx.work.set_("fill", (o,), "+1")
+        tick_threats(ctx.u, ctx.work)       # on top of the scene end's tick (rule.md, cut(rest))
 
 
 def _choose(ctx, g, c):

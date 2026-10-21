@@ -41,6 +41,8 @@ from .view import (
 
 GAME_ID = re.compile(r"g_[a-f0-9]{32}")
 RECEIPTS = 50
+PREVIOUS_TURNS = 3
+RECAP_NOTABLE = 5
 
 
 class Missing(LookupError):
@@ -70,6 +72,7 @@ class Stream:
         self.events: list[dict] = []
         self.done = False
         self.cond = asyncio.Condition()
+        self.task: asyncio.Task | None = None    # held so the running narration is not garbage-collected
 
     async def push(self, *events: dict, done: bool = False) -> None:
         async with self.cond:
@@ -266,7 +269,9 @@ class GameService:
             # How the sentence ended, for the interpretation metric (fun.md F1).
             card = p.get("card")
             outcome = ("idle" if out["plan"][0].get("idle")
-                       else "clarify" if card and card["kind"] == "clarify" else "accepted")
+                       else "clarify" if card and card["kind"] == "clarify"
+                       # a waiting card the sentence discarded and nothing done: refused, though the response is a turn
+                       else "refused" if not result["steps"] and card is None else "accepted")
             p["requests"].append({"kind": "text", "text": text, "outcome": outcome})
         return result
 
@@ -351,6 +356,8 @@ class GameService:
         if records or p["card"] is not None or had_card:
             p["revision"] += 1
         if not records and p["card"] is None and not had_card:
+            if kind == "text":
+                p["requests"].append({"kind": "refused", "text": text})
             why = unreachable(u, observe(u, g.state, g.log), text, "") if text else None
             return self._refused(u, g, already or why or "candidate")
         return self._result(u, g, "card" if p["card"] else "turn", turn, records)
@@ -390,7 +397,7 @@ class GameService:
             mark = step.after.mark_.get((x, slot))
             atom = ("mark", x, *mark, slot) if mark else None
             if atom and atom in step.delta.add:
-                p["tags"].append([list(atom), t, default_tag_name(u, name, mark[0])])
+                p["tags"].append([list(atom), t, default_tag_name(name, mark[0])])
         if a.schema == "choose":
             p["choices"].append({"kind": "fork", "name": label, "chapter": k})
         ending = step.after.flag("ending") if ended(step.after) and not ended(s) else None
@@ -399,25 +406,25 @@ class GameService:
         return step_record(u, p, g.log.seen[PLAYER][-1], label, ending)
 
     async def narration(self, game_id: str, n: int):
-        return await self._narration(game_id, ("turn", n))
+        return await self._narration(game_id, "narration", n, self._turn_job)
 
     async def recap(self, game_id: str, k: int):
-        return await self._narration(game_id, ("recap", k))
+        return await self._narration(game_id, "recap", k, self._recap_job)
 
-    async def _narration(self, game_id: str, what: tuple):
+    async def _narration(self, game_id: str, store: str, n: int, job_of):
         async with self.lock(game_id):
             u, g = await self.load(game_id)
-            store, key = ("narration", str(what[1])) if what[0] == "turn" else ("recap", str(what[1]))
+            key = str(n)
             entry = g.presentation.get(store, {}).get(key)
             if entry is not None:
                 return _cached(entry)
-            job = self._turn_job(u, g, what[1]) if what[0] == "turn" else self._recap_job(u, g, what[1])
+            job = job_of(u, g, n)
             if job is None:
-                raise Missing(f"{what[0]} {what[1]}")
-            sid = (game_id, *what)
+                raise Missing(f"{store} {n}")
+            sid = (game_id, store, n)
             if sid not in self.streams:
-                self.streams[sid] = Stream()
-                asyncio.create_task(self._make(game_id, sid, store, key, job))
+                stream = self.streams[sid] = Stream()
+                stream.task = asyncio.create_task(self._make(game_id, sid, store, key, job))
             return self.streams[sid].read()
 
     async def _make(self, game_id: str, sid: tuple, store: str, key: str, job: Job) -> None:
@@ -434,7 +441,11 @@ class GameService:
                     p.setdefault(store, {})[key] = entry
                     for t in entry["tags"]:
                         p["tags"][t["index"]][2] = t["name"]
-                    await self.store(u, g)
+                    try:
+                        await self.store(u, g)
+                    except BaseException:
+                        self.games.pop(game_id, None)       # an unsaved narration is not served from memory
+                        raise
                 await stream.push(*[x async for x in _cached(entry)], done=True)
         except Exception as exc:  # noqa: BLE001 -- a stream must end; the next request starts over
             await stream.push({"type": "error", "message": f"{type(exc).__name__}"}, done=True)
@@ -451,11 +462,12 @@ class GameService:
         if turn is None:
             return None
         o = self._at(u, g, turn["t1"])
+        changes = [c for r in turn["steps"] for c in r["changes"]]
         happened, delta, ids, named = [], [], set(), []
         for r in turn["steps"]:
-            lines, changes = step_lines(u, r)
+            lines, told = step_lines(u, r)
             happened += lines
-            delta += changes
+            delta += told
             ids |= change_ids(r)
             named += r["action"].split(";")[0].split(":")[1:]
             named += [c["id"] for c in r["changes"] if c["kind"] == "follow" or c.get("with")]
@@ -464,23 +476,22 @@ class GameService:
         speakers = [x for x in dict.fromkeys(named) if x in people]
         # A companion who stayed is out of sight once the player has gone, so where they stayed is where the player
         # left; reading it from the view gave None and broke the narration (qa_test/runs/play-3-talker 33).
-        went = next((c["from"] for r in turn["steps"] for c in r["changes"] if c["kind"] == "move" and c["id"] == PLAYER),
-                    None)
-        left = {c["id"]: q for r in turn["steps"] for c in r["changes"]
+        went = next((c["from"] for c in changes if c["kind"] == "move" and c["id"] == PLAYER), None)
+        left = {c["id"]: q for c in changes
                 if c["kind"] == "follow" and c["state"] == "stop" and (q := o.facts.where(c["id"]) or went) and q != here}
-        joined = tuple(c["id"] for r in turn["steps"] for c in r["changes"] if c["kind"] == "follow" and c["state"] == "start")
+        joined = tuple(c["id"] for c in changes if c["kind"] == "follow" and c["state"] == "start")
         tags = [{"index": i, "slot": atom[4], "owner": atom[1], "name": name}
                 for i, (atom, t, name) in enumerate(p["tags"])
                 if turn["t0"] <= t <= turn["t1"] and o.facts.mark_.get((atom[1], atom[4])) == tuple(atom[2:4])]
-        kinds = {c["kind"] for r in turn["steps"] for c in r["changes"]}
-        ending = next((c["id"] for r in turn["steps"] for c in r["changes"] if c["kind"] == "ending"), None)
+        kinds = {c["kind"] for c in changes}
+        ending = next((c["id"] for c in changes if c["kind"] == "ending"), None)
         previous = [p["narration"][str(m)]["text"] for m in range(max(1, n - PREVIOUS_TURNS), n)
                     if str(m) in p["narration"]]
         grown = all(r["action"].startswith("grow:") for r in turn["steps"])
-        progress = {c["id"]: c["to"] >= u.boxes(c["id"]) for r in turn["steps"] for c in r["changes"]
+        progress = {c["id"]: c["to"] >= u.boxes(c["id"]) for c in changes
                     if c["kind"] == "fill" and c["to"] > c["from"]}
         blocked = tuple(r["label"] for r in turn["steps"] if r["result"] == "blocked")
-        came = [c for r in turn["steps"] for c in r["changes"] if c["kind"] in ("crisis", "arrival")]
+        came = [c for c in changes if c["kind"] in ("crisis", "arrival")]
         struck = tuple(dict.fromkeys(c["name"] for c in came if not c["id"].startswith("deadline.")))
         missed = tuple(dict.fromkeys(c["name"] for c in came if c["id"].startswith("deadline.")))
         # A blocked step rolls nothing, so nothing was leaned on (rule.md 3.4).
@@ -517,10 +528,6 @@ class GameService:
         task = ko.fill(ko.RECAP_TASK, title=u.chapter_of(k).title, sentences=RECAP_SENTENCES, chars=RECAP_CHARS)
         return Job(u, o, p, lines, lines, {PLAYER, o.facts.where(PLAYER)}, chars=RECAP_CHARS,
                    sentences=RECAP_SENTENCES, task=task)
-
-
-PREVIOUS_TURNS = 3
-RECAP_NOTABLE = 5
 
 
 def notable_step(u, r: dict) -> bool:

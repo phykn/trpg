@@ -15,14 +15,14 @@ export type Phase =
   | 'loading' | 'start' | 'idle' | 'sending' | 'card' | 'rolling' | 'revealing' | 'narrating'
   | 'stuck' | 'narration_error' | 'blocked' | 'ending';
 
-export type Reveal = { steps: StepRecord[]; beats: Beat[]; start: number; card: Card | null; skipped: boolean };
-export type Narration = { stage: string | null; text: string | null; recap: string | null; error: string | null };
+type Reveal = { steps: StepRecord[]; beats: Beat[]; start: number; card: Card | null; skipped: boolean };
+export type Narration = { text: string | null; recap: string | null; error: string | null };
 
 type Pending =
   | { kind: 'command'; requestId: string; revision: number; body: CommandBody; gameId: string }
   | { kind: 'create'; requestId: string; story: string; creation: Creation };
 
-const EMPTY: Narration = { stage: null, text: null, recap: null, error: null };
+const EMPTY: Narration = { text: null, recap: null, error: null };
 
 export function requestId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
@@ -35,7 +35,7 @@ export function destination(view: GameView, growthLater: boolean): Phase {
   return 'idle';
 }
 
-export function recapChapter(steps: StepRecord[], view: GameView): number | null {
+function recapChapter(steps: StepRecord[], view: GameView): number | null {
   for (const s of steps) {
     for (const c of s.changes) {
       if (c.kind === 'chapter') return c.from as number;
@@ -104,12 +104,11 @@ export function useGame(reduced = false) {
     let failed = false;
     await stream(path, (e) => {
       if (!mounted.current) return;
-      if (e.type === 'stage') setNarration((n) => ({ ...n, stage: e.stage }));
-      else if (e.type === 'text') onText(e.text);
+      if (e.type === 'text') onText(e.text);
       else if (e.type === 'done') onDone(e);
       else if (e.type === 'error') {
         failed = true;
-        setNarration((n) => ({ ...n, stage: null, error: e.message ?? '' }));
+        setNarration((n) => ({ ...n, error: e.message ?? '' }));
       }
     });
     return !failed;
@@ -120,13 +119,13 @@ export function useGame(reduced = false) {
     if (!id) return;
     turn.current = { ...turn.current, narrated: false, typed: false, recap, failed: false };
     setNarration(EMPTY);
-    const ok = await read(narrationPath(id, n), (text) => setNarration((x) => ({ ...x, text, stage: null })), (e) => {
+    const ok = await read(narrationPath(id, n), (text) => setNarration((x) => ({ ...x, text })), (e) => {
       if (e.type === 'done' && viewRef.current) accept(renameTags(viewRef.current, e.tags));
     });
     if (ok && recap !== null) {
       const recapped = await read(recapPath(id, recap), (text) => {
         turn.current.typed = false;                   // the narration may be typed out already; the recap is not
-        setNarration((x) => ({ ...x, recap: text, stage: null }));
+        setNarration((x) => ({ ...x, recap: text }));
         setRecaps((r) => ({ ...r, [recap]: text }));    // the view lists only recaps cached before it was sent
       }, () => undefined);
       if (!recapped) { turn.current.failed = true; maybeEnd(); return; }
@@ -205,6 +204,8 @@ export function useGame(reduced = false) {
       } else if (cause.status === 404) {
         clearGameId();
         gameId.current = null;
+        viewRef.current = null;
+        setView(null);
         setPhase('start');
       } else {
         setNotice(cause.reason ?? ko.serverError);
@@ -233,6 +234,14 @@ export function useGame(reduced = false) {
     return p?.kind === 'command' && 'pick' in p.body && viewRef.current?.card?.kind === 'roll';
   }
 
+  function send(p: Pending) {
+    if (rolls(p)) {
+      rollAt.current = Date.now();
+      setPhase('rolling');
+    } else setPhase('sending');
+    dispatch(p);
+  }
+
   function command(body: CommandBody) {
     const v = viewRef.current;
     const id = gameId.current;
@@ -241,24 +250,13 @@ export function useGame(reduced = false) {
     const p: Pending = { kind: 'command', requestId: requestId(), revision: v.revision, body, gameId: id };
     pending.current = p;
     setNotice(null);
-    if (rolls(p)) {
-      rollAt.current = Date.now();
-      setPhase('rolling');
-    } else {
-      setSent('text' in body ? body.text : null);
-      setPhase('sending');
-    }
-    dispatch(p);
+    setSent('text' in body ? body.text : null);
+    send(p);
   }
 
   function resend() {
     const p = pending.current;
-    if (!p || phase !== 'stuck') return;
-    if (rolls(p)) {
-      rollAt.current = Date.now();
-      setPhase('rolling');
-    } else setPhase('sending');
-    dispatch(p);                                     // the same request id and body: the receipt answers
+    if (p && phase === 'stuck') send(p);             // the same request id and body: the receipt answers
   }
 
   function create(story: string, creation: Creation) {
@@ -266,8 +264,7 @@ export function useGame(reduced = false) {
     const p: Pending = { kind: 'create', requestId: requestId(), story, creation };
     pending.current = p;
     setNotice(null);
-    setPhase('sending');
-    dispatch(p);
+    send(p);
   }
 
   async function restore() {
@@ -302,6 +299,8 @@ export function useGame(reduced = false) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const newGame = () => { if (!pending.current) { setNotice(null); setPhase('start'); } };
+
   return {
     phase, stories, view, before, notice, reveal, narration, recaps, sent, growthLater, gameId: gameId.current,
     // A creation in flight or lost keeps the start screen; a lost roll keeps its card, where the resend goes.
@@ -319,8 +318,8 @@ export function useGame(reduced = false) {
     },
     laterGrowth: () => { growthRef.current = true; setGrowthLater(true); settle(); },
     openGrowth: () => { growthRef.current = false; setGrowthLater(false); if (phase === 'idle') setPhase('card'); },
-    newGame: () => { if (!pending.current) { setNotice(null); setPhase('start'); } },
-    toTitle: () => { if (!pending.current && ['idle', 'card'].includes(phase)) { setNotice(null); setPhase('start'); } },
+    newGame,
+    toTitle: () => { if (['idle', 'card'].includes(phase)) newGame(); },
     canResume: phase === 'start' && !!view && !view.ending,
     resume: () => { const v = viewRef.current; if (phase === 'start' && v && !v.ending) setPhase(destination(v, growthRef.current)); },
   };

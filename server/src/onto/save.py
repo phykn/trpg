@@ -65,10 +65,8 @@ def rebuild(u: Universe, data: dict) -> Game:
         raise SaveError("incompatible schema_version")
     if data.get("story", {}).get("digest") != u.digest:
         raise SaveError("incompatible story")
-    g = Game(data["game_id"], u.id, data["seed"], data["creation"], initial(u, data["creation"]),
-             presentation=data.get("presentation", {}))
-    g.state, g.log = replay(u, data["creation"], [Event.from_json(raw) for raw in data["log"]])
-    return g
+    s, log = replay(u, data["creation"], [Event.from_json(raw) for raw in data["log"]])
+    return Game(data["game_id"], u.id, data["seed"], data["creation"], s, log, data.get("presentation", {}))
 
 
 def replay(u: Universe, creation: dict, events: list[Event]) -> tuple[State, Log]:
@@ -82,10 +80,3 @@ def replay(u: Universe, creation: dict, events: list[Event]) -> tuple[State, Log
         s = after
     return s, log
 
-
-def load(u: Universe, path: Path) -> Game:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as e:
-        raise SaveError(str(e)) from None
-    return rebuild(u, data)

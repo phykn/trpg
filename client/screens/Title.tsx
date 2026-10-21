@@ -9,9 +9,7 @@ import { ko } from '@/locale/ko';
 import type { GameView, Story } from '@/services/types';
 import { version } from '../package.json';
 
-function Shelf({ stories, at, onStep }: { stories: Story[]; at: number; onStep: (d: number) => void }) {
-  const s = stories[at];
-  const many = stories.length > 1;
+function Shelf({ story: s, many, onStep }: { story: Story; many: boolean; onStep: (d: number) => void }) {
   return (
     <View className="gap-1.5 rounded-2xl border border-border-default bg-canvas-subtle px-4 py-3.5">
       <View className="min-h-[36px] flex-row items-center">
@@ -28,7 +26,8 @@ export function Title({ stories, saved, onResume, onPick }: {
   stories: Story[]; saved: GameView | null; onResume: () => void; onPick: (id: string) => void;
 }) {
   const [at, setAt] = useState(() => Math.max(0, stories.findIndex((x) => x.id === saved?.story.id)));
-  const s = stories[Math.min(at, stories.length - 1)];
+  const i = Math.min(at, stories.length - 1);
+  const s = stories[i];
   const here = saved && s && saved.story.id === s.id ? saved : null;
   const logo = useEnter(10);
   const shelf = useEnter(12, 120);
@@ -47,7 +46,7 @@ export function Title({ stories, saved, onResume, onPick }: {
       {s ? (
         <Animated.View style={shelf}>
           <View className="gap-3">
-            <Shelf stories={stories} at={stories.indexOf(s)} onStep={(d) => setAt((stories.indexOf(s) + d + stories.length) % stories.length)} />
+            <Shelf story={s} many={stories.length > 1} onStep={(d) => setAt((i + d + stories.length) % stories.length)} />
             <View className="gap-2">
               {here ? (
                 <Button icon="play" label={ko.resume} onPress={onResume}

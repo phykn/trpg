@@ -19,12 +19,11 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+async function request<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, {
     method: body === undefined ? 'GET' : 'POST',
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
-    signal,
   });
   if (!response.ok) {
     let payload: { view?: GameView; reason?: string } = {};
@@ -37,11 +36,11 @@ async function request<T>(path: string, body?: unknown, signal?: AbortSignal): P
 const game = (id: string) => `/games/${encodeURIComponent(id)}`;
 
 export const getStories = () => request<Story[]>('/stories');
-export const createGame = (requestId: string, story: string, creation: Creation, signal?: AbortSignal) =>
-  request<{ game_id: string; view: GameView }>('/games', { request_id: requestId, story, creation }, signal);
+export const createGame = (requestId: string, story: string, creation: Creation) =>
+  request<{ game_id: string; view: GameView }>('/games', { request_id: requestId, story, creation });
 export const getGame = (id: string) => request<GameView>(game(id));
-export const sendCommand = (id: string, requestId: string, revision: number, body: CommandBody, signal?: AbortSignal) =>
-  request<CommandResult>(`${game(id)}/commands`, { request_id: requestId, revision, ...body }, signal);
+export const sendCommand = (id: string, requestId: string, revision: number, body: CommandBody) =>
+  request<CommandResult>(`${game(id)}/commands`, { request_id: requestId, revision, ...body });
 
 export class LineReader {
   private buffer = '';

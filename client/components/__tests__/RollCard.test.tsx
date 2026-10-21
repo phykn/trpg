@@ -90,3 +90,23 @@ test('once rolling, the help, the dice and the close button are locked', async (
   expect(labelled(tree!, ko.close)).toBe(false);
   await flush(async () => { tree!.unmount(); });
 });
+
+test('a decisive chip says whether it helped or hindered', async () => {
+  const step = {
+    t: 1, action: 'try:door:finesse', label: 'door', result: 'success' as const, risk: 'normal' as const, dc: 8,
+    roll: { d1: 3, d2: 3 }, total: 8, decisive: [1, 2], changes: [],
+    mods: [{ kind: 'stat' as const, label: 'finesse', value: 2 }, { kind: 'help' as const, label: 'key', value: 1 },
+      { kind: 'hinder' as const, label: 'storm', value: -1 }],
+  };
+  const frame = {
+    step: 0, dice: [3, 3] as [number, number], point: 8, chips: 3, settled: 'success', decisive: [1, 2], boxes: {},
+    folded: false, changes: [], blocked: null, done: true,
+  };
+  let tree: ReturnType<typeof renderer.create>;
+  await flush(async () => {
+    tree = renderer.create(<RollCard card={card()} step={step} frame={frame} onRoll={jest.fn()} onCancel={jest.fn()} />);
+  });
+  expect(texts(tree!)).toContain(`key +1 ${ko.thanks}`);
+  expect(texts(tree!)).toContain(`storm −1 ${ko.because}`);
+  await flush(async () => { tree!.unmount(); });
+});

@@ -12,9 +12,10 @@ from .lang.claims import accepts, claims, subjects
 from .lang.context import fact_line, render, scene
 from .lang.polite import QUOTED, plain, polite
 from .locale import ko
-from .models.decision import ModelUnavailable
+from .models.decision import ModelUnavailable, choice, probs_of
 from .onto.atoms import PLAYER
 from .onto.view import Obs
+from .view import name
 
 ATTEMPTS = 3                 # one draft and two rewrites
 SENTENCES, CHARS = 4, 200
@@ -99,7 +100,7 @@ def change_line(u, c: dict) -> str | None:
     if k in ("clock", "crisis", "arrival", "chapter", "ending"):
         return ko.fill(ko.CHANGE[k], name=c["name"])
     if k in ("tag_add", "tag_remove"):
-        owner = "당신" if c["owner"] == PLAYER else u.name(c["owner"])
+        owner = name(u, c["owner"])
         agent = k == "tag_add" and (c["owner"] == PLAYER or u.kind(c["owner"]) == "agent")
         return ko.fill(ko.CHANGE["tag_add_agent" if agent else k], owner=owner, name=c["name"])
     if k == "scar":
@@ -109,9 +110,9 @@ def change_line(u, c: dict) -> str | None:
     if k == "move":
         to = c["to"]
         if to == PLAYER or u.kind(to) == "agent":
-            return ko.fill(ko.CHANGE["move_get"], to="당신" if to == PLAYER else c["to_name"], name=c["name"])
+            return ko.fill(ko.CHANGE["move_get"], to=c["to_name"], name=c["name"])
         if c["from"] == PLAYER:
-            return ko.fill(ko.CHANGE["move_lose"], **{"from": "당신"}, name=c["name"])
+            return ko.fill(ko.CHANGE["move_lose"], **{"from": ko.YOU}, name=c["name"])
         return ko.fill(ko.CHANGE["move_with" if c.get("with") else "move_place"], name=c["name"], to=c["to_name"])
     if k == "follow":
         # Agreeing to come while still avoiding a place read as a broken promise at the next move card
@@ -208,6 +209,10 @@ def afar(job: Job, x: str, sentence: str) -> bool:
             and any(x in a[1:3] for a in legacy(job.u, job.o)))
 
 
+def legacy_lines(job: Job) -> list[str]:
+    return [x for a in legacy(job.u, job.o) if (x := fact_line(job.u, job.p, a))]
+
+
 WORD = re.compile(r"[가-힣]+")
 WORN = 3
 
@@ -230,7 +235,7 @@ def worn(u, previous: list[str]) -> list[str]:
     skipped, "젖은 손" came three turns running (play-5-talker 28–30)."""
     names = [n for x in (*u.places, *u.agents, *u.things, *u.obstacles) for n in (u.name(x), *u.aliases(x))]
     story = {k for t in (*names, *(c for q in u.places.values() for c in q.senses)) for k in pairs(t)}
-    who = {"당신", *(w for n in names for w in n.split() if len(w) >= 2)}
+    who = {ko.YOU, *(w for n in names for w in n.split() if len(w) >= 2)}
     seen = [pairs(t) for t in previous]
     count: dict = {}
     for d in seen:
@@ -272,7 +277,7 @@ def steering(job: Job, lines) -> list[str]:
         # The usual cue, pace and close ("end on someone's reaction") outweighed the frame, so no ending told
         # whether the boats came home, and with a cue the legacy never fit in 160 characters (play-2-explorer 44,
         # play-2-talker 48).
-        kept = [x for a in legacy(u, job.o) if (x := fact_line(u, job.p, a))]
+        kept = legacy_lines(job)
         if tired:
             out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
         if kept:
@@ -370,7 +375,7 @@ class Narrator:
             return out
         return await asyncio.wait_for(run(), self.timeout)
 
-    def rules(self, job: Job, said: list[str], names: list[str]) -> tuple[dict[int, list[str]], list[str]]:
+    def rules(self, job: Job, said: list[str]) -> tuple[dict[int, list[str]], list[str]]:
         u, facts = job.u, job.o.facts
         bad = forbidden(u, job.o)
         gone = absent(job)
@@ -424,9 +429,9 @@ class Narrator:
         bad = forbidden(job.u, job.o)
         out = []
         for i, t in enumerate(job.tags):
-            name = names[i] if i < len(names) else ""
-            ok = 0 < len(name) <= TAG_CHARS and not any(w in name for w in bad) and not DIGIT.search(name)
-            out.append({**t, "name": name if ok else t["name"]})
+            given = names[i] if i < len(names) else ""
+            ok = 0 < len(given) <= TAG_CHARS and not any(w in given for w in bad) and not DIGIT.search(given)
+            out.append({**t, "name": given if ok else t["name"]})
         return out
 
     async def judge(self, job: Job, said: list[str], skip: set[int]) -> dict[int, list[str]]:
@@ -434,12 +439,12 @@ class Narrator:
         if job.happened:
             state += "\n" + ko.HEAD["happened"] + "\n" + "\n".join(f"- {x}" for x in job.happened)
         if job.ending:
-            kept = [x for a in legacy(job.u, job.o) if (x := fact_line(job.u, job.p, a))]
+            kept = legacy_lines(job)
             state += "\n" + "\n".join([ko.HEAD["ending"], job.ending, *(f"- {x}" for x in kept)])
         qs = {}
         for i, s in enumerate(said):
             if i not in skip:
-                qs[str(i)] = {"type": "choice", "instructions": f"{ko.CHECK_QUESTION}\n문장: {s}", "criteria": ko.CHECK}
+                qs[str(i)] = choice(ko.fill(ko.CHECK_QUESTION, text=s), ko.CHECK)
         if not qs:
             return {}
         try:
@@ -448,8 +453,7 @@ class Narrator:
             answers = {}
         out: dict[int, list[str]] = {}
         for i in qs:
-            a = answers.get(i)
-            probs = dict(a.probabilities) if a is not None and a.probabilities else {}
+            probs = probs_of(answers.get(i))
             # An unreadable check answer cannot clear a sentence.
             if probs.get("fine", 0.0) > 1 - self.theta:
                 continue
@@ -473,7 +477,7 @@ class Narrator:
             if not said:
                 continue
             yield {"type": "stage", "stage": "checking"}
-            per, whole = self.rules(job, said, names)
+            per, whole = self.rules(job, said)
             per2 = await self.judge(job, said, set(per))
             for i, why in per2.items():
                 per.setdefault(i, []).extend(why)

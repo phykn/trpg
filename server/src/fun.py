@@ -13,6 +13,7 @@ from .onto.log import matches
 from .onto.save import SaveError, rebuild
 from .onto.universe import initial
 from .rules.acts import parse
+from .story.load import StoryError
 from .story.validate import load_all
 
 QUIT_DAYS = 7
@@ -42,16 +43,15 @@ class Play:
         self.u, self.data, self.mtime = u, data, mtime
         self.g = rebuild(u, data)
         self.events = self.g.log.events
-        self.p = data.get("presentation", {})
-        self.turns = self.p.get("turns", [])
-        self.requests = self.p.get("requests", [])
+        self.turns = self.g.presentation.get("turns", [])
+        self.requests = self.g.presentation.get("requests", [])
         self.steps = [s for t in self.turns for s in t["steps"]]
         self.chapter_at: dict[int, int] = {}
         k = 1
         for s in self.steps:
             self.chapter_at[s["t"]] = k
             k += sum(1 for c in s["changes"] if c["kind"] == "chapter")
-        self.ending = self.p.get("ending") or next(
+        self.ending = self.g.presentation.get("ending") or next(
             (c["id"] for s in self.steps for c in s["changes"] if c["kind"] == "ending"), None)
 
     def rolled(self):
@@ -252,13 +252,14 @@ def f13_14(plays) -> dict:
 def measure(saves: list[Path], stories: dict, now: float) -> dict:
     plays, skipped = [], []
     for path in saves:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        u = stories.get(data.get("story", {}).get("id"))
         try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            u = stories.get(data.get("story", {}).get("id"))
             if u is None:
                 raise SaveError("unknown story")
             plays.append(Play(u, data, path.stat().st_mtime))
-        except SaveError as e:
+        # the same saves the service refuses as incompatible (service.load)
+        except (SaveError, StoryError, ValueError, KeyError, TypeError, AttributeError) as e:
             skipped.append(f"{path.name}: {e}")
     rest = f13_14(plays)
     return {"games": len(plays), "skipped": skipped,

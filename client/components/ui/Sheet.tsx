@@ -31,14 +31,13 @@ export function Sheet({ title, icon, tone, onClose, children }: {
 }
 
 // One row per answer: the same height, the same left edge, a chevron that says it goes on.
-export function Choice({ label, sub, icon, primary, onPress }: {
-  label: string; sub?: string; icon?: IconName; primary?: boolean; onPress: () => void;
+export function Choice({ label, sub, primary, onPress }: {
+  label: string; sub?: string; primary?: boolean; onPress: () => void;
 }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={sub ? `${label}, ${sub}` : label} onPress={onPress}
       style={pressed}
       className={`min-h-[48px] flex-row items-center gap-3 rounded-xl px-4 py-2 ${primary ? 'bg-gold-fg' : 'border border-border-default bg-canvas-subtle'}`}>
-      {icon ? <Icon name={icon} size={16} color={primary ? colors.fg['on-emphasis'] : colors.fg.muted} /> : null}
       <View className="min-w-0 flex-1">
         <Text className={`font-sans-semibold text-body ${primary ? 'text-fg-on-emphasis' : 'text-fg-default'}`}>{label}</Text>
         {sub ? <Text className={`font-sans text-panel ${primary ? 'text-fg-on-emphasis opacity-80' : 'text-fg-muted'}`}>{sub}</Text> : null}

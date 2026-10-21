@@ -381,3 +381,19 @@ async def test_a_button_move_needs_no_card(svc):
     gid, view = await new(svc)
     out, view = await press(svc, gid, view, "go:village", "r1")
     assert out["kind"] == "turn" and view["card"] is None and view["scene"]["place"]["id"] == "village"
+
+
+async def test_every_sentence_that_does_nothing_counts_as_refused(tmp_path):
+    """A sentence whose first step cannot run is a refusal for F1 (fun.md), with or without a card waiting."""
+    svc = service(tmp_path, {"문으로": ["try:door:force"], "마당으로": ["go:yard"]})
+    gid, view = await new(svc)
+    out = await cmd(svc, gid, view, "t1", text="문으로")
+    assert out["kind"] == "refused"
+    _, view = await press(svc, gid, out["view"], "go:village", "r1")
+    out = await cmd(svc, gid, view, "t2", text="마당으로")
+    assert out["view"]["card"]["kind"] == "move"
+    out = await cmd(svc, gid, out["view"], "t3", text="문으로")
+    assert out["kind"] == "turn" and not out["steps"]
+    _, g = await svc.load(gid)
+    said = [r for r in g.presentation["requests"] if r.get("text") == "문으로"]
+    assert said == [{"kind": "refused", "text": "문으로"}, {"kind": "text", "text": "문으로", "outcome": "refused"}]

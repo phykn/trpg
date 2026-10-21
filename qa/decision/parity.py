@@ -160,7 +160,7 @@ async def run_check() -> tuple[list[str], Counter]:
             kinds.setdefault(want.split(":")[0], e["text"])
         paths = u.witnesses["paths"]
         for i in range(len(paths)):
-            for k in range(len(_path(u, paths, i, "parity")) + 1):
+            for k in range(len(_path(paths, i, "parity")) + 1):
                 states.setdefault(repr({"path": i, "step": k}), ({"path": i, "step": k}, list(kinds.values())))
         for at, texts in states.values():
             bad += await check_state(u, at, texts, n)

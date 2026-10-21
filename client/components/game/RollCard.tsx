@@ -6,13 +6,13 @@ import Animated, {
 
 import { IconButton, pressed } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { Notice, Resend } from '@/components/ui/Notice';
 import { useDialog } from '@/components/ui/useDialog';
 import { colors, fontFamily, motion } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { Frame } from '@/logic/reveal';
 import type { Card, CardOption, Chip, Preview, StepRecord } from '@/services/types';
 import { Boxes } from './Boxes';
-import { Notice, Resend } from './CommandBar';
 import { Dice } from './Dice';
 
 const plain = (o: CardOption) => !o.id.includes('rely=');

@@ -8,12 +8,10 @@ import { useEnter } from '@/components/ui/motion';
 import { colors, motion } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { Narration as N } from '@/logic/useGame';
-import type { Entry } from '@/logic/useLog';
+import type { Entry, Roll } from '@/logic/useLog';
 import { Face } from './Dice';
 
 const STORY = { fontSize: 16, lineHeight: 26 };
-
-export type Roll = { d1: number; d2: number; total: number; result: string; dc?: number; approach?: string };
 
 function Dot({ delay }: { delay: number }) {
   const t = useSharedValue(0);
@@ -28,7 +26,7 @@ function Dot({ delay }: { delay: number }) {
 }
 
 // The only waiting signal: no words, just a chat partner typing.
-export function Typing() {
+function Typing() {
   return (
     <View accessibilityLabel={ko.typing} className="h-[26px] flex-row items-center gap-[5px]">
       {[0, 180, 360].map((d) => <Dot key={d} delay={d} />)}
@@ -36,7 +34,7 @@ export function Typing() {
   );
 }
 
-export function RollLine({ roll }: { roll: Roll }) {
+function RollLine({ roll }: { roll: Roll }) {
   const won = roll.result === 'success';
   return (
     <View className="flex-row items-center gap-2">

@@ -2,6 +2,7 @@
 // Keeps both sides current: server/story edits restart the API, client edits redeploy the Worker.
 const { spawn, spawnSync } = require('node:child_process');
 const path = require('node:path');
+const { health } = require('./common.cjs');
 const { tunnelBinary } = require('./tunnel.cjs');
 
 const root = path.resolve(__dirname, '../..');
@@ -34,14 +35,7 @@ function track(child, name) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function healthy(base) {
-  try {
-    const response = await fetch(`${base}/health`, { signal: AbortSignal.timeout(5000) });
-    return response.ok && (await response.json()).mode === 'engine';
-  } catch {
-    return false;
-  }
-}
+const healthy = async (base) => (await health(base, 5000)) === 'engine';
 
 let api = null;
 

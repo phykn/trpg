@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
-import { Notice, Resend } from '@/components/game/CommandBar';
 import { Button, IconButton, pressed } from '@/components/ui/Button';
 import { Icon, type IconName } from '@/components/ui/Icon';
+import { Notice, Resend } from '@/components/ui/Notice';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { Creation, GameView, Story } from '@/services/types';

@@ -1,6 +1,6 @@
 import type { Change, StepRecord } from '@/services/types';
 
-export type Motion = {
+type Motion = {
   die: number; dieGap: number; line: number; chip: number; settle: number; decisive: number;
   box: number; fold: number; change: number; blockedFade: number; reduced: number;
 };
@@ -11,7 +11,7 @@ export type Beat = Base & (
   | { kind: 'line'; value: number }
   | { kind: 'chip'; index: number; value: number }
   | { kind: 'settle'; value: number; result: string }
-  | { kind: 'decisive'; index: number; word: 'thanks' | 'because' }
+  | { kind: 'decisive'; index: number }
   | { kind: 'box'; change: number }
   | { kind: 'fold' }
   | { kind: 'change'; change: number }
@@ -20,12 +20,12 @@ export type Beat = Base & (
 
 const ROW_KINDS = new Set(['fill', 'clock', 'crisis', 'arrival']);
 
-export function boxBeats(c: Change): number {
+function boxBeats(c: Change): number {
   if (c.kind === 'fill' || c.kind === 'clock') return Math.max(1, Math.abs((c.to as number) - (c.from as number)));
   return 1;
 }
 
-export function rolled(step: StepRecord): boolean {
+export function rolled(step: StepRecord): step is StepRecord & { roll: NonNullable<StepRecord['roll']> } {
   return step.roll !== null && step.result !== 'blocked';
 }
 
@@ -46,7 +46,7 @@ export function timeline(steps: StepRecord[], motion: Motion, reduced = false): 
       s.changes.forEach((_, c) => push(i, motion.change, { kind: 'change', change: c }));
       return;
     }
-    if (rolled(s) && s.roll) {
+    if (rolled(s)) {
       const roll = s.roll;
       push(i, motion.die, { kind: 'die', which: 1, value: roll.d1 });
       // d2 starts dieGap after d1 starts: the only overlap.
@@ -58,9 +58,7 @@ export function timeline(steps: StepRecord[], motion: Motion, reduced = false): 
         push(i, motion.chip, { kind: 'chip', index, value });
       });
       push(i, motion.settle, { kind: 'settle', value: s.total ?? value, result: s.result });
-      s.decisive.forEach((index) => push(i, motion.decisive, {
-        kind: 'decisive', index, word: s.mods[index]?.kind === 'hinder' ? 'because' : 'thanks',
-      }));
+      s.decisive.forEach((index) => push(i, motion.decisive, { kind: 'decisive', index }));
     }
     s.changes.forEach((c, change) => {
       if (!ROW_KINDS.has(c.kind)) return;

@@ -6,7 +6,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api import router
+from src.api import add_error_handlers, router
 from src.config import Settings, load_server_env, settings
 from src.interpret import Interpreter
 from src.models.decision import DecisionClient
@@ -47,6 +47,7 @@ def build_app(*, service: GameService, basic_auth_user: str, basic_auth_pass: st
     app.state.basic_auth_pass = basic_auth_pass
     app.state.service = service
     app.include_router(router)
+    add_error_handlers(app)
 
     @app.get("/health")
     async def health():

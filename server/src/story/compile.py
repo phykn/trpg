@@ -124,7 +124,7 @@ class _Builder:
         key = (prefix, result)
         if key not in self.pattern_keys:
             self.pattern_keys[key] = len(self.u.patterns)
-            self.u.patterns.append(compile_pattern(prefix, result))
+            self.u.patterns.append(compile_pattern(prefix, (result,) if result else None))
         return self.pattern_keys[key]
 
     def cond(self, raw, where) -> Cond:
@@ -158,10 +158,10 @@ class _Builder:
             if what == "fill" and len(a) == 3:
                 o = self.ref(a[1], ("obstacle",), where)
                 self.engine_owned(o, where)
-                return ("set", "fill", (o,), self.value(a[2], where))
+                return ("set", "fill", (o,), self.number(a[2], where))
             if what == "regards" and len(a) == 5:
                 g, h = self.ref(a[1], ("agent",), where), self.ref(a[2], ("agent",), where)
-                return ("set", "regards", (g, h, self.choice(a[3], AXES, where)), self.value(a[4], where))
+                return ("set", "regards", (g, h, self.choice(a[3], AXES, where)), self.number(a[4], where))
             if what == "flag" and len(a) == 3:
                 if a[1] not in self.u.flags or a[1] == "chapter" or a[1].startswith("fired_"):
                     self.fail(f"{where}: flag {a[1]} cannot be set by a story")
@@ -193,11 +193,15 @@ class _Builder:
             self.fail(f"{where}: clocks and deadlines cannot be targeted")
 
     def value(self, v, where):
-        if isinstance(v, str) and re.fullmatch(r"[+-]\d+", v):
-            return v
         if isinstance(v, (int, str)) and not isinstance(v, bool):
             return v
         self.fail(f"{where}: bad value {v!r}")
+
+    def number(self, v, where):
+        """A count or a step such as "+1"; a word here failed only when the effect ran."""
+        if isinstance(v, int) and not isinstance(v, bool) or isinstance(v, str) and re.fullmatch(r"[+-]\d+", v):
+            return v
+        self.fail(f"{where}: {v!r} is not a number or a step like +1")
 
     def build(self) -> Universe:
         r = self.map(self.raw, "story", allowed={
@@ -347,7 +351,7 @@ class _Builder:
                 else:
                     u.agents[bid] = self.agent(bid, bv, f"{w}.brings.{bid}", lid)
                 brings.append(bid)
-            self.pending.append(("latent", lid, lv, tuple(brings)))
+            self.pending.append((lid, lv, tuple(brings)))
             u.props[lid] = Prop(lid, self.text(lv["text"], w), tuple(brings), tuple(brings), (), True, "latent")
 
         for sec, table in (("places", u.places), ("characters", u.agents), ("things", u.things),
@@ -388,7 +392,7 @@ class _Builder:
             u.places[pid] = _replace(u.places[pid], complications=comps)
         for cid, cv in sections["characters"].items():
             u.agents[cid] = self.agent_parts(u.agents[cid], cv, f"characters.{cid}")
-        for _, lid, lv, brings in self.pending:
+        for lid, lv, brings in self.pending:
             w = f"latents.{lid}"
             for bid in brings:
                 if bid in u.agents:
@@ -457,16 +461,14 @@ class _Builder:
         for aid, ag in u.agents.items():
             if ag.favor is not None:
                 u.favor_patterns[aid] = len(u.patterns)
-                u.patterns.append(compile_pattern(f"talk:{aid}:favor", None, ("success", "none")))
+                u.patterns.append(compile_pattern(f"talk:{aid}:favor", ("success", "none")))
 
         # Triggers, in weaving order (story.md 3.11).
         woven = []
-        for oid, o in u.obstacles.items():
-            if o.sub == "threat":
-                woven.append(Trigger(f"appear.{oid}", o.appears_when, (("move", oid, PLAYER),), False, "appear"))
-        for oid, o in u.obstacles.items():
-            if o.sub == "fork":
-                woven.append(Trigger(f"appear.{oid}", o.appears_when, (("move", oid, PLAYER),), False, "appear"))
+        for sub in ("threat", "fork"):
+            for oid, o in u.obstacles.items():
+                if o.sub == sub:
+                    woven.append(Trigger(f"appear.{oid}", o.appears_when, (("move", oid, PLAYER),), False, "appear"))
         for tid, tv in sections["triggers"].items():
             w = f"triggers.{tid}"
             tv = self.map(tv, w, {"when", "effects", "repeat"}, ("when",))
@@ -561,7 +563,7 @@ class _Builder:
         return Obstacle(
             id=oid, sub="plain", name=self.text(ov["name"], w), aliases=self.texts(ov.get("aliases"), w),
             look=self.text(ov["look"], w), at=self.ref(ov["at"], ("place",), f"{w}.at"),
-            boxes=self.int(ov.get("boxes", 1), f"{w}.boxes", 1, 6),
+            boxes=self.u.obstacles[oid].boxes,
             risk=self.choice(ov.get("risk", "normal"), STORY_RISKS, f"{w}.risk"),
             fits=tuple(self.choice(x, APPROACHES, f"{w}.fits") for x in self.list(ov.get("fits"), w)),
             clashes=tuple(self.choice(x, APPROACHES, f"{w}.clashes") for x in self.list(ov.get("clashes"), w)),

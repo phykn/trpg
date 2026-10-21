@@ -62,10 +62,9 @@ def split_action(action: str) -> tuple[tuple[str, ...], dict[str, str]]:
     return tuple(head.split(":")), dict(j.split("=", 1) for j in judge)
 
 
-def compile_pattern(prefix: str, result: str | None, results: tuple[str, ...] | None = None) -> Pattern:
+def compile_pattern(prefix: str, results: tuple[str, ...] | None) -> Pattern:
     pieces, judge = split_action(prefix)
-    rs = frozenset(results) if results else (frozenset((result,)) if result else None)
-    return Pattern(pieces, tuple(sorted(judge.items())), rs)
+    return Pattern(pieces, tuple(sorted(judge.items())), frozenset(results) if results else None)
 
 
 def matches(p: Pattern, action: str, result: str) -> bool:

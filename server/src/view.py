@@ -12,7 +12,7 @@ from .rules.roll import DC, band, risk, rolls
 CLOCK_ORDER = ("clock", "deadline", "threat", "fork")
 
 
-def tag_name(u, p: dict, atom) -> str:
+def tag_name(p: dict, atom) -> str:
     key = list(atom)
     for a, _, name in reversed(p.get("tags", [])):
         if a == key:
@@ -20,14 +20,14 @@ def tag_name(u, p: dict, atom) -> str:
     return ko.TAG_DEFAULT[atom[2]]
 
 
-def default_tag_name(u, name: str | None, kind: str) -> str:
+def default_tag_name(name: str | None, kind: str) -> str:
     if name is None:
         return ko.TAG_DEFAULT[kind]
     return ko.TAG_KEYS.get(name, name)
 
 
 def name(u, x: str) -> str:
-    return "당신" if x == PLAYER else u.name(x)
+    return ko.YOU if x == PLAYER else u.name(x)
 
 
 def prop_label(u, pid: str) -> str:
@@ -41,12 +41,16 @@ def prop_label(u, pid: str) -> str:
     return ko.fill(ko.CLUE, name=u.name(p.about[0])) if p.about else p.text
 
 
+def holders(u, pid: str) -> list[str]:
+    return [a.id for a in u.agents.values() if any(t.prop == pid for t in a.topics)]
+
+
 def rely_label(u, p: dict, facts: State, rely: str) -> str:
     kind, _, rest = rely.partition(":")
     if kind == "tag":
         x, _, slot = rest.rpartition(":")
         life = facts.mark_.get((x, int(slot)), ("edge", "scene"))[1]
-        return tag_name(u, p, ("mark", x, "edge", life, int(slot)))
+        return tag_name(p, ("mark", x, "edge", life, int(slot)))
     if kind == "trait":
         return u.traits[rest][0]
     if kind == "thing":
@@ -59,7 +63,7 @@ def rely_label(u, p: dict, facts: State, rely: str) -> str:
 def atom_label(u, p: dict, atom) -> str:
     k = atom[0]
     if k == "mark":
-        return tag_name(u, p, atom)
+        return tag_name(p, atom)
     if k == "stat":
         return ko.APPROACHES.get(atom[2]) or u.traits[atom[2]][0]
     if k == "at":
@@ -159,7 +163,7 @@ def growth_name(u, o, p, a) -> tuple[str, str]:
     if i[0] == "trait":
         return "trait", ko.fill(ko.SWAP, old=u.traits[i[1]][0], new=u.traits[i[2]][0])
     if i[0] == "scar":
-        return "scar", tag_name(u, p, ("mark", PLAYER, "snag", "scar", int(i[1])))
+        return "scar", tag_name(p, ("mark", PLAYER, "snag", "scar", int(i[1])))
     v = o.facts.stat(PLAYER, i[0]) or 0
     return "approach", ko.fill(ko.ACTION["grow"], approach=ko.APPROACHES[i[0]], before=v, after=v + 1)
 
@@ -186,7 +190,7 @@ def effect_names(u, effects) -> list[str]:
         elif k == "set" and e[1] == "regards":
             out.append(ko.fill(ko.EFFECT["regards"], g=u.name(e[2][0])))
         elif k == "tag":
-            out.append(ko.fill(ko.EFFECT["tag"], name=default_tag_name(u, e[4], e[2])))
+            out.append(ko.fill(ko.EFFECT["tag"], name=default_tag_name(e[4], e[2])))
         elif k == "retire":
             out.append(ko.fill(ko.EFFECT["retire"], o=u.name(e[1])))
         elif k in ko.EFFECT:
@@ -201,12 +205,13 @@ def step_record(u, p: dict, seen: Seen, label: str, ending: str | None) -> dict:
     mods = chips_of_atoms(u, p, seen.mods)
     roll = {"d1": seen.roll[0], "d2": seen.roll[1]} if seen.roll else None
     total = decisive = None
-    dc = DC[risk(u, a)]
+    level = risk(u, a)
+    dc = DC[level]
     if roll:
         total = roll["d1"] + roll["d2"] + sum(c["value"] for c in mods)
         decisive = [i for i, c in enumerate(mods) if c["value"] and band(total - c["value"], dc) != seen.result]
     return {"t": seen.t, "action": seen.action, "label": label, "result": seen.result,
-            "risk": risk(u, a), "dc": dc if roll else None, "roll": roll, "mods": mods if roll else [], "total": total,
+            "risk": level, "dc": dc if roll else None, "roll": roll, "mods": mods if roll else [], "total": total,
             "decisive": decisive or [], "changes": changes(u, p, seen, a, ending)}
 
 
@@ -250,11 +255,11 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
         if at[0] == "mark":
             kind = "scar" if at[3] == "scar" else "tag_add"
             out.append({"kind": kind, "owner": at[1], "slot": at[4], "tag": at[2], "life": at[3],
-                        "name": tag_name(u, p, at)})
+                        "name": tag_name(p, at)})
     for at in sorted(rem, key=str):
         if at[0] == "mark" and not any(b[0] == "mark" and b[1] == at[1] and b[4] == at[4] for b in add):
             out.append({"kind": "tag_remove", "owner": at[1], "slot": at[4], "tag": at[2], "life": at[3],
-                        "name": tag_name(u, p, at)})
+                        "name": tag_name(p, at)})
     w0, w1 = value(rem, "stat", PLAYER, "wounds"), value(add, "stat", PLAYER, "wounds")
     if w0 is not None and w1 is not None:
         out.append({"kind": "wound", "from": w0, "to": w1})
@@ -287,10 +292,9 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
         if at[0] == "owes":
             g, h, k = at[1:]
             other = h if g == PLAYER else g
-            state = "made" if at in add else _closing(u, p, seen, other) if k == "promise" else "closed"
-            label = u.agents[other].favor.promise if k == "promise" and u.agents[other].favor else ""
+            state = "made" if at in add else _closing(p, seen) if k == "promise" else "closed"
             out.append({"kind": "promise", "id": other, "name": u.name(other), "owes": k, "debtor": g,
-                        "state": state, "promise": label})
+                        "state": state, "promise": _promise(u, other, k)})
     for at in add:
         if at[0] == "at" and at[1].startswith("clock.") and at[2] == PLAYER:
             k = int(at[1].split(".")[1])
@@ -301,10 +305,19 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
     return out
 
 
-def _closing(u, p: dict, seen: Seen, h: str) -> str:
+def _promise(u, other: str, kind: str) -> str:
+    favor = u.agents[other].favor
+    return favor.promise if kind == "promise" and favor else ""
+
+
+def _attitude(f: State, h: str) -> str:
+    return ko.attitude(f.regards(h, PLAYER, "trust") or 0, f.regards(h, PLAYER, "fear") or 0)
+
+
+def _closing(p: dict, seen: Seen) -> str:
     # Trust is clamped, so a kept promise at full trust may change nothing; a break always tags the player.
     broken = ko.TAG_KEYS["@broken_promise"]
-    if any(at[0] == "mark" and at[1] == PLAYER and tag_name(u, p, at) == broken for at in seen.delta.add):
+    if any(at[0] == "mark" and at[1] == PLAYER and tag_name(p, at) == broken for at in seen.delta.add):
         return "broken"
     return "kept"
 
@@ -322,7 +335,7 @@ def game_view(u, g) -> dict:
     k = chapter_k(u, f)
     ending = p.get("ending")
     last = p["turns"][-1] if p.get("turns") else None
-    view = {
+    return {
         "revision": p.get("revision", 0),
         "story": {"id": u.id, "title": u.title, "premise": u.premise},
         "chapter": {"k": k, "title": u.chapter_of(k).title, "aim": u.chapter_of(k).aim},
@@ -331,7 +344,7 @@ def game_view(u, g) -> dict:
         "clocks": [{"id": c, "name": u.name(c), "fill": f.fill(c), "boxes": u.boxes(c), "kind": u.obstacles[c].sub}
                    for c in sorted(filter(None, [held_clock(u, f), *active_threats(u, f)]),
                                    key=lambda c: CLOCK_ORDER.index(u.obstacles[c].sub))],
-        "journal": _journal(u, g, o, p, here),
+        "journal": _journal(u, o, p),
         "buttons": [] if ending else [
             {"action": str(a), "label": action_label(u, o, p, a), "rolls": rolls(u, f, o.hist, a)}
             for a in recommend(u, o)],
@@ -345,7 +358,6 @@ def game_view(u, g) -> dict:
         "recaps": sorted(int(x) for x in p.get("recap", {})),
         "ending": {"id": ending, "title": u.endings[ending].title} if ending else None,
     }
-    return view
 
 
 def _scene(u, o: Obs, p: dict, here: str) -> dict:
@@ -355,7 +367,7 @@ def _scene(u, o: Obs, p: dict, here: str) -> dict:
     return {
         "place": {"id": here, "name": u.name(here), "senses": list(u.places[here].senses)},
         "people": [{"id": h, "name": u.name(h),
-                    "attitude": ko.attitude(f.regards(h, PLAYER, "trust") or 0, f.regards(h, PLAYER, "fear") or 0),
+                    "attitude": _attitude(f, h),
                     "with": f.has("follows", h, PLAYER)}
                    for h in people],
         "things": [{"id": x, "name": u.name(x)} for x in seen if x in u.things and f.where(x) == here],
@@ -366,7 +378,7 @@ def _scene(u, o: Obs, p: dict, here: str) -> dict:
                    "blocked": any(b in o.seen and f.where(b) and (f.fill(b) or 0) < u.boxes(b)
                                   for b, ob in u.obstacles.items() if q in ob.blocks)}
                   for q in seen if u.kind(q) == "place" and f.has("link", here, q)],
-        "tags": [{"owner": x, "slot": i, "kind": kind, "life": life, "name": tag_name(u, p, ("mark", x, kind, life, i))}
+        "tags": [{"owner": x, "slot": i, "kind": kind, "life": life, "name": tag_name(p, ("mark", x, kind, life, i))}
                  for x in seen if x != PLAYER for i, kind, life in f.marks(x)],
     }
 
@@ -377,7 +389,7 @@ def _player(u, o: Obs, p: dict) -> dict:
         "approaches": [{"id": ap, "name": ko.APPROACHES[ap], "value": f.stat(PLAYER, ap) or 0} for ap in APPROACHES],
         "traits": [{"id": t, "name": u.traits[t][0], "spent": f.has("spent", PLAYER, t)}
                    for t in u.traits if f.stat(PLAYER, t) == 1],
-        "tags": [{"slot": i, "kind": kind, "life": life, "name": tag_name(u, p, ("mark", PLAYER, kind, life, i))}
+        "tags": [{"slot": i, "kind": kind, "life": life, "name": tag_name(p, ("mark", PLAYER, kind, life, i))}
                  for i, kind, life in f.marks(PLAYER)],
         "things": [{"id": x, "name": u.name(x), "spent": f.has("spent", PLAYER, x)}
                    for x in sorted(o.seen, key=u.rank) if x in u.things and f.where(x) == PLAYER],
@@ -387,22 +399,20 @@ def _player(u, o: Obs, p: dict) -> dict:
     }
 
 
-def _journal(u, g, o: Obs, p: dict, here: str) -> dict:
+def _journal(u, o: Obs, p: dict) -> dict:
     f = o.facts
     near = set(o.seen)
     beliefs = []
     for n, pid in enumerate(o.beliefs):
         prop = u.props[pid]
-        holders = [a.id for a in u.agents.values() if any(t.prop == pid for t in a.topics)]
         beliefs.append({"id": pid, "text": prop.text, "order": n, "spent": f.has("spent", PLAYER, pid),
-                        "here": bool(near & set(prop.about)) or bool(near & set(holders))})
+                        "here": bool(near & set(prop.about)) or bool(near & set(holders(u, pid)))})
     owes = []
     for gg, h, k in sorted(f.rows("owes")):
         other = h if gg == PLAYER else gg
-        promise = u.agents[other].favor.promise if k == "promise" and u.agents[other].favor else ""
-        owes.append({"debtor": gg, "creditor": h, "kind": k, "name": u.name(other), "promise": promise})
+        owes.append({"debtor": gg, "creditor": h, "kind": k, "name": u.name(other), "promise": _promise(u, other, k)})
     relations = [{"id": h, "name": u.name(h), "trust": f.regards(h, PLAYER, "trust"),
                   "fear": f.regards(h, PLAYER, "fear"),
-                  "attitude": ko.attitude(f.regards(h, PLAYER, "trust") or 0, f.regards(h, PLAYER, "fear") or 0)}
+                  "attitude": _attitude(f, h)}
                  for h in u.agents if h in near or any(s.action.startswith(f"talk:{h}:") for s in o.memory)]
     return {"beliefs": beliefs, "owes": owes, "relations": relations, "choices": p.get("choices", [])}

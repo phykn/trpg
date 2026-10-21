@@ -209,7 +209,7 @@ def v4(u: Universe) -> None:
         for x in table.values():
             if x.id.startswith(("clock.", "deadline.")):
                 continue
-            for term in (x.name, *getattr(x, "aliases", ())):
+            for term in (x.name, *x.aliases):
                 if term in seen and seen[term] != x.id:
                     fail("V4", f"{x.id}.aliases", f"{term!r} is also a name of {seen[term]}")
                 seen[term] = x.id
@@ -262,9 +262,9 @@ def v5(u: Universe) -> None:
             fail("V5", where, "reach takes one goal or ending")
         (what, target), = reach.items()
         run = Run(u, _creation(u, p))
-        steps = _path(u, paths, i, where)
+        steps = _path(paths, i, where)
         for n, st in enumerate(steps):
-            aid, dice = (st.get("do"), st.get("roll")) if isinstance(st, dict) else (st, None)
+            aid, dice = _step(st)
             sw = f"{where}.steps[{n}]"
             if ended(run.s):
                 fail("V5", sw, "the game has already ended")
@@ -278,7 +278,7 @@ def v5(u: Universe) -> None:
             if dice is None and rolls(u, o.facts, o.hist, a):
                 fail("V5", sw, f"{aid} rolls; give roll: [d1, d2, u]")
             before = _reached(run.s, what, target)
-            run.step(a, tuple(dice) if dice else (1, 1, 0))
+            run.step(a, dice or NO_ROLL)
             if before:
                 fail("V5", sw, f"{what} {target} was reached before the last step")
         if not _reached(run.s, what, target):
@@ -291,7 +291,19 @@ def v5(u: Universe) -> None:
             fail("V5", "witnesses.paths", f"no path reaches {what} {target}")
 
 
-def _path(u, paths, i, where, depth=0) -> list:
+# The dice of a step that rolls nothing.
+NO_ROLL = (1, 1, 0)
+
+
+def _step(st) -> tuple[str, tuple | None]:
+    """A witness step: an action id, or {do, roll} for one that rolls."""
+    if not isinstance(st, dict):
+        return st, None
+    dice = st.get("roll")
+    return st.get("do"), tuple(dice) if dice else None
+
+
+def _path(paths, i, where, depth=0) -> list:
     p = paths[i]
     if not isinstance(p, dict) or not isinstance(p.get("steps"), list):
         fail("V5", where, "a path needs steps")
@@ -300,7 +312,7 @@ def _path(u, paths, i, where, depth=0) -> list:
         return list(p["steps"])
     if not isinstance(after, int) or not 0 <= after < len(paths) or depth > len(paths):
         fail("V5", where, f"after: {after!r} is not an earlier path")
-    return _path(u, paths, after, where, depth + 1) + list(p["steps"])
+    return _path(paths, after, where, depth + 1) + list(p["steps"])
 
 
 def _reached(s, what, target) -> bool:

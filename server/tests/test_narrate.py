@@ -227,7 +227,7 @@ async def test_a_change_naming_someone_elsewhere_does_not_bring_them_here(tmp_pa
     u, g = svc.games[gid]
     job = replace(svc._turn_job(u, g, 1), delta=["윤슬이 기름통을 얻었습니다"])
     said = ["윤슬이 당신의 젖은 소매를 가볍게 스칩니다.", "도해가 낮게 기침합니다.", "\"윤슬이 온다\"고 누가 외칩니다."]
-    per, _ = svc.narrator.rules(job, said, [])
+    per, _ = svc.narrator.rules(job, said)
     assert list(per) == [0]
 
 
@@ -236,7 +236,7 @@ async def test_a_companion_left_behind_appears_only_parting(tmp_path):
     u, g = svc.games[gid]
     job = replace(svc._turn_job(u, g, 1), left={"yunseul": "dock"})
     said = ["윤슬은 선착장에 남아 손을 흔듭니다.", "윤슬이 당신의 젖은 소매를 가볍게 스칩니다."]
-    per, _ = svc.narrator.rules(job, said, [])
+    per, _ = svc.narrator.rules(job, said)
     assert list(per) == [1]
     prompt = messages(job)[1]["content"]
     assert "윤슬은 선착장에 남았습니다" in prompt and u.agents["yunseul"].fear.rstrip(".") in prompt
@@ -323,8 +323,8 @@ async def test_an_ending_picks_up_what_the_player_left_behind(tmp_path):
     assert "윤슬은 당신을 신뢰합니다" in now and "도해가 아들의 편지를 지니고 있습니다" in now
     assert now.rstrip().endswith("불이 다시 켜집니다") and "아직 멀었습니다" not in now
     said = ["멀리 선착장에서 윤슬이 불빛을 올려다봅니다.", "윤슬이 당신 곁에서 웃습니다."]
-    assert list(svc.narrator.rules(job, said, [])[0]) == [1]
-    assert list(svc.narrator.rules(replace(job, ending=None), said, [])[0]) == [0, 1]
+    assert list(svc.narrator.rules(job, said)[0]) == [1]
+    assert list(svc.narrator.rules(replace(job, ending=None), said)[0]) == [0, 1]
 
 
 def test_a_lowered_threat_recedes_instead_of_approaching(u):

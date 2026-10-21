@@ -130,6 +130,18 @@ test('a lost roll keeps its card with the dice at rest and the resend on it, whi
   expect(tree!.root.findByType(Dice).props.state).toBe('rolling');
 });
 
+test('a new roll card starts from its own help, not the one picked on the card before', async () => {
+  (getGame as jest.Mock).mockResolvedValue({ ...base, card: door });
+  const next: GameView = { ...base, revision: 1, card: { ...door, id: 'c2' } };
+  (sendCommand as jest.Mock).mockResolvedValue({ kind: 'card', turn: null, steps: [], reason: null, view: next } as CommandResult);
+  await flush(async () => { tree = renderer.create(<Screen />); });
+  await flush(async () => { (radio().props.onPress as () => void)(); });
+  expect(radio().props.accessibilityState).toMatchObject({ checked: true });
+  await flush(async () => { (pressable(ko.close).props.onPress as () => void)(); });
+  expect(game.view?.card?.id).toBe('c2');
+  expect(radio().props.accessibilityState).toMatchObject({ checked: false });
+});
+
 test('a server error on a roll shows its notice on the card, which stays open, and not under it', async () => {
   (getGame as jest.Mock).mockResolvedValue({ ...base, card: door });
   (sendCommand as jest.Mock).mockRejectedValueOnce(new ApiError(500, null, null));

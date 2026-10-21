@@ -36,7 +36,7 @@ def _gain(u, p: dict, g: dict) -> dict:
     if g["kind"] == "fill":
         return {"kind": "fill", "boxes": g["boxes"], "fit": g["fit"]}
     if g["kind"] == "tag":
-        return {"kind": "tag", "remove": tag_name(u, p, g["remove"]) if g["remove"] else None}
+        return {"kind": "tag", "remove": tag_name(p, g["remove"]) if g["remove"] else None}
     if g["kind"] == "favor":
         return {"kind": "favor", "effects": effect_names(u, g["effects"])}
     if g["kind"] == "follow":

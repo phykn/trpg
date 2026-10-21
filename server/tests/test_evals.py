@@ -94,3 +94,9 @@ async def test_a_case_with_relies_asks_what_the_first_roll_card_offers():
     it = Interpreter(Fake({"s1": {"look": 0.9}, "n": {"1": 0.9}, "intent": {"door": 0.9}}))
     got = await interpret(it, u, replay(u, {"path": 0, "step": 2}), "문을 살펴본다", card=True)
     assert got["steps"] == ["look:door"] and got["relies"] is None
+
+
+def test_a_step_that_rolls_nothing_replays_without_dice(u):
+    """A witness step {do} without roll is valid where the action rolls nothing (V5), so a replay takes it too."""
+    run = replay(u, {"path": 0, "step": 0, "then": [{"do": "go:village"}]})
+    assert run.s.where("player") == "village"

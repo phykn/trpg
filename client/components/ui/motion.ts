@@ -8,7 +8,7 @@ import { motion } from '@/design/tokens';
 const ease = Easing.out(Easing.cubic);
 
 // Chat lines, sheets, dropdowns and screens arrive the same way: a short fade with a small travel from `from` px.
-export function useEnter(from = 8, delay = 0, axis: 'x' | 'y' = 'y') {
+export function useEnter(from = 8, delay = 0) {
   const reduced = useReducedMotion();
   const t = useSharedValue(reduced ? 1 : 0);
   useEffect(() => {
@@ -16,6 +16,6 @@ export function useEnter(from = 8, delay = 0, axis: 'x' | 'y' = 'y') {
   }, [reduced, delay, t]);
   return useAnimatedStyle(() => ({
     opacity: t.value,
-    transform: [axis === 'y' ? { translateY: (1 - t.value) * from } : { translateX: (1 - t.value) * from }],
+    transform: [{ translateY: (1 - t.value) * from }],
   }));
 }

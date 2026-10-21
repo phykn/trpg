@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from ..onto.atoms import PLAYER, State
 from ..onto.cond import holds
-from .candidates import active_threats, held_clock
+from .candidates import ACTIVE, active_threats, held_clock
 from .schemas import Ctx, run, scene_end
 
 
@@ -123,7 +123,7 @@ ENGINE = (t_risk, t_fall, t_scene, t_arrive, t_promise)
 
 def bound(u) -> int:
     """m + 3 + w + q: story triggers, three engine ones, threats, favors (rule.md 8)."""
-    w = sum(o.sub in ("threat", "fork", "deadline") for o in u.obstacles.values())
+    w = sum(o.sub in ACTIVE for o in u.obstacles.values())
     q = sum(a.favor is not None for a in u.agents.values())
     return len(u.triggers) + 3 + w + q
 

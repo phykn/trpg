@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { loadLog, storeLog } from '@/services/storage';
 
+export type Roll = { d1: number; d2: number; total: number; result: string; dc?: number; approach?: string };
 export type Entry =
   | { id: string; kind: 'you' | 'story'; text: string }
-  | { id: string; kind: 'roll'; d1: number; d2: number; total: number; result: string; dc?: number; approach?: string };
+  | ({ id: string; kind: 'roll' } & Roll);
 
 const CAP = 300;
 

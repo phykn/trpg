@@ -17,7 +17,7 @@ from ..models.llm import LLMClient
 from ..rules.acts import NEUTRAL, parse
 from ..rules.roll import rolls
 from ..service import fresh_presentation
-from .validate import Run, _creation, _path, load
+from .validate import NO_ROLL, Run, _creation, _path, _step, load
 
 IDLE = " (idle)"
 FRAGILE = 0.05
@@ -29,9 +29,9 @@ TIMEOUT = 60.0
 def replay(u, at: dict) -> Run:
     paths = u.witnesses["paths"]
     run = Run(u, _creation(u, paths[at["path"]]))
-    for st in [*_path(u, paths, at["path"], "evals")[:at["step"]], *at.get("then", [])]:
-        aid, dice = (st["do"], st["roll"]) if isinstance(st, dict) else (st, None)
-        run.step(parse(aid), tuple(dice) if dice else (1, 1, 0))
+    for st in [*_path(paths, at["path"], "evals")[:at["step"]], *at.get("then", [])]:
+        aid, dice = _step(st)
+        run.step(parse(aid), dice or NO_ROLL)
     return run
 
 
@@ -115,7 +115,7 @@ def score(expect, got: dict) -> bool:
     if isinstance(expect, str) and ":" not in expect:       # a schema: any action of it
         return got["steps"][:1] != [] and got["steps"][0].split(":")[0] == expect
     want = expect if isinstance(expect, list) else [expect]
-    return got["steps"][:len(want)] == want if isinstance(expect, list) else got["steps"][:1] == want
+    return got["steps"][:len(want)] == want
 
 
 def near(calls: list[dict], theta: float, step_theta: float) -> list[dict]:

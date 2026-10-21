@@ -1,30 +1,12 @@
 import { type RefObject, useState } from 'react';
-import { ActivityIndicator, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, TextInput, View } from 'react-native';
 
-import { Button, IconButton } from '@/components/ui/Button';
-import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/Button';
+import { Notice, Resend } from '@/components/ui/Notice';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 
 type Mode = 'open' | 'locked' | 'sending' | 'stuck';
-
-export function Resend({ onResend }: { onResend: () => void }) {
-  return (
-    <View className="w-full flex-row items-center gap-3">
-      <Text className="min-w-0 flex-1 font-sans text-panel text-fg-muted">{ko.stuck}</Text>
-      <Button icon="retry" label={ko.resend} onPress={onResend} />
-    </View>
-  );
-}
-
-export function Notice({ text }: { text: string }) {
-  return (
-    <View accessibilityRole="alert" className="w-full flex-row items-center gap-1.5">
-      <Icon name="alert" size={12} color={colors.danger.fg} />
-      <Text className="min-w-0 flex-1 font-sans text-chip text-danger-fg">{text}</Text>
-    </View>
-  );
-}
 
 export function CommandBar({ mode, sent, notice, placeholder, text, onText, onSend, onResend, inputRef }: {
   mode: Mode; sent: string | null; notice: string | null; placeholder: string; text: string;

@@ -7,7 +7,7 @@ import unicodedata
 from .cards import rely_options
 from .lang.context import about, context, render
 from .locale import ko
-from .models.decision import ModelUnavailable
+from .models.decision import ModelUnavailable, choice, noul, probs_of
 from .onto.atoms import APPROACHES, PLAYER
 from .onto.view import observe
 from .rules.acts import JUDGE, make, parse
@@ -59,6 +59,10 @@ def named(u, o, text: str) -> list[str]:
     return [x for _, x in sorted(found)]
 
 
+def says(u, x: str, text: str) -> bool:
+    return any(mentions(w, text) >= 0 for w in (u.name(x), *u.aliases(x)))
+
+
 def unreachable(u, o, text: str, schema: str) -> str | None:
     """Why the sentence's own target is out of reach, when the engine knows it. Refused with no reason, players could
     not tell a guard dog from a broken game, and a sentence aimed at a guarded person landed on another target
@@ -73,12 +77,12 @@ def unreachable(u, o, text: str, schema: str) -> str | None:
         # a thing handed over is out of sight in its new holder's hands, so memory says it is known
         known = {a[1] for s in o.memory for a in (*s.delta.add, *s.delta.remove) if a[0] == "at" and a[1] in u.things}
         for x in sorted(known | {x for x in o.seen if x in u.things}):
-            if f.where(x) != PLAYER and any(mentions(w, text) >= 0 for w in (u.name(x), *u.aliases(x))):
+            if f.where(x) != PLAYER and says(u, x, text):
                 return ko.fill(ko.WHY["not_held"], x=u.name(x))
     if schema in ("talk", "give"):
         met = {w for s in o.memory for w in s.witnesses}
         for x in sorted(met - set(o.seen)):
-            if x in u.agents and any(mentions(w, text) >= 0 for w in (u.name(x), *u.aliases(x))):
+            if x in u.agents and says(u, x, text):
                 return ko.fill(ko.WHY["away"], x=u.name(x))
         # spoken to no one by name ("왜 못하지?"), the people here are the ones meant
         here_people = [x for x in sorted(o.seen, key=u.rank) if x in u.agents and f.where(x) == here]
@@ -141,16 +145,8 @@ def rules(u, o, p: dict, text: str) -> dict | None:
     return None
 
 
-def noul(question: str) -> dict:
-    return {"type": "noul", "instructions": question, "criteria": {"true": ko.YES, "false": ko.NO}}
-
-
 def yes_share(answer) -> float:
-    return float((getattr(answer, "probabilities", None) or {}).get("true", 0.0))
-
-
-def choice(question: str, criteria: dict[str, str]) -> dict:
-    return {"type": "choice", "instructions": question, "criteria": criteria}
+    return float(probs_of(answer).get("true", 0.0))
 
 
 def listed(options: dict[str, str]) -> str:
@@ -159,7 +155,7 @@ def listed(options: dict[str, str]) -> str:
 
 def ranked(answer, options) -> list[tuple[str, float]]:
     """Answers outside the options count 0 (engine.md 3)."""
-    probs = getattr(answer, "probabilities", None) or {}
+    probs = probs_of(answer)
     return sorted(((w, float(probs.get(w, 0.0))) for w in options), key=lambda x: -x[1])
 
 
@@ -176,7 +172,7 @@ class Interpreter:
         except (ModelUnavailable, TimeoutError):
             out = {}
         self.calls.append({"questions": questions, "answers": {
-            k: dict(getattr(v, "probabilities", {})) for k, v in out.items()}})
+            k: probs_of(v) for k, v in out.items()}})
         return out
 
     async def numbers(self, system: str, prompt: str) -> list[int] | None:
@@ -252,7 +248,7 @@ class Interpreter:
 
     @staticmethod
     def sentence(text: str) -> str:
-        return f"플레이어 문장: {text}"
+        return ko.fill(ko.SENTENCE, text=text)
 
     @staticmethod
     def idle(ap: str | None = None) -> dict:
@@ -285,7 +281,7 @@ class Interpreter:
         # The place the player is in, unless the sentence names a way out: offered only the ways out, Kev took one
         # for a sentence naming this place (qa_test/runs/misread-1). Choosing it moves nowhere. Naming this place
         # alone does not settle it: "to the dock" stays where "leaving the dock" goes.
-        if st["schema"] == "go" and "intent" not in fixed and not any(i[0] in named(u, o, text) for i in intents):
+        if st["schema"] == "go" and "intent" not in fixed and not any(i[0] in names for i in intents):
             intents = [*intents, here]
             slot_of[here] = Slot("go", here)
         labels = {":".join(i): action_label(u, o, p, expand(slot_of[i])[0]) for i in intents}
@@ -308,7 +304,7 @@ class Interpreter:
             # One yes/no per claim: offered as one choice with "no claim", the model took "no claim" for every lie.
             # What the sentence says needs only the sentence; the scene lowered every right answer.
             got = await self.ask(self.sentence(text),
-                                 {c: noul(ko.fill(ko.CLAIM_QUESTION, text=u.props[c].text)) for c in claims})
+                                 {c: noul(ko.fill(ko.CLAIM_QUESTION, text=u.props[c].text), ko.YES, ko.NO) for c in claims})
             yes = max(claims, key=lambda c: yes_share(got.get(c)))
             fixed["claim"] = yes if yes_share(got.get(yes)) >= self.theta else None
         if "intent" not in fixed:
@@ -322,7 +318,7 @@ class Interpreter:
                 sure = top[0][1] >= self.theta and (st["schema"], top[0][0]) != ("go", here[0])
                 w = top[0][0] if sure else await self.pick(state, qs["intent"]["instructions"], labels)
                 if w is None:
-                    return self.clarify(u, o, p, st, fixed, "intent", [x for x, _ in top[:3]], labels)
+                    return self.clarify(st, fixed, "intent", [x for x, _ in top[:3]], labels)
                 fixed["intent"] = w
         intent = tuple(fixed["intent"].split(":"))
         if st["schema"] == "go" and intent == here:
@@ -381,7 +377,7 @@ class Interpreter:
                 top = ranked(answers.get("target"), labels)
                 w = picks["target"] or (top[0][0] if top[0][1] >= self.theta else None)
                 if w is None:
-                    return self.clarify(u, o, p, st, fixed, "target", [x for x, _ in top[:3]], labels)
+                    return self.clarify(st, fixed, "target", [x for x, _ in top[:3]], labels)
                 fixed["target"] = w
         if "approach" not in fixed:
             top = ranked(answers.get("approach"), approaches)
@@ -421,7 +417,7 @@ class Interpreter:
         focus = {PLAYER, o.facts.where(PLAYER), *(x for i in intents for x in i)}
         return render(context(u, o, focus, p)) + "\n\n" + self.sentence(text)
 
-    async def relevant(self, u, o, p, a, values: list[str], named: str | None, text: str | None) -> list[str]:
+    async def relevant(self, u, o, p, a, values: list[str], hinted: str | None, text: str | None) -> list[str]:
         """The roll card's reliances (engine.md 4.2): what the story ties to the target, every edge in reach, who is at
         the player's side, what was offered for this attempt before, and what the model sees helping it now."""
         x = a.intent[0]
@@ -429,7 +425,7 @@ class Interpreter:
         # Once offered for an attempt, a reliance stays: asked anew with each sentence, the same one came and went
         # (qa_test/runs/play-4-bold 8, 12, 15).
         offered = p.setdefault("relevance", {}).setdefault(":".join((a.schema, *a.intent)), [])
-        keep = {*linked, *offered, named}
+        keep = {*linked, *offered, hinted}
         # An edge exists to be spent, and its name, often the default one, is all the model could judge it by.
         ask = [v for v in values if v not in keep and not v.startswith(("tag:", "with:"))]
         if ask:
@@ -438,7 +434,7 @@ class Interpreter:
             state = "\n".join([ko.fill(ko.ATTEMPT, label=action_label(u, o, p, a)), *(ln.text for ln in about(u, o, x)),
                                *([self.sentence(text)] if text else [])])
             answer = (await self.ask(state, {"rely": choice(ko.RELY_QUESTION, {**opts, "none": ko.RELY_NONE})})).get("rely")
-            probs = getattr(answer, "probabilities", None)
+            probs = probs_of(answer)
             # A silent model takes no choice away from the player.
             drop = {v for i, v in enumerate(ask) if probs.get(f"r{i}", 0.0) < RELY_SHARE} if probs else set()
             values = [v for v in values if v not in drop]
@@ -448,7 +444,8 @@ class Interpreter:
     def done(self, u, o, p, a, text, echo) -> dict:
         return {"action": str(a), "rely": rely_hint(u, o, p, a, text), "slots": echo}
 
-    def clarify(self, u, o, p, st, fixed, slot, top, labels) -> dict:
+    @staticmethod
+    def clarify(st, fixed, slot, top, labels) -> dict:
         resume = {w: {**st, "fixed": {**fixed, slot: w}} for w in top}
         return {"clarify": {"slot": slot, "question": ko.CLARIFY_SLOT[slot],
                             "options": [{"id": w, "label": labels[w]} for w in top], "resume": resume}}

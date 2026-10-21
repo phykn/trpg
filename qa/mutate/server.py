@@ -64,7 +64,7 @@ MUTANTS = [
      "if c is None or s.fill(c) < ctx.u.boxes(c) - 1:",
      "risk clock crisis fires one box before the clock is full"),
     ("T7", "server/src/rules/schemas.py",
-     'w.set_("stat", (PLAYER, "beats"), 0)\n    for o in active_threats(u, w.state()):\n        w.set_("fill", (o,), "+1")',
+     'w.set_("stat", (PLAYER, "beats"), 0)\n    tick_threats(u, w)',
      'w.set_("stat", (PLAYER, "beats"), 0)',
      "a scene end no longer brings active threats and deadlines closer"),
     ("T8", "server/src/rules/triggers.py",

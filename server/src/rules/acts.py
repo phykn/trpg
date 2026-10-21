@@ -32,10 +32,6 @@ class Action:
         d.update(judge)
         return make(self.schema, self.intent, d)
 
-    @property
-    def target(self) -> str | None:
-        return self.intent[0] if self.intent else None
-
     def __str__(self) -> str:
         return format(self)
 

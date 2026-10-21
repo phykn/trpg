@@ -78,8 +78,8 @@ class Recording(Narrator):
         self.prompts.append(messages(job, draft, problems))
         return await super().write(job, draft, problems)
 
-    def rules(self, job, said, names):
-        per, whole = super().rules(job, said, names)
+    def rules(self, job, said):
+        per, whole = super().rules(job, said)
         self.log.append({"said": said, "rules": {str(k): v for k, v in per.items()}, "whole": whole})
         return per, whole
 

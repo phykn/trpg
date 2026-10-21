@@ -9,18 +9,17 @@ from src.interpret import (
     STEP_THETA,
     Interpreter,
     approach_cue,
-    choice,
     mentions,
-    noul,
     ranked,
     squeeze,
 )
 from src.lang.context import MEMORY, Line, render
 from src.locale import ko
+from src.models.decision import choice, noul
 from src.onto.atoms import APPROACHES, PLAYER
 
 sentence = Interpreter.sentence
-YOU = "당신"
+YOU = ko.YOU
 # Reliances the engine keeps without asking (interpret.relevant): an edge is spent, a companion is at the player's side.
 UNASKED = ("tag", "with")
 
@@ -273,7 +272,7 @@ def layer2(s: Scene, text: str, σ: str) -> Ask | None:
     focus = {s.here, *(e for i in intents for e in s.ents(σ, i))}
     claims = s.sc.get("claims", []) if σ == "talk" else []
     return Ask(request=(s.state(focus, text), qs) if qs else None,
-               claims=(sentence(text), {f"c{n + 1}": noul(ko.fill(ko.CLAIM_QUESTION, text=c))
+               claims=(sentence(text), {f"c{n + 1}": noul(ko.fill(ko.CLAIM_QUESTION, text=c), ko.YES, ko.NO)
                                         for n, c in enumerate(claims)}) if claims else None,
                keys={"intent": keys, "claim": {c: f"c{n + 1}" for n, c in enumerate(claims)}}, settled=settled)
 
@@ -321,5 +320,5 @@ def check(item: dict) -> tuple[str, dict]:
     state = render(lines)
     if item.get("happened"):
         state += "\n" + ko.HEAD["happened"] + "\n" + "\n".join(f"- {x}" for x in item["happened"])
-    q = {"type": "choice", "instructions": f"{ko.CHECK_QUESTION}\n문장: {item['sentence']}", "criteria": ko.CHECK}
+    q = choice(ko.fill(ko.CHECK_QUESTION, text=item["sentence"]), ko.CHECK)
     return state, {"0": q}

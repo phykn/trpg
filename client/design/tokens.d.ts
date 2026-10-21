@@ -1,10 +1,9 @@
 export const colors: {
-  transparent: string;
   canvas: { default: string; subtle: string; inset: string; floating: string };
   fg: { default: string; muted: string; subtle: string; 'on-emphasis': string };
   border: { default: string; strong: string };
-  danger: { fg: string; muted: string };
-  health: { fg: string; muted: string };
+  danger: { fg: string };
+  health: { fg: string };
   gold: { fg: string; muted: string };
   chip: { stat: string; help: string; hinder: string };
   kind: { person: string; thing: string; obstacle: string };

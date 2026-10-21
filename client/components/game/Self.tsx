@@ -10,15 +10,18 @@ import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 import { Item, Row, TagItems } from './Row';
 
+const left = (player: GameView['player']) => player.wound_boxes - player.wounds;
+
 // Health counts what is left, so it must not look like a clock's boxes, which count what has gone wrong.
 // The sheet's row already leads with the heart, so only the button draws its own.
-function Health({ left, of, bare }: { left: number; of: number; bare?: boolean }) {
+function Health({ player, bare }: { player: GameView['player']; bare?: boolean }) {
+  const n = left(player);
   return (
     <View className="flex-row items-center gap-[3px]">
       {bare ? null : <View className="mr-0.5"><Icon name="heart" size={12} color={colors.health.fg} width={2.2} /></View>}
-      {Array.from({ length: of }, (_, i) => (
+      {Array.from({ length: player.wound_boxes }, (_, i) => (
         <View key={i} className="h-2 w-2 rounded-full border"
-          style={{ borderColor: colors.health.fg, backgroundColor: i < left ? colors.health.fg : 'transparent' }} />
+          style={{ borderColor: colors.health.fg, backgroundColor: i < n ? colors.health.fg : 'transparent' }} />
       ))}
     </View>
   );
@@ -29,10 +32,9 @@ export function HeroButton({ player, open, growth, onPress }: {
   player: GameView['player']; open: boolean; growth: boolean; onPress?: () => void;
 }) {
   const name = player.name || ko.hero;
-  const left = player.wound_boxes - player.wounds;
   return (
-    <IconButton icon="user" label={ko.heroButton(name, left, player.wound_boxes)} open={open} dot={growth} onPress={onPress}>
-      <Health left={left} of={player.wound_boxes} />
+    <IconButton icon="user" label={ko.heroButton(name, left(player), player.wound_boxes)} open={open} dot={growth} onPress={onPress}>
+      <Health player={player} />
     </IconButton>
   );
 }
@@ -60,7 +62,7 @@ export function HeroSheet({ player, journal, onGrowth, onClose }: {
           ) : null}
         </View>
         <Row inset icon="heart" tone={colors.health.fg} label={ko.health}>
-          <View className="h-[22px] justify-center"><Health bare left={player.wound_boxes - player.wounds} of={player.wound_boxes} /></View>
+          <View className="h-[22px] justify-center"><Health bare player={player} /></View>
         </Row>
         {player.tags.length ? (
           <Row inset icon="tag" label={ko.row.state}>

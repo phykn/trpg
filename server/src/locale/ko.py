@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+YOU = "당신"
 APPROACHES = {"force": "완력", "finesse": "솜씨", "wits": "재치", "charm": "매력"}
 APPROACH_HINT = {
     "force": "밀고 버티는 힘",
@@ -275,7 +276,8 @@ TO_PERSON = ("에게", "한테", "께")
 CLARIFY_SLOT = {"intent": "무엇을 말씀하신 건가요?", "target": "무엇을 두고 하는 행동인가요?"}
 READER = ("당신은 한국어 TRPG의 입력 분류기입니다. 플레이어 문장이 하는 행동을 일어나는 차례대로 선택지 번호로 적습니다. "
           "한 행동을 여러 말로 풀어 쓴 것은 하나로 셉니다. 번호만 쉼표로 나누어 답합니다.")
-READER_PROMPT = "플레이어 문장: {text}\n선택지:\n{options}\n번호:"
+SENTENCE = "플레이어 문장: {text}"
+READER_PROMPT = SENTENCE + "\n선택지:\n{options}\n번호:"
 PICKER = "당신은 한국어 TRPG의 입력 분류기입니다. 문맥과 플레이어 문장을 읽고 질문에 맞는 답을 선택지에서 번호 하나로 고릅니다. 번호만 답합니다."
 PICKER_PROMPT = "{state}\n\n질문: {question}\n선택지:\n{options}\n번호:"
 NO_TARGET = "특정한 대상 없이"
@@ -387,7 +389,7 @@ FEEDBACK = {
 }
 REWRITE = "아래 문장을 받지 않았습니다. 이유를 고쳐 처음부터 다시 쓰십시오."
 # One choice per sentence: two yes/no questions let the model answer "no" to both (decision-1 REPORT).
-CHECK_QUESTION = "이 문장은 문맥과 비교해 어떻습니까?"
+CHECK_QUESTION = "이 문장은 문맥과 비교해 어떻습니까?\n문장: {text}"
 CHECK = {"fine": "문맥의 사실과 맞고, 문맥에 없는 것을 지어내지 않았다",
          "contradicts": "문맥의 사실과 어긋난다",
          "invents": "문맥에 없는 사람, 물건, 길을 지어냈다"}

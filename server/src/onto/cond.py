@@ -4,6 +4,7 @@ import operator
 from typing import Protocol
 
 from .atoms import AXES, KINDS, State
+from .log import RESULTS
 
 Cond = tuple
 TRUE: Cond = ("all", ())
@@ -35,7 +36,7 @@ def compile_cond(raw, ctx: Context, where: str) -> Cond:
         if len(args) not in (1, 2) or not isinstance(args[0], str):
             ctx.fail(f"{where}: did takes [action prefix] or [action prefix, result]")
         result = args[1] if len(args) == 2 else None
-        if result is not None and result not in ("success", "mixed", "fail", "none", "blocked"):
+        if result is not None and result not in RESULTS:
             ctx.fail(f"{where}: unknown result {result}")
         return ("did", ctx.pattern(args[0], result, where))
     if key not in n:

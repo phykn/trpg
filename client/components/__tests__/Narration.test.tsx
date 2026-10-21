@@ -13,7 +13,7 @@ const tick = 1000 / motion.typeRate;
 async function render(patch: Partial<Props>) {
   const props: Props = {
     entries: [], live: true, roll: null, waiting: true, hold: false, failed: false, onTyped: jest.fn(), onRetry: jest.fn(),
-    narration: { stage: null, text: TEXT, recap: null, error: null }, ...patch,
+    narration: { text: TEXT, recap: null, error: null }, ...patch,
   };
   let tree: ReturnType<typeof renderer.create>;
   await flush(async () => { tree = renderer.create(<Chat {...props} />); });
@@ -50,7 +50,7 @@ test('narration waits behind the dots while the reveal plays', async () => {
 });
 
 test('a failed narration shows the server message under the fixed copy, with a retry', async () => {
-  const { tree, props, text } = await render({ failed: true, narration: { stage: null, text: null, recap: null, error: '모델이 응답하지 않습니다.' } });
+  const { tree, props, text } = await render({ failed: true, narration: { text: null, recap: null, error: '모델이 응답하지 않습니다.' } });
   expect(text()).toContain(ko.narrationFailed);
   expect(text()).toContain('모델이 응답하지 않습니다.');
   const retry = tree.root.findAll((n: Node) => n.props.accessibilityLabel === ko.retryNarration && typeof n.props.onPress === 'function')[0];
@@ -64,9 +64,9 @@ async function nextTurn(first: string, second: string) {
   const onTyped = jest.fn();
   const props = (patch: Partial<Props>): Props => ({
     entries: [], live: true, roll: null, waiting: true, hold: false, failed: false, onTyped, onRetry: jest.fn(),
-    narration: { stage: null, text: first, recap: null, error: null }, ...patch,
+    narration: { text: first, recap: null, error: null }, ...patch,
   });
-  const told = (text: string | null) => ({ stage: null, text, recap: null, error: null });
+  const told = (text: string | null) => ({ text, recap: null, error: null });
   let tree: ReturnType<typeof renderer.create>;
   await flush(async () => { tree = renderer.create(<Chat {...props({})} />); });
   await flush(async () => { jest.advanceTimersByTime(tick * (first.length + 2)); });
@@ -96,7 +96,7 @@ test('a recap arriving after the narration is typed carries on from there and co
   const { tree, props, text } = await render({});
   await flush(async () => { jest.advanceTimersByTime(tick * (TEXT.length + 2)); });
   expect(props.onTyped).toHaveBeenCalledTimes(1);
-  const recap = { stage: null, text: TEXT, recap: '지난 일입니다.', error: null };
+  const recap = { text: TEXT, recap: '지난 일입니다.', error: null };
   await flush(async () => { tree.update(<Chat {...props} narration={recap} />); });
   await flush(async () => { jest.advanceTimersByTime(tick * 3); });
   expect(text()).toContain(JSON.stringify(`${TEXT}\n\n지`).slice(1, -1));

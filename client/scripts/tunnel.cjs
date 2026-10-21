@@ -7,6 +7,7 @@ async function tunnelBinary() {
   const dir = path.resolve(__dirname, '../node_modules/.cache/cloudflared');
   const file = path.join(dir, '2026.9.3.exe');
   let bytes;
+  let fetched = false;
   try { bytes = await readFile(file); }
   catch (error) {
     if (error.code !== 'ENOENT') throw error;
@@ -14,13 +15,16 @@ async function tunnelBinary() {
     const response = await fetch('https://github.com/cloudflare/cloudflared/releases/download/2026.9.3/cloudflared-windows-amd64.exe', { signal: AbortSignal.timeout(120_000) });
     if (!response.ok) throw new Error(`cloudflared download failed: HTTP ${response.status}`);
     bytes = Buffer.from(await response.arrayBuffer());
+    fetched = true;
   }
   const digest = createHash('sha256').update(bytes).digest('hex');
   if (digest !== 'f096265ec2fcbe9bb6e2d64268db167ced3fcbb83d894bdb9e2fcdb26f2ea7e2') {
     throw new Error(`cloudflared checksum mismatch. Remove ${file} and retry.`);
   }
-  await mkdir(dir, { recursive: true });
-  await writeFile(file, bytes);
+  if (fetched) {
+    await mkdir(dir, { recursive: true });
+    await writeFile(file, bytes);
+  }
   return file;
 }
 

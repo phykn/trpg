@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from ..locale import ko
 from ..onto.atoms import PLAYER, Atom
 from ..onto.view import Obs
-from ..view import name, prop_label, tag_name
+from ..view import holders, name, prop_label, tag_name
 
 MEMORY = 3
 
@@ -31,7 +31,7 @@ def fact_line(u, p: dict, atom: Atom) -> str | None:
         return ko.fill(ko.FRAME["link"], p=u.name(atom[1]), q=u.name(atom[2]))
     if k == "mark":
         frame = "mark_agent" if atom[1] == PLAYER or atom[1] in u.agents else "mark"
-        return ko.fill(ko.FRAME[frame], x=name(u, atom[1]), name=tag_name(u, p, atom))
+        return ko.fill(ko.FRAME[frame], x=name(u, atom[1]), name=tag_name(p, atom))
     if k == "fill":
         return ko.fill(ko.FRAME["fill"], o=u.name(atom[1]), n=atom[2], boxes=u.boxes(atom[1]))
     if k == "regards" and atom[2] == PLAYER:
@@ -76,8 +76,8 @@ def context(u, o: Obs, focus, p: dict) -> list[Line]:
             out.append(Line("fact", text, atom))
     for pid in o.beliefs:
         prop = u.props[pid]
-        holders = {a.id for a in u.agents.values() if any(t.prop == pid for t in a.topics)}
-        if x & set(prop.about) or x & holders or (not prop.about and not holders):
+        held = set(holders(u, pid))
+        if x & set(prop.about) or x & held or (not prop.about and not held):
             out.append(Line("belief", ko.fill(ko.FRAME["belief"], text=prop.text)))
     for seen in o.memory[-MEMORY:]:
         names = set(seen.action.replace(";", ":").split(":")) | {a[1] for a in seen.delta.add | seen.delta.remove}

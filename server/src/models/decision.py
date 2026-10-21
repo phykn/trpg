@@ -33,6 +33,19 @@ class Answer(BaseModel):
     low: bool = False
 
 
+def probs_of(answer: Answer | None) -> dict[str, float]:
+    """A missing or unreadable answer gives every option 0."""
+    return dict(getattr(answer, "probabilities", None) or {})
+
+
+def noul(question: str, yes: str, no: str) -> dict:
+    return {"type": "noul", "instructions": question, "criteria": {"true": yes, "false": no}}
+
+
+def choice(question: str, criteria: dict[str, str]) -> dict:
+    return {"type": "choice", "instructions": question, "criteria": criteria}
+
+
 def normalize(raw: dict[str, Any], min_confidence: float) -> Answer:
     """Same shape as local-models `kev.backends.normalize`, so one threshold fits every question type."""
     if raw["type"] == "noul":
@@ -84,4 +97,4 @@ class DecisionClient:
         want = DECISION_MODELS[self.name].run
         if not any(r.startswith(want) for r in runs):
             raise ModelUnavailable(f"decision: {self.name} is configured but the server runs {runs or 'nothing'}")
-        await self.decide("ping", {"ok": {"type": "noul", "instructions": "ok?", "criteria": {"true": "yes", "false": "no"}}})
+        await self.decide("ping", {"ok": noul("ok?", "yes", "no")})

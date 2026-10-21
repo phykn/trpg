@@ -20,7 +20,7 @@ test('a rolled step runs dice, line, chips in mods order, settle, decisive, boxe
   expect(d2.at - d1.at).toBe(motion.dieGap);
   const chips = beats.filter((b) => b.kind === 'chip');
   expect(chips.map((b) => (b as { value: number }).value)).toEqual([11, 10]);
-  expect(beats.find((b) => b.kind === 'decisive')).toMatchObject({ index: 0, word: 'thanks' });
+  expect(beats.find((b) => b.kind === 'decisive')).toMatchObject({ index: 0 });
 });
 
 test('frames carry the running point and what has happened so far', () => {

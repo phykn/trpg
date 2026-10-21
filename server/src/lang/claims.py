@@ -7,11 +7,10 @@ from ..onto.atoms import PLAYER, Atom, State
 from .polite import QUOTED
 
 JOSA = {"을": "(?:을|를)", "이": "(?:이|가)", "은": "(?:은|는)", "와": "(?:과|와)", "으로": "(?:으로|로)"}
-YOU = "당신"
 
 
 def words(u, x: str) -> tuple[str, ...]:
-    return (YOU,) if x == PLAYER else (u.name(x), *u.aliases(x))
+    return (ko.YOU,) if x == PLAYER else (u.name(x), *u.aliases(x))
 
 
 _CACHE: dict[tuple[str, str], object] = {}
