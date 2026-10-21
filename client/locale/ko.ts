@@ -45,6 +45,7 @@ export const ko = {
   send: '보내기',
   stuck: '응답을 받지 못했습니다.',
   resend: '다시 보내기',
+  serverError: '서버 오류로 처리하지 못했습니다.',
   conflict: '게임 상태가 바뀌어 새로 불러왔습니다.',
   menu: '메뉴',
   closeMenu: '메뉴 닫기',

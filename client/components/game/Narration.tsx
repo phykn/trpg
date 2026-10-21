@@ -95,26 +95,29 @@ export function Chat({ entries, live, roll, waiting, narration, hold, failed, on
   narration: N; hold: boolean; failed: boolean; onTyped: () => void; onRetry: () => void;
 }) {
   const scroll = useRef<ScrollView>(null);
-  const [shown, setShown] = useState(0);
   const full = live ? [narration.text, narration.recap].filter(Boolean).join('\n\n') : '';
-  const typedFor = useRef<string | null>(null);
+  // The typing belongs to one text and is reset in the same render the text changes, so a new turn never inherits
+  // the last one's count. A recap appended to the narration carries on from where the typing was.
+  const [typed, setTyped] = useState({ full, shown: 0, told: false });
+  if (typed.full !== full) setTyped({ full, shown: typed.full && full.startsWith(typed.full) ? typed.shown : 0, told: false });
+  const { shown } = typed;
 
   useEffect(() => {
     if (hold || !full) return undefined;
-    setShown(0);
-    const id = setInterval(() => setShown((n) => {
-      if (n + 1 >= full.length) { clearInterval(id); return full.length; }
-      return n + 1;
+    const id = setInterval(() => setTyped((x) => {
+      if (x.full !== full) return x;
+      if (x.shown + 1 >= full.length) { clearInterval(id); return { ...x, shown: full.length }; }
+      return { ...x, shown: x.shown + 1 };
     }), 1000 / motion.typeRate);
     return () => clearInterval(id);
   }, [full, hold]);
 
   useEffect(() => {
-    if (!hold && full && shown >= full.length && typedFor.current !== full) {
-      typedFor.current = full;
+    if (!hold && full && typed.shown >= full.length && !typed.told) {
+      setTyped((x) => ({ ...x, told: true }));
       onTyped();
     }
-  }, [shown, full, hold, onTyped]);
+  }, [typed, full, hold, onTyped]);
 
   const end = (animated: boolean) => scroll.current?.scrollToEnd({ animated });
   const typing = live && !hold && full && shown < full.length;
@@ -126,7 +129,7 @@ export function Chat({ entries, live, roll, waiting, narration, hold, failed, on
         {entries.map((e) => <Line key={e.id} entry={e} />)}
         {live && roll && !hold ? <Rise><RollLine roll={roll} /></Rise> : null}
         {live && full && !hold ? (
-          <Pressable accessibilityRole="text" accessibilityHint={ko.skip} onPress={() => setShown(full.length)}>
+          <Pressable accessibilityRole="text" accessibilityHint={ko.skip} onPress={() => setTyped((x) => ({ ...x, shown: full.length }))}>
             <Text className="font-sans text-fg-default" style={STORY}>{full.slice(0, shown)}</Text>
           </Pressable>
         ) : null}

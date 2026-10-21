@@ -12,6 +12,7 @@ import { ko } from '@/locale/ko';
 import type { Frame } from '@/logic/reveal';
 import type { Card, CardOption, Chip, Preview, StepRecord } from '@/services/types';
 import { Boxes } from './Boxes';
+import { Notice, Resend } from './CommandBar';
 import { Dice } from './Dice';
 
 const plain = (o: CardOption) => !o.id.includes('rely=');
@@ -78,8 +79,10 @@ function Mods({ mods, shown, decisive = [] }: { mods: Chip[]; shown?: number; de
   );
 }
 
-export function RollCard({ card, onRoll, onCancel, step, frame, rolling }: {
-  card: Card; onRoll: (pick: string) => void; onCancel: () => void;
+// `onResend` is given while the roll's answer is lost: the dice rest blank and the resend is the only control.
+// The card covers the input bar, so a notice for a roll that came back with the card still open shows here.
+export function RollCard({ card, onRoll, onCancel, onResend, notice, step, frame, rolling }: {
+  card: Card; onRoll: (pick: string) => void; onCancel: () => void; onResend?: () => void; notice?: string | null;
   step?: StepRecord; frame?: Frame; rolling?: boolean;
 }) {
   const none = card.options.find(plain) ?? card.options[card.options.length - 1];
@@ -88,7 +91,7 @@ export function RollCard({ card, onRoll, onCancel, step, frame, rolling }: {
   const p = chosen.preview as Preview;
   const target = card.plan.step?.target;
   const high = p.risk === 'high';
-  const locked = rolling || !!step;
+  const locked = rolling || !!step || !!onResend;
   const relyChip = (o: CardOption) => o.preview?.mods.find((m) => m.kind === 'help' && m.label === o.label);
   const fixed = p.mods.filter((m) => m.value !== 0 && m.kind !== 'help');
   const fill = target?.fill ?? 0;
@@ -116,7 +119,7 @@ export function RollCard({ card, onRoll, onCancel, step, frame, rolling }: {
           <View className="w-9">{!locked ? <IconButton icon="close" label={ko.close} onPress={onCancel} /> : null}</View>
         </View>
         <Target dc={p.dc} high={high} result={frame?.settled ?? null} />
-        <Dice state={frame?.blocked ? 'gone' : step ? 'stopped' : rolling ? 'rolling' : 'ready'}
+        <Dice state={frame?.blocked ? 'gone' : step || rolling ? 'rolling' : onResend ? 'stopped' : 'ready'}
           values={frame ? frame.dice : [null, null]} label={ko.hold} onRelease={() => onRoll(pick)} />
         <View className="h-[30px] items-center justify-center">
           {/* The total stays when the verdict lands beside it, so nobody has to add the dice up. */}
@@ -154,6 +157,8 @@ export function RollCard({ card, onRoll, onCancel, step, frame, rolling }: {
             </View>
           </View>
         )}
+        {notice ? <Notice text={notice} /> : null}
+        {onResend ? <Resend onResend={onResend} /> : null}
         {frame?.blocked?.length ? (
           <Text className="font-sans-semibold text-title text-danger-fg">{frame.blocked.join(', ')}</Text>
         ) : null}

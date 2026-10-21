@@ -114,6 +114,25 @@ async def test_three_failures_drop_the_sentences_and_keep_delta(tmp_path):
     assert entry["attempts"] == 3 and entry["dropped"] == 2
 
 
+class SilentDecision:
+    def __init__(self, answers=None):
+        self.answers = answers
+
+    async def decide(self, state, questions):
+        if self.answers is None:
+            raise ModelUnavailable("down")
+        return {q: SimpleNamespace(probabilities=self.answers) for q in questions}
+
+
+async def test_a_check_that_cannot_be_read_clears_no_sentence(tmp_path):
+    """engine.md 3.3, 5.3: an unreadable or missing answer has probability 0 on "맞다", so the sentence is rejected."""
+    for i, decision in enumerate((SilentDecision(), SilentDecision({}), SilentDecision({"invents": 0.2}))):
+        llm = FakeLLM(GOOD)
+        svc, gid, _ = await game(tmp_path / str(i), llm, decision)
+        await events(svc, gid)
+        assert len(llm.calls) == 3 and svc.games[gid][1].presentation["narration"]["1"]["dropped"] == 2
+
+
 async def test_a_silent_model_ends_in_error_and_is_not_cached(tmp_path):
     llm = FakeLLM(ModelUnavailable("down"))
     svc, gid, _ = await game(tmp_path, llm)
@@ -231,6 +250,17 @@ async def test_obstacle_progress_is_steered_short_of_done(tmp_path):
     assert "진척" not in messages(job)[1]["content"].split(ko.HEAD["now"])[1]
 
 
+async def test_progress_is_done_only_when_the_obstacle_is_full(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
+    u, g = svc.games[gid]
+    fill = {"kind": "fill", "id": "lamp", "name": u.name("lamp"), "from": u.boxes("lamp") - 2,
+            "to": u.boxes("lamp") - 1, "fit": 0}
+    g.presentation["turns"][0]["steps"][0]["changes"].append(fill)
+    assert svc._turn_job(u, g, 1).progress == {"lamp": False}          # one box short still reads as not done
+    fill.update({"from": u.boxes("lamp") - 1, "to": u.boxes("lamp")})
+    assert svc._turn_job(u, g, 1).progress == {"lamp": True}
+
+
 async def test_a_blocked_step_and_what_a_roll_leaned_on_are_steered(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
     job = svc._turn_job(*svc.games[gid], 1)
@@ -331,6 +361,29 @@ def test_arriving_somewhere_is_a_claim_on_where_you_are():
     assert not any(a[1] == "player" for _, a in claims(u, "윤슬이 등대 앞에 도착했습니다."))
 
 
+def test_a_wanted_thing_still_hidden_is_not_named(u, s0):
+    """story.md 3.4: wants show in prompts only while the thing is not hidden from the player."""
+    from src.lang.context import about, render
+    from src.onto.change import Work
+    from src.onto.log import Log
+    from src.onto.view import observe
+    assert u.agents["yunseul"].wants == ("oil",)
+    assert u.name("oil") not in render(about(u, observe(u, s0, Log()), "yunseul"))
+    w = Work(u, s0)
+    w.reveal(PLAYER, "oil.hidden")
+    assert u.name("oil") in render(about(u, observe(u, w.state(), Log()), "yunseul"))
+
+
+def test_a_negative_claim_needs_the_thing_seen_elsewhere(u, s0):
+    """engine.md 5.3: "the oil is not here" holds only if F' puts it somewhere else; unseen, it may be here."""
+    from src.lang.claims import accepts
+    from src.onto.log import Log
+    from src.onto.view import observe
+    f = observe(u, s0, Log()).facts
+    assert f.where("oil") is None and not accepts(f, False, ("at", "oil", "dock"))
+    assert accepts(f, False, ("at", "letter", "dock")) and not accepts(f, False, ("at", "letter", PLAYER))
+
+
 def test_the_narrators_context_has_only_the_scene_and_no_numbers():
     from src.lang.context import render, scene
     from src.onto.log import Log
@@ -380,9 +433,13 @@ def test_repetition_cues_and_address():
     assert ADDRESS.search("\"어머, 아저씨! 바다요?\"") and not ADDRESS.search("\"저 아저씨는 누구야?\"")
 
 
-def test_worn_phrases_are_those_in_two_recent_narrations_aside_from_names_and_senses(u):
+def test_worn_phrases_are_the_narrations_own_wording_in_two_recent_narrations(u):
     from src.narrate import worn
-    previous = ["파도가 등대를 집어삼킬 듯 몰아칩니다. 윤슬이 웃습니다.",
-                "어둠이 바다를 집어삼킬 듯한 기세입니다. 윤슬이 웃습니다.",
-                "젖은 밧줄 냄새가 납니다."]
-    assert worn(u, previous) == ["집어삼킬 듯한"]
+    assert worn(u, ["파도가 등대를 집어삼킬 듯 몰아칩니다.", "어둠이 바다를 집어삼킬 듯한 기세입니다.",
+                    "젖은 밧줄 냄새가 납니다."]) == ["집어삼킬 듯한"]
+    # A word from a place's senses, a name or 당신 does not make the phrase the story's (play-5-talker 28–30).
+    assert worn(u, ["젖은 손을 비빕니다.", "젖은 손을 털어 냅니다.", "젖은 손을 감춥니다."]) == ["젖은 손을"]
+    assert worn(u, ["파도 소리가 커집니다. 당신은 렌즈를 응시합니다.",
+                    "파도 소리가 멎습니다. 당신은 렌즈를 응시합니다."]) == ["파도 소리가", "렌즈를 응시합니다"]
+    # Part of a name or a sense, and names alone, stay out.
+    assert worn(u, ["등대 앞에. 젖은 밧줄 냄새. 도해는 윤슬을."] * 2) == []

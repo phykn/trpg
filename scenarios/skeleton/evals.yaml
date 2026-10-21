@@ -1,24 +1,29 @@
 # 해석 평가 문장(story.md 6절). 원고가 아니라 시험 자료이고 시작 시 검증에 들지 않습니다.
 # at: 증인 길 path의 걸음 step개를 실행한 뒤의 상태. then이 있으면 그 행동들(증인 걸음과 같은 꼴)을 더 실행한 뒤.
-# expect: 행동 id 하나(첫 단계), 행동 id의 목록(이어지는 단계들), 스키마 이름(첫 단계가 그 스키마의 아무 행동), refused, clarify 중 하나.
+# expect: 행동 id 하나(첫 단계), 행동 id의 목록(이어지는 단계들), 스키마 이름(첫 단계가 그 스키마의 아무 행동), refused, clarify, idle 중 하나.
 # 굴리는 행동의 기댈 것은 0층의 이름 맞추기가 정한 굴림 카드의 기본값으로 비교합니다.
+# relies: 첫 굴림 카드가 내놓는 기댈 것들. known: 알려진 실패와 그 까닭이고, 표시 없는 실패는 회귀라 평가가 실패합니다.
 
 # 선착장: 윤슬, 아들의 편지
 - {at: {path: 0, step: 0}, text: 마을로 내려간다, expect: go:village}
 - {at: {path: 0, step: 0}, text: 등대 쪽으로 서둘러 걸어간다, expect: go:yard}
 - {at: {path: 0, step: 0}, text: 윤슬에게 등대 뒤 담장에 대해 물어본다, expect: talk:yunseul:t_wall}
 - {at: {path: 0, step: 0}, text: 윤슬에게 편지를 보여 주며 건넨다, expect: give:letter:yunseul}
-- {at: {path: 0, step: 0}, text: 윤슬에게 아들의 편지를 보여주며 이 편지를 누구에게 전해야 하는지 묻는다, expect: talk}
+- {at: {path: 0, step: 0}, text: 윤슬에게 아들의 편지를 보여주며 이 편지를 누구에게 전해야 하는지 묻는다, expect: talk,
+   known: '이야기 모델이 "보여주며"를 건네기로 읽어 give가 먼저 옵니다'}
 - {at: {path: 0, step: 0}, text: 어부의 딸에게 반갑게 말을 건다, expect: "talk:yunseul:chat;tone=friendly"}
 - {at: {path: 0, step: 0}, text: 품속의 편지를 꺼내 다시 읽어 본다, expect: look:letter}
 - {at: {path: 0, step: 0}, text: 부두 주변을 천천히 둘러본다, expect: look:dock}
 - {at: {path: 0, step: 0}, text: 하늘의 구름이 얼마나 몰려오는지 살핀다, expect: look:clock.1}
 - {at: {path: 0, step: 0}, text: 휴대전화로 구조대를 부른다, expect: refused}
-- {at: {path: 0, step: 0}, text: 마을로 가서 노인을 찾아 말을 건다, expect: [go:village, talk:dohae:chat]}
-- {at: {path: 0, step: 0}, text: 잠시 숨을 고르며 바다를 바라본다, expect: look:dock}
+- {at: {path: 0, step: 0}, text: 마을로 가서 노인을 찾아 말을 건다, expect: [go:village, talk:dohae:chat],
+   known: '행동 수 질문이 1로 답해 도해에게 말 걸기를 버립니다'}
+- {at: {path: 0, step: 0}, text: 잠시 숨을 고르며 바다를 바라본다, expect: look:dock,
+   known: '1층이 "숨을 고르며"를 시간 보내기(cut)로 확신합니다'}
 - {at: {path: 0, step: 0}, text: "편지에 뭐라고 쓰여 있어?", expect: look:letter}
 - {at: {path: 0, step: 0}, text: 아들의 편지를 확인한다, expect: look:letter}
-- {at: {path: 0, step: 0}, text: "여기 뭐가 있지?", expect: look:dock}
+- {at: {path: 0, step: 0}, text: "여기 뭐가 있지?", expect: look:dock,
+   known: '2층이 "여기"를 선착장 대신 편지로 확신합니다'}
 - {at: {path: 0, step: 0}, text: 윤슬에게 말을 건다 ㅎㅇ, expect: "talk:yunseul:chat;tone=friendly"}
 - {at: {path: 0, step: 0}, text: 등대로 간다, expect: go:yard}
 - {at: {path: 0, step: 0}, text: 선착장을 떠난다, expect: go}
@@ -27,16 +32,18 @@
 - {at: {path: 0, step: 0}, text: 따라와, expect: talk:yunseul:come}
 
 # 선착장, 윤슬이 따라옴
-- {at: {path: 0, step: 0, then: [{do: "talk:yunseul:come", roll: [6, 6, 0]}]}, text: 윤슬아 여기서 기다려, expect: talk:yunseul:stay}
+- {at: {path: 0, step: 0, then: [{do: "talk:yunseul:come", roll: [6, 6, 0]}]}, text: 윤슬아 여기서 기다려, expect: talk:yunseul:stay,
+   known: '1층이 "기다려"를 시간 보내기(cut)로 확신합니다'}
 - {at: {path: 0, step: 0, then: [{do: "talk:yunseul:come", roll: [6, 6, 0]}]}, text: 윤슬과 같이 마을로 간다, expect: go:village}
 
 # 바닷가 마을: 도해
-- {at: {path: 0, step: 1}, text: 도해에게 등대 기름이 어디 있는지 묻는다, expect: talk:dohae:t_oil}
+- {at: {path: 0, step: 1}, text: 도해에게 등대 기름이 어디 있는지 묻는다, expect: talk:dohae:t_oil, relies: [thing:letter]}
 - {at: {path: 0, step: 1}, text: 등대지기에게 열쇠를 빌려 달라고 부탁한다, expect: talk:dohae:favor}
 - {at: {path: 0, step: 1}, text: 노인에게 아들의 편지를 건넨다, expect: give:letter:dohae}
 - {at: {path: 0, step: 1}, text: 도해에게 아드님 편지를 가져왔다고 간청하며 이야기한다, expect: "talk:dohae:chat;tone=plead"}
 - {at: {path: 0, step: 1}, text: 도해에게 내가 새로 온 등대지기라고 속인다, expect: "talk:dohae:chat;claim=c_keeper;tone=deceive"}
-- {at: {path: 0, step: 1}, text: 도해의 멱살을 잡고 열쇠를 내놓으라고 윽박지른다, expect: "talk:dohae:favor;tone=threaten"}
+- {at: {path: 0, step: 1}, text: 도해의 멱살을 잡고 열쇠를 내놓으라고 윽박지른다, expect: "talk:dohae:favor;tone=threaten",
+   known: '이야기 모델이 부탁(favor) 대신 말 걸기(chat)를 고릅니다'}
 - {at: {path: 0, step: 1}, text: 이 마을에 예전에 같이 배를 탄 동료가 있다고 떠올린다, expect: declare:l_baek}
 - {at: {path: 0, step: 1}, text: 마을 우물가에 앉아 잠깐 쉰다, expect: cut:rest}
 - {at: {path: 0, step: 1}, text: 등대 앞으로 올라간다, expect: go:yard}
@@ -44,9 +51,11 @@
 # 등대 앞: 녹슨 문, 흔들리는 다리
 - {at: {path: 0, step: 2}, text: 어깨로 문을 들이받는다, expect: try:door:force}
 - {at: {path: 0, step: 2}, text: 기계공 경험을 살려 녹슨 자물쇠를 살살 딴다, expect: "try:door:finesse;rely=trait:tinker"}
-- {at: {path: 0, step: 2}, text: 문틈을 살펴 녹이 덜 슨 곳을 찾아 꾀를 낸다, expect: try:door:wits}
+- {at: {path: 0, step: 2}, text: 문틈을 살펴 녹이 덜 슨 곳을 찾아 꾀를 낸다, expect: try:door:wits,
+   known: '이야기 모델이 "살펴"를 따로 살피기(look)로 읽어 try 앞에 둡니다'}
 - {at: {path: 0, step: 2}, text: 밧줄로 다리를 동여맨다, expect: try:bridge:force}
-- {at: {path: 0, step: 2}, text: 쐐기를 박아 다리 기둥을 세운다, expect: try:bridge:wits}
+- {at: {path: 0, step: 2}, text: 쐐기를 박아 다리 기둥을 세운다, expect: try:bridge:wits,
+   known: '이야기 모델이 접근을 솜씨(finesse)로 고르고, 무리(forced)가 0.501로 θ를 겨우 넘습니다'}
 - {at: {path: 0, step: 2}, text: 문을 온몸으로 무리해서 밀어붙인다, expect: "try:door:force;strain=forced"}
 - {at: {path: 0, step: 2}, text: 문을 마법으로 연다, expect: refused}
 - {at: {path: 0, step: 2}, text: 녹슨 문을 자세히 살펴본다, expect: look:door}
@@ -63,3 +72,19 @@
 - {at: {path: 0, step: 5}, text: 기름 절반은 마을 봉화를 위해 남겨 둔다, expect: choose:g_oil:beacon}
 - {at: {path: 0, step: 5}, text: 꺼진 등불의 구조를 꼼꼼히 살핀다, expect: look:lamp}
 - {at: {path: 0, step: 5}, text: 등불 심지를 꾀를 내어 고쳐 본다, expect: try:lamp:wits}
+
+# 마을, 윤슬이 오래전에 따라나섬: 함께 다닌다는 것이 기억에서 밀려나 맥락의 사실 줄에만 남음
+- {at: {path: 0, step: 0, then: [{do: "talk:yunseul:come", roll: [6, 6, 0]}, go:village, go:dock, go:village]},
+   text: 동행에게 말을 건다, expect: talk:yunseul:chat}
+- {at: {path: 0, step: 0, then: [{do: "talk:yunseul:come", roll: [6, 6, 0]}, go:village, go:dock, go:village]},
+   text: 동행에게 여기서 기다리라고 한다, expect: talk:yunseul:stay}
+
+# 등대 앞, 윤슬이 따라옴
+- {at: {path: 0, step: 0, then: [{do: "talk:yunseul:come", roll: [6, 6, 0]}, go:yard]},
+   text: 윤슬과 같이 어깨로 문을 들이받는다, expect: "try:door:force;rely=with:yunseul"}
+
+# 기댈 것 고르기, 아무도 읽지 못한 문장, 되묻기
+- {at: {path: 0, step: 2}, text: 녹슨 자물쇠를 살살 따 본다, expect: try:door:finesse, relies: [trait:tinker]}
+- {at: {path: 0, step: 0}, text: ㅁㄴㅇㄹ, expect: idle}
+- {at: {path: 0, step: 2}, text: 그걸 고친다, expect: clarify,
+   known: '문인지 다리인지 문장에 없는데, 이야기 모델이 늘 하나를 골라 되묻기 카드까지 가지 않습니다(engine.md 3.4)'}

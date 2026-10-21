@@ -42,14 +42,14 @@ function Die({ value, tumbling, spin, ready }: { value: number | null; tumbling:
     landed.current = false;
     const id = setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 70);
     turn.value = withRepeat(withTiming(spin * 360, { duration: 420, easing: Easing.linear }), -1, false);
-    return () => { clearInterval(id); cancelAnimation(turn); };
+    // Stopping with no value (a lost answer) leaves a blank die upright, not a random face that reads as a result.
+    return () => { clearInterval(id); setFace(0); turn.value = withTiming(0, { duration: 160, easing: Easing.out(Easing.cubic) }); };
   }, [tumbling, reduced, spin, turn]);
 
   useEffect(() => {
     if (value == null || landed.current) return;
     landed.current = true;
     if (reduced) return;
-    turn.value = withTiming(0, { duration: 160, easing: Easing.out(Easing.cubic) });
     scale.value = withSequence(withTiming(1.12, { duration: 110 }), withTiming(1, { duration: 170 }));
   }, [value, reduced, turn, scale]);
 
@@ -96,7 +96,8 @@ export function Dice({ state, values, onRelease, label }: {
     onRelease?.();
   };
 
-  const tumbling = (i: 0 | 1) => state === 'rolling' || (state === 'stopped' && values[i] == null);
+  // Rolling dice tumble until their value arrives; stopped dice rest, blank if they have none.
+  const tumbling = (i: 0 | 1) => state === 'rolling' && values[i] == null;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={state !== 'ready'}
       onPressIn={press} onPress={release} className="rounded-2xl p-2">

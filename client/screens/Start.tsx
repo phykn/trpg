@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { Notice, Resend } from '@/components/game/CommandBar';
 import { Button, IconButton, pressed } from '@/components/ui/Button';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { colors } from '@/design/tokens';
@@ -29,9 +30,10 @@ function Section({ icon, label, used, of }: { icon: IconName; label: string; use
 }
 
 // `again` opens creation for that story at once: starting over from an ending skips the title.
-export function Start({ stories, busy, saved, again, onCreate, onResume }: {
-  stories: Story[]; busy: boolean; saved: GameView | null; again: string | null;
-  onCreate: (story: string, c: Creation) => void; onResume: () => void;
+// A lost answer to creating puts the resend where the start button was (`onResend`), as a command's does in the input bar.
+export function Start({ stories, busy, saved, again, notice, onCreate, onResume, onResend }: {
+  stories: Story[]; busy: boolean; saved: GameView | null; again: string | null; notice: string | null;
+  onCreate: (story: string, c: Creation) => void; onResume: () => void; onResend?: () => void;
 }) {
   const [id, setId] = useState<string | null>(again);
   const story = stories.find((s) => s.id === id);
@@ -97,9 +99,12 @@ export function Start({ stories, busy, saved, again, onCreate, onResume }: {
           );
         })}
       </View>
-      <View className="mt-auto">
-        <Button icon="play" label={ko.create} disabled={!ready}
-          onPress={() => onCreate(story.id, { name: name.trim() || ko.hero, approaches: placed, traits })} />
+      <View className="mt-auto gap-1.5">
+        {notice ? <Notice text={notice} /> : null}
+        {onResend ? <Resend onResend={onResend} /> : (
+          <Button icon="play" label={ko.create} disabled={!ready}
+            onPress={() => onCreate(story.id, { name: name.trim() || ko.hero, approaches: placed, traits })} />
+        )}
       </View>
     </View>
   );

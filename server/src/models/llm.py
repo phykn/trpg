@@ -67,7 +67,7 @@ class LLMClient:
     def body(self, messages: list[dict[str, str]], max_tokens: int, seed: int | None = None,
              sampling: dict[str, Any] | None = None) -> dict[str, Any]:
         # mlx-lm reads chat_template_kwargs, mlx-vlm reads the top-level flag; send both, always off.
-        # The server samples with a fixed seed unless told otherwise, so a rewrite needs its own seed.
+        # A seed does not replay a draft: the server gave two texts for one seed (narration bench, 2026-10-21).
         return {
             "model": self.model, "messages": messages, "stream": True, "max_tokens": max_tokens,
             "enable_thinking": False, "chat_template_kwargs": {"enable_thinking": False},

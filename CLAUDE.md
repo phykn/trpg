@@ -8,6 +8,7 @@ A story-agnostic Korean web TRPG engine. The player types a Korean sentence; rul
 - **Story**: [scenarios/skeleton/](scenarios/skeleton/) (`story.yaml` with id `lighthouse`, and `evals.yaml` for interpretation) is the only story.
 - **Server** (`server/src/`): `onto/` (world, log, saves), `rules/` (pure rules), `story/` (loading, validation, evals), `interpret.py`, `narrate.py`, `cards.py`, `view.py`, `service.py`, `api.py`, `fun.py` (offline metrics).
 - **Client** (`client/`): `logic/useGame.ts` (state machine), `logic/reveal.ts`, `components/ui/` (shared icon, button, sheet, motion, dialog), `components/game/`, `screens/`.
+- **Mac app** (`app/`): `build.sh` builds `TRPG.app`, which starts and stops `npm run serve` and shows the phone address, passing the loaded models as `DECISION_MODEL` and `LLM_MODEL`.
 - QA: [qa/README.md](qa/README.md) maps each kind of change to the checks to run; [qa/](qa/) also holds the open findings, the bench scripts and the playtest (`qa/play/`). Recordings, playtests and real-UI runs go to ignored `qa_test/runs/<run>/`.
 
 ## Models
@@ -34,6 +35,7 @@ Both models are required and run outside this repo. Never start or stop them (no
 ```bash
 .venv/bin/python server/run_api.py --local          # API on 127.0.0.1:8000, Basic Auth local/local
 cd client && npm run web                             # web UI on localhost:8090 (8081 is the decision model)
+app/build.sh && open TRPG.app                        # Mac app: one-button npm run serve
 
 .venv/bin/python -m pytest -q
 cd server && ../.venv/bin/python -m src.story ../scenarios/<folder>                                      # validate a story

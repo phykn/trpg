@@ -5,7 +5,8 @@ import httpx
 import pytest
 from conftest import REPO
 from run_api import build_app
-from src.service import Conflict, GameService, Incompatible, Missing
+from src import service as service_module
+from src.service import RECEIPTS, Conflict, GameService, Incompatible, Missing
 from src.story.validate import load_all
 
 STORIES = load_all(REPO / "scenarios")
@@ -85,6 +86,44 @@ async def test_stale_revision_is_a_conflict_with_the_view(svc):
     with pytest.raises(Conflict) as e:
         await cmd(svc, gid, view, "r2", action="go:dock")
     assert e.value.view["revision"] == 1
+    with pytest.raises(Conflict):                                   # a revision from the future is as wrong
+        await svc.command(gid, {"request_id": "r3", "revision": 2, "action": "go:dock"})
+
+
+async def test_the_newest_requests_keep_their_receipts(svc):
+    """A response lost after many requests is still answered from its receipt, not run again (engine.md 7)."""
+    gid, view = await new(svc)
+    for i in range(RECEIPTS + 1):
+        body = {"request_id": f"r{i}", "revision": view["revision"], "action": "try:player:wits"}
+        out = await svc.command(gid, body)
+        view = out["view"]
+    assert await svc.command(gid, body) == out and (await svc.view(gid))["revision"] == RECEIPTS + 1
+
+
+async def test_a_failed_save_leaves_the_game_as_saved(svc, monkeypatch):
+    """ontology.md 4, atomicity: a request that fails midway changes neither the file nor the game it serves."""
+    gid, view = await new(svc)
+
+    def full_disk(*args):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(service_module, "save", full_disk)
+    with pytest.raises(OSError):
+        await cmd(svc, gid, view, "r1", action="go:village")
+    monkeypatch.undo()
+    again = await svc.view(gid)
+    assert again["revision"] == 0 and again["scene"]["place"]["id"] == "dock"
+    out = await cmd(svc, gid, view, "r1", action="go:village")      # the client resends the same command
+    assert out["kind"] == "turn" and out["view"]["revision"] == 1
+
+
+async def test_a_latent_person_is_named_only_once_declared(svc):
+    """A latent never declared leaves no trace (story.md 3.10), so the journal knows no one it brings until then."""
+    gid, view = await new(svc)
+    _, view = await press(svc, gid, view, "go:village", "r1")
+    assert "baek" not in [r["id"] for r in view["journal"]["relations"]]
+    _, view = await press(svc, gid, view, "declare:l_baek", "r2")
+    assert "baek" in [r["id"] for r in view["journal"]["relations"]]
 
 
 async def test_out_of_candidate_action_is_refused(svc):
@@ -123,6 +162,17 @@ async def test_a_blocked_step_reaches_the_narration(svc):
     assert out["steps"][0]["result"] == "blocked"
     job = svc._turn_job(*svc.games[gid], out["turn"])
     assert job.blocked == (out["steps"][0]["label"],) and not job.relied
+
+
+async def test_a_blocked_step_still_tells_the_scene_end_its_beat_brought(svc):
+    gid, view = await new(svc)
+    for i, a in enumerate(["look:dock", "look:yunseul", "look:dock", "look:yunseul", "go:village"]):
+        _, view = await press(svc, gid, view, a, f"r{i}")
+    out = await cmd(svc, gid, view, "r9", action="talk:dohae:chat")      # the sixth beat ends the scene (narr-3 turn 6)
+    step = out["steps"][0]
+    assert step["result"] == "blocked" and step["changes"][0] == {"kind": "reveal", "id": "hound", "name": "사나운 누렁이"}
+    assert {"kind": "clock", "id": "deadline.1", "name": "해가 진다", "from": 0, "to": 1} in step["changes"]
+    assert "해가 진다: 다가왔습니다" in svc._turn_job(*svc.games[gid], out["turn"]).happened
 
 
 async def test_a_blocked_roll_leans_on_nothing(svc):

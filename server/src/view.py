@@ -214,11 +214,13 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
     add, rem = seen.delta.add, seen.delta.remove
     out: list[dict] = []
     if seen.result == "blocked":
-        for at in add:
-            if at[0] == "believes" and at[2].endswith(".hidden"):
-                x = at[2][:-len(".hidden")]
-                out.append({"kind": "reveal", "id": x, "name": u.name(x)})
-        return out
+        # The blocker comes to light by name; the beat the step spent still runs on, and a scene end it brought
+        # went untold (qa_test/runs/narr-3 turn 6: the sunset went to 1/3).
+        found = {at for at in add if at[0] == "believes" and at[2].endswith(".hidden")}
+        for at in sorted(found, key=str):
+            x = at[2][:-len(".hidden")]
+            out.append({"kind": "reveal", "id": x, "name": u.name(x)})
+        add = add - found
 
     def value(atoms, pred, *key):
         for at in atoms:

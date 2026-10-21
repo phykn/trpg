@@ -90,6 +90,15 @@ def test_tag_skips_scars_and_stops_when_all_slots_are_scars(u, s0):
     assert w.tag(PLAYER, "edge", "scene") == 2
 
 
+def test_each_operation_sees_the_one_before(u, s0):
+    """ontology.md 4: the working copy's state follows every operation, even after it was read."""
+    w = Work(u, s0)
+    slot = w.tag(PLAYER, "snag", "scene")
+    assert w.state().marks(PLAYER) == [(slot, "snag", "scene")]
+    w.untag(PLAYER, slot)
+    assert w.state().marks(PLAYER) == []
+
+
 def test_followers_move_with_the_player_and_a_lone_move_ends_following(u, s0):
     w = Work(u, s0)
     w.insert(("follows", "yunseul", PLAYER))
@@ -171,6 +180,17 @@ def test_rebuild_refuses_another_story_or_schema(u, creation):
         rebuild(u, {**data, "story": {**data["story"], "digest": "sha256:other"}})
 
 
+def test_rebuild_refuses_a_log_that_breaks_conformance(u, creation):
+    """ontology.md 6: conforms at every replayed step, so a tampered log is refused, not loaded."""
+    g = new_game(u, "g_x", 1, creation)
+    step(u, g, 0, "go:village", [("move", PLAYER, "village")])
+    data = to_json(u, g)
+    data["log"][0]["delta"]["add"].append(["fill", "door", u.boxes("door") + 1])
+    data["log"][0]["delta"]["remove"].append(["fill", "door", 0])
+    with pytest.raises(SaveError, match="breaks C"):
+        rebuild(u, data)
+
+
 def test_yaml_subset():
     assert parse("a: no\nb: on\nc: 3\nd: '3'\ne: -1\nf: '-1'\n") == {
         "a": "no", "b": "on", "c": 3, "d": "3", "e": -1, "f": "-1"}
@@ -183,6 +203,8 @@ def test_yaml_subset():
     (lambda r: r["endings"].pop("collapse"), "collapse"),
     (lambda r: r["places"].__setitem__("chat", r["places"].pop("dock")), "reserved"),
     (lambda r: r["obstacles"]["bridge"]["solutions"].pop("s_wedge"), "two or more"),
+    (lambda r: r["obstacles"]["bridge"]["solutions"]["s_wedge"].__setitem__("approach", "force"), "different approaches"),
+    (lambda r: r["chapters"][0]["clock"].__setitem__("boxes", 2), "out of range"),
     (lambda r: r["chapters"][1]["deadline"].pop("ending"), "needs an ending"),
     (lambda r: r["triggers"]["tr_spray"]["effects"].append({"set": ["fill", "clock.1", 0]}), "clocks"),
     (lambda r: r["places"]["dock"].__setitem__("smell", "x"), "unknown field"),

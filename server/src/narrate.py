@@ -224,19 +224,21 @@ def pairs(text: str) -> dict[tuple[str, str], str]:
 
 
 def worn(u, previous: list[str]) -> list[str]:
-    """Phrases in two of the recent narrations, names and place senses aside. Below the repetition check's 10
-    characters, "집어삼킬 듯" came back in nearly every turn (qa_test/runs/play-1-*)."""
-    skip = {"당신", *(w for x in (*u.places, *u.agents, *u.things, *u.obstacles) for n in (u.name(x), *u.aliases(x))
-                      for w in n.split() if len(w) >= 2),
-            *(w for q in u.places.values() for c in q.senses for w in c.split() if len(w) >= 2)}
+    """Phrases in two of the recent narrations. Below the repetition check's 10 characters, "집어삼킬 듯" came back in
+    nearly every turn (qa_test/runs/play-1-*). Part of a name or of a place's senses is the story's wording, and names
+    and 당신 alone say who, not how; a phrase that only shares a word with them is the narration's own: when it was
+    skipped, "젖은 손" came three turns running (play-5-talker 28–30)."""
+    names = [n for x in (*u.places, *u.agents, *u.things, *u.obstacles) for n in (u.name(x), *u.aliases(x))]
+    story = {k for t in (*names, *(c for q in u.places.values() for c in q.senses)) for k in pairs(t)}
+    who = {"당신", *(w for n in names for w in n.split() if len(w) >= 2)}
     seen = [pairs(t) for t in previous]
     count: dict = {}
     for d in seen:
         for k in d:
             count[k] = count.get(k, 0) + 1
     latest = {k: v for d in seen for k, v in d.items()}
-    twice = [latest[k] for k, n in count.items() if n >= 2]
-    return [ph for ph in twice if not any(w.startswith(x) for w in ph.split() for x in skip)][:WORN]
+    twice = [latest[k] for k, n in count.items() if n >= 2 and k not in story]
+    return [ph for ph in twice if not all(any(w.startswith(x) for x in who) for w in ph.split())][:WORN]
 
 
 def fresh_cue(senses: list[str], previous: list[str]) -> str | None:

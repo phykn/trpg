@@ -19,6 +19,7 @@ async def test_metrics_read_sentence_outcomes_card_origins_and_closed_cards(tmp_
 
     out = await cmd(svc, gid, view, "r3", action="go:village")               # a button
     out = await cmd(svc, gid, out["view"], "r4", action="talk:dohae:t_oil")  # a roll card, then closed
+    assert out["view"]["card"] is not None, out["reason"]
     out = await cmd(svc, gid, out["view"], "r5", card=out["view"]["card"]["id"], cancel=True)
     out = await cmd(svc, gid, out["view"], "r6", text="back")                # a move card, then taken
     card = out["view"]["card"]

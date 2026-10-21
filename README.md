@@ -44,6 +44,8 @@ cd client && npm run web
 
 Open http://localhost:8090. `--local` needs no env file; the API is on `127.0.0.1:8000` with auth `local/local`. The web client reloads on its own; restart the API after changing server code or a story. Other models and settings: [server/README.md](server/README.md). Phone and public access: [client/README.md](client/README.md).
 
+On a Mac, `app/build.sh && open TRPG.app` builds a small app that runs `npm run serve` ([client/README.md](client/README.md#public-serving-workersdev)) with one button and shows the phone address with a QR code. It runs the API with whichever models the model servers have loaded, keeps output in `logs/server.log`, and quitting it stops the server.
+
 ## Play
 
 1. On the title screen pick a story, then set a name, stats and traits.

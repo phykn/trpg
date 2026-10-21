@@ -2,6 +2,8 @@
 
 Each genre file `data/<genre>.jsonl` holds one JSON object per line. Korean for all story text. Player-facing narration uses 당신 and 합니다체.
 
+The bench asks each item what the engine would ask in that scene: `mirror.py` reads a scene the way the engine's `space()` reads a state and builds the requests with `interpret.py` and `locale/ko.py`, so the item files hold no question or option wording. Before every run, `parity.py` writes the skeleton story's eval and witness states as scenes in this format and fails if the bench's requests differ from the engine's.
+
 ## 1. Sentence items (`"kind": "sentence"`), 36 per genre
 
 ```json
@@ -28,6 +30,8 @@ Each genre file `data/<genre>.jsonl` holds one JSON object per line. Korean for 
 - `where` of a thing: `"player"` (carried), `"here"` (lying in this place), or a person's name (that person holds it).
 - `favor` is the one thing the person can be asked to do or lend (a label), or null. `wants` lists things the person would welcome.
 - `threats`, `forks`, `latents`, `claims`, `memory` may be empty lists. Keep a scene small: 1–3 people, 1–4 things, 0–2 obstacles, 1–3 exits. A scene may be reused by several items (copy it).
+- Optional, as a story would have them: `place.aliases`; an exit as `{"name", "aliases"}`; a person's `persona` (one of the sixteen types in `ko.PERSONAS`); an obstacle's `blocks` (names it keeps out of reach until filled); `following` (people walking with the player); `player.wounds`; and `order`, the story's declaration order of the names, which orders every option list (default: place, exits, people, things, obstacles, threats, forks).
+- As in the engine, a thing a person holds is unseen: it is never an option and is left out of the context.
 - `text` is what a player types. `gold.steps` is the list of 1–3 schemas the sentence asks for, in order. `gold.detail` is the first step's arguments.
 
 ### Schemas and their first-step detail
@@ -70,6 +74,7 @@ go 4, look 5, take 3, give 3, talk 7 (all five tones at least once, favor at lea
 
 - `options` are what the player could lean on for a +1: traits (`text` = the trait text), carried things (`text` = look), known facts (`prop`, `text` = the fact), edge tags (`tag`, `name` only), a person who deeply trusts the player (`bond`, `name` = the person).
 - 4–6 options per item; `relevant` lists the indexes that would really help this attempt (0, 1 or 2 of them). Include plausible distractors from the same world, and at least once a known fact about a danger that does not help (like "a fierce dog guards the hut" while fixing a lamp). One item per genre has no relevant option.
+- As in the engine, a `tag` is never asked about: an edge stays on the roll card unasked, so it counts as kept. `score` reports both the card (`rely exact`) and the asked options alone (`asked`).
 
 ## 3. Narration check items (`"kind": "check"`), 10 per genre
 
@@ -84,3 +89,4 @@ go 4, look 5, take 3, give 3, talk 7 (all five tones at least once, favor at lea
 
 - `sentence` is one narrator sentence (합니다체, the player is 당신). `contradicts`: it states something the facts or what happened deny (a person who is elsewhere is here, a held thing is lost, a locked obstacle is fully open, a different result than what happened). `invents`: it introduces a person, a usable thing, or a route not in the facts or public lines. Mood, weather, sounds and feelings drawn from the senses are neither.
 - Per genre: 4 faithful (both false), 3 contradicting, 3 inventing (one may be both).
+- `facts` and `public` are sent as written, while the narrator's own context words an obstacle's progress instead of counting it and leaves out a zero fill (`lang.context.scene`), so lines like "잠긴 격벽: 0/2" are older than the engine. The question is the engine's (`narrate.Narrator.judge`); optional `beliefs` and `memory` lists go in their sections.

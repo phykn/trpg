@@ -1,24 +1,38 @@
 import json
 import random
 import sys
+from pathlib import Path
 
-a_name, b_name, out = sys.argv[1], sys.argv[2], sys.argv[3]
-A, B = json.load(open(a_name)), json.load(open(b_name))
-rng = random.Random(7)
-key, items = {}, []
-for x, y in zip(A, B):
-    assert (x["run"], x["i"], x["text"]) == (y["run"], y["i"], y["text"])
-    if not (x["narration"] and y["narration"]):
-        continue
-    p = y["narration"]["prompts"][0][1]["content"]
-    happened = p[p.index("[일어난 일]"):].split("\n\n")[0]
-    context = p[:p.index("[일어난 일]")].strip()
-    pair = [("before", x), ("after", y)]
-    rng.shuffle(pair)
-    iid = f"r{x['run']}t{x['i']}"
-    key[iid] = {"A": pair[0][0], "B": pair[1][0], "same_steps": x["steps"] == y["steps"]}
-    items.append({"id": iid, "player": x["text"], "context": context, "happened": happened,
-                  "A": pair[0][1]["narration"]["text"], "B": pair[1][1]["narration"]["text"]})
-json.dump(items, open(out, "w"), ensure_ascii=False, indent=1)
-json.dump(key, open(out.replace(".json", ".key.json"), "w"), indent=1)
-print(len(items), sum(v["same_steps"] for v in key.values()))
+HAPPENED = ("[일어난 일]", "[이 장의 일]")      # ko.HEAD happened, and notable for a recap
+
+
+def rows(path: str) -> dict:
+    data = json.loads(Path(path).read_text())
+    return {(r["game"], r.get("n", f"recap {r.get('recap')}")): r for r in data["rows"]}
+
+
+def sections(prompt: str) -> tuple[str, str]:
+    at = min(i for h in HAPPENED if (i := prompt.find(h)) >= 0)
+    return prompt[:at].strip(), prompt[at:].split("\n\n")[0]
+
+
+def main(before: str, after: str, out: str):
+    a, b = rows(before), rows(after)
+    rng = random.Random(7)
+    key, items = {}, []
+    for k in [k for k in a if k in b]:
+        x, y = a[k], b[k]
+        context, happened = sections(y["narration"]["prompts"][0][1]["content"])
+        pair = [("before", x), ("after", y)]
+        rng.shuffle(pair)
+        iid = f"g{k[0]}t{k[1]}".replace(" ", "")
+        key[iid] = {"A": pair[0][0], "B": pair[1][0], "same_steps": x.get("steps") == y.get("steps")}
+        items.append({"id": iid, "player": x.get("text"), "context": context, "happened": happened,
+                      "A": pair[0][1]["narration"]["text"], "B": pair[1][1]["narration"]["text"]})
+    Path(out).write_text(json.dumps(items, ensure_ascii=False, indent=1))
+    Path(out.replace(".json", ".key.json")).write_text(json.dumps(key, indent=1))
+    print(len(items), sum(v["same_steps"] for v in key.values()))
+
+
+if __name__ == "__main__":
+    main(*sys.argv[1:4])

@@ -292,10 +292,25 @@ Replay starts from the `S₀` built from `creation`. At each step it checks `a�
 
 ## 6. Interpretation evals
 
-`evals.yaml` is test data that measures the interpretation model's accuracy, and it is not part of startup validation. A case names its state as the point after one step of a witness; for a state that is not on a witness path, `then` lists further actions to run, in the same shape as witness steps (`then: [{do: "talk:h:come", roll: [6, 6, 0]}]`).
+`evals.yaml` is test data that measures interpretation against the real models, and it is not part of startup validation. It is a list of cases:
+
+| Field | Meaning |
+|---|---|
+| `at` | The state: after the first `step` steps of witness path `path`. For a state no witness passes through, `then` lists further actions to run, in the same shape as witness steps (`then: [{do: "talk:h:come", roll: [6, 6, 0]}]`) |
+| `text` | The player's sentence |
+| `expect` | One action id (the first step), a list of action ids (the leading steps), a schema name (any action of it first), `refused`, `clarify` (a clarify card, engine.md 4.1) or `idle` (the whole sentence became `try(player)`, engine.md 3.4). A reliance the sentence names is part of the action id |
+| `relies` | Optional. The reliances the card of the sentence's first rolled step offers, in card order and without "rely on nothing": what the decision model's relevance question kept (engine.md 4.2) |
+| `known` | Optional. The case is a known miss, and the value says why |
 
 ```yaml
 - at: {path: 0, step: 2}
-  text: 열쇠로 문을 열어 본다
-  expect: try:door:finesse;rely=thing:key
+  text: 녹슨 자물쇠를 살살 따 본다
+  expect: try:door:finesse
+  relies: [trait:tinker]
+- at: {path: 0, step: 0}
+  text: 잠시 숨을 고르며 바다를 바라본다
+  expect: look:dock
+  known: 1층이 "숨을 고르며"를 시간 보내기(cut)로 확신합니다
 ```
+
+The evals command (`python -m src.story.evals`) is a regression gate. A case passes when the sentence's outcome matches `expect` and, if given, the offered reliances match `relies`. The run fails (exit 1) on a **regression**, a case without `known` that fails, and on a case where a model gave no answer (an error or the time limit), since its result says nothing about interpretation. A **fix**, a `known` case that passes, does not fail the run; it is listed so that its `known` is removed. A case is listed as **fragile**, with the probability, when an answer that a threshold decides lies within 0.05 of it, since a small change in a prompt or model flips it: `θ₁` for the first step, `θ` for an intent slot, a judgment other than `ν₀` and a claim, and `θ_rely` for each reliance (engine.md 3.4, 4.2). The `try` target and approach are left out, as the narration model's pick decides them.

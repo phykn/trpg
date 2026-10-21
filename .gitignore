@@ -36,3 +36,6 @@ notebooks/
 .superpowers/
 .worktrees/
 .loopy/
+
+# Mac app (app/build.sh)
+TRPG.app/

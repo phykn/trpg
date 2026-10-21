@@ -60,14 +60,16 @@ def fact_line(u, p: dict, atom: Atom) -> str | None:
 
 
 def context(u, o: Obs, focus, p: dict) -> list[Line]:
-    """X = focus ∩ E."""
+    """X = focus ∩ E. A fact touches X and names only E: the player is in every focus, and F holds the player's ties
+    to people anywhere, so the decision model read an absent companion's regard and a latent person's (qa_test/runs/
+    decision-2/parity-context.txt)."""
     x = set(focus) & set(o.seen)
     out: list[Line] = []
     for atom in sorted(o.facts.atoms(), key=lambda a: (a[0], str(a[1:]))):
         if atom[0] in ("due", "spent", "believes"):
             continue
         slots = [a for a in atom[1:] if isinstance(a, str) and u.kind(a) is not None or a == PLAYER]
-        if not any(a in x for a in slots):
+        if not any(a in x for a in slots) or not set(slots) <= o.seen:
             continue
         text = fact_line(u, p, atom)
         if text:

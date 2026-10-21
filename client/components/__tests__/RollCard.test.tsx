@@ -58,3 +58,35 @@ test('a high risk card warns', async () => {
   expect(texts(tree!)).toContain('9');
   await flush(async () => { tree!.unmount(); });
 });
+
+function radios(tree: ReturnType<typeof renderer.create>) {
+  return tree.root.findAll((n: { props: { accessibilityRole?: string; onPress?: unknown } }) =>
+    n.props.accessibilityRole === 'radio' && typeof n.props.onPress === 'function', { deep: false });
+}
+function dice(tree: ReturnType<typeof renderer.create>) {
+  return tree.root.find((n: { props: { accessibilityLabel?: string; onPress?: unknown } }) =>
+    n.props.accessibilityLabel === ko.hold && typeof n.props.onPress === 'function');
+}
+
+test('the dice roll with the help the player chose, not the one the card opened with', async () => {
+  const onRoll = jest.fn();
+  let tree: ReturnType<typeof renderer.create>;
+  await flush(async () => { tree = renderer.create(<RollCard card={card()} onRoll={onRoll} onCancel={jest.fn()} />); });
+  await flush(async () => { radios(tree!)[0].props.onPress(); });
+  await flush(async () => { dice(tree!).props.onPress(); });
+  expect(onRoll).toHaveBeenLastCalledWith('try:door:finesse');
+  await flush(async () => { radios(tree!)[0].props.onPress(); });
+  await flush(async () => { dice(tree!).props.onPress(); });
+  expect(onRoll).toHaveBeenLastCalledWith('try:door:finesse;rely=thing:key');
+  await flush(async () => { tree!.unmount(); });
+});
+
+test('once rolling, the help, the dice and the close button are locked', async () => {
+  const onRoll = jest.fn();
+  let tree: ReturnType<typeof renderer.create>;
+  await flush(async () => { tree = renderer.create(<RollCard card={card()} onRoll={onRoll} onCancel={jest.fn()} rolling />); });
+  expect(radios(tree!)[0].props.disabled).toBe(true);
+  expect(dice(tree!).props.disabled).toBe(true);
+  expect(labelled(tree!, ko.close)).toBe(false);
+  await flush(async () => { tree!.unmount(); });
+});

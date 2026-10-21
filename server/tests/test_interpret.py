@@ -259,6 +259,7 @@ async def test_a_claim_is_asked_only_after_a_deceiving_tone(tmp_path):
     assert [set(q) for _, q in decision.asked[1:]] == [{"intent", "tone"}, {"c_keeper"}]
     assert decision.asked[-1][1]["c_keeper"]["type"] == "noul"
     card = out["view"]["card"]
+    assert card is not None and card["kind"] == "confirm", "a lie is high risk and waits for a confirm card"
     assert card["plan"]["step"]["action"] == "talk:dohae:chat;claim=c_keeper;tone=deceive"
 
 
@@ -363,3 +364,12 @@ async def test_giving_what_the_player_does_not_hold_says_so(tmp_path):
     u, g = svc.games[gid]
     st = await svc.interpreter.fill(u, g, {"schema": "give", "text": "윤슬에게 편지를 다시 건넨다", "fixed": {}})
     assert st == {"refused": "아들의 편지를 지니고 있지 않습니다."}
+
+
+async def test_the_decision_models_context_names_only_who_is_in_sight(tmp_path):
+    decision = FakeDecision({"s1": {"talk": 0.9}, "n": {"1": 0.9}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("1"), moves=["go:village"])
+    await say(svc, gid, view, "도해에게 인사한다")
+    state = decision.asked[1][0]
+    # 윤슬 stayed at the dock and 백 is not brought in yet, yet both regard the player (decision-2/parity-context.txt).
+    assert "도해는 당신을" in state and "윤슬" not in state and "백은" not in state

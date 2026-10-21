@@ -1,17 +1,22 @@
 import random
 
 import pytest
+from conftest import skeleton_raw
 from src.onto.atoms import PLAYER
+from src.onto.change import Work
 from src.onto.log import Delta, Log
 from src.onto.universe import conforms, initial
 from src.onto.view import Seen, facts_of, observe, record
 from src.rules.acts import format, parse
-from src.rules.candidates import admits, candidates, space
+from src.rules.candidates import active_threats, admits, candidates, held_clock, space
+from src.rules.costs import pool
 from src.rules.recommend import recommend
 from src.rules.resolve import event_of, resolve
-from src.rules.roll import DC, chance, outcome, preview, risk, roll, rolls
+from src.rules.roll import DC, chance, modifiers, outcome, preview, risk, roll, rolls
 from src.rules.triggers import ended
-from src.view import atom_label, changes
+from src.story.compile import build
+from src.story.validate import Run
+from src.view import atom_label, changes, step_record
 
 
 class Play:
@@ -68,7 +73,6 @@ def test_roll_is_a_function_of_seed_and_turn():
 
 def test_the_target_number_splits_success_from_fail(u, s0):
     a = parse("try:door:wits")
-    from src.rules.roll import modifiers
     m = modifiers(u, s0, a)          # wits 1
     assert m.z == 1
     for r, dc in DC.items():
@@ -111,10 +115,29 @@ def test_a_fail_applies_its_cost_at_once(play):
     assert "pay" not in {a.schema for a in candidates(play.u, play.obs)}
 
 
+def test_the_decisive_chips_are_those_whose_removal_flips_the_result(play):
+    """api.md 3: with the spray hindering, finesse 2 and tinker 1 roll against 8."""
+    play.do("go:village")
+    play.do("go:yard")
+    play.do("try:door:finesse;rely=trait:tinker", (3, 2, 0))          # 7 fails; without the spray, 8 would succeed
+    assert step_record(play.u, {"tags": []}, play.log.seen[PLAYER][-1], "", None)["decisive"] == [2]
+    play.do("try:door:finesse;rely=thing:letter", (4, 3, 0))          # 9 succeeds; without finesse, 7 would fail
+    assert step_record(play.u, {"tags": []}, play.log.seen[PLAYER][-1], "", None)["decisive"] == [0]
+
+
 def path_steps(u, i):
     p = u.witnesses["paths"][i]
     before = path_steps(u, p["after"]) if "after" in p else []
     return before + p["steps"]
+
+
+def pass_until(run, done):
+    """cut(pass) alone reaches an ending within 1 + Σ deadline boxes steps (rule.md 10, guaranteed ending)."""
+    for _ in range(1 + sum(run.u.boxes(c.deadline) for c in run.u.chapters)):
+        if done(run.s) or ended(run.s):
+            break
+        run.step(parse("cut:pass"))
+    assert done(run.s), "passing time did not get there within the guaranteed bound"
 
 
 @pytest.mark.parametrize("i", range(4))
@@ -155,13 +178,22 @@ def test_progress_and_neutral_self_try(play):
 
 def test_hinder_counts_once(u, play):
     play.do("go:yard")                     # spray: a snag on the player
-    from src.onto.change import Work
     w = Work(u, play.s)
     w.tag("door", "snag", "scene", None)
     w.tag("yard", "snag", "scene", None)
-    from src.rules.roll import modifiers
     m = modifiers(u, w.state(), parse("try:door:finesse"))
     assert len(m.hinder) == 3 and m.z == 2 - 1
+
+
+def test_a_talk_is_hindered_by_the_axis_its_tone_reads(u, s0):
+    """rule.md 3.2: a threat reads the other party's fear, any other tone their trust; only a negative one hinders."""
+    w = Work(u, s0)
+    w.set_("regards", ("yunseul", PLAYER, "trust"), -1)
+    threat, ask = parse("talk:yunseul:t_wall;tone=threaten"), parse("talk:yunseul:t_wall")
+    assert modifiers(u, w.state(), threat).hinder == ()
+    assert modifiers(u, w.state(), ask).hinder == (("regards", "yunseul", PLAYER, "trust", -1),)
+    w.set_("regards", ("yunseul", PLAYER, "fear"), -1)
+    assert modifiers(u, w.state(), threat).hinder == (("regards", "yunseul", PLAYER, "fear", -1),)
 
 
 def test_risk_reads_only_the_action(u):
@@ -169,6 +201,8 @@ def test_risk_reads_only_the_action(u):
     assert risk(u, parse("try:bridge:wits;strain=forced")) == "normal"
     assert risk(u, parse("try:door:force;strain=forced")) == "high"
     assert risk(u, parse("talk:dohae:chat;tone=threaten")) == "high"
+    assert risk(u, parse("talk:dohae:chat;tone=deceive")) == "high"
+    assert risk(u, parse("talk:dohae:chat;tone=friendly")) == "normal"
     assert risk(u, parse("choose:g_oil:beacon")) == "high"
     assert risk(u, parse("go:yard")) == "low"
 
@@ -194,6 +228,7 @@ def test_favor_promise_is_kept_by_giving_back(play):
     assert not admits(play.u, play.obs, parse("talk:dohae:favor"))
     play.do("give:key:dohae")
     assert not play.s.rows("owes") and play.s.regards("dohae", PLAYER, "trust") == 1
+    assert not admits(play.u, play.obs, parse("talk:dohae:favor"))        # one favor per character (story.md 3.4)
 
 
 def test_an_open_promise_outlives_chapters_and_the_ending(u, play):
@@ -222,6 +257,30 @@ def test_deceit_is_caught_by_a_contrary_belief(play):
     assert any(k == "snag" and life == "chapter" for _, k, life in play.s.marks(PLAYER))
 
 
+def test_a_threat_frightens_and_costs_trust_even_when_it_fails(play):
+    """rule.md 5.1 step 4: whatever the result."""
+    assert play.do("talk:yunseul:t_wall;tone=threaten", (1, 1, 0)).result == "fail"
+    assert play.s.regards("yunseul", PLAYER, "fear") == 1 and play.s.regards("yunseul", PLAYER, "trust") == -1
+
+
+def test_a_failed_favor_can_be_asked_again(play):
+    """Only a granted favor counts as asked (rule.md 5.1 step 5): its pattern takes success or none, not fail."""
+    play.do("go:village")
+    play.do("talk:dohae:chat")             # reveals the hound
+    play.do("try:hound:wits", (6, 6, 0))
+    assert play.do("talk:dohae:favor", (1, 1, 0)).result == "fail"
+    assert play.s.where("key") == "dohae" and admits(play.u, play.obs, parse("talk:dohae:favor"))
+
+
+def test_a_story_complication_waits_for_its_condition(u, s0):
+    """rule.md 3.3: a story complication joins the pool only while its when holds (dohae is cold at trust 0 or less)."""
+    w = Work(u, s0)
+    w.move(PLAYER, "village")
+    assert "c_dohae_cold" in [c.id for c in pool(u, "light", "dohae", w.state(), frozenset())]
+    w.set_("regards", ("dohae", PLAYER, "trust"), 1)
+    assert [c.id for c in pool(u, "light", "dohae", w.state(), frozenset())] == ["engine.snag", "engine.beat"]
+
+
 def test_give_wanted_thing_earns_kindness(play):
     play.do("go:village")
     play.do("talk:dohae:chat")
@@ -231,6 +290,7 @@ def test_give_wanted_thing_earns_kindness(play):
     assert not rolls(play.u, facts_of(play.u, play.s, PLAYER), play.log.hist, parse("talk:dohae:favor"))
     play.do("talk:dohae:favor")
     assert play.s.where("key") == PLAYER and not play.s.rows("owes")
+    assert not admits(play.u, play.obs, parse("talk:dohae:favor"))
 
 
 def test_declare_brings_the_latent(play):
@@ -241,6 +301,43 @@ def test_declare_brings_the_latent(play):
     assert admits(play.u, play.obs, parse("talk:baek:chat"))
     play.do("go:yard")
     assert admits(play.u, play.obs, parse("try:door:wits;rely=bond:baek"))
+
+
+def test_rest_only_where_one_can_rest(play):
+    assert not admits(play.u, play.obs, parse("cut:rest"))           # the dock is no resting place
+    play.do("go:village")
+    assert admits(play.u, play.obs, parse("cut:rest"))
+
+
+def test_an_overcome_obstacle_is_no_longer_a_target(play):
+    play.do("go:village")
+    play.do("go:yard")
+    assert admits(play.u, play.obs, parse("try:door:wits"))
+    play.do("try:door:finesse", (6, 6, 0))
+    assert play.s.fill("door") == play.u.boxes("door") and admits(play.u, play.obs, parse("go:lamp_room"))
+    assert not [a for a in candidates(play.u, play.obs) if a.schema == "try" and a.intent[0] == "door"]
+
+
+def test_a_fitting_approach_fills_one_box_more(u, creation):
+    play = Play(u, creation)
+    for st in path_steps(u, 0):
+        aid, r = (st["do"], tuple(st["roll"])) if isinstance(st, dict) else (st, None)
+        play.do(aid, r)
+    play.do("try:lamp:wits", (6, 6, 0))                                   # the lamp fits wits
+    assert play.s.fill("lamp") == 2
+    play.do("try:lamp:finesse", (6, 6, 0))
+    assert play.s.fill("lamp") == 3
+
+
+def test_a_success_on_something_else_lifts_its_lowest_snag(u, play):
+    """rule.md 7: the lowest-slot snag, the one the roll card names."""
+    w = Work(u, play.s)
+    w.tag("letter", "snag", "scene")
+    w.tag("letter", "snag", "chapter")
+    play.s = w.state()
+    assert preview(u, play.obs, parse("try:letter:finesse")).gain["remove"] == ("mark", "letter", "snag", "scene", 1)
+    play.do("try:letter:finesse", (6, 6, 0))
+    assert play.s.marks("letter") == [(2, "snag", "chapter")]
 
 
 def test_rest_heals_and_brings_threats_closer(play):
@@ -294,7 +391,6 @@ def test_an_edge_on_a_carried_thing_goes_along(u, play):
 def test_a_thing_leaned_on_is_spent_until_the_chapter_changes(u, creation):
     """A free letter gave +1 to every roll and no trait was ever leaned on (play-5-odd 25)."""
     from src.rules.candidates import rely_values
-    from src.story.validate import Run
     run = Run(u, creation)
     for a in ("go:village", "go:yard"):
         run.step(parse(a))
@@ -302,8 +398,7 @@ def test_a_thing_leaned_on_is_spent_until_the_chapter_changes(u, creation):
     run.step(parse("try:door:finesse;rely=thing:letter"), (1, 1, 0))
     assert run.s.has("spent", PLAYER, "letter") and "thing:letter" not in rely_values(u, run.obs.facts, "door")
     assert not admits(u, run.obs, parse("try:door:finesse;rely=thing:letter"))
-    while run.s.flag("chapter") in (None, 1):
-        run.step(parse("cut:pass"))
+    pass_until(run, lambda s: s.flag("chapter") == 2)
     assert not run.s.has("spent", PLAYER, "letter")
 
 
@@ -317,6 +412,57 @@ def visible(u, s):
     return facts_of(u, s, PLAYER).atoms()
 
 
+CLOCK_COST = {"low": 1, "normal": 1, "high": 2}     # boxes a fail adds to the held clock (rule.md 3.3)
+
+
+def quiet(a) -> bool:
+    """Steps that raise no beat (rule.md 4.1)."""
+    return a.schema in ("cut", "grow") or (a.schema == "try" and a.intent[0] == PLAYER)
+
+
+def may_lose(u, a, s0, step) -> set:
+    """Tag slots this step may clear without an expiry: what it relied on, the snag a success lifts, a healed scar,
+    and slots it tagged again (ontology.md 4)."""
+    out = {(x, slot) for x, slot, _ in step.names}
+    rely = a.get("rely") or ""
+    if rely.startswith("tag:"):
+        x, _, slot = rely[4:].rpartition(":")
+        out.add((x, int(slot)))
+    if a.schema == "try" and step.result == "success" and a.intent[0] not in u.obstacles:
+        snags = [i for i, kind, _ in s0.marks(a.intent[0]) if kind == "snag"]
+        out |= {(a.intent[0], snags[0])} if snags else set()
+    if a.schema == "grow" and a.intent[0] == "scar":
+        out.add((PLAYER, int(a.intent[1])))
+    return out
+
+
+def check_time(u, a, s0, step):
+    """When things happen (rule.md 4, 6, 8): crises, scene ends, arrivals and collapse."""
+    s1 = step.after
+    marks = s1.marks(PLAYER)
+    assert (s1.flag("ending") == "collapse") == (len(marks) == 3 and all(life == "scar" for _, _, life in marks))
+    if ended(s1):
+        return
+    for o in active_threats(u, s1):
+        assert s1.fill(o) < u.boxes(o), f"{o} is full but has not arrived"
+    new_chapter = s1.flag("chapter") != s0.flag("chapter")
+    scene_end = not new_chapter and (a.schema == "cut" or not quiet(a) and s1.stat(PLAYER, "beats") == 0)
+    lose = may_lose(u, a, s0, step)
+    for (x, slot), (kind, life) in s0.mark_.items():
+        if (x, slot) in lose:
+            continue
+        if life == "scene" and (scene_end or new_chapter) or life == "chapter" and new_chapter:
+            assert (x, slot) not in s1.mark_, f"{life} tag on {x} outlived its {life}"
+        else:
+            assert s1.mark_.get((x, slot)) == (kind, life), f"{life} tag on {x} lost after {format(a)}"
+    if new_chapter:
+        return
+    c = held_clock(u, s0)
+    n = s0.fill(c) + (CLOCK_COST[step.risk] if step.result == "fail" else 0) + (a.schema == "declare")
+    # A full clock brings its crisis and starts over; short of full, nothing else moves it.
+    assert s1.fill(c) == (0 if n >= u.boxes(c) else n), f"{c}: {s0.fill(c)} → {s1.fill(c)} after {format(a)}"
+
+
 @pytest.mark.parametrize("seed", range(40))
 def test_random_play_keeps_the_properties(u, creation, seed):
     rng = random.Random(seed)
@@ -324,6 +470,7 @@ def test_random_play_keeps_the_properties(u, creation, seed):
     traits = rng.sample(sorted(u.traits), u.pick)
     play = Play(u, {"approaches": dict(zip(("force", "finesse", "wits", "charm"), ap, strict=True)),
                     "traits": traits}, seed)
+    beats = dict.fromkeys(range(1, len(u.chapters) + 1), 0)
     for _ in range(300):
         if ended(play.s):
             break
@@ -334,7 +481,7 @@ def test_random_play_keeps_the_properties(u, creation, seed):
         a = rng.choice(buttons) if buttons and rng.random() < 0.5 else pick(rng, k)
         r = (rng.randint(1, 6), rng.randint(1, 6), rng.randrange(60))
         pv = preview(u, o, a) if rolls(u, o.facts, o.hist, a) else None
-        before = visible(u, play.s)
+        s0, before = play.s, visible(u, play.s)
         step = play.do(format(a), r)
         assert conforms(u, play.s) == []
         assert ended(play.s) or play.s.stat(PLAYER, "beats") < u.beats
@@ -344,6 +491,12 @@ def test_random_play_keeps_the_properties(u, creation, seed):
             assert visible(u, play.s) != before
         elif pv is not None:
             assert step.result == "blocked"
+        check_time(u, a, s0, step)
+        # A scene ends within B beat-raising steps and a deadline of n boxes arrives within n scenes (fun.md 3.3).
+        chapter = s0.flag("chapter")
+        beats[chapter] += not quiet(a)
+        assert beats[chapter] <= u.boxes(f"deadline.{chapter}") * u.beats
+    assert ended(play.s), "no ending within 300 steps"
     assert space(u, play.obs) is not None
 
 
@@ -420,16 +573,95 @@ def test_a_companion_goes_along_until_a_place_it_avoids(u, play):
 
 
 def test_a_missed_goal_costs_time_and_opens_no_growth(u, creation):
-    from src.story.validate import Run
     late = Run(u, creation)
-    while late.s.flag("chapter") in (None, 1):
-        late.step(parse("cut:pass"))
+    pass_until(late, lambda s: s.flag("chapter") == 2)
     assert late.s.fill("deadline.2") == 1 and not late.s.stat(PLAYER, "growth")
     on_time = Run(u, creation)
     for a, r in (("go:village", None), ("go:yard", None), ("try:door:finesse", (6, 6, 0)), ("go:lamp_room", None)):
         on_time.step(parse(a), r)
     assert on_time.s.flag("chapter") == 2 and on_time.s.fill("deadline.2") == 0
     assert on_time.s.stat(PLAYER, "growth") == 1
+
+
+def test_the_crisis_comes_when_the_clock_is_full_not_before(play):
+    play.do("go:village")
+    play.do("go:yard")
+    boxes = play.u.boxes("clock.1")
+    for n in range(1, boxes):
+        play.do("try:bridge:wits", (1, 1, 0))                             # a low-risk fail: clock +1, nothing else
+        assert play.s.fill("clock.1") == n and not any(life == "chapter" for _, _, life in play.s.marks(PLAYER))
+    play.do("try:bridge:wits", (1, 1, 0))
+    assert play.s.fill("clock.1") == 0                                    # the crisis soaks the player for the chapter
+    assert [(kind, life) for _, kind, life in play.s.marks(PLAYER)] == [("snag", "chapter")]
+
+
+def test_a_scene_end_clears_scene_tags_and_keeps_chapter_tags(play):
+    for aid, r in (("go:village", None), ("talk:dohae:chat", None), ("try:hound:wits", (6, 6, 0)),
+                   ("talk:dohae:chat;claim=c_keeper;tone=deceive", None), ("go:yard", None)):
+        play.do(aid, r)
+    assert sorted(life for _, _, life in play.s.marks(PLAYER)) == ["chapter", "scene"]   # suspicion, spray
+    play.do("cut:pass")
+    assert [(kind, life) for _, kind, life in play.s.marks(PLAYER)] == [("snag", "chapter")]
+
+
+def test_a_chapter_change_clears_chapter_tags(u, creation):
+    """rule.md 4.3 step 1: the crisis that soaked the player in chapter 1 does not follow into chapter 2."""
+    play = Play(u, creation)
+    for aid in ("go:village", "go:yard", "try:bridge:wits", "try:bridge:wits", "try:bridge:wits", "try:bridge:wits"):
+        play.do(aid, (1, 1, 0))
+    assert [(kind, life) for _, kind, life in play.s.marks(PLAYER)] == [("snag", "chapter")]
+    play.do("try:door:finesse", (6, 6, 0))
+    play.do("go:lamp_room")
+    assert play.s.flag("chapter") == 2 and play.s.marks(PLAYER) == []
+
+
+def test_a_full_threat_arrives_and_leaves(u, creation):
+    run = Run(u, creation)
+    run.step(parse("go:yard"))                                            # the bridge starts to fall
+    assert run.s.where("t_bridge_fall") == PLAYER and run.s.has("link", "yard", "village")
+    pass_until(run, lambda s: s.where("t_bridge_fall") is None)
+    assert not run.s.has("link", "yard", "village") and not run.s.has("link", "village", "yard")
+
+
+def test_passing_time_alone_reaches_an_ending(u, creation):
+    run = Run(u, creation)
+    pass_until(run, ended)
+    assert run.s.flag("ending") == "wreck"
+
+
+def test_a_late_chapter_does_not_start_a_one_box_deadline_full(creation):
+    """rule.md 4.3: lateness costs a box only of a next deadline with more than one, else it would arrive at once."""
+    raw = skeleton_raw()
+    raw["chapters"][1]["deadline"]["boxes"] = 1
+    run = Run(build(raw, "sha256:x"), creation)
+    pass_until(run, lambda s: s.flag("chapter") == 2)
+    assert not ended(run.s) and run.s.fill("deadline.2") == 0
+    run.step(parse("cut:pass"))
+    assert run.s.flag("ending") == "wreck"
+
+
+def test_a_repeating_trigger_fires_on_each_rise_not_while_it_holds(creation):
+    """rule.md 8: story triggers are edge-fired, so a repeat one fires each time its condition becomes true."""
+    raw = skeleton_raw()
+    raw["triggers"]["tr_gust"] = {"when": {"at": ["player", "yard"]}, "repeat": True,
+                                  "effects": [{"set": ["regards", "yunseul", "player", "trust", "+1"]}]}
+    play = Play(build(raw, "sha256:x"), creation)
+    trust = []
+    for aid in ("go:yard", "look:door", "look:bridge", "go:village", "go:yard"):
+        play.do(aid)
+        trust.append(play.s.regards("yunseul", PLAYER, "trust"))
+    assert trust == [1, 1, 1, 1, 2]
+
+
+def test_one_scar_is_not_a_collapse(u, creation):
+    """rule.md 6: collapse only once every slot is a scar."""
+    play = Play(u, creation)
+    for aid, r in (("go:village", None), ("go:yard", None), ("try:door:force;strain=forced", (1, 1, 0)),
+                   ("try:door:finesse", (6, 6, 0)), ("go:lamp_room", None)):
+        play.do(aid, r)
+    assert play.s.flag("chapter") == 2 and play.s.stat(PLAYER, "wounds") == 1 and not play.s.marks(PLAYER)
+    play.do("try:lamp:charm", (1, 1, 0))                                  # high: u = 0 picks a wound, the second
+    assert not ended(play.s) and play.s.marks(PLAYER) == [(1, "snag", "scar")] and play.s.stat(PLAYER, "wounds") == 0
 
 
 def test_an_attempt_names_its_target_and_approach(u, s0):

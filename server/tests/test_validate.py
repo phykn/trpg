@@ -1,8 +1,10 @@
 import re
+from dataclasses import replace
 
 import pytest
 import yaml
 from conftest import REPO, skeleton_raw
+from src.onto.atoms import apply
 from src.story import validate as V
 from src.story.compile import build
 from src.story.load import StoryError
@@ -27,6 +29,8 @@ BROKEN = [
     ("V3", lambda r: r["triggers"].__setitem__("tr_x", {"when": {"at": ["player", "dock"]}})),
     ("V3", lambda r: r["obstacles"]["door"]["solutions"]["s_shoulder"].__setitem__("when", {"flag": ["gale", 1]})),
     ("V3", lambda r: r["characters"]["yunseul"]["topics"]["t_wall"].__setitem__("free_when", {"at": ["key", "dohae"]})),
+    ("V3", lambda r: r["obstacles"]["door"]["solutions"]["s_shoulder"].__setitem__(
+        "when", {"believes": ["dohae", "b_no_keeper"]})),
     ("V3", lambda r: r["obstacles"]["hound"].__setitem__("at", "dock")),
     ("V3", lambda r: r["obstacles"]["door"].__setitem__("at", "village")),
     ("V4", lambda r: r.__setitem__("style", r["style"] + "- 누렁이가 짖습니다.\n")),
@@ -73,6 +77,19 @@ def test_fuzzing_catches_a_preview_that_lies(u, monkeypatch):
 
     monkeypatch.setattr(V, "preview", lying)
     with pytest.raises(StoryError, match="^V6 .*preview differs"):
+        V.v6(u)
+
+
+def test_fuzzing_catches_a_step_that_breaks_conformance(u, monkeypatch):
+    real = V.resolve
+
+    def overfill(u_, s, h, a, r):
+        step = real(u_, s, h, a, r)
+        after = apply(step.after, [("fill", "door", u_.boxes("door") + 1)], [("fill", "door", step.after.fill("door"))])
+        return replace(step, after=after)
+
+    monkeypatch.setattr(V, "resolve", overfill)
+    with pytest.raises(StoryError, match="^V6 run 0 step 0: .* breaks C"):
         V.v6(u)
 
 

@@ -125,6 +125,7 @@ export function useGame(reduced = false) {
     });
     if (ok && recap !== null) {
       const recapped = await read(recapPath(id, recap), (text) => {
+        turn.current.typed = false;                   // the narration may be typed out already; the recap is not
         setNarration((x) => ({ ...x, recap: text, stage: null }));
         setRecaps((r) => ({ ...r, [recap]: text }));    // the view lists only recaps cached before it was sent
       }, () => undefined);
@@ -192,7 +193,10 @@ export function useGame(reduced = false) {
       pending.current = null;
       setSent(null);
       rollAt.current = null;
-      if (cause.status === 409 && cause.view) {
+      if (p.kind === 'create') {
+        setNotice(cause.reason ?? ko.serverError);
+        setPhase('start');
+      } else if (cause.status === 409 && cause.view) {
         accept(cause.view);
         setNotice(ko.conflict);
         settle();
@@ -203,7 +207,7 @@ export function useGame(reduced = false) {
         gameId.current = null;
         setPhase('start');
       } else {
-        setNotice(cause.reason);
+        setNotice(cause.reason ?? ko.serverError);
         settle();
       }
       return;
@@ -225,6 +229,10 @@ export function useGame(reduced = false) {
       (e) => { answered = true; if (mounted.current) fail(p, e); });
   }
 
+  function rolls(p: Pending | null): boolean {
+    return p?.kind === 'command' && 'pick' in p.body && viewRef.current?.card?.kind === 'roll';
+  }
+
   function command(body: CommandBody) {
     const v = viewRef.current;
     const id = gameId.current;
@@ -233,7 +241,7 @@ export function useGame(reduced = false) {
     const p: Pending = { kind: 'command', requestId: requestId(), revision: v.revision, body, gameId: id };
     pending.current = p;
     setNotice(null);
-    if ('pick' in body && v.card?.kind === 'roll') {
+    if (rolls(p)) {
       rollAt.current = Date.now();
       setPhase('rolling');
     } else {
@@ -246,7 +254,7 @@ export function useGame(reduced = false) {
   function resend() {
     const p = pending.current;
     if (!p || phase !== 'stuck') return;
-    if (p.kind === 'command' && 'pick' in p.body && viewRef.current?.card?.kind === 'roll') {
+    if (rolls(p)) {
       rollAt.current = Date.now();
       setPhase('rolling');
     } else setPhase('sending');
@@ -257,6 +265,7 @@ export function useGame(reduced = false) {
     if (pending.current) return;
     const p: Pending = { kind: 'create', requestId: requestId(), story, creation };
     pending.current = p;
+    setNotice(null);
     setPhase('sending');
     dispatch(p);
   }
@@ -295,6 +304,10 @@ export function useGame(reduced = false) {
 
   return {
     phase, stories, view, before, notice, reveal, narration, recaps, sent, growthLater, gameId: gameId.current,
+    // A creation in flight or lost keeps the start screen; a lost roll keeps its card, where the resend goes.
+    creating: pending.current?.kind === 'create',
+    lostRoll: phase === 'stuck' && rolls(pending.current),
+    recapDue: turn.current.recap !== null && !narration.recap,
     command, resend, create,
     skip: () => { if (phase === 'revealing') finishReveal(); },
     typed: () => { turn.current.typed = true; maybeEnd(); },

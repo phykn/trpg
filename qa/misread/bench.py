@@ -1,36 +1,40 @@
-"""Closed options that miss the sentence's answer: layer 1 over every schema, and go with the current place.
+"""Layer 1 and go as the engine asks them, on sentences whose answer the scene may not offer.
 
-  python bench.py record     # Kev and the narration model on every request; appends to answers.jsonl
-  python bench.py score      # the engine's plan before and after, paired
+  python bench.py record --run RUN                  # both models on every request; resumes RUN/answers.jsonl
+  python bench.py score --run RUN [--against RUN2]  # the engine's plan, and paired with another recording
 
 Items: decision-1's 216 bench sentences and 120 held-out ones, as they are ("normal"), and the same sentences with
 the asked thing made impossible ("cf"): layer 1 with the first step's schema removed from the scene, go with the
-player already standing at the destination. Nothing here is written for this test.
+player already standing at the destination. Nothing here is written for this test. The requests come from
+qa/decision/mirror.py, checked against the engine first (parity.py), and plans follow interpret.plan at STEP_THETA.
 """
+import argparse
 import asyncio
 import json
 import math
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parent
 D1 = ROOT.parent / "decision"
-sys.path.insert(0, str(ROOT.parent))
-sys.path.insert(0, str(D1))
-import bench as B  # noqa: E402
-import common  # noqa: E402
-from src.interpret import Interpreter, choice, mentions, ranked  # noqa: E402
-from src.locale import ko  # noqa: E402
+sys.path[:0] = [str(D1), str(ROOT.parent)]
+import common
+import mirror as M
+import parity
+from src.interpret import SAY, STEP_THETA, THETA, Interpreter, ranked
 
-THETA = 0.5
-SAY = B.SAY
-OUT = common.RUNS / "misread-1" / "answers.jsonl"
+GENRES = ("fantasy", "horror", "joseon", "mystery", "postapoc", "scifi")
 REPLACEABLE = {"go", "take", "give", "talk", "declare", "choose"}   # look, try and cut are always possible
+
+
+def bench_items():
+    return [json.loads(x) for f in sorted((D1 / "data").glob("*.jsonl")) for x in f.read_text().splitlines()
+            if x.strip()]
 
 
 def scenes():
     out = {}
-    for g in ("fantasy", "horror", "joseon", "mystery", "postapoc", "scifi"):
+    for g in GENRES:
         seen = []
         for r in map(json.loads, (D1 / "data" / f"{g}.jsonl").read_text().splitlines()):
             if r["kind"] == "sentence":
@@ -44,7 +48,7 @@ def scenes():
 
 def items():
     out = [{"id": r["id"], "scene": r["scene"], "text": r["text"], "steps": r["gold"]["steps"],
-            "detail": r["gold"]["detail"]} for r in B.load() if r["kind"] == "sentence"]
+            "detail": r["gold"]["detail"]} for r in bench_items() if r["kind"] == "sentence"]
     sc = scenes()
     for h in map(json.loads, (D1 / "heldout" / "plan.jsonl").read_text().splitlines()):
         out.append({"id": h["id"], "scene": sc[(h["genre"], h["scene"])], "text": h["text"], "steps": h["steps"],
@@ -53,12 +57,12 @@ def items():
 
 
 def layer1_requests():
-    """(key, text, have, gold plan, set)."""
+    """(key, scene, text, have, gold plan, set)."""
     for it in items():
-        have = B.available(it["scene"])
-        yield it["id"], it["text"], have, it["steps"][:3], "normal"
+        have = M.Scene(it["scene"]).have()
+        yield it["id"], it["scene"], it["text"], have, it["steps"][:3], "normal"
         if it["steps"][0] in REPLACEABLE:
-            yield it["id"] + "~cf", it["text"], [s for s in have if s != it["steps"][0]], it["steps"][:1], "cf"
+            yield it["id"] + "~cf", it["scene"], it["text"], have - {it["steps"][0]}, it["steps"][:1], "cf"
 
 
 def go_requests():
@@ -69,178 +73,159 @@ def go_requests():
         sc, to = it["scene"], it["detail"]["to"]
         yield it["id"], sc, it["text"], to, "normal"
         here = sc["place"]["name"]
-        moved = {**sc, "place": {**sc["place"], "name": to},
-                 "exits": [e for e in sc["exits"] if e != to] + [here]}
+        moved = {**sc, "place": {**sc["place"], "name": to}, "exits": [e for e in sc["exits"] if e != to] + [here]}
         yield it["id"] + "~cf", moved, it["text"], to, "cf"
 
 
-def go_options(sc, stay):
-    names = list(sc["exits"]) + ([sc["place"]["name"]] if stay else [])
-    return {f"e{i + 1}": n for i, n in enumerate(names)}
+def layer1(sc, text, have):
+    """The engine's first request; with choose removed, no fork is open and its choices are not named."""
+    return M.layer1(text, have, M.Scene(sc).choices() if "choose" in have else [])
 
 
-def narrow(names: dict, text):
-    """interpret.narrow for one-entity intents: the options the sentence names, else all."""
-    hit = [k for k, n in names.items() if mentions(n, text) >= 0]
-    return hit or list(names)
-
-
-async def record():
+async def record(out: Path):
     kev, llm = common.models()
     it = Interpreter(kev, llm, timeout=60)
-    done = {json.loads(x)["key"] for x in OUT.read_text().splitlines()} if OUT.exists() else set()
-    f = OUT.open("a")
+    done = {json.loads(x)["key"] for x in out.read_text().splitlines()} if out.exists() else set()
+    out.parent.mkdir(parents=True, exist_ok=True)
     n = 0
-    for key, text, have, gold, kind in layer1_requests():
-        k = f"l1:{key}"
-        if k in done:
-            continue
-        first = {s: ko.SCHEMA_ASK[s] for s in SAY if s in have}
-        every = first | {s: ko.SCHEMA_ASK[s] for s in SAY if s not in have}
-        state = it.sentence(text)
-        row = {"key": k, "set": kind, "text": text, "have": have, "gold": gold}
-        for name, opts in (("base", first), ("all", every)):
-            a = await kev.decide(state, {"s1": choice(ko.STEP_QUESTION, opts), "n": choice(ko.COUNT_QUESTION, ko.COUNT)})
-            row[name] = {q: dict(v.probabilities) for q, v in a.items()}
-        row["read"] = await it.read(text, every)
-        f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        f.flush()
-        n += 1
-        if n % 25 == 0:
-            print("l1", n, flush=True)
-    for key, sc, text, to, kind in go_requests():
-        k = f"go:{key}"
-        if k in done:
-            continue
-        state = B.render(sc, text)
-        row = {"key": k, "set": kind, "text": text, "gold": to, "here": sc["place"]["name"]}
-        for name, stay in (("base", False), ("stay", True)):
-            names = go_options(sc, stay)
-            keys = narrow(names, text)
-            labels = {x: ko.fill(ko.ACTION["go"], q=names[x]) for x in keys}
-            got = {"names": names, "narrowed": keys}
-            if len(keys) > 1:
-                q = choice(ko.SLOT_QUESTION["intent"], labels)
-                a = await kev.decide(state, {"intent": q})
-                got["kev"] = dict(a["intent"].probabilities)
-                got["pick"] = await it.pick(state, q["instructions"], labels)
-            row[name] = got
-        f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        f.flush()
+    with out.open("a") as f:
+        for key, sc, text, have, gold, kind in layer1_requests():
+            k = f"l1:{key}"
+            if k in done:
+                continue
+            state, qs = layer1(sc, text, have)
+            a = await kev.decide(state, qs)
+            row = {"key": k, "set": kind, "text": text, "have": [σ for σ in SAY if σ in have], "gold": gold,
+                   "kev": {q: dict(v.probabilities) for q, v in a.items()},
+                   "read": await it.read(text, qs["s1"]["criteria"])}
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            f.flush()
+            n += 1
+            if n % 50 == 0:
+                print("l1", n, flush=True)
+        for key, sc, text, to, kind in go_requests():
+            k = f"go:{key}"
+            if k in done:
+                continue
+            a = M.layer2(M.Scene(sc), text, "go")
+            names = {v: i[0] for i, v in a.keys["intent"].items()}
+            row = {"key": k, "set": kind, "text": text, "gold": to, "here": sc["place"]["name"], "names": names,
+                   "narrowed": list(names)}
+            if a.request:
+                state, qs = a.request
+                row["kev"] = dict((await kev.decide(state, qs))["intent"].probabilities)
+                row["pick"] = await it.pick(state, qs["intent"]["instructions"], qs["intent"]["criteria"])
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            f.flush()
     print("done", flush=True)
 
 
-def plan_base(r):
-    have = r["have"]
-    first = [s for s in SAY if s in have]
-    top, pr = ranked(_ans(r["base"]["s1"]), first)[0]
-    sure, one = pr >= THETA, ranked(_ans(r["base"]["n"]), ko.COUNT)[0][0] == "1"
-    if sure and one:
-        return [top]
-    steps = r["read"]
-    if steps and steps[0] not in have:
-        steps = None
-    if not one and steps and len(steps) > 1:
-        return steps
-    if not sure:
-        if not steps:
-            return ["idle"]
-        top = steps[0]
-    return [top]
+def l1_answers(r):
+    """misread-1 recorded the engine's request under "all" (and the one before it under "base")."""
+    return r.get("kev") or r["all"]
 
 
-def plan_all(r):
-    have = r["have"]
-    every = [s for s in SAY if s in have] + [s for s in SAY if s not in have]
-    top, pr = ranked(_ans(r["all"]["s1"]), every)[0]
-    sure, one = pr >= THETA and top in have, ranked(_ans(r["all"]["n"]), ko.COUNT)[0][0] == "1"
-    if sure and one:
-        return [top]
-    steps = r["read"]
-    if sure and steps and steps[0] not in have:
-        steps = None
-    if not one and steps and len(steps) > 1:
-        return steps
-    if not sure:
-        if not steps:
-            return ["idle"]
-        top = steps[0]
-    return [top]
+def go_answers(r):
+    return r if "names" in r else r["stay"]
 
 
-class _ans:
-    def __init__(self, p):
-        self.probabilities = p
+def plan(r, theta=STEP_THETA):
+    a = l1_answers(r)
+    return M.plan(a["s1"], a["n"], r["read"], set(r["have"]), theta)
 
 
 def go_pick(got, here):
-    """interpret.fill for go: Kev's sure answer, except that staying needs the narration model's pick too."""
+    """interpret.fill for go: the decision model's sure answer, except that staying needs the narration model's pick."""
     keys = got["narrowed"]
     if len(keys) == 1:
         return got["names"][keys[0]]
-    top, pr = ranked(_ans(got["kev"]), keys)[0]
+    top, pr = ranked(M.Probs(got["kev"]), keys)[0]
     w = top if pr >= THETA and got["names"][top] != here else got.get("pick")
     return got["names"][w] if w else None
 
 
 def sign(b, c):
-    n = b + c
-    k = min(b, c)
+    n, k = b + c, min(b, c)
     return 1.0 if n == 0 else min(1.0, 2 * sum(math.comb(n, i) for i in range(k + 1)) / 2 ** n)
 
 
-def outcome(plan, have):
-    return "idle" if plan == ["idle"] else "refused" if plan[0] not in have else "acted"
+def outcome(p, have):
+    return "idle" if p == ["idle"] else "refused" if p[0] not in have else "acted"
 
 
-def score():
-    rows = [json.loads(x) for x in OUT.read_text().splitlines()]
+def right(p, r):
+    return p[:len(r["gold"])] == r["gold"] if r["set"] == "cf" else p == r["gold"]
+
+
+SETS = (("normal bench", lambda r: r["set"] == "normal" and "-s" in r["key"]),
+        ("normal held-out", lambda r: r["set"] == "normal" and "-h" in r["key"]),
+        ("cf bench", lambda r: r["set"] == "cf" and "-s" in r["key"]),
+        ("cf held-out", lambda r: r["set"] == "cf" and "-h" in r["key"]))
+
+
+def score(path: Path, against: Path | None, theta: float):
+    rows = [json.loads(x) for x in path.read_text().splitlines()]
+    other = {r["key"]: r for r in map(json.loads, against.read_text().splitlines())} if against else {}
     l1 = [r for r in rows if r["key"].startswith("l1:")]
-    print("## layer 1: every schema offered (all) vs those possible here (base)\n")
-    print("| set | n | base right | all right | +/- | p | base idle/refused/acted | all idle/refused/acted |")
-    print("|---|---|---|---|---|---|---|---|")
-    for kind, part in (("normal bench", lambda r: r["set"] == "normal" and "-s" in r["key"]),
-                       ("normal held-out", lambda r: r["set"] == "normal" and "-h" in r["key"]),
-                       ("cf bench", lambda r: r["set"] == "cf" and "-s" in r["key"]),
-                       ("cf held-out", lambda r: r["set"] == "cf" and "-h" in r["key"])):
+    print(f"## layer 1 as interpret.plan takes it (θ₁ {theta}): right, and what the turn did\n")
+    print("| set | n | right | idle/refused/acted |" + (" there | +/− | p |" if other else ""))
+    print("|---|---|---|---|" + ("---|---|---|" if other else ""))
+    for kind, part in SETS:
         rs = [r for r in l1 if part(r)]
-        a = [plan_base(r) for r in rs]
-        b = [plan_all(r) for r in rs]
-        ra = [p[:len(r["gold"])] == r["gold"] if r["set"] == "cf" else p == r["gold"] for p, r in zip(a, rs)]
-        rb = [p[:len(r["gold"])] == r["gold"] if r["set"] == "cf" else p == r["gold"] for p, r in zip(b, rs)]
-        up = sum(y and not x for x, y in zip(ra, rb))
-        down = sum(x and not y for x, y in zip(ra, rb))
-
-        def outs(ps):
-            o = [outcome(p, r["have"]) for p, r in zip(ps, rs)]
-            return "/".join(str(o.count(k)) for k in ("idle", "refused", "acted"))
-        print(f"| {kind} | {len(rs)} | {sum(ra)} | {sum(rb)} | +{up}/-{down} | {sign(up, down):.3g} | {outs(a)} | "
-              f"{outs(b)} |")
-    print("\nby genre, normal (bench + held-out): base → all")
-    for g in ("fantasy", "horror", "joseon", "mystery", "postapoc", "scifi"):
+        a = [right(plan(r, theta), r) for r in rs]
+        outs = [outcome(plan(r, theta), set(r["have"])) for r in rs]
+        line = f"| {kind} | {len(rs)} | {sum(a)} | " + "/".join(str(outs.count(k)) for k in ("idle", "refused", "acted"))
+        if other:
+            pairs = [(x, right(plan(other[r["key"]], theta), other[r["key"]])) for x, r in zip(a, rs) if r["key"] in other]
+            up = sum(x and not y for x, y in pairs)
+            down = sum(y and not x for x, y in pairs)
+            line += f" | {sum(y for _, y in pairs)}/{len(pairs)} | +{up}/−{down} | {sign(up, down):.3g}"
+        print(line + " |")
+    print("\nby genre, normal (bench + held-out):")
+    for g in GENRES:
         rs = [r for r in l1 if r["set"] == "normal" and r["key"][3:].startswith(g)]
-        print(f"- {g}: {sum(plan_base(r) == r['gold'] for r in rs)} → {sum(plan_all(r) == r['gold'] for r in rs)} "
-              f"/ {len(rs)}")
-    print("\nchanged normal items:")
+        print(f"- {g}: {sum(right(plan(r, theta), r) for r in rs)} / {len(rs)}")
+    print("\nnormal sentences read wrong:")
     for r in l1:
-        if r["set"] == "normal" and plan_base(r) != plan_all(r):
-            print(f"- {r['key'][3:]} gold {r['gold']} base {plan_base(r)} all {plan_all(r)}: {r['text']}")
+        p = plan(r, theta)
+        if r["set"] == "normal" and not right(p, r):
+            print(f"- {r['key'][3:]} gold {r['gold']} got {p}: {r['text']}")
     go = [r for r in rows if r["key"].startswith("go:")]
-    print("\n## go: the current place offered (stay) vs not (base)\n")
-    print("| set | n | base right | stay right | +/- | p |")
-    print("|---|---|---|---|---|---|")
+    print("\n## go, the current place offered when no way out is named\n")
+    print("| set | n | right |" + (" there | +/− | p |" if other else ""))
+    print("|---|---|---|" + ("---|---|---|" if other else ""))
     for kind in ("normal", "cf"):
         rs = [r for r in go if r["set"] == kind]
-        ra = [go_pick(r["base"], r["here"]) == r["gold"] for r in rs]
-        rb = [go_pick(r["stay"], r["here"]) == r["gold"] for r in rs]
-        up = sum(y and not x for x, y in zip(ra, rb))
-        down = sum(x and not y for x, y in zip(ra, rb))
-        print(f"| {kind} | {len(rs)} | {sum(ra)} | {sum(rb)} | +{up}/-{down} | {sign(up, down):.3g} |")
+        a = [go_pick(go_answers(r), r["here"]) == r["gold"] for r in rs]
+        line = f"| {kind} | {len(rs)} | {sum(a)} |"
+        if other:
+            pairs = [(x, go_pick(go_answers(other[r["key"]]), r["here"]) == r["gold"]) for x, r in zip(a, rs)
+                     if r["key"] in other]
+            up = sum(x and not y for x, y in pairs)
+            down = sum(y and not x for x, y in pairs)
+            line += f" {sum(y for _, y in pairs)}/{len(pairs)} | +{up}/−{down} | {sign(up, down):.3g} |"
+        print(line)
     for r in go:
-        a, b = go_pick(r["base"], r["here"]), go_pick(r["stay"], r["here"])
-        if a != b:
-            print(f"- {r['key'][3:]} gold {r['gold']} base {a} stay {b}: {r['text']}")
+        got = go_pick(go_answers(r), r["here"])
+        if got != r["gold"]:
+            print(f"- {r['key'][3:]} gold {r['gold']} got {got}: {r['text']}")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("cmd", choices=("record", "score"))
+    ap.add_argument("--run", required=True, help="recording name under qa_test/runs/")
+    ap.add_argument("--against", help="another recording to pair with (misread-1 works)")
+    ap.add_argument("--theta", type=float, default=STEP_THETA, help="the first step's threshold, to try another")
+    ap.add_argument("--root")
+    a = ap.parse_args()
+    out = common.RUNS / a.run / "answers.jsonl"
+    if a.cmd == "record":
+        parity.check()
+        asyncio.run(record(out))
+    else:
+        score(out, common.RUNS / a.against / "answers.jsonl" if a.against else None, a.theta)
 
 
 if __name__ == "__main__":
-    asyncio.run(record()) if sys.argv[1] == "record" else score()
+    main()

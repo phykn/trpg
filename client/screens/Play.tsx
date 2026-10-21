@@ -49,7 +49,8 @@ export function Play({ game }: { game: Game }) {
     dc: rolled.dc ?? 0, approach: rolled.mods.find((m) => m.kind === 'stat')?.label ?? '',
   } : null;
   const onTyped = () => {
-    if (turnNo !== null) {
+    // A recap still to come would be lost once the turn is logged, so the turn waits for it to be typed too.
+    if (turnNo !== null && !game.recapDue) {
       const text = [game.narration.text, game.narration.recap].filter(Boolean).join('\n\n');
       log.add(...(roll ? [{ id: `roll:${turnNo}`, kind: 'roll' as const, ...roll }] : []),
         { id: `story:${turnNo}`, kind: 'story', text });
@@ -57,7 +58,7 @@ export function Play({ game }: { game: Game }) {
     game.typed();
   };
   // A restored turn already in the log is not typed again, so it counts as typed once its text arrives.
-  useEffect(() => { if (phase === 'narrating' && !live && game.narration.text) game.typed(); }, [phase, live, game.narration.text]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (phase === 'narrating' && !live && game.narration.text) game.typed(); }, [phase, live, game.narration.text, game.narration.recap]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (phase !== 'idle' && phase !== 'card') { setMenu(false); setSheet(false); } }, [phase]);
   const revealing = phase === 'revealing' && reveal !== null && !reveal.skipped;
   useEffect(() => {
@@ -69,7 +70,7 @@ export function Play({ game }: { game: Game }) {
   const frame = revealing && reveal ? frameAt(reveal.beats, now - reveal.start) : null;
   const step = frame && reveal ? reveal.steps[frame.step] : undefined;
   const rows = game.before ?? view;
-  const rollOpen = (phase === 'rolling' && view.card?.kind === 'roll')
+  const rollOpen = ((phase === 'rolling' || game.lostRoll) && view.card?.kind === 'roll')
     || (revealing && reveal?.card && step?.roll && !frame?.folded);
   const crisis = view.last?.steps.flatMap((s) => s.changes.filter((c) => c.kind === 'crisis').map((c) => c.id as string));
 
@@ -80,18 +81,19 @@ export function Play({ game }: { game: Game }) {
   let card = null;
   let roller = null;
   if (rollOpen) {
-    const c = phase === 'rolling' ? view.card : reveal?.card;
+    const c = revealing ? reveal?.card : view.card;
     if (c) {
+      // The same key as the open card's, so the card the player rolled stays as it was through to the reveal.
       roller = (
-        <RollCard card={c} rolling={phase === 'rolling'} step={revealing ? step : undefined}
-          frame={revealing ? frame ?? undefined : undefined}
+        <RollCard key={c.id} card={c} rolling={phase === 'rolling'} step={revealing ? step : undefined}
+          frame={revealing ? frame ?? undefined : undefined} onResend={game.lostRoll ? game.resend : undefined}
           onRoll={(pick) => game.command({ card: c.id, pick })} onCancel={() => game.command({ card: c.id, cancel: true })} />
       );
     }
   } else if (phase === 'card') {
     const c = view.card;
     if (c?.kind === 'roll') {
-      roller = <RollCard key={c.id} card={c} onRoll={(pick) => game.command({ card: c.id, pick })}
+      roller = <RollCard key={c.id} card={c} notice={game.notice} onRoll={(pick) => game.command({ card: c.id, pick })}
         onCancel={() => game.command({ card: c.id, cancel: true })} />;
     } else if (c?.kind === 'clarify') {
       card = <ClarifyCard card={c} onPick={(pick) => game.command({ card: c.id, pick })}
@@ -107,7 +109,7 @@ export function Play({ game }: { game: Game }) {
     }
   }
 
-  const mode = commandsOpen ? 'open' : phase === 'sending' ? 'sending' : phase === 'stuck' ? 'stuck' : 'locked';
+  const mode = commandsOpen ? 'open' : phase === 'sending' ? 'sending' : phase === 'stuck' && !roller ? 'stuck' : 'locked';
 
   return (
     <View className="min-h-0 flex-1">
@@ -127,7 +129,7 @@ export function Play({ game }: { game: Game }) {
               <Pressable accessibilityLabel={ko.skip} className="absolute bottom-0 left-0 right-0 top-0" onPress={game.skip} />
             ) : null}
           </View>
-          <CommandBar mode={mode} sent={game.sent} notice={game.notice} text={draft} onText={setDraft} inputRef={input}
+          <CommandBar mode={mode} sent={game.sent} notice={roller ? null : game.notice} text={draft} onText={setDraft} inputRef={input}
             placeholder={hint(view.scene)}
             onSend={(text) => { log.add({ id: `you:${Date.now()}`, kind: 'you', text }); game.command({ text }); }} onResend={game.resend} />
           {card ? <View className="absolute bottom-0 left-0 right-0 max-h-full">{card}</View> : null}

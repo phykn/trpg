@@ -138,7 +138,7 @@ async function runTunnel(binary) {
         if (!ready) await sleep(2000);
       }
       if (ready && kv('put', 'origin', url)) {
-        console.log(`\n외부 접속 준비 완료: 배포한 workers.dev 주소 (1분쯤 뒤부터)\n터널: ${url}\n코드를 바꾸면 알아서 반영합니다: 서버·스토리는 API 재시작, 화면은 자동 배포(1분쯤).\n종료: Ctrl+C\n`);
+        console.log(`\n외부 접속 준비 완료: ${address ?? '배포한 workers.dev 주소'} (1분쯤 뒤부터)\n터널: ${url}\n코드를 바꾸면 알아서 반영합니다: 서버·스토리는 API 재시작, 화면은 자동 배포(1분쯤).\n종료: Ctrl+C\n`);
       } else {
         console.error('터널이 응답하지 않아 다시 엽니다.');
         tunnel.kill('SIGTERM');
@@ -152,7 +152,27 @@ async function runTunnel(binary) {
   }
 }
 
+// The Worker's address comes from the account's workers.dev subdomain at run time; the repo never holds it.
+async function workerAddress() {
+  try {
+    const json = (...args) => JSON.parse(spawnSync(process.execPath, [wrangler, ...args, '--json'],
+      { cwd: client, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).stdout);
+    const account = json('whoami').accounts[0].id;
+    const { token } = json('auth', 'token');
+    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/workers/subdomain`,
+      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) });
+    const { subdomain } = (await response.json()).result;
+    const config = require('node:fs').readFileSync(path.join(client, 'wrangler.jsonc'), 'utf8').replace(/^\s*\/\/.*$/gm, '');
+    return `https://${JSON.parse(config).name}.${subdomain}.workers.dev`;
+  } catch {
+    return null;
+  }
+}
+
+let address = null;
+
 async function main() {
+  address = await workerAddress();
   if (process.platform === 'darwin') track(spawn('caffeinate', ['-i', '-w', String(process.pid)], { stdio: 'ignore' }), 'caffeinate');
   const binary = await tunnelBinary();
   await startApi();

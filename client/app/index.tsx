@@ -13,7 +13,7 @@ import { Start } from '@/screens/Start';
 export default function Index() {
   const height = useViewportHeight();
   const game = useGame(useReducedMotion());
-  const starting = game.phase === 'start' || (game.phase === 'sending' && !game.view);
+  const starting = game.phase === 'start' || game.creating;
   return (
     <View className="items-center bg-canvas-inset" style={{ height }}>
       <Head><title>{ko.brand}</title></Head>
@@ -25,7 +25,8 @@ export default function Index() {
           </View>
         ) : starting ? (
           <Start stories={game.stories} busy={game.phase === 'sending'} onCreate={game.create}
-            saved={game.canResume ? game.view : null} onResume={game.resume}
+            saved={game.canResume ? game.view : null} onResume={game.resume} notice={game.notice}
+            onResend={game.phase === 'stuck' ? game.resend : undefined}
             again={game.view?.ending ? game.view.story.id : null} />
         ) : game.view ? (
           <Play game={game} />

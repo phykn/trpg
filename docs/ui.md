@@ -111,6 +111,7 @@ Row text is already 12px and does not shrink. If a story produces a scene over b
 
 ```
 loading ─► start (no game_id) ─► creating ─► destination
+creating ─ error status ─► start                      (its reason, or "서버 오류로 처리하지 못했습니다." ("The server could not handle it."), above the start button)
 loading ─► restoring ─► destination | narrating | blocked
 
 idle ─ command ─► sending ─┬─► destination             (refused: show reason above the input bar)
@@ -122,6 +123,7 @@ card ─ answer / cancel ─► sending
 sending | rolling ─ no response (30s) ─► stuck ─ same command again ─► sending | rolling
 sending | rolling ─ 409(view) ─► destination          409(incompatible) ─► blocked
 sending | rolling ─ 404 ─► start                      422 ─► destination (same as refused; a client bug)
+sending | rolling ─ other error status ─► destination (its reason, or the same server-error line, above the input bar)
 narrating ─ stream error ─► narration_error ─ retry ─► narrating
 idle | card ─ menu: to title ─► start ─ resume ─► destination   (when there is a view and it is not an ending)
 ```
@@ -136,13 +138,13 @@ The **destination** is always decided from the adopted `view` in the same order:
 | `rolling` | locked | dice tumbling |
 | `revealing` | locked; a tap jumps to the end state | reveal (4.5) |
 | `narrating` | locked | three dots, received text appears in turn |
-| `stuck` | only the resend-same-command button | "응답을 받지 못했습니다." ("No response received.") and resend (↻). The dice stop on the tray with no value |
+| `stuck` | only the resend-same-command button | "응답을 받지 못했습니다." ("No response received.") and resend (↻) in place of the input bar. After a roll they sit on the roll card instead, whose dice stop on the tray with no value (4.4) |
 | `narration_error` | only the retry button | "서술을 받지 못했습니다." ("Narration not received.") The reveal's end state stays |
 | `blocked` | to-title only | centered "이 판은 더 이어할 수 없습니다." ("This game can no longer continue.") and a to-title button. No input bar. `trpg.game_id` is not cleared |
 | `ending` | new game only | ending panel (5.4) |
 
 - **Steps before a card**: a response that ran the plan's earlier steps and stopped at a card has `steps` and `turn` as well as `view.card`. The UI reveals those steps, fetches their narration, then opens the card.
-- **Command lifecycle**: each command gets one `request_id`, remembered together with its body. With no response within 30 seconds the state is `stuck`, and the command is resent only with the same `request_id` and body. The server's receipt returns the same result, so nothing runs twice. On resend the dice tumble again and the 600ms and 30-second timers restart; if the earlier request's response arrives late it is the same response, so whichever comes first is used. Game creation works the same way.
+- **Command lifecycle**: each command gets one `request_id`, remembered together with its body. With no response within 30 seconds the state is `stuck`, and the command is resent only with the same `request_id` and body. The server's receipt returns the same result, so nothing runs twice. On resend the dice tumble again and the 600ms and 30-second timers restart; if the earlier request's response arrives late it is the same response, so whichever comes first is used. Game creation works the same way, with the stuck line and resend in place of the start button.
 - **revision**: the response's `view.revision` goes on the next command. If a 409 carries a `view`, it is adopted, tumbling dice vanish with no value, and one line, "게임 상태가 바뀌어 새로 불러왔습니다" ("The game state changed and was reloaded"), appears above the input bar. `incompatible` without a `view` means `blocked`.
 - **What is stored**: the browser keeps only `trpg.game_id` and chat history. `useLog` keeps the latest 300 items of the current game in `trpg.log.<game_id>` (deleting other games' history), with item ids that include the turn so reopening does not duplicate them; a device without history rebuilds it from the premise. A failed reopen clears nothing; only a 404 clears them and goes to the start screen.
 - **Reopening**: the step records in `view.last` are drawn in their end state without motion; cached narration is fetched and shown at once, otherwise it is fetched in `narrating`. If that turn is already in the chat history, it is not written again and finishes as soon as it arrives. If there is a `view.card`, the card opens. The reveal is not replayed.
@@ -198,7 +200,8 @@ The roll card draws the same modifier row on the card and in the reveal. A modif
 - **Release**: sends the roll request `{card, pick}`, and the dice spin (one turn per 420ms) with faces changing randomly every 70ms. This is the only optimistic motion and it decides no value. After the roll, the card's decision area locks.
 - **Stop**: once the response has arrived and 600ms have passed since release (whichever is later), `d1` and `d2` settle in turn on the server's values (standing upright, 1.12× to 1×). The values are the `roll` of `steps[0]` (the accepted step).
 - **Blocked**: if `steps[0].result` is `blocked`, moments 1–5 do not happen. The dice do not stop but fade out over 300ms, and the name of what was revealed (the `reveal` in `changes`) appears in their place. Then the card fades out (200ms) and that obstacle appears in the scene row (150ms). No roll line remains in the chat. Narration follows. The player lives the rule that hidden things are found only by trying.
-- **No response**: the dice stop on the tray with no value and the state becomes `stuck`. Resending the same roll returns the same result.
+- **No response**: the dice stop on the tray with no value (blank faces, upright) and the state becomes `stuck`. The card stays as it was rolled, locked, with the stuck line and resend under the helps; the input bar under the scrim shows no second one. Resending the same roll returns the same result.
+- **Notice**: when a roll comes back with the card still open (refused, an error status), its notice shows on the card under the helps, not above the input bar the card covers.
 
 ### 4.5 Reveal
 
@@ -243,7 +246,7 @@ Moving, looking around, picking up, handing over, small talk, free topics, choic
 - Until text arrives, only three dots show at the end of the chat. The stream's `stage` and `attempt` are not used.
 - When `text` arrives, characters appear in turn (60 per second; a tap shows it all at once). When all the text is shown and `done` has arrived, `narrating` ends.
 - `error` shows after the reveal ends, with the server's `message` in small type under the fixed copy. A dropped stream or a non-2xx status counts as an `error` without `message`. The client has no timeout (the limit is the server's, engine.md 8).
-- A chapter-change or ending turn continues with a recap (`/chapters/{k}/recap`, `k` from api.md 4) below the narration. It is requested after the narration's `done` (still in `narrating`), and a failure is the same `narration_error` as for narration.
+- A chapter-change or ending turn continues with a recap (`/chapters/{k}/recap`, `k` from api.md 4) below the narration. It is requested after the narration's `done` (still in `narrating`), and a failure is the same `narration_error` as for narration. The typing carries on into the recap from where it was, and `narrating` ends only once the recap is typed too.
 - Tag names in `done` rename the hero row and the chips.
 
 ### 5.2 Clarify, confirm, move

@@ -29,7 +29,7 @@ npm run deploy           # build the client and deploy it to the Cloudflare Work
 npm run serve            # run the API and a quick tunnel, and write the tunnel URL to the Worker's KV
 ```
 
-Deploy once; after that `serve` redeploys whenever client files change. The Worker serves the static client and forwards `/api/*` to the tunnel URL in KV. While `serve` runs:
+Deploy once; after that `serve` redeploys whenever client files change. When it is ready it prints the Worker's address, looked up from the Cloudflare account at run time. The Worker serves the static client and forwards `/api/*` to the tunnel URL in KV. While `serve` runs:
 
 - A dropped tunnel is reopened and its new URL written to KV, which takes about a minute to take effect.
 - A change to a `.py` file in `server/` or a `.yaml` file in `scenarios/` restarts only the API; the address keeps working. If the API fails to start (a story that fails validation, say), `/api` returns 502 until a later change fixes it. Changing a story makes its saved games incompatible: they open on a blocked screen, and the player starts a new game.

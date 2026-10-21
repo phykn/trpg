@@ -49,3 +49,20 @@ test('reduced motion shows each beat for the same short time, one after another'
   expect(beats.every((b) => b.dur === motion.reduced)).toBe(true);
   expect(beats[1].at).toBe(beats[0].at + motion.reduced);
 });
+
+test('the settle lands on the server total, never a sum the client adds up', () => {
+  const step: StepRecord = { ...rolledStep, total: 12 };
+  const beats = timeline([step], motion);
+  expect(beats.find((b) => b.kind === 'settle')).toMatchObject({ value: 12, result: 'success' });
+  expect(frame(beats, duration(beats)).point).toBe(12);
+});
+
+test('each step starts from a clean frame: the second roll shows none of the first', () => {
+  const second: StepRecord = { ...rolledStep, roll: { d1: 1, d2: 2 }, total: 4, result: 'fail', decisive: [] };
+  const beats = timeline([rolledStep, second], motion);
+  const start = beats.find((b) => b.step === 1)!.at;
+  expect(frame(beats, start)).toMatchObject({
+    step: 1, dice: [1, null], point: null, chips: 0, settled: null, decisive: [], boxes: {}, folded: false, changes: [],
+  });
+  expect(frame(beats, duration(beats))).toMatchObject({ step: 1, point: 4, settled: 'fail', decisive: [] });
+});

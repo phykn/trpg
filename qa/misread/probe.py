@@ -12,11 +12,11 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import common  # noqa: E402
-from src.interpret import Interpreter  # noqa: E402
-from src.rules.acts import parse  # noqa: E402
-from src.story.evals import interpret, replay, score  # noqa: E402
-from src.story.validate import load_all  # noqa: E402
+import common
+from src.interpret import Interpreter
+from src.rules.acts import parse
+from src.story.evals import interpret, replay, score
+from src.story.validate import load_all
 
 
 class Logged(Interpreter):
