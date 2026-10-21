@@ -59,7 +59,7 @@ class Watched:
 
 
 async def interpret(it: Interpreter, u, run: Run, text: str, card: bool = False) -> dict:
-    """What the service would do with the sentence, without cards: the steps' ids, or why it stopped. With card, also
+    """What the service would do with the sentence, taking each card as it opens: the steps' ids, or why it stopped. With card, also
     what the first rolled step's card offers to rely on (engine.md 4.2), None when no step rolls."""
     g = SimpleNamespace(state=run.s, log=run.log, presentation=fresh_presentation(""))
     out = await it.plan(u, g, text)
@@ -86,14 +86,16 @@ async def interpret(it: Interpreter, u, run: Run, text: str, card: bool = False)
         last = st["action"]
         a = parse(st["action"])
         o = run.obs
-        if card and relies is None and rolls(u, o.facts, o.hist, a):
+        rolling = rolls(u, o.facts, o.hist, a)
+        if card and relies is None and rolling:
             it.calls = []
             relies = await it.relevant(u, o, g.presentation, a, rely_options(u, o, a), st.get("rely"), text)
             calls += it.calls
-        if st.get("rely"):
-            a = a.with_(rely=st["rely"])
-        steps.append(str(a) + (IDLE if st.get("idle") else ""))
-        run.step(parse(st["action"]), (6, 6, 0))
+        told = a.with_(rely=st["rely"]) if st.get("rely") else a
+        steps.append(str(told) + (IDLE if st.get("idle") else ""))
+        # A roll card opens with the hinted reliance selected, so the step that runs spends it; a step without a roll
+        # opens no card and runs bare, as in the service.
+        run.step(told if rolling else a, (6, 6, 0))
         g.state, g.log = run.s, run.log
     if not steps and kind == "plan":
         kind = "refused"                # the service refuses a sentence that ran no step and opened no card

@@ -100,3 +100,22 @@ def test_a_step_that_rolls_nothing_replays_without_dice(u):
     """A witness step {do} without roll is valid where the action rolls nothing (V5), so a replay takes it too."""
     run = replay(u, {"path": 0, "step": 0, "then": [{"do": "go:village"}]})
     assert run.s.where("player") == "village"
+
+
+class Planned:
+    """An interpreter that reads every sentence as the given plan."""
+
+    def __init__(self, plan):
+        self.plan_, self.calls = plan, []
+
+    async def plan(self, u, g, text):
+        return {"plan": self.plan_}
+
+
+async def test_a_rolled_step_runs_with_the_reliance_its_card_would_open_with(u):
+    """The service's roll card selects the hinted reliance, so the step that runs spends it (engine.md 4.2)."""
+    run = replay(u, {"path": 0, "step": 2})
+    got = await interpret(Planned([{"action": "try:door:finesse", "rely": "trait:tinker"}]), u, run, "자물쇠를 딴다")
+    assert got["steps"] == ["try:door:finesse;rely=trait:tinker"]
+    assert run.s.has("spent", "player", "tinker")
+
