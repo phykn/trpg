@@ -59,8 +59,8 @@ class Watched:
 
 
 async def interpret(it: Interpreter, u, run: Run, text: str, card: bool = False) -> dict:
-    """What the service would do with the sentence, taking each card as it opens: the steps' ids, or why it stopped. With card, also
-    what the first rolled step's card offers to rely on (engine.md 4.2), None when no step rolls."""
+    """What the service would do with the sentence, taking each card as it opens: the steps' ids, or why it stopped.
+    With card, also what the first rolled step's card offers to rely on (engine.md 4.2), None when no step rolls."""
     g = SimpleNamespace(state=run.s, log=run.log, presentation=fresh_presentation(""))
     out = await it.plan(u, g, text)
     if out.get("refused"):
