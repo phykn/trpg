@@ -482,6 +482,19 @@ async def test_a_muse_ends_on_a_way_forward_that_rotates(tmp_path):
     assert svc._turn_job(*svc.games[gid], 1).hint is None
 
 
+async def test_only_what_happened_is_answered(tmp_path):
+    """engine.md 5.2: a person no step names does not answer, and a presumed event is not played along with."""
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))                                   # go:village, 도해 there
+    job = svc._turn_job(*svc.games[gid], 1)
+    assert job.speakers == [] and "도해" not in messages(job)[1]["content"].split(ko.HEAD["now"])[1]
+    now = messages(replace(job, text="등대 기름 어디 있어요?"))[1]["content"].split(ko.HEAD["now"])[1]
+    assert "도해는 이번에 당신과 말을 나누지 않았습니다" in now
+    svc, gid, _ = await game(tmp_path / "t", FakeLLM(GOOD), moves=("talk:yunseul:chat",))
+    job = svc._turn_job(*svc.games[gid], 1)
+    now = messages(replace(job, text="아까 할아버지가 열쇠 주셨지?"))[1]["content"].split(ko.HEAD["now"])[1]
+    assert "윤슬은 그런 일은 없었다고 하거나" in now and "말을 나누지 않았습니다" not in now
+
+
 def test_what_a_person_knows_is_in_the_narrators_context_while_they_are_here(u):
     from src.lang.context import context, render, scene
     from src.onto.log import Log

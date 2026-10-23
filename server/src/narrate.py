@@ -297,6 +297,8 @@ def steering(job: Job, lines) -> list[str]:
         reply = ko.fill(ko.NOW[job.reply], names=names) if names or job.reply == "talk" else ko.NOW["muse_alone"]
         if tired:
             out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
+        if job.text and names:
+            out.append(ko.fill(ko.NOW["presumed"], names=names))
         hint = [ko.fill(ko.NOW["hint" if names else "hint_alone"], hint=job.hint[1], names=names)] if job.hint else []
         return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {reply}", *(f"- {x}" for x in hint)]
     here = job.o.facts.where(PLAYER)
@@ -331,6 +333,10 @@ def steering(job: Job, lines) -> list[str]:
     # (qa_test/runs/play-3-odd 18, play-3-explorer 41).
     if job.unfinished is not None:
         out.append(ko.fill(ko.NOW["waits"], label=job.unfinished) if job.unfinished else ko.NOW["waits_rest"])
+    # A question to 도해 became a failed detour roll, and he answered it anyway (qa_test/runs/loop-1/detour.json).
+    if job.text and (silent := [x for x in sorted(job.o.seen, key=u.rank) if x in u.agents and x not in job.speakers
+                                and job.o.facts.where(x) == here]):
+        out.append(ko.fill(ko.NOW["unaddressed"], names=", ".join(map(u.name, silent))))
     if tired:
         out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
     return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {ko.NOW['close']}"]

@@ -40,6 +40,11 @@ SCRIPTS = {
     # lost: musing at the dock with 윤슬, in the village with 도해 and alone at the lighthouse (engine.md 5.2 hint)
     "lost": ["흠..", "뭘 해야 하지?", "어쩌지", "마을로 가자", "음...", "막막하네", "등대로 가", "흠..", "이제 뭐하지?",
              "어떡하지"],
+    # presume: lines that take for granted what never happened, then questions to 도해 that the dog turns into
+    # detour rolls (engine.md 5.2 "Only what happened is answered"); 6 is a true question as a control
+    "presume": ["안녕", "아까 나한테 준 사탕 맛있더라", "네가 아까 등대 열쇠 있다고 했잖아", "우리 처음 만났을 때 기억나?",
+                "아버지가 어제 뭐라고 하셨다고 했지?", "아버지는 어디 가셨어?", "!talk:yunseul:come*", "!go:village",
+                "도해 할아버지 안녕하세요", "등대 기름 어디 있어요?", "아들 소식은 있어요?", "아까 할아버지가 열쇠 주셨잖아"],
     # Chapter 1 through to the lamp room. "!" lines are buttons and a trailing "*" repeats one while it is a
     # candidate, so the dice cannot stall the story; the typed lines after each shared event ask people about it.
     "long": ["안녕", "!talk:yunseul:come*", "!go:village", "도해 할아버지 안녕하세요", "!try:hound:wits*",

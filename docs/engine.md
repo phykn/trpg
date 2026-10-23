@@ -289,6 +289,11 @@ What happened tells a muse turn as "당신이 말하거나 혼잣말을 했습�
 
 **A muse ends on a hint.** A player talks to themself mostly when they do not know what to do next, so the GM answers with a way forward. The engine picks it: the first of `recommend(U, O)` (rule.md 9) not hinted in the previous 3 narrations, else the first. It is told by its button label, so it names only what the player can already see, and its targets join the narration's ids. The steering asks for it as something noticed, never as done or ordered: with people here, through a speaker's line or gesture; alone, as the moment of the surroundings that answers. The narration entry keeps the hinted action for the rotation. With no hint, the reply is as above. Without it, every muse alone got the same shape, "목소리가 바람에 흩어집니다" (4 of 4 per game; qa_test/runs/loop-1/after-summary.md), and moved nothing.
 
+**Only what happened is answered.** The player's sentence reaches the narrator whole, but the rules decide what it did, and the reply must not do more:
+
+- In an act reply, a person here whom no step names was not spoken to, so the steering says they do not answer the sentence or give what it asks. A question typed to 도해 behind the dog became a detour roll that failed, and 도해 still answered it ("…기름은 밑에 두게"; 10 of 10 failed detour turns, qa_test/runs/loop-1/detour.json).
+- A talk or muse reply that a sentence presumes an event for, one that is not in what they lived through or the narration, says it did not happen or that they do not know, and never plays along. Asked "할아버지가 열쇠 빌려줄 때 무슨 말 했지?" after the favor was refused, 윤슬 made up the lending (1 of 2, qa_test/runs/loop-1/long-summary.md).
+
 **The prose carries the game.** The screen has no pictures, so the writing must do what art and voice do elsewhere, as a narrator does in Baldur's Gate 3: one sharp concrete detail per sentence, chosen for this person and this place, instead of stock phrases ("눈을 반짝이며", "코끝을 스칩니다"); people who sound like themselves, whose lines answer and also let a want, a fear or a habit show; and a last sentence that leaves an echo or a tension rather than a summary. These are rules of craft and name no story; the story's `style` sets the tone they serve.
 
 Format rules:
