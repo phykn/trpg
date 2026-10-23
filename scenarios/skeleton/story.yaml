@@ -69,6 +69,9 @@ characters:
     desire: 떠난 아들의 소식을 기다립니다.
     fear: 등대에 다시 오르는 것을 두려워합니다.
     avoids: [lamp_room]
+    knows:
+      - 아들은 몇 해 전 뭍으로 일하러 떠났고, 편지 한 장 없습니다.
+      - 등대 불은 사흘 전 밤에 꺼졌습니다.
     beliefs:
       b_no_keeper: 이 섬에 새 등대지기는 오지 않는다.
     wants: [letter]
@@ -101,6 +104,9 @@ characters:
     desire: 아버지의 배가 무사히 돌아오기를 바랍니다.
     fear: 꺼진 등대를 무서워합니다.
     avoids: [lamp_room]
+    knows:
+      - 아버지는 새벽에 고깃배를 몰고 나갔고 아직 돌아오지 않았습니다.
+      - 등대 불이 꺼진 뒤로 아무도 등대에 오르지 않았습니다.
     wants: [oil]
     topics:
       t_wall:

@@ -70,6 +70,7 @@ class Job:
     relied: tuple[str, ...] = ()     # what this turn's rolls leaned on
     looked: tuple[str, ...] = ()     # things and obstacles this turn looked at
     reply: str = "act"               # act, talk (only small talk) or muse (only try(player)); engine.md 5.2
+    said: dict = field(default_factory=dict)   # speaker → [(player sentence, [their lines])] before previous; 5.1
 
 
 def sentences_of(text: str) -> list[str]:
@@ -292,8 +293,9 @@ def steering(job: Job, lines) -> list[str]:
         # (engine.md 5.2).
         names = ", ".join(u.name(x) for x in job.speakers)
         reply = ko.fill(ko.NOW[job.reply], names=names) if names or job.reply == "talk" else ko.NOW["muse_alone"]
-        return [*(f"- {x}" for x in out), *([f"- {ko.fill(ko.NOW['worn'], words=', '.join(tired))}"] if tired else []),
-                f"- {reply}"]
+        if tired:
+            out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
+        return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {reply}"]
     here = job.o.facts.where(PLAYER)
     cue = fresh_cue(list(u.places[here].senses), job.previous) if here in u.places else None
     out.append(ko.fill(ko.NOW["cue"], cue=cue) if cue else ko.NOW["no_cue"])
@@ -328,7 +330,26 @@ def steering(job: Job, lines) -> list[str]:
         out.append(ko.fill(ko.NOW["waits"], label=job.unfinished) if job.unfinished else ko.NOW["waits_rest"])
     if tired:
         out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
-    return [*(f"- {x}" for x in out), f"- {ko.NOW['close']}"]
+    return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {ko.NOW['close']}"]
+
+
+def kept_word(job: Job) -> list[str]:
+    return [ko.fill(ko.NOW["said"], names=", ".join(job.u.name(x) for x in job.said))] if job.said else []
+
+
+def spoken(u, speakers: list[str], said: list[str]) -> dict[str, list[str]]:
+    """Each quote goes to the speaker its sentence names, or to the only speaker when it names no one (engine.md 6)."""
+    out: dict[str, list[str]] = {}
+    for s in said:
+        quotes = [q[1:-1] for q in QUOTED.findall(s)]
+        if not quotes:
+            continue
+        bare = QUOTED.sub(" ", s)
+        named = [x for x in u.agents if any(w in bare for w in (u.name(x), *u.agents[x].aliases))]
+        who = [x for x in named if x in speakers] if named else speakers
+        if len(who) == 1:
+            out.setdefault(who[0], []).extend(quotes)
+    return out
 
 
 def messages(job: Job, draft: list[str] | None = None, problems: list[str] | None = None) -> list[dict]:
@@ -340,6 +361,9 @@ def messages(job: Job, draft: list[str] | None = None, problems: list[str] | Non
         blocks += ["", ko.HEAD["notable"], job.task, *(f"- {x}" for x in job.happened)]
     else:
         blocks += ["", ko.HEAD["happened"], *(f"- {x}" for x in job.happened)]
+        if job.said:
+            blocks += ["", ko.HEAD["said"], *(f"- {ko.fill(ko.SAID_LINE, text=t, x=u.name(x), lines=' '.join(q))}"
+                                               for x, rows in job.said.items() for t, q in rows)]
         if job.previous:
             blocks += ["", ko.HEAD["previous"], *job.previous]
         if job.text:
@@ -420,7 +444,8 @@ class Narrator:
                     why.append(ko.fill(ko.FEEDBACK[key], names=u.name(atom[1])))
                 else:
                     why.append(ko.fill(ko.FEEDBACK["claim"], facts=s))
-            span = repeated(s, job.previous + [q for x in job.speakers for q in QUOTED.findall(u.agents[x].voice)])
+            span = repeated(s, job.previous + [q for x in job.speakers for q in QUOTED.findall(u.agents[x].voice)]
+                            + [q for rows in job.said.values() for _, qs in rows for q in qs])
             if span:
                 why.append(ko.fill(ko.FEEDBACK["repeat"], span=span))
             for q in QUOTED.findall(s):
@@ -513,7 +538,7 @@ class Narrator:
 
     def result(self, job: Job, said: list[str], attempts: int, dropped: int, names: list[str]) -> dict:
         return {"type": "result", "text": " ".join(said), "attempts": attempts, "dropped": dropped,
-                "tags": self.tag_names(job, names)}
+                "tags": self.tag_names(job, names), "said": spoken(job.u, job.speakers, said)}
 
 
 __all__ = ["Job", "Narrator", "change_ids", "change_line", "change_lines", "messages", "sentences_of", "split", "step_lines"]

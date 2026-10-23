@@ -196,6 +196,22 @@ Observation reads only `S`, `L` and `U`, never the presentation layer (engine.md
 
 Candidates `K(O)` read only `(E, F, B, hᵥ)` and story constants (rule.md 2). Entity arguments come from `E` and proposition arguments from `B`, and conditions are evaluated over `(F, hᵥ)`. The evaluation is deliberately optimistic: with no visible block, it assumes there is none. So `R` must be defined even when the visible condition is true but the real one is false (a hidden block), and the only way to learn what is hidden is to act and run into it. Conditions that reach the screen or a prompt (a topic's free condition, solution names) use the same visible evaluation.
 
+### 3.4 What people know and what was said
+
+A cycle (the player types, the engine answers) must run many times without the answers drifting. The world carries what the rules changed, but small talk changes nothing, so before this section the only thing that carried a conversation was the last three narrations. Inside that window an answer held ("아까 말했잖아요, 마을 안쪽 창고요!"); past it, it was gone. What a person made up ("아버지는 아까 배를 타고 먼바다로 나갔어요", which the story never says) counted as fact for three turns and then vanished (qa_test/runs/loop-1/base-summary.md). So what a person may state and what they have said are defined here, apart from the world.
+
+**What a person may state as fact** comes in three tiers. Nothing else is fact in their mouth, and asked about anything else, they do not know.
+
+| Tier | Source | Who reads it | Changes |
+|---|---|---|---|
+| Seen | `F`, the player's visible facts | everyone | with the world |
+| Told freely | `knows(g)`, a public parameter of `g` in `U` (story.md 3.4) | narration and its check, while `g` is in the focus | never |
+| Held back | topics (propositions revealed by `reveal`) and `believes(g, p)` | the rules; a topic's text reaches prompts once the player believes it | only through `R` |
+
+`knows` is everyday knowledge a person tells anyone who asks: where their father went, how long the lamp has been dark. No rule reads it, so telling it changes nothing, and since it is public it must not name anything hidden (story.md V4). Knowledge that should cost something (trust, a roll) is a topic. A person's own `believes` stays private: it grounds exposure (3.1) and is never handed to narration, since a false belief told aloud would read as fact.
+
+**What was said** `said` is the quoted lines a person spoke in accepted narration, kept per turn in the presentation layer (engine.md 6) with the player's sentence that drew them. It is model output, so it is never a fact and never an argument of `R` (Bounded model influence, section 7). It binds only the narration: when that person speaks again, their earlier lines are handed over so they neither contradict nor repeat themselves. It reaches the check only through the repetition rule, never as context, so a line once accepted cannot vouch for a new one.
+
 ## 4. Effects and operations
 
 The only code that changes the world is the operations in `change.py`. Each operation has the form `op(work, …)` and reads and edits the working copy `Work(S)`; each one sees the state the previous ones left. Every operation preserves `C`, so their sequential composition does too.
@@ -306,5 +322,6 @@ Each game is a single file, `saves/engine/g_<id>.json`, and the log is the sourc
 | Meaning of a proposition | the sentence is required, `⟦p⟧` is optional | a story constant is enough for a proposition without a meaning |
 | Time intervals on facts, variables in conditions | none | the history summary and a finite `U` are enough, and stories stay simple |
 | Autonomous NPC actions | reactions and story effects only | goal-seeking NPCs would need a planner |
+| What people say | `knows` as a public constant, earlier lines in `P`; neither enters `S` | a spoken line is model output, and letting it become fact would let the models change the world (3.4) |
 | Crowds, units smaller than a place | none | `V` stays simple when `here` is a single place |
 | Story flags | as few as possible | the history summary and `fill` cover most of it |

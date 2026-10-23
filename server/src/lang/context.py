@@ -136,6 +136,9 @@ def scene(u, o: Obs, focus, p: dict) -> list[Line]:
             n, boxes = o.facts.fill(c) or 0, u.boxes(c)
             word = ko.PACE[0 if n == 0 else 2 if n >= boxes - 1 else 1]
             out.append(Line("fact", ko.fill(ko.FRAME["pace"], o=u.name(c), word=word), ("fill", c, n)))
+    # What a person may state beyond F (ontology.md 3.4); interpretation never needs it, so it is not in about().
+    for g in sorted(x & set(u.agents), key=u.rank):
+        out += [Line("public", ko.fill(ko.FRAME["knows"], x=u.name(g), text=k)) for k in u.agents[g].knows]
     return out
 
 

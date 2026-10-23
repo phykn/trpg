@@ -27,6 +27,7 @@ BROKEN = [
     ("V1", lambda r: r["chapters"][1]["clock"]["crisis"].__setitem__(1, {"set": ["flag", "gale", "windy"]})),
     ("V1", lambda r: r["chapters"][1]["clock"]["crisis"].__setitem__(
         1, {"set": ["regards", "yunseul", "player", "trust", "warm"]})),
+    ("V1", lambda r: r["characters"]["dohae"].__setitem__("knows", ["하나.", "둘.", "셋.", "넷.", "다섯."])),
     ("V2", lambda r: r["witnesses"]["creation"]["approaches"].__setitem__("charm", 3)),
     ("V3", lambda r: r["triggers"].__setitem__("tr_x", {"when": {"at": ["player", "dock"]}})),
     ("V3", lambda r: r["obstacles"]["door"]["solutions"]["s_shoulder"].__setitem__("when", {"flag": ["gale", 1]})),
@@ -38,6 +39,8 @@ BROKEN = [
     ("V4", lambda r: r.__setitem__("style", r["style"] + "- 누렁이가 짖습니다.\n")),
     ("V4", lambda r: r["obstacles"]["bridge"].__setitem__("aliases", ["문"])),
     ("V4", lambda r: r["impossible"].append("열쇠")),
+    ("V4", lambda r: r["characters"]["yunseul"]["knows"].append("도해 할아버지는 마을에 삽니다.")),
+    ("V4", lambda r: r["characters"]["dohae"]["knows"].append("오두막 앞에 누렁이를 묶어 두었습니다.")),
     ("V5", lambda r: first_path_door(r, [1, 1, 0])),
     ("V5", lambda r: r["witnesses"]["paths"].pop()),
     ("V5", lambda r: r["witnesses"]["paths"][0]["steps"].insert(0, "go:lamp_room")),

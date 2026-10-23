@@ -44,6 +44,7 @@ from .view import (
 GAME_ID = re.compile(r"g_[a-f0-9]{32}")
 RECEIPTS = 50
 PREVIOUS_TURNS = 3
+SAID = 4                # earlier exchanges per speaker handed to narration (engine.md 5.1)
 RECAP_NOTABLE = 5
 
 
@@ -436,7 +437,7 @@ class GameService:
                 if e["type"] != "result":
                     await stream.push(e, done=e["type"] == "error")
                     continue
-                entry = {k: e[k] for k in ("text", "attempts", "dropped", "tags")}
+                entry = {k: e[k] for k in ("text", "attempts", "dropped", "tags")} | ({"said": e["said"]} if e.get("said") else {})
                 async with self.lock(game_id):
                     u, g = await self.load(game_id)
                     p = g.presentation
@@ -508,13 +509,21 @@ class GameService:
         elif all(a.schema == "try" and a.intent[0] == PLAYER for a in actions):
             # the idle label would leak ("말한 대로 행동을 이어갑니다"), and anyone here may answer (engine.md 5.2)
             reply, happened, speakers = "muse", [ko.HAPPENED_MUSE], sorted(people, key=u.rank)
+        # What each speaker said before the previous narration, which alone let an answer drift (engine.md 5.1).
+        texts = {x["n"]: x.get("text") or "" for x in p["turns"]}
+        said: dict[str, list] = {}
+        for m in range(1, n - PREVIOUS_TURNS):
+            for x, lines in p["narration"].get(str(m), {}).get("said", {}).items():
+                if x in speakers:
+                    said.setdefault(x, []).append((texts.get(m, ""), lines))
+        said = {x: rows[-SAID:] for x, rows in said.items()}
         size = {"sentences": GROWN_SENTENCES, "chars": GROWN_CHARS} if grown else \
             dict(zip(("sentences", "chars"), REPLY_SIZE[reply])) if reply != "act" and not kinds & {"chapter", "ending"} \
             else {"chars": SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars}
         return Job(u, o, p, happened, delta, {PLAYER, here, *people, *ids}, text=turn["text"], tags=tags,
                    previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers, left=left,
                    joined=joined, unfinished=turn.get("unfinished"), grown=grown, progress=progress, blocked=blocked,
-                   relied=relied, looked=looked, struck=struck, missed=missed, reply=reply, **size)
+                   relied=relied, looked=looked, struck=struck, missed=missed, reply=reply, said=said, **size)
 
     def _recap_job(self, u: Universe, g: Game, k: int) -> Job | None:
         p = g.presentation

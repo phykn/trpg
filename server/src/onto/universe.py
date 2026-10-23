@@ -88,6 +88,7 @@ class Agent:
     complications: tuple[Complication, ...]
     latent: str | None
     avoids: tuple[str, ...] = ()   # places it will not follow the player into
+    knows: tuple[str, ...] = ()    # told to anyone who asks; ontology.md 3.4
 
 
 @dataclass(frozen=True)

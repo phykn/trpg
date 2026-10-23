@@ -213,6 +213,12 @@ def v4(u: Universe) -> None:
                 if term in seen and seen[term] != x.id:
                     fail("V4", f"{x.id}.aliases", f"{term!r} is also a name of {seen[term]}")
                 seen[term] = x.id
+    # The narrator moves anyone its context names, so a person's knows naming another brings them into the scene.
+    for a in u.agents.values():
+        for k in a.knows:
+            for b in u.agents.values():
+                if b.id != a.id and any(term in k for term in (b.name, *b.aliases)):
+                    fail("V4", f"characters.{a.id}.knows", f"names {b.id}")
     labels = list(seen) + [sol.label for o in u.obstacles.values() for sol in o.solutions]
     for phrase in u.impossible:
         for text in labels:
@@ -229,7 +235,7 @@ def _public(u: Universe):
     for p in u.places.values():
         yield p.id, f"places.{p.id}", " ".join((p.name, *p.aliases, *p.senses))
     for a in u.agents.values():
-        yield a.id, f"characters.{a.id}", " ".join((a.name, *a.aliases, a.voice, a.desire, a.fear))
+        yield a.id, f"characters.{a.id}", " ".join((a.name, *a.aliases, a.voice, a.desire, a.fear, *a.knows))
         for t in a.topics:
             yield a.id, f"characters.{a.id}.topics.{t.id}.title", t.title
         if a.favor is not None:
