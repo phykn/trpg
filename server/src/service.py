@@ -45,6 +45,7 @@ GAME_ID = re.compile(r"g_[a-f0-9]{32}")
 RECEIPTS = 50
 PREVIOUS_TURNS = 3
 SAID = 4                # earlier exchanges per speaker handed to narration (engine.md 5.1)
+SHARED = 4              # events lived together per speaker (ontology.md 3.4)
 RECAP_NOTABLE = 5
 
 
@@ -517,13 +518,15 @@ class GameService:
                 if x in speakers:
                     said.setdefault(x, []).append((texts.get(m, ""), lines))
         said = {x: rows[-SAID:] for x, rows in said.items()}
+        shared = lived(u, o, [m for m in p["turns"] if m["n"] < n - PREVIOUS_TURNS], speakers)
         size = {"sentences": GROWN_SENTENCES, "chars": GROWN_CHARS} if grown else \
             dict(zip(("sentences", "chars"), REPLY_SIZE[reply])) if reply != "act" and not kinds & {"chapter", "ending"} \
             else {"chars": SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars}
         return Job(u, o, p, happened, delta, {PLAYER, here, *people, *ids}, text=turn["text"], tags=tags,
                    previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers, left=left,
                    joined=joined, unfinished=turn.get("unfinished"), grown=grown, progress=progress, blocked=blocked,
-                   relied=relied, looked=looked, struck=struck, missed=missed, reply=reply, said=said, **size)
+                   relied=relied, looked=looked, struck=struck, missed=missed, reply=reply, said=said, shared=shared,
+                   **size)
 
     def _recap_job(self, u: Universe, g: Game, k: int) -> Job | None:
         p = g.presentation
@@ -547,6 +550,28 @@ class GameService:
         task = ko.fill(ko.RECAP_TASK, title=u.chapter_of(k).title, sentences=RECAP_SENTENCES, chars=RECAP_CHARS)
         return Job(u, o, p, lines, lines, {PLAYER, o.facts.where(PLAYER)}, chars=RECAP_CHARS,
                    sentences=RECAP_SENTENCES, task=task)
+
+
+def lived(u, o, turns: list[dict], speakers: list[str]) -> dict[str, list[str]]:
+    """Each speaker's events of shared(g), older than the previous narration, as step lines (ontology.md 3.4)."""
+    witnessed = {s.t: s.witnesses for s in o.memory}
+    out: dict[str, list[str]] = {}
+    for turn in turns:
+        for r in turn["steps"]:
+            for x in speakers:
+                if x in witnessed.get(r["t"], ()) and marks(u, r):
+                    out.setdefault(x, []).append(". ".join(step_lines(u, r)[0]))
+    return {x: lines[-SHARED:] for x, lines in out.items()}
+
+
+def marks(u, r: dict) -> bool:
+    """An event that marks its witnesses: notable, done to a person with a change or a roll, or the player hurt
+    (ontology.md 3.4). A refused favor changes nothing, yet left out, 윤슬 later told of the key being lent
+    (qa_test/runs/loop-1/long-after r0 t21)."""
+    kinds = {c["kind"] for c in r["changes"]}
+    person = any(a in u.agents for a in r["action"].split(";")[0].split(":")[1:])
+    acted = person and (kinds & {"move", "follow", "promise", "regards", "reveal"} or r["roll"] is not None)
+    return notable_step(u, r) or bool(acted) or "wound" in kinds
 
 
 def notable_step(u, r: dict) -> bool:

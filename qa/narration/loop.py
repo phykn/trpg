@@ -37,12 +37,21 @@ SCRIPTS = {
     # 7 and 8 ask about answers that have left the 3-turn narration window
     "recall": ["아버지는 어디 가셨어?", "먹을거 어디 있어?", "넌 이름이 뭐니", "무서워?", "등대 얘기 좀 해줘",
                "날씨 진짜 별로다", "아까 먹을 거 어디 있다고 했지?", "아버지 언제 나가셨다고 했지?"],
+    # Chapter 1 through to the lamp room. "!" lines are buttons and a trailing "*" repeats one while it is a
+    # candidate, so the dice cannot stall the story; the typed lines after each shared event ask people about it.
+    "long": ["안녕", "!talk:yunseul:come*", "!go:village", "도해 할아버지 안녕하세요", "!try:hound:wits*",
+             "아드님 편지예요", "등대 열쇠 좀 빌려주세요", "누렁이 아까 무서웠죠?", "!go:yard", "!try:door:finesse*",
+             "여기까지 같이 와 줘서 고마워", "아까 그 개 기억나?", "편지 받고 할아버지 표정 봤어?", "!go:lamp_room",
+             "드디어 올라왔다", "!go:yard", "아까 누렁이 달랠 때 어땠어?", "할아버지가 열쇠 빌려줄 때 무슨 말 했지?",
+             "우리 처음 만났을 때 기억나?"],
 }
+REPEAT = 6
 
 
 async def turn(svc, narrator, gid: str, view: dict, k: int, text: str) -> tuple[dict, dict]:
     t0 = time.monotonic()
-    res = await svc.command(gid, {"request_id": f"t{k}", "revision": view["revision"], "text": text})
+    body = {"action": text[1:]} if text.startswith("!") else {"text": text}
+    res = await svc.command(gid, {"request_id": f"t{k}", "revision": view["revision"], **body})
     interp = time.monotonic() - t0
     steps, card = list(res["steps"]), res["view"].get("card")
     cards = []
@@ -94,11 +103,17 @@ async def main():
                 continue
             made = await svc.create(f"{name}-{r}", STORY, CREATION)
             gid, view = made["game_id"], made["view"]
-            for k, text in enumerate(lines, 1):
-                row, view = await turn(svc, narrator, gid, view, k, text)
-                rows.append({"repeat": r, "script": name, **row})
-                print(r, name, k, row["outcome"], row["place"], row["beats"], row.get("narr_s"),
-                      f"{text} → {row.get('text_out')}", flush=True)
+            k = 0
+            for line in lines:
+                text, again = line.rstrip("*"), line.endswith("*")
+                for _ in range(REPEAT if again else 1):
+                    k += 1
+                    row, view = await turn(svc, narrator, gid, view, k, text)
+                    rows.append({"repeat": r, "script": name, **row})
+                    print(r, name, k, row["outcome"], row["place"], row["beats"], row.get("narr_s"),
+                          f"{text} → {row.get('text_out')}", flush=True)
+                    if row["kind"] == "refused":
+                        break
     shutil.rmtree(tmp, ignore_errors=True)
     ROOT.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps({"name": a.name, "commit": commit(), "rows": rows}, ensure_ascii=False, indent=1),

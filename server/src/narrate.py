@@ -71,6 +71,7 @@ class Job:
     looked: tuple[str, ...] = ()     # things and obstacles this turn looked at
     reply: str = "act"               # act, talk (only small talk) or muse (only try(player)); engine.md 5.2
     said: dict = field(default_factory=dict)   # speaker → [(player sentence, [their lines])] before previous; 5.1
+    shared: dict = field(default_factory=dict)  # speaker → step lines of what they lived through with you; 5.1
 
 
 def sentences_of(text: str) -> list[str]:
@@ -334,7 +335,12 @@ def steering(job: Job, lines) -> list[str]:
 
 
 def kept_word(job: Job) -> list[str]:
-    return [ko.fill(ko.NOW["said"], names=", ".join(job.u.name(x) for x in job.said))] if job.said else []
+    out = [ko.fill(ko.NOW["shared"], names=", ".join(job.u.name(x) for x in job.shared))] if job.shared else []
+    return out + ([ko.fill(ko.NOW["said"], names=", ".join(job.u.name(x) for x in job.said))] if job.said else [])
+
+
+def shared_lines(job: Job) -> list[str]:
+    return [f"- {ko.fill(ko.SHARED_LINE, x=job.u.name(x), line=line)}" for x, lines in job.shared.items() for line in lines]
 
 
 def spoken(u, speakers: list[str], said: list[str]) -> dict[str, list[str]]:
@@ -361,8 +367,11 @@ def messages(job: Job, draft: list[str] | None = None, problems: list[str] | Non
         blocks += ["", ko.HEAD["notable"], job.task, *(f"- {x}" for x in job.happened)]
     else:
         blocks += ["", ko.HEAD["happened"], *(f"- {x}" for x in job.happened)]
+        if job.shared:
+            blocks += ["", ko.HEAD["shared"], *shared_lines(job)]
         if job.said:
-            blocks += ["", ko.HEAD["said"], *(f"- {ko.fill(ko.SAID_LINE, text=t, x=u.name(x), lines=' '.join(q))}"
+            blocks += ["", ko.HEAD["said"], *(f"- {ko.fill(ko.SAID_LINE if t else ko.SAID_ALONE, text=t, x=u.name(x),
+                                                             lines=' '.join(q))}"
                                                for x, rows in job.said.items() for t, q in rows)]
         if job.previous:
             blocks += ["", ko.HEAD["previous"], *job.previous]
@@ -471,6 +480,8 @@ class Narrator:
 
     async def judge(self, job: Job, said: list[str], skip: set[int]) -> dict[int, list[str]]:
         state = render(scene(job.u, job.o, job.focus, job.p))
+        if job.shared:
+            state += "\n" + "\n".join([ko.HEAD["shared"], *shared_lines(job)])
         if job.happened:
             state += "\n" + ko.HEAD["happened"] + "\n" + "\n".join(f"- {x}" for x in job.happened)
         if job.ending:

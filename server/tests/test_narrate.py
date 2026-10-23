@@ -498,3 +498,27 @@ async def test_what_a_speaker_said_before_the_previous_narration_is_handed_back(
     per, _ = svc.narrator.rules(replace(job, previous=[]), ["윤슬이 말합니다. \"마을 안쪽 창고에 말린 생선이 있어요.\""])
     assert any("마을안쪽창고에" in w for w in per[0])
     assert svc._turn_job(*svc.games[gid], 4).said == {}
+
+
+async def test_what_a_speaker_lived_through_with_you_is_remembered(tmp_path):
+    """ontology.md 3.4: 도해 forgot the dog calmed in front of him once it left the window (qa_test/runs/loop-1)."""
+    moves = ("give:letter:yunseul", *("talk:yunseul:chat",) * 4)
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD), moves=moves)
+    job = svc._turn_job(*svc.games[gid], 5)
+    assert list(job.shared) == ["yunseul"] and "아들의 편지" in job.shared["yunseul"][0]
+    prompt = messages(job)[1]["content"]
+    assert ko.HEAD["shared"] in prompt and "윤슬과 함께: " in prompt
+    assert "[함께 겪은 일]을 기억합니다" in prompt.split(ko.HEAD["now"])[1]
+    decision = FakeDecision()
+    svc.narrator.decision = decision
+    await svc.narrator.judge(job, ["윤슬이 웃습니다."], set())
+    assert ko.HEAD["shared"] in decision.asked[-1][0]                 # a fact, so the check reads it too
+    assert svc._turn_job(*svc.games[gid], 4).shared == {}               # still inside the previous narration
+
+
+def test_a_refused_request_marks_its_witnesses_and_small_talk_does_not(u):
+    from src.service import marks
+    roll = {"d1": 1, "d2": 2}
+    assert marks(u, {"action": "talk:dohae:favor", "result": "fail", "changes": [], "roll": roll})
+    assert not marks(u, {"action": "talk:dohae:chat", "result": "none", "changes": [], "roll": None})
+    assert not marks(u, {"action": "look:letter", "result": "none", "changes": [], "roll": None})
