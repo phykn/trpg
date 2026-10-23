@@ -10,7 +10,7 @@ type Node = { props: Record<string, unknown> };
 
 async function render(patch: Partial<Props>) {
   const props: Props = {
-    mode: 'open', sent: null, notice: null, placeholder: '', text: '', onText: jest.fn(), onSend: jest.fn(), onResend: jest.fn(), ...patch,
+    mode: 'open', sent: null, notice: null, text: '', onText: jest.fn(), onSend: jest.fn(), onResend: jest.fn(), ...patch,
   };
   let tree: ReturnType<typeof renderer.create>;
   await flush(async () => { tree = renderer.create(<CommandBar {...props} />); });

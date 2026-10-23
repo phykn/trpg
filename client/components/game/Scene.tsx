@@ -6,7 +6,7 @@ import type { GameView } from '@/services/types';
 import { Boxes } from './Boxes';
 import { Item, Pill, Row, TagItems } from './Row';
 
-export const cleared = (o: GameView['scene']['obstacles'][number]) => o.fill >= o.boxes;
+const cleared = (o: GameView['scene']['obstacles'][number]) => o.fill >= o.boxes;
 
 // Where the player is and what is here; every name starts a sentence when tapped.
 export function Scene({ scene, onDraft }: { scene: GameView['scene']; onDraft?: (text: string) => void }) {

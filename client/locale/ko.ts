@@ -32,10 +32,7 @@ export const ko = {
   typing: '이야기를 쓰는 중',
   narrationFailed: '서술을 받지 못했습니다.',
   retryNarration: '다시 받기',
-  placeholder: '무엇을 할까요?',
-  // The empty box names the first thing in the scene, so it already shows what a sentence looks like.
-  askObject: (name: string) => `${eul(name)} 어떻게 할까요?`,
-  askPerson: (name: string) => `${name}에게 무엇을 할까요?`,
+  command: '무엇을 할까요?',
   // Tapping a name starts the sentence; the player finishes it.
   draft: {
     go: (place: string) => `${ro(place)} 간다`,

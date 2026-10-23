@@ -12,21 +12,13 @@ import { Menu } from '@/components/game/Menu';
 import { MoveCard } from '@/components/game/MoveCard';
 import { Chat } from '@/components/game/Narration';
 import { RollCard } from '@/components/game/RollCard';
-import { cleared, Scene } from '@/components/game/Scene';
+import { Scene } from '@/components/game/Scene';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import { frame as frameAt, rolled as isRolled } from '@/logic/reveal';
 import type { Game } from '@/logic/useGame';
 import { useLog } from '@/logic/useLog';
 import type { GameView } from '@/services/types';
-
-function hint(scene: GameView['scene']): string {
-  const open = scene.obstacles.find((o) => !cleared(o));
-  if (open) return ko.askObject(open.name);
-  if (scene.people.length) return ko.askPerson(scene.people[0].name);
-  if (scene.things.length) return ko.askObject(scene.things[0].name);
-  return ko.placeholder;
-}
 
 export function Play({ game }: { game: Game }) {
   const view = game.view as GameView;
@@ -114,7 +106,6 @@ export function Play({ game }: { game: Game }) {
             ) : null}
           </View>
           <CommandBar mode={mode} sent={game.sent} notice={roller ? null : game.notice} text={draft} onText={setDraft} inputRef={input}
-            placeholder={hint(view.scene)}
             onSend={(text) => { log.add({ id: `you:${Date.now()}`, kind: 'you', text }); game.command({ text }); }} onResend={game.resend} />
           {card ? <View className="absolute bottom-0 left-0 right-0 max-h-full">{card}</View> : null}
         </View>
