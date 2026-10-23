@@ -73,6 +73,8 @@ class Job:
     said: dict = field(default_factory=dict)   # speaker → [(player sentence, [their lines])] before previous; 5.1
     shared: dict = field(default_factory=dict)  # speaker → step lines of what they lived through with you; 5.1
     hint: tuple[str, str] | None = None   # a muse's way forward: (action, its button label); 5.2
+    arrived: bool = False            # the player came to this place this turn: its scenery is new
+    paced: tuple[str, ...] = ()      # clocks and deadlines whose pace word this turn changed
 
 
 def sentences_of(text: str) -> list[str]:
@@ -302,12 +304,16 @@ def steering(job: Job, lines) -> list[str]:
         hint = [ko.fill(ko.NOW["hint" if names else "hint_alone"], hint=job.hint[1], names=names)] if job.hint else []
         return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {reply}", *(f"- {x}" for x in hint)]
     here = job.o.facts.where(PLAYER)
-    cue = fresh_cue(list(u.places[here].senses), job.previous) if here in u.places else None
+    # Scenery and time are told when they change; asked every turn, the weather filled every narration (engine.md 5.1).
+    cue = fresh_cue(list(u.places[here].senses), job.previous) if job.arrived and here in u.places else None
     out.append(ko.fill(ko.NOW["cue"], cue=cue) if cue else ko.NOW["no_cue"])
-    pace = [ln.text for ln in lines if ln.atom and ln.atom[0] == "fill" and ln.atom[1] in u.obstacles
-            and u.obstacles[ln.atom[1]].sub in ("clock", "deadline")]
+    pace = [ln.text for ln in lines if ln.atom and ln.atom[0] == "fill" and ln.atom[1] in job.paced]
     if pace:
         out.append(ko.fill(ko.NOW["pace"], text=", ".join(pace)))
+    elif not (job.struck or job.missed):
+        # Without it the story's style ("어두워지는 하늘로 시간이 흐르는 것") still filled half the sentences
+        # (qa_test/runs/loop-1/weather-after).
+        out.append(ko.NOW["still"])
     # A lamp at 1/4 already pushed back the dark (qa_test/runs/play-2-bold 6–7, play-4-odd 28).
     for x, done in job.progress.items():
         out.append(ko.fill(ko.NOW["done" if done else "partial"], name=u.name(x)))

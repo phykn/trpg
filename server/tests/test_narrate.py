@@ -495,6 +495,24 @@ async def test_only_what_happened_is_answered(tmp_path):
     assert "윤슬은 그런 일은 없었다고 하거나" in now and "말을 나누지 않았습니다" not in now
 
 
+async def test_scenery_and_time_are_told_when_they_change(tmp_path):
+    """engine.md 5.1: the place cue on arrival only, and a clock's pace only when its word changes."""
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD), moves=("go:village", "talk:dohae:chat"))
+    u, g = svc.games[gid]
+    arrived, stayed = svc._turn_job(u, g, 1), svc._turn_job(u, g, 2)
+    assert arrived.arrived and "새로 그릴 감각" in messages(arrived)[1]["content"].split(ko.HEAD["now"])[1]
+    assert not stayed.arrived and ko.NOW["no_cue"] in messages(stayed)[1]["content"].split(ko.HEAD["now"])[1]
+    changes = g.presentation["turns"][1]["steps"][0]["changes"]
+    changes.append({"kind": "fill", "id": "deadline.1", "name": "해가 진다", "from": 1, "to": 1})        # 3 boxes: 1 stays "다가오고"
+    assert svc._turn_job(u, g, 2).paced == ()
+    changes[-1] = {"kind": "fill", "id": "deadline.1", "name": "해가 진다", "from": 1, "to": 2}           # one box left: "코앞에"
+    job = svc._turn_job(u, g, 2)
+    assert job.paced == ("deadline.1",)
+    assert "때:" in messages(job)[1]["content"].split(ko.HEAD["now"])[1]
+    assert ko.NOW["still"] not in messages(job)[1]["content"]
+    assert ko.NOW["still"] in messages(replace(job, paced=()))[1]["content"].split(ko.HEAD["now"])[1]
+
+
 def test_what_a_person_knows_is_in_the_narrators_context_while_they_are_here(u):
     from src.lang.context import context, render, scene
     from src.onto.log import Log
@@ -505,6 +523,20 @@ def test_what_a_person_knows_is_in_the_narrators_context_while_they_are_here(u):
     assert knows in render(scene(u, o, {"player", "dock", "yunseul"}, {}))
     assert knows not in render(scene(u, o, {"player", "dock"}, {}))
     assert knows not in render(context(u, o, {"player", "dock", "yunseul"}, {}))     # interpretation never needs it
+
+
+def test_clocks_reach_the_narrator_as_pace_words_once(u):
+    """engine.md 5.1: no box counts, and one line per clock."""
+    from src.lang.context import render, scene
+    from src.onto.log import Log
+    from src.onto.universe import initial
+    from src.onto.view import observe
+    o = observe(u, initial(u, CREATION), Log())
+    text = render(scene(u, o, {"player", "dock"}, {}))
+    clocks = [c for c in o.seen if c in u.obstacles and u.obstacles[c].sub in ("clock", "deadline")]
+    assert clocks
+    for c in clocks:
+        assert f"{u.name(c)}: 0/" not in text and text.count(f"{u.name(c)}: ") == 1
 
 
 def test_quotes_go_to_the_speaker_their_sentence_names(u):

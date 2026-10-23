@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .cards import clarify_card, confirm_card, move_card, rely_options, roll_card, ways
 from .interpret import names_way, unreachable
+from .lang.context import pace
 from .locale import ko
 from .narrate import (
     GROWN_CHARS,
@@ -490,6 +491,9 @@ class GameService:
                 for i, (atom, t, name) in enumerate(p["tags"])
                 if turn["t0"] <= t <= turn["t1"] and o.facts.mark_.get((atom[1], atom[4])) == tuple(atom[2:4])]
         kinds = {c["kind"] for c in changes}
+        paced = tuple(dict.fromkeys(c["id"] for c in changes if c["kind"] == "fill" and c["id"] in u.obstacles
+                                    and u.obstacles[c["id"]].sub in ("clock", "deadline")
+                                    and pace(c["from"], u.boxes(c["id"])) != pace(c["to"], u.boxes(c["id"]))))
         ending = next((c["id"] for c in changes if c["kind"] == "ending"), None)
         previous = [p["narration"][str(m)]["text"] for m in range(max(1, n - PREVIOUS_TURNS), n)
                     if str(m) in p["narration"]]
@@ -534,7 +538,7 @@ class GameService:
                    previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers, left=left,
                    joined=joined, unfinished=turn.get("unfinished"), grown=grown, progress=progress, blocked=blocked,
                    relied=relied, looked=looked, struck=struck, missed=missed, reply=reply, said=said, shared=shared,
-                   hint=hint, **size)
+                   hint=hint, arrived=went is not None, paced=paced, **size)
 
     def _recap_job(self, u: Universe, g: Game, k: int) -> Job | None:
         p = g.presentation

@@ -59,6 +59,11 @@ def fact_line(u, p: dict, atom: Atom) -> str | None:
     return None
 
 
+def pace(n: int, boxes: int) -> int:
+    """A clock's pace word: still far with no box filled, upon you with one box left or none (engine.md 5.1)."""
+    return 0 if n == 0 else 2 if n >= boxes - 1 else 1
+
+
 def context(u, o: Obs, focus, p: dict) -> list[Line]:
     """X = focus ∩ E. A fact touches X and names only E: the player is in every focus, and F holds the player's ties
     to people anywhere, so the decision model read an absent companion's regard and a latent person's (qa_test/runs/
@@ -119,7 +124,11 @@ def scene(u, o: Obs, focus, p: dict) -> list[Line]:
             # A neutral regard says nothing, and its wording reads as a temperament that fights the persona.
             if a[0] == "regards" and a[4] == 0:
                 continue
-            if a[0] == "fill" and a[1] in u.obstacles and u.obstacles[a[1]].sub not in ("clock", "deadline"):
+            # A clock goes in as its pace word, never as boxes: "몰려오는 폭풍: 0/4" reached the narrator beside
+            # "아직 멀었습니다" (engine.md 5.1).
+            if a[0] == "fill" and a[1] in u.obstacles and u.obstacles[a[1]].sub in ("clock", "deadline"):
+                ln = Line("fact", ko.fill(ko.FRAME["pace"], o=u.name(a[1]), word=ko.PACE[pace(a[2], u.boxes(a[1]))]), a)
+            elif a[0] == "fill" and a[1] in u.obstacles:
                 if a[2] == 0:
                     continue
                 n, boxes = a[2], u.boxes(a[1])
@@ -131,10 +140,11 @@ def scene(u, o: Obs, focus, p: dict) -> list[Line]:
                 elif a[2] not in u.traits:
                     continue
         out.append(ln)
+    paced = {ln.atom[1] for ln in out if ln.atom and ln.atom[0] == "fill"}
     for c in o.facts.held_by(PLAYER):
-        if c in u.obstacles and u.obstacles[c].sub in ("clock", "deadline") and c in o.seen:
+        if c in u.obstacles and u.obstacles[c].sub in ("clock", "deadline") and c in o.seen and c not in paced:
             n, boxes = o.facts.fill(c) or 0, u.boxes(c)
-            word = ko.PACE[0 if n == 0 else 2 if n >= boxes - 1 else 1]
+            word = ko.PACE[pace(n, boxes)]
             out.append(Line("fact", ko.fill(ko.FRAME["pace"], o=u.name(c), word=word), ("fill", c, n)))
     # What a person may state beyond F (ontology.md 3.4); interpretation never needs it, so it is not in about().
     for g in sorted(x & set(u.agents), key=u.rank):
@@ -178,4 +188,4 @@ def render(lines: list[Line]) -> str:
     return "\n".join(out)
 
 
-__all__ = ["Line", "about", "context", "fact_line", "prop_label", "render", "scene"]
+__all__ = ["Line", "about", "context", "fact_line", "pace", "prop_label", "render", "scene"]
