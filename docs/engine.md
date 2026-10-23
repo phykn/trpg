@@ -217,6 +217,8 @@ class Card:
 
 When neither the decision model nor the narration model settles a layer-2 intent slot. The options are the `λ` of `{ω₁, ω₂, ω₃}` and "그만두기" (cancel). The answer fills that slot and the plan continues.
 
+**Detour.** When a step would be refused because what the sentence aims at (a person, a thing, a way) is blocked by a visible obstacle `ob` here, the step becomes a clarify card about `ob` instead. The question names the block and asks what to do ("사나운 누렁이가 도해를 막고 있습니다. 어떻게 할까요?"); the options are `ob`'s solutions whose condition holds in the view, each the `try(ob, approach)` with its `rely`, under its `label`. A pick continues the plan as that try, with its roll card (4.2). The card is the hint: the block and the ways around it, all public parameters of a visible obstacle, so nothing hidden leaks and nothing runs until the player picks. With no solution holding, the step is refused with the reason as before. Refused with the reason alone, a player kept talking to a guarded person and got five refusals in a row with no reply (qa_test/runs/loop-1, talker 11–15).
+
 ### 4.2 Roll
 
 If the plan's next step `a` is a rolled action, the engine stops just before executing it and puts up a roll card. Whether it rolls is decided from the observation: `try(x ≠ player)` always; `talk` when the topic is not in `B` and `free_when` is false on what is visible, or when it is a request without goodwill (rule.md 5.1). The visible and world verdicts agree because story.md V3 limits the atoms of `free_when` to visible ones. Only a hidden block makes this decision differ from execution, and then the block is revealed through the card (`blocked`).

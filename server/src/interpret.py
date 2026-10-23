@@ -11,7 +11,16 @@ from .models.decision import ModelUnavailable, choice, noul, probs_of
 from .onto.atoms import APPROACHES, PLAYER
 from .onto.view import observe
 from .rules.acts import JUDGE, make, parse
-from .rules.candidates import Slot, blockers, candidates, expand, solution_label, space
+from .rules.candidates import (
+    Slot,
+    blockers,
+    candidates,
+    expand,
+    solution_action,
+    solution_holds,
+    solution_label,
+    space,
+)
 from .view import action_label, rely_label
 
 THETA = 0.5
@@ -68,16 +77,33 @@ def says(u, x: str, text: str) -> bool:
     return any(mentions(w, text) >= 0 for w in (u.name(x), *u.aliases(x)))
 
 
-def unreachable(u, o, text: str, schema: str) -> str | None:
-    """Why the sentence's own target is out of reach, when the engine knows it. Refused with no reason, players could
-    not tell a guard dog from a broken game, and a sentence aimed at a guarded person landed on another target
-    ("도해의 아구창을 날린다" → a try on the letter)."""
+def guarded(u, o, text: str, schema: str) -> tuple[str, str] | None:
+    """(target, the visible obstacle blocking it) for what the sentence aims at: something it names, or, spoken to no
+    one by name ("왜 못하지?"), the people here when all of them are guarded."""
     f, here = o.facts, o.facts.where(PLAYER)
     for x in named(u, o, text):
         by = blockers(u, f, x) if x != here else []
         if by:
-            key = "blocked_way" if u.kind(x) == "place" else "blocked"
-            return ko.fill(ko.WHY[key], ob=u.name(by[0]), x=u.name(x))
+            return x, by[0]
+    if schema in ("talk", "give"):
+        here_people = [x for x in sorted(o.seen, key=u.rank) if x in u.agents and f.where(x) == here]
+        held = [(x, by) for x in here_people if (by := blockers(u, f, x))]
+        if here_people and len(held) == len(here_people) and not set(named(u, o, text)) & set(u.agents):
+            return held[0][0], held[0][1][0]
+    return None
+
+
+def blocked_why(u, x: str, ob: str) -> str:
+    return ko.fill(ko.WHY["blocked_way" if u.kind(x) == "place" else "blocked"], ob=u.name(ob), x=u.name(x))
+
+
+def unreachable(u, o, text: str, schema: str) -> str | None:
+    """Why the sentence's own target is out of reach, when the engine knows it. Refused with no reason, players could
+    not tell a guard dog from a broken game, and a sentence aimed at a guarded person landed on another target
+    ("도해의 아구창을 날린다" → a try on the letter)."""
+    f = o.facts
+    if (g := guarded(u, o, text, schema)) and g[0] in named(u, o, text):
+        return blocked_why(u, *g)
     if schema == "give":
         # a thing handed over is out of sight in its new holder's hands, so memory says it is known
         known = {a[1] for s in o.memory for a in (*s.delta.add, *s.delta.remove) if a[0] == "at" and a[1] in u.things}
@@ -89,13 +115,7 @@ def unreachable(u, o, text: str, schema: str) -> str | None:
         for x in sorted(met - set(o.seen)):
             if x in u.agents and says(u, x, text):
                 return ko.fill(ko.WHY["away"], x=u.name(x))
-        # spoken to no one by name ("왜 못하지?"), the people here are the ones meant
-        here_people = [x for x in sorted(o.seen, key=u.rank) if x in u.agents and f.where(x) == here]
-        guarded = [(x, by) for x in here_people if (by := blockers(u, f, x))]
-        if here_people and len(guarded) == len(here_people) and not set(named(u, o, text)) & set(u.agents):
-            x, by = guarded[0]
-            return ko.fill(ko.WHY["blocked"], ob=u.name(by[0]), x=u.name(x))
-    return None
+    return blocked_why(u, *g) if g else None
 
 
 def title_words(title: str) -> list[str]:
@@ -301,9 +321,13 @@ class Interpreter:
             # small talk (a say line) is chat or a named topic; requests, threats and lies come from acts
             slots = [s for s in slots if topic_named(u, *s.intent, text)
                      and not (st.get("say") and s.intent[1] in REQUESTS)]
-        why = unreachable(u, o, text, st["schema"])
+        # a target a card settled (a detour's pick) is not read from the sentence again
+        why = None if {"target", "intent"} & set(fixed) else unreachable(u, o, text, st["schema"])
         names = named(u, o, text)
         if not slots or (why and not any(x in s.intent for s in slots for x in names if x != PLAYER)):
+            g = guarded(u, o, text, st["schema"])
+            if g and why == blocked_why(u, *g) and (ask := self.detour(u, o, text, *g)):
+                return {"clarify": ask}
             return {"refused": why or ko.REFUSED["candidate"]}
         if st["schema"] == "try":
             return await self.fill_try(u, o, p, st, slots, text, fixed)
@@ -480,6 +504,18 @@ class Interpreter:
 
     def done(self, u, o, p, a, text, echo) -> dict:
         return {"action": str(a), "rely": rely_hint(u, o, p, a, text), "slots": echo}
+
+    @staticmethod
+    def detour(u, o, text: str, x: str, ob: str) -> dict | None:
+        """The ways around what blocks the target, as a clarify card: the hint instead of a refusal (engine.md 4.1)."""
+        sols = [s for s in u.obstacles[ob].solutions if solution_holds(u, o, ob, s)]
+        if not sols:
+            return None
+        resume = {str(solution_action(ob, s)): {"schema": "try", "text": text, "rely": s.rely,
+                                                "fixed": {"target": ob, "approach": s.approach, "strain": "natural"}}
+                  for s in sols}
+        return {"slot": "detour", "question": ko.fill(ko.DETOUR, why=blocked_why(u, x, ob)),
+                "options": [{"id": str(solution_action(ob, s)), "label": s.label} for s in sols], "resume": resume}
 
     @staticmethod
     def clarify(st, fixed, slot, top, labels) -> dict:

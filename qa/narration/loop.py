@@ -4,7 +4,7 @@
 
 typed.py starts every line in a fresh game and so cannot see what a cycle hands to the next one: a fact a quote made up,
 a worry told twice, a phrase that comes back. Lines that refer back ("아까 어디 있다고 했지?") ask for exactly that.
-A card that opens is taken with its default, since this bench measures the replies, not the choices.
+Every card that opens is taken with its default, since this bench measures the replies, not the choices.
 """
 import argparse
 import asyncio
@@ -45,12 +45,15 @@ async def turn(svc, narrator, gid: str, view: dict, k: int, text: str) -> tuple[
     res = await svc.command(gid, {"request_id": f"t{k}", "revision": view["revision"], "text": text})
     interp = time.monotonic() - t0
     steps, card = list(res["steps"]), res["view"].get("card")
-    if card and card["kind"] != "clarify":
+    cards = []
+    # a detour's clarify leads on to a roll card, so cards are taken until none is left
+    while (card := res["view"].get("card")) and len(cards) < 3:
+        cards.append(card.get("question") or card["kind"])
         pick = card.get("selected") or card["options"][0]["id"]
-        res = await svc.command(gid, {"request_id": f"c{k}", "revision": res["view"]["revision"], "card": card["id"],
-                                      "pick": pick})
+        res = await svc.command(gid, {"request_id": f"c{k}-{len(cards)}", "revision": res["view"]["revision"],
+                                      "card": card["id"], "pick": pick})
         steps += res["steps"]
-    row = {"k": k, "text": text, "steps": [s["action"] for s in steps], "card": card and card["kind"],
+    row = {"k": k, "text": text, "steps": [s["action"] for s in steps], "card": cards,
            "kind": res["kind"], "interp_s": round(interp, 2), "place": res["view"]["scene"]["place"]["name"],
            "beats": [view["player"]["beats"], res["view"]["player"]["beats"]]}
     row["outcome"] = outcome(row["steps"])

@@ -374,23 +374,30 @@ async def test_a_fork_in_the_scene_lends_its_choices_as_the_examples_of_choose()
     assert "기름" not in decision.asked[0][1]["s1"]["criteria"]["choose"]
 
 
-async def test_a_refusal_names_what_keeps_the_target_out_of_reach(tmp_path):
+async def test_a_guarded_target_offers_the_ways_around_the_guard(tmp_path):
+    """engine.md 4.1 detour: five refusals in a row left the player talking to a guarded man (qa_test/runs/loop-1)."""
     decision = FakeDecision({"s1": {"try": 0.9}, "n": {"1": 0.9}, "strain": {"natural": 0.9}})
     # talking to 도해 runs into the hidden dog, which is then in sight
     svc, gid, view = await game(tmp_path, decision, FakeLLM("1"), moves=["go:village", "talk:dohae:chat"])
     assert "hound" in [x["id"] for x in view["scene"]["obstacles"]]
     out = await say(svc, gid, view, "ㅋㅋㅋ 도해의 아구창을 날린다")
-    # not a try on another target (the letter) but the reason
-    assert out["kind"] == "refused" and out["reason"] == "사나운 누렁이가 도해를 막고 있습니다."
+    # not a try on another target (the letter) but the guard and the ways around it
+    card = out["view"]["card"]
+    assert out["kind"] == "card" and card["kind"] == "clarify" and not out["steps"]
+    assert card["question"] == "사나운 누렁이가 도해를 막고 있습니다. 어떻게 할까요?"
+    assert [o["label"] for o in card["options"]] == ["낮은 목소리로 달래며 다가간다", "말린 생선을 던져 시선을 돌린다"]
+    out = await svc.command(gid, {"request_id": "pick", "revision": out["view"]["revision"], "card": card["id"],
+                                  "pick": card["options"][0]["id"]})
+    assert out["view"]["card"]["kind"] == "roll" and out["view"]["card"]["selected"] == "try:hound:charm"
     decision.answers["s1"] = {"talk": 0.9}
     out = await say(svc, gid, out["view"], "도해에게 이야기", "t2")
-    assert out["reason"] == "사나운 누렁이가 도해를 막고 있습니다."
+    assert out["view"]["card"]["question"].startswith("사나운 누렁이가 도해를 막고 있습니다.")
     # someone met elsewhere: the reader may well walk there, but a talk step says where they are not
     u, g = svc.games[gid]
     st = await svc.interpreter.fill(u, g, {"schema": "talk", "text": "윤슬에게 등대에 대해 묻는다", "fixed": {}})
     assert st == {"refused": "윤슬은 여기 없습니다."}
     st = await svc.interpreter.fill(u, g, {"schema": "talk", "text": "왜 못하지?", "fixed": {}})
-    assert st == {"refused": "사나운 누렁이가 도해를 막고 있습니다."}
+    assert st["clarify"]["slot"] == "detour" and set(st["clarify"]["resume"]) == {"try:hound:charm", "try:hound:wits"}
     # the guard keeps things from being handed over too
     out = await svc.command(gid, {"request_id": "g", "revision": out["view"]["revision"], "action": "give:letter:dohae"})
     assert out["kind"] == "refused"
@@ -399,12 +406,15 @@ async def test_a_refusal_names_what_keeps_the_target_out_of_reach(tmp_path):
     assert out["kind"] != "refused"
 
 
-async def test_a_way_an_obstacle_blocks_is_refused_with_its_reason(tmp_path):
+async def test_a_blocked_way_offers_only_the_ways_around_that_hold(tmp_path):
     decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}})
     svc, gid, view = await game(tmp_path, decision, FakeLLM("1"), moves=["go:yard"])
     for i, text in enumerate(["등불 방으로 올라간다", "날아서 꼭대기 등불실로"]):
-        out = await say(svc, gid, view, text, f"t{i}")
-        assert out["reason"] == "녹슨 등대 문이 등불실로 가는 길을 막고 있습니다."
+        view = (await say(svc, gid, view, text, f"t{i}"))["view"]
+        card = view["card"]
+        assert card["question"] == "녹슨 등대 문이 등불실로 가는 길을 막고 있습니다. 어떻게 할까요?"
+        # no key and no word of the wall yet: only the shoulder
+        assert [o["label"] for o in card["options"]] == ["어깨로 문을 들이받는다"]
 
 
 async def test_giving_what_the_player_does_not_hold_says_so(tmp_path):
