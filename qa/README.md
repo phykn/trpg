@@ -14,7 +14,7 @@ Cheapest first. Run every row your change touches, and when you report a result,
 | The API boundary: `api.py`, `run_api.py`, receipts, revisions or streams in `service.py` | The above · a short [play/](play/) game (`new`, a sentence that opens a card, `cancel`, the same sentence, `pick`) | yes | 1 min |
 | A story in `scenarios/` | `cd server && ../.venv/bin/python -m src.story ../scenarios/<folder>` · the interpretation evals below | evals only | 1 s · 1.5 min |
 | Interpretation: `interpret.py`, `models/decision.py`, question or option wording in `locale/ko.py` | Interpretation evals → `qa/decision/bench.py parity` → [decision/](decision/) bench → [misread/](misread/) if option wording changed | parity no, the rest yes | 1.5 min · 3 s · 2.5 min · 15–25 min |
-| Narration: `narrate.py`, narration wording | [narration/](narration/) bench before and after → compare (a verdict per metric) → blind comparison when the numbers are within noise | yes | 10–15 min per side |
+| Narration: `narrate.py`, `jobs.py`, narration wording | [narration/](narration/) bench before and after → compare (a verdict per metric) → blind comparison when the numbers are within noise · for replies to typed lines, `narration/typed.py` (each line from its eval state) and `narration/loop.py` (scripted lines in one game, so each reply carries the turns before it) | yes | 10–15 min per side · 5–15 min |
 | Screens in `client/` | `cd client && npm test -- --runInBand && npx tsc --noEmit && npm run lint` · the real UI check below | no | 10 s · by hand |
 | Tests in `server/tests/` or `client/**/__tests__/`, or before trusting a green suite after a large change | The [mutation check](#mutation-check) for that side | no | 30 s per side |
 | Fun and naturalness: people, a story's tone, balance, or after any large change | A [play/](play/) playtest round | yes | about 10 min per game |
@@ -78,6 +78,10 @@ cd server && ../.venv/bin/python -m src.story.evals ../scenarios/skeleton --out 
 # Narration bench: a 16-turn script through chapter 1's recap to an ending, × 3 games (→ narr-3/<name>.json)
 .venv/bin/python qa/narration/run.py before --root ../trpg-base   # the checkout before the change; --games N
 .venv/bin/python qa/narration/run.py after
+
+# Typed-line benches (→ typed-1/<name>.json, loop-1/<name>.json); --root runs another checkout for a baseline
+.venv/bin/python qa/narration/typed.py <name>
+.venv/bin/python qa/narration/loop.py <name> --script long --repeat 2
 .venv/bin/python qa/narration/compare.py qa_test/runs/narr-3/before.json qa_test/runs/narr-3/after.json
 .venv/bin/python qa/narration/blind.py qa_test/runs/narr-3/before.json qa_test/runs/narr-3/after.json qa_test/runs/narr-3/blind.json
 

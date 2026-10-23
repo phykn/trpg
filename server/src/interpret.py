@@ -10,7 +10,7 @@ from .locale import ko
 from .models.decision import ModelUnavailable, choice, noul, probs_of
 from .onto.atoms import APPROACHES, PLAYER
 from .onto.view import observe
-from .rules.acts import JUDGE, make, parse
+from .rules.acts import JUDGE, make
 from .rules.candidates import (
     Slot,
     blockers,
@@ -20,6 +20,7 @@ from .rules.candidates import (
     solution_holds,
     solution_label,
     space,
+    topic_of,
 )
 from .view import action_label, rely_label
 
@@ -58,7 +59,7 @@ def names_way(u, q: str, ways: list[str], text: str) -> bool:
     """The sentence names way q and no other way, so its move card only confirms it (engine.md 4.4)."""
     said = [w for w in ways
             if any(mentions(n, text) >= 0 or mentions(n.replace(" ", ""), text) >= 0
-                   for n in (u.name(w), *u.aliases(w)))]
+                   for n in u.terms(w))]
     return said == [q]
 
 
@@ -67,14 +68,14 @@ def named(u, o, text: str) -> list[str]:
     for x in o.seen:
         if x == PLAYER or u.kind(x) is None:
             continue
-        at = [i for w in (u.name(x), *u.aliases(x)) if (i := mentions(w, text)) >= 0]
+        at = [i for w in u.terms(x) if (i := mentions(w, text)) >= 0]
         if at:
             found.append((min(at), x))
     return [x for _, x in sorted(found)]
 
 
 def says(u, x: str, text: str) -> bool:
-    return any(mentions(w, text) >= 0 for w in (u.name(x), *u.aliases(x)))
+    return any(mentions(w, text) >= 0 for w in u.terms(x))
 
 
 def guarded(u, o, text: str, schema: str) -> tuple[str, str] | None:
@@ -129,14 +130,14 @@ def topic_named(u, h: str, topic: str, text: str) -> bool:
     """A story topic is offered only when the sentence names it: offered every topic, the models put any question near
     the place on its one topic (qa_test/runs/intent-1-base). By the head noun alone, 5 of 18 bench questions lost
     theirs ("폐허 가는 길"); by any title word, 1, and no other topic came in (qa_test/runs/intent-1-probe)."""
-    t = next((t for t in u.agents[h].topics if t.id == topic), None)
+    t = topic_of(u, h, topic)
     return t is None or any(mentions(w, text) >= 0 for w in title_words(t.title))
 
 
 def addressee(u, o, text: str) -> str | None:
     for x in o.seen:
         if x in u.agents:
-            for w in (u.name(x), *u.aliases(x)):
+            for w in u.terms(x):
                 if any(w + t in text for t in ko.TO_PERSON):
                     return x
     return None
@@ -467,7 +468,7 @@ class Interpreter:
         titles = {}
         for i in intents:
             if len(i) == 2 and i[0] in u.agents:
-                t = next((t for t in u.agents[i[0]].topics if t.id == i[1]), None)
+                t = topic_of(u, *i)
                 if t is not None and squeeze(t.title) in squeeze(text):
                     titles[i] = 1
         score = {i: sum(x in names for x in i) + titles.get(i, 0) for i in intents}
@@ -524,4 +525,4 @@ class Interpreter:
                             "options": [{"id": w, "label": labels[w]} for w in top], "resume": resume}}
 
 
-__all__ = ["Interpreter", "mentions", "named", "parse", "rules", "squeeze"]
+__all__ = ["Interpreter", "mentions", "named", "rules", "squeeze"]

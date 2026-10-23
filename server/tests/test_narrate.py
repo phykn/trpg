@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import httpx
 from conftest import REPO
 from run_api import build_app
+from src.jobs import observed, turn_job
 from src.lang.polite import polite
 from src.locale import ko
 from src.models.decision import ModelUnavailable
@@ -194,7 +195,7 @@ async def test_a_finished_chapter_has_a_recap(tmp_path):
             break
     out = await svc.command(gid, {"request_id": "up", "revision": view["revision"], "action": "go:lamp_room"})
     n = out["turn"]
-    assert svc._turn_job(*svc.games[gid], n - 1).progress == {"door": True}     # the roll that opened the door
+    assert turn_job(*svc.games[gid], n - 1).progress == {"door": True}     # the roll that opened the door
     narr = await events(svc, gid, n)
     assert narr[-2]["type"] == "text"
     assert "160자" in llm.calls[-1][0]["content"]
@@ -226,7 +227,7 @@ async def test_an_absent_person_acting_is_rewritten(tmp_path):
 async def test_a_change_naming_someone_elsewhere_does_not_bring_them_here(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
     u, g = svc.games[gid]
-    job = replace(svc._turn_job(u, g, 1), delta=["윤슬이 기름통을 얻었습니다"])
+    job = replace(turn_job(u, g, 1), delta=["윤슬이 기름통을 얻었습니다"])
     said = ["윤슬이 당신의 젖은 소매를 가볍게 스칩니다.", "도해가 낮게 기침합니다.", "\"윤슬이 온다\"고 누가 외칩니다."]
     per, _ = svc.narrator.rules(job, said)
     assert list(per) == [0]
@@ -235,7 +236,7 @@ async def test_a_change_naming_someone_elsewhere_does_not_bring_them_here(tmp_pa
 async def test_a_companion_left_behind_appears_only_parting(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))     # the village; 윤슬 is at the dock
     u, g = svc.games[gid]
-    job = replace(svc._turn_job(u, g, 1), left={"yunseul": "dock"})
+    job = replace(turn_job(u, g, 1), left={"yunseul": "dock"})
     said = ["윤슬은 선착장에 남아 손을 흔듭니다.", "윤슬이 당신의 젖은 소매를 가볍게 스칩니다."]
     per, _ = svc.narrator.rules(job, said)
     assert list(per) == [1]
@@ -245,7 +246,7 @@ async def test_a_companion_left_behind_appears_only_parting(tmp_path):
 
 async def test_obstacle_progress_is_steered_short_of_done(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
-    job = svc._turn_job(*svc.games[gid], 1)
+    job = turn_job(*svc.games[gid], 1)
     now = messages(replace(job, progress={"lamp": False, "door": True}))[1]["content"].split(ko.HEAD["now"])[1]
     assert "꺼진 등불은 조금 진척이 있었을 뿐 아직 다 되지 않았습니다" in now and "녹슨 등대 문은 마침내 다 되었습니다" in now
     assert "진척" not in messages(job)[1]["content"].split(ko.HEAD["now"])[1]
@@ -257,14 +258,14 @@ async def test_progress_is_done_only_when_the_obstacle_is_full(tmp_path):
     fill = {"kind": "fill", "id": "lamp", "name": u.name("lamp"), "from": u.boxes("lamp") - 2,
             "to": u.boxes("lamp") - 1, "fit": 0}
     g.presentation["turns"][0]["steps"][0]["changes"].append(fill)
-    assert svc._turn_job(u, g, 1).progress == {"lamp": False}          # one box short still reads as not done
+    assert turn_job(u, g, 1).progress == {"lamp": False}          # one box short still reads as not done
     fill.update({"from": u.boxes("lamp") - 1, "to": u.boxes("lamp")})
-    assert svc._turn_job(u, g, 1).progress == {"lamp": True}
+    assert turn_job(u, g, 1).progress == {"lamp": True}
 
 
 async def test_a_blocked_step_and_what_a_roll_leaned_on_are_steered(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
-    job = svc._turn_job(*svc.games[gid], 1)
+    job = turn_job(*svc.games[gid], 1)
     now = messages(replace(job, blocked=("도해와 이야기한다",), relied=("기름통",)))[1]["content"].split(ko.HEAD["now"])[1]
     assert "'도해와 이야기한다'는 무언가에 가로막혀" in now and "기름통을 밑천으로 삼았습니다" in now
     assert "가로막혀" not in messages(job)[1]["content"]
@@ -272,7 +273,7 @@ async def test_a_blocked_step_and_what_a_roll_leaned_on_are_steered(tmp_path):
 
 async def test_what_a_look_found_is_steered_to_be_shown(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD), moves=("look:letter",))
-    job = svc._turn_job(*svc.games[gid], 1)
+    job = turn_job(*svc.games[gid], 1)
     assert job.looked == ("letter",)
     now = messages(replace(job, looked=("letter", "dohae")))[1]["content"].split(ko.HEAD["now"])[1]
     assert "당신이 살펴본 아들의 편지: 젖지 않게 기름종이로 싼 편지." in now and "살펴본 도해" not in now
@@ -280,7 +281,7 @@ async def test_what_a_look_found_is_steered_to_be_shown(tmp_path):
 
 async def test_what_came_to_pass_is_steered_to_be_told(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
-    job = svc._turn_job(*svc.games[gid], 1)
+    job = turn_job(*svc.games[gid], 1)
     now = messages(replace(job, struck=("무너지는 다리",), missed=("해가 진다",)))[1]["content"].split(ko.HEAD["now"])[1]
     assert "이번에 닥친 일: 무너지는 다리." in now and "때가 다 된 일: 해가 진다." in now
     assert "닥친 일" not in messages(job)[1]["content"]
@@ -288,13 +289,13 @@ async def test_what_came_to_pass_is_steered_to_be_told(tmp_path):
     g.presentation["turns"][0]["steps"][0]["changes"] += [
         {"kind": "arrival", "id": "deadline.1", "name": "해가 진다"},
         {"kind": "crisis", "id": "storm", "name": "몰려오는 폭풍", "from": 3, "to": 0}]
-    job = svc._turn_job(u, g, 1)
+    job = turn_job(u, g, 1)
     assert job.struck == ("몰려오는 폭풍",) and job.missed == ("해가 진다",)
 
 
 async def test_a_growth_turn_is_steered_to_the_change_alone(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
-    job = replace(svc._turn_job(*svc.games[gid], 1), grown=True)
+    job = replace(turn_job(*svc.games[gid], 1), grown=True)
     now = messages(job)[1]["content"].split(ko.HEAD["now"])[1]
     assert ko.NOW["grown"] in now and "새로 그릴 감각" not in now and ko.NOW["close"] not in now
 
@@ -302,7 +303,7 @@ async def test_a_growth_turn_is_steered_to_the_change_alone(tmp_path):
 async def test_a_turn_that_stops_before_the_rest_of_the_sentence_says_so(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
     u, g = svc.games[gid]
-    job = svc._turn_job(u, g, 1)
+    job = turn_job(u, g, 1)
     assert "아직 하지 않았습니다" not in messages(job)[1]["content"]
     now = messages(replace(job, unfinished="녹슨 등대 문을 완력으로 다룬다"))[1]["content"].split(ko.HEAD["now"])[1]
     assert "'녹슨 등대 문을 완력으로 다룬다'부터는 아직 하지 않았습니다" in now
@@ -314,7 +315,7 @@ async def test_an_ending_picks_up_what_the_player_left_behind(tmp_path):
     from src.onto.view import Seen
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))     # met 윤슬 at the dock, now in the village with 도해
     u, g = svc.games[gid]
-    job = svc._turn_job(u, g, 1)
+    job = turn_job(u, g, 1)
     atoms = [a for a in job.o.facts.atoms() if a[:2] != ("regards", "yunseul")]
     trust = [("regards", "yunseul", PLAYER, "trust", 2), ("regards", "yunseul", PLAYER, "fear", 0)]
     gave = Seen(9, "give", None, "none", ("dohae", PLAYER), Delta(frozenset({("at", "letter", "dohae")}), frozenset()), ())
@@ -411,7 +412,7 @@ async def test_a_companion_who_will_not_go_everywhere_says_so_when_joining(tmp_p
     come = {"kind": "follow", "id": "dohae", "name": "도해", "state": "start"}
     assert change_line(u, come) == "도해가 당신과 함께 다니기로 했지만 등불실에는 가지 않습니다"
     assert change_line(u, {**come, "state": "stop"}) == "도해는 이제 당신을 따라다니지 않습니다"
-    now = messages(replace(svc._turn_job(u, g, 1), joined=("dohae",)))[1]["content"].split(ko.HEAD["now"])[1]
+    now = messages(replace(turn_job(u, g, 1), joined=("dohae",)))[1]["content"].split(ko.HEAD["now"])[1]
     assert "도해는 등불실에는 따라가지 않습니다" in now and u.agents["dohae"].fear.rstrip(".") in now
 
 
@@ -427,6 +428,14 @@ def test_repetition_cues_and_address():
     before = ["거친 파도가 절벽을 때리며 차가운 물보라를 뿌립니다."]
     assert repeated("거친 파도가 절벽을 때리며 흩어집니다.", before) == "거친파도가절벽을때리며"
     assert repeated("파도가 높습니다.", before) is None
+    # Names, 당신 and the story's own wording say who and what the story wrote, not how.
+    from src.narrate import names_of, story_wording
+    u = STORIES["lighthouse"]
+    story, who = story_wording(u), ["당신", *names_of(u)]
+    said = ["\"몰라요.\" 윤슬이 고개를 저으며 당신의 소매를 잡습니다.", "\"아버지는 새벽에 고깃배를 몰고 나가셨어요.\""]
+    assert repeated("\"그런 적 없어요.\" 윤슬이 고개를 저으며 당신의 손을 놓습니다.", said[:1], story, who) is None
+    assert repeated("\"아버지는 새벽에 고깃배를 몰고 나가셨대도요.\"", said[1:], story, who) is None
+    assert repeated("거친 파도가 절벽을 때리며 흩어집니다.", before, story, who) == "거친파도가절벽을때리며"
     senses = ["젖은 밧줄 냄새", "말뚝에 부딪는 파도", "낮게 깔린 회색 구름"]
     assert fresh_cue(senses, ["젖은 밧줄의 비릿한 냄새가 납니다."]) == "말뚝에 부딪는 파도"
     assert fresh_cue(senses, []) == "젖은 밧줄 냄새"
@@ -449,18 +458,18 @@ def test_worn_phrases_are_the_narrations_own_wording_in_two_recent_narrations(u)
 async def test_replies_follow_the_kind_of_line(tmp_path):
     """engine.md 5.2: small talk opens on the person, a muse never reads as an act, and neither paints the place."""
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD), moves=("talk:yunseul:chat",))     # 윤슬 at the dock
-    job = svc._turn_job(*svc.games[gid], 1)
+    job = turn_job(*svc.games[gid], 1)
     now = messages(job)[1]["content"].split(ko.HEAD["now"])[1]
     assert job.reply == "talk" and (job.sentences, job.chars) == REPLY_SIZE["talk"]
     assert "윤슬의 대답으로 시작합니다" in now and ko.NOW["no_cue"] not in now and "새로 그릴 감각" not in now
     svc, gid, _ = await game(tmp_path / "m", FakeLLM(GOOD), moves=("try:player:wits",))
-    job = svc._turn_job(*svc.games[gid], 1)
+    job = turn_job(*svc.games[gid], 1)
     assert job.reply == "muse" and job.happened == [ko.HAPPENED_MUSE] and job.speakers == ["yunseul"]
     assert "윤슬이 그 말에 짧게 반응합니다" in messages(job)[1]["content"]
     alone = messages(replace(job, speakers=[]))[1]["content"].split(ko.HEAD["now"])[1]
     assert ko.NOW["muse_alone"] in alone
     svc, gid, _ = await game(tmp_path / "a", FakeLLM(GOOD))
-    assert svc._turn_job(*svc.games[gid], 1).reply == "act"
+    assert turn_job(*svc.games[gid], 1).reply == "act"
 
 
 async def test_a_muse_ends_on_a_way_forward_that_rotates(tmp_path):
@@ -468,8 +477,8 @@ async def test_a_muse_ends_on_a_way_forward_that_rotates(tmp_path):
     from src.rules.recommend import recommend
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD), moves=("try:player:wits",) * 2)
     u, g = svc.games[gid]
-    job = svc._turn_job(u, g, 1)
-    forward = [str(a) for a in recommend(u, svc._at(u, g, g.presentation["turns"][0]["t1"]))]
+    job = turn_job(u, g, 1)
+    forward = [str(a) for a in recommend(u, observed(u, g, g.presentation["turns"][0]["t1"]))]
     assert job.hint and job.hint[0] == forward[0]
     now = messages(job)[1]["content"].split(ko.HEAD["now"])[1]
     assert f"'{job.hint[1]}'" in now and "윤슬의 그 반응이" in now
@@ -477,20 +486,20 @@ async def test_a_muse_ends_on_a_way_forward_that_rotates(tmp_path):
     assert "응답하는 그 한순간이" in alone
     await events(svc, gid, 1)
     assert g.presentation["narration"]["1"]["hint"] == forward[0]
-    assert svc._turn_job(u, g, 2).hint[0] == forward[1]
+    assert turn_job(u, g, 2).hint[0] == forward[1]
     svc, gid, _ = await game(tmp_path / "t", FakeLLM(GOOD), moves=("talk:yunseul:chat",))
-    assert svc._turn_job(*svc.games[gid], 1).hint is None
+    assert turn_job(*svc.games[gid], 1).hint is None
 
 
 async def test_only_what_happened_is_answered(tmp_path):
     """engine.md 5.2: a person no step names does not answer, and a presumed event is not played along with."""
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))                                   # go:village, 도해 there
-    job = svc._turn_job(*svc.games[gid], 1)
+    job = turn_job(*svc.games[gid], 1)
     assert job.speakers == [] and "도해" not in messages(job)[1]["content"].split(ko.HEAD["now"])[1]
     now = messages(replace(job, text="등대 기름 어디 있어요?"))[1]["content"].split(ko.HEAD["now"])[1]
     assert "도해는 이번에 당신과 말을 나누지 않았습니다" in now
     svc, gid, _ = await game(tmp_path / "t", FakeLLM(GOOD), moves=("talk:yunseul:chat",))
-    job = svc._turn_job(*svc.games[gid], 1)
+    job = turn_job(*svc.games[gid], 1)
     now = messages(replace(job, text="아까 할아버지가 열쇠 주셨지?"))[1]["content"].split(ko.HEAD["now"])[1]
     assert "윤슬은 그런 일은 없었다고 하거나" in now and "말을 나누지 않았습니다" not in now
 
@@ -499,14 +508,14 @@ async def test_scenery_and_time_are_told_when_they_change(tmp_path):
     """engine.md 5.1: the place cue on arrival only, and a clock's pace only when its word changes."""
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD), moves=("go:village", "talk:dohae:chat"))
     u, g = svc.games[gid]
-    arrived, stayed = svc._turn_job(u, g, 1), svc._turn_job(u, g, 2)
+    arrived, stayed = turn_job(u, g, 1), turn_job(u, g, 2)
     assert arrived.arrived and "새로 그릴 감각" in messages(arrived)[1]["content"].split(ko.HEAD["now"])[1]
     assert not stayed.arrived and ko.NOW["no_cue"] in messages(stayed)[1]["content"].split(ko.HEAD["now"])[1]
     changes = g.presentation["turns"][1]["steps"][0]["changes"]
     changes.append({"kind": "fill", "id": "deadline.1", "name": "해가 진다", "from": 1, "to": 1})        # 3 boxes: 1 stays "다가오고"
-    assert svc._turn_job(u, g, 2).paced == ()
+    assert turn_job(u, g, 2).paced == ()
     changes[-1] = {"kind": "fill", "id": "deadline.1", "name": "해가 진다", "from": 1, "to": 2}           # one box left: "코앞에"
-    job = svc._turn_job(u, g, 2)
+    job = turn_job(u, g, 2)
     assert job.paced == ("deadline.1",)
     assert "때:" in messages(job)[1]["content"].split(ko.HEAD["now"])[1]
     assert ko.NOW["still"] not in messages(job)[1]["content"]
@@ -554,21 +563,21 @@ async def test_what_a_speaker_said_before_the_previous_narration_is_handed_back(
         await events(svc, gid, n)
     entry = svc.games[gid][1].presentation["narration"]["1"]
     assert entry["said"] == {"yunseul": ["마을 안쪽 창고에 말린 생선이 있어요."]}
-    job = svc._turn_job(*svc.games[gid], 5)
+    job = turn_job(*svc.games[gid], 5)
     assert list(job.said) == ["yunseul"] and len(job.said["yunseul"]) == 1          # turns 2–4 are the previous ones
     prompt = messages(job)[1]["content"]
     assert ko.HEAD["said"] in prompt and "윤슬: 마을 안쪽 창고에 말린 생선이 있어요." in prompt
     assert "앞서 나눈 말]에서 한 말과 어긋나지 않게" in prompt.split(ko.HEAD["now"])[1]
     per, _ = svc.narrator.rules(replace(job, previous=[]), ["윤슬이 말합니다. \"마을 안쪽 창고에 말린 생선이 있어요.\""])
     assert any("마을안쪽창고에" in w for w in per[0])
-    assert svc._turn_job(*svc.games[gid], 4).said == {}
+    assert turn_job(*svc.games[gid], 4).said == {}
 
 
 async def test_what_a_speaker_lived_through_with_you_is_remembered(tmp_path):
     """ontology.md 3.4: 도해 forgot the dog calmed in front of him once it left the window (qa_test/runs/loop-1)."""
     moves = ("give:letter:yunseul", *("talk:yunseul:chat",) * 4)
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD), moves=moves)
-    job = svc._turn_job(*svc.games[gid], 5)
+    job = turn_job(*svc.games[gid], 5)
     assert list(job.shared) == ["yunseul"] and "아들의 편지" in job.shared["yunseul"][0]
     prompt = messages(job)[1]["content"]
     assert ko.HEAD["shared"] in prompt and "윤슬과 함께: " in prompt
@@ -577,11 +586,11 @@ async def test_what_a_speaker_lived_through_with_you_is_remembered(tmp_path):
     svc.narrator.decision = decision
     await svc.narrator.judge(job, ["윤슬이 웃습니다."], set())
     assert ko.HEAD["shared"] in decision.asked[-1][0]                 # a fact, so the check reads it too
-    assert svc._turn_job(*svc.games[gid], 4).shared == {}               # still inside the previous narration
+    assert turn_job(*svc.games[gid], 4).shared == {}               # still inside the previous narration
 
 
 def test_a_refused_request_marks_its_witnesses_and_small_talk_does_not(u):
-    from src.service import marks
+    from src.jobs import marks
     roll = {"d1": 1, "d2": 2}
     assert marks(u, {"action": "talk:dohae:favor", "result": "fail", "changes": [], "roll": roll})
     assert not marks(u, {"action": "talk:dohae:chat", "result": "none", "changes": [], "roll": None})

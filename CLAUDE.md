@@ -6,7 +6,7 @@ A story-agnostic Korean web TRPG engine. The player types a Korean sentence; rul
 
 - **Design (source of truth)**: [docs/](docs/) — `ontology.md` (world, invariants, operations, save format), `story.md` (story format and validation), `rule.md` (candidates, rolls, time, people), `engine.md` (interpretation, cards, narration, turn protocol), `api.md`, `ui.md`, `fun.md` (metrics).
 - **Story**: [scenarios/skeleton/](scenarios/skeleton/) (`story.yaml` with id `lighthouse`, and `evals.yaml` for interpretation) is the only story.
-- **Server** (`server/src/`): `onto/` (world, log, saves), `rules/` (pure rules), `story/` (loading, validation, evals), `interpret.py`, `narrate.py`, `cards.py`, `view.py`, `service.py`, `api.py`, `fun.py` (offline metrics).
+- **Server** (`server/src/`): `onto/` (world, log, saves), `rules/` (pure rules), `story/` (loading, validation, evals), `interpret.py`, `narrate.py`, `jobs.py` (what a narration reads), `cards.py`, `view.py`, `service.py`, `api.py`, `fun.py` (offline metrics).
 - **Client** (`client/`): `logic/useGame.ts` (state machine), `logic/reveal.ts`, `components/ui/` (shared icon, button, sheet, motion, dialog, notice), `components/game/`, `screens/`.
 - **Mac app** (`app/`): `build.sh` builds `TRPG.app`, which starts and stops `npm run serve` and shows the phone address, passing the loaded models as `DECISION_MODEL` and `LLM_MODEL`.
 - QA: [qa/README.md](qa/README.md) maps each kind of change to the checks to run; [qa/](qa/) also holds the open findings, the bench scripts and the playtest (`qa/play/`). Recordings, playtests and real-UI runs go to ignored `qa_test/runs/<run>/`.

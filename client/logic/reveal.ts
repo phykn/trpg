@@ -111,3 +111,8 @@ export function frame(beats: Beat[], elapsed: number): Frame {
   }
   return f;
 }
+
+// What the chat types out for a turn, and so what the log keeps: the narration, then any recap.
+export function told(n: { text: string | null; recap: string | null }): string {
+  return [n.text, n.recap].filter(Boolean).join('\n\n');
+}

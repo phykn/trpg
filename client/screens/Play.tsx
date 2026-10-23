@@ -15,7 +15,7 @@ import { RollCard } from '@/components/game/RollCard';
 import { Scene } from '@/components/game/Scene';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
-import { frame as frameAt, rolled as isRolled } from '@/logic/reveal';
+import { frame as frameAt, rolled as isRolled, told } from '@/logic/reveal';
 import type { Game } from '@/logic/useGame';
 import { useLog } from '@/logic/useLog';
 import type { GameView } from '@/services/types';
@@ -39,7 +39,7 @@ export function Play({ game }: { game: Game }) {
   const onTyped = () => {
     // A recap still to come would be lost once the turn is logged, so the turn waits for it to be typed too.
     if (turnNo !== null && !game.recapDue) {
-      const text = [game.narration.text, game.narration.recap].filter(Boolean).join('\n\n');
+      const text = told(game.narration);
       log.add(...(roll ? [{ id: `roll:${turnNo}`, kind: 'roll' as const, ...roll }] : []),
         { id: `story:${turnNo}`, kind: 'story', text });
     }

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from ..locale import ko
 from ..onto.atoms import PLAYER, Atom
-from ..onto.view import Obs
+from ..onto.view import Obs, hidden
 from ..view import holders, name, prop_label, tag_name
 
 MEMORY = 3
@@ -62,6 +62,10 @@ def fact_line(u, p: dict, atom: Atom) -> str | None:
 def pace(n: int, boxes: int) -> int:
     """A clock's pace word: still far with no box filled, upon you with one box left or none (engine.md 5.1)."""
     return 0 if n == 0 else 2 if n >= boxes - 1 else 1
+
+
+def pace_line(u, c: str, n: int) -> Line:
+    return Line("fact", ko.fill(ko.FRAME["pace"], o=u.name(c), word=ko.PACE[pace(n, u.boxes(c))]), ("fill", c, n))
 
 
 def context(u, o: Obs, focus, p: dict) -> list[Line]:
@@ -127,7 +131,7 @@ def scene(u, o: Obs, focus, p: dict) -> list[Line]:
             # A clock goes in as its pace word, never as boxes: "몰려오는 폭풍: 0/4" reached the narrator beside
             # "아직 멀었습니다" (engine.md 5.1).
             if a[0] == "fill" and a[1] in u.obstacles and u.obstacles[a[1]].sub in ("clock", "deadline"):
-                ln = Line("fact", ko.fill(ko.FRAME["pace"], o=u.name(a[1]), word=ko.PACE[pace(a[2], u.boxes(a[1]))]), a)
+                ln = pace_line(u, a[1], a[2])
             elif a[0] == "fill" and a[1] in u.obstacles:
                 if a[2] == 0:
                     continue
@@ -143,9 +147,7 @@ def scene(u, o: Obs, focus, p: dict) -> list[Line]:
     paced = {ln.atom[1] for ln in out if ln.atom and ln.atom[0] == "fill"}
     for c in o.facts.held_by(PLAYER):
         if c in u.obstacles and u.obstacles[c].sub in ("clock", "deadline") and c in o.seen and c not in paced:
-            n, boxes = o.facts.fill(c) or 0, u.boxes(c)
-            word = ko.PACE[pace(n, boxes)]
-            out.append(Line("fact", ko.fill(ko.FRAME["pace"], o=u.name(c), word=word), ("fill", c, n)))
+            out.append(pace_line(u, c, o.facts.fill(c) or 0))
     # What a person may state beyond F (ontology.md 3.4); interpretation never needs it, so it is not in about().
     for g in sorted(x & set(u.agents), key=u.rank):
         out += [Line("public", ko.fill(ko.FRAME["knows"], x=u.name(g), text=k)) for k in u.agents[g].knows]
@@ -163,7 +165,7 @@ def about(u, o: Obs, x: str) -> list[Line]:
                 for k, v in (("voice", a.voice), ("desire", a.desire), ("fear_of", a.fear))]
         if a.topics:
             out.append(Line("public", ko.fill(ko.FRAME["topics"], x=a.name, text=", ".join(t.title for t in a.topics))))
-        wants = [u.name(w) for w in a.wants if not _hidden_from_player(u, o, w)]
+        wants = [u.name(w) for w in a.wants if not hidden(u, w, PLAYER, o.facts)]
         if wants:
             out.append(Line("public", ko.fill(ko.FRAME["wants"], x=a.name, text=", ".join(wants))))
     elif x in u.things:
@@ -171,11 +173,6 @@ def about(u, o: Obs, x: str) -> list[Line]:
     elif x in u.obstacles and u.obstacles[x].look:
         out.append(Line("public", ko.fill(ko.FRAME["look"], x=u.name(x), text=u.obstacles[x].look)))
     return out
-
-
-def _hidden_from_player(u, o: Obs, x: str) -> bool:
-    props = u.shows.get(x)
-    return bool(props) and not any(p in o.beliefs for p in props)
 
 
 def render(lines: list[Line]) -> str:
@@ -188,4 +185,4 @@ def render(lines: list[Line]) -> str:
     return "\n".join(out)
 
 
-__all__ = ["Line", "about", "context", "fact_line", "pace", "prop_label", "render", "scene"]
+__all__ = ["Line", "about", "context", "fact_line", "pace", "render", "scene"]

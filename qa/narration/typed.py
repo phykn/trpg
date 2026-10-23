@@ -83,20 +83,25 @@ async def one(svc, narrator, u, k: int, at: dict, text: str) -> dict:
            "beats": [view["player"]["beats"], res["view"]["player"]["beats"]]}
     row["outcome"] = outcome(row["steps"])
     if res.get("turn"):
-        narrator.reset()
-        t0 = time.monotonic()
-        events = [e async for e in await svc.narration(gid, res["turn"])]
-        row["narr_s"] = round(time.monotonic() - t0, 2)
-        _, g = await svc.load(gid)
-        entry = g.presentation["narration"].get(str(res["turn"]))
-        if entry is None:
-            row["error"] = events[-1].get("message") if events else "no events"
-        else:
+        row.update(await narrated(svc, narrator, gid, res["turn"]))
+        if text_out := row.get("text_out"):
             senses = u.places[run.s.where("player")].senses
-            row.update(text_out=entry["text"], attempts=entry["attempts"], dropped=entry["dropped"],
-                       chars=len(entry["text"]), sentences=sentences(entry["text"]), quote='"' in entry["text"],
-                       senses=[s for s in senses if sum(w in entry["text"] for w in s.split()) >= 2], prompt=narrator.prompts[-1:])
+            row.update(quote='"' in text_out, senses=[s for s in senses if sum(w in text_out for w in s.split()) >= 2])
     return row
+
+
+async def narrated(svc, narrator, gid: str, turn: int) -> dict:
+    """One turn's narration as the bench records it, with the prompt of its last attempt."""
+    narrator.reset()
+    t0 = time.monotonic()
+    events = [e async for e in await svc.narration(gid, turn)]
+    out = {"narr_s": round(time.monotonic() - t0, 2)}
+    _, g = await svc.load(gid)
+    entry = g.presentation["narration"].get(str(turn))
+    if entry is None:
+        return {**out, "error": events[-1].get("message") if events else "no events"}
+    return {**out, "text_out": entry["text"], "attempts": entry["attempts"], "dropped": entry["dropped"],
+            "chars": len(entry["text"]), "sentences": sentences(entry["text"]), "prompt": narrator.prompts[-1:]}
 
 
 async def main():

@@ -336,7 +336,7 @@ class _Builder:
             w = f"things.{tid}"
             tv = self.map(tv, w, {"name", "aliases", "look", "at", "clue", "hidden"}, ("name", "look", "at"))
             u.things[tid] = Thing(tid, self.text(tv["name"], w), self.texts(tv.get("aliases"), w),
-                                  self.text(tv["look"], w), self.ref(tv["at"], ("place", "agent"), f"{w}.at"), None)
+                                  self.text(tv["look"], w), self.ref(tv["at"], ("place", "agent"), f"{w}.at"))
         # Complications and favors come later, after all ids exist.
         for cid, cv in sections["characters"].items():
             u.agents[cid] = self.agent(cid, cv, f"characters.{cid}", None)
@@ -348,12 +348,12 @@ class _Builder:
                 if self.kinds[bid] == "thing":
                     bv = self.map(bv, f"{w}.brings.{bid}", {"name", "aliases", "look"}, ("name", "look"))
                     u.things[bid] = Thing(bid, self.text(bv["name"], w), self.texts(bv.get("aliases"), w),
-                                          self.text(bv["look"], w), None, lid)
+                                          self.text(bv["look"], w), None)
                 else:
                     u.agents[bid] = self.agent(bid, bv, f"{w}.brings.{bid}", lid)
                 brings.append(bid)
             self.pending.append((lid, lv, tuple(brings)))
-            u.props[lid] = Prop(lid, self.text(lv["text"], w), tuple(brings), tuple(brings), (), True, "latent")
+            u.props[lid] = Prop(lid, self.text(lv["text"], w), tuple(brings), tuple(brings), (), "latent")
 
         for sec, table in (("places", u.places), ("characters", u.agents), ("things", u.things),
                            ("obstacles", None)):
@@ -361,22 +361,22 @@ class _Builder:
                 v = self.map(v, f"{sec}.{i}")
                 if v.get("hidden") is not None:
                     u.props[f"{i}.hidden"] = Prop(f"{i}.hidden", self.text(v["hidden"], f"{sec}.{i}.hidden"),
-                                                  (i,), (i,), (), True, "hidden")
+                                                  (i,), (i,), (), "hidden")
                 if v.get("clue") is not None:
                     u.props[f"{i}.clue"] = Prop(f"{i}.clue", self.text(v["clue"], f"{sec}.{i}.clue"),
-                                                (i,), (), (), True, "clue")
+                                                (i,), (), (), "clue")
         for cid, cv in sections["characters"].items():
             for b, text in self.map(cv.get("beliefs"), f"characters.{cid}.beliefs").items():
-                u.props[b] = Prop(b, self.text(text, f"characters.{cid}.beliefs.{b}"), (), (), (), True, "belief")
+                u.props[b] = Prop(b, self.text(text, f"characters.{cid}.beliefs.{b}"), (), (), (), "belief")
             for t, tv in self.map(cv.get("topics"), f"characters.{cid}.topics").items():
                 if "text" in tv:
-                    u.props[t] = Prop(t, self.text(tv["text"], f"characters.{cid}.topics.{t}"), (), (), (), True, "topic")
+                    u.props[t] = Prop(t, self.text(tv["text"], f"characters.{cid}.topics.{t}"), (), (), (), "topic")
         for c, cv in sections["claims"].items():
             w = f"claims.{c}"
             cv = self.map(cv, w, {"text", "against"}, ("text", "against"))
             against = self.ref(cv["against"], ("prop",), f"{w}.against")
             u.claims[c] = against
-            u.props[c] = Prop(c, self.text(cv["text"], w), (), (), (against,), False, "claim")
+            u.props[c] = Prop(c, self.text(cv["text"], w), (), (), (against,), "claim")
         for pid, prop in u.props.items():
             for x in prop.shows:
                 u.shows[x] = u.shows.get(x, ()) + (pid,)
@@ -510,7 +510,7 @@ class _Builder:
                      self.text(cv["voice"], w), self.text(cv["desire"], w), self.text(cv["fear"], w), cv["persona"],
                      self.ref(cv["at"], ("place",), f"{w}.at") if latent is None else None,
                      {ax: self.int(reg.get(ax, 0), f"{w}.regards.{ax}", -3, 3) for ax in AXES},
-                     tuple(self.map(cv.get("beliefs"), f"{w}.beliefs")), (), (), None, (), latent,
+                     tuple(self.map(cv.get("beliefs"), f"{w}.beliefs")), (), (), None, (),
                      tuple(self.ref(q, ("place",), f"{w}.avoids") for q in self.list(cv.get("avoids"), f"{w}.avoids")),
                      knows)
 

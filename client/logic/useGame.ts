@@ -17,7 +17,6 @@ export type Phase =
 
 type Reveal = { steps: StepRecord[]; beats: Beat[]; start: number; card: Card | null; skipped: boolean };
 export type Narration = { text: string | null; recap: string | null; error: string | null };
-
 type Pending =
   | { kind: 'command'; requestId: string; revision: number; body: CommandBody; gameId: string }
   | { kind: 'create'; requestId: string; story: string; creation: Creation };

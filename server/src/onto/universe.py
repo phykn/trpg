@@ -18,7 +18,6 @@ class Prop:
     about: tuple[str, ...]
     shows: tuple[str, ...]
     against: tuple[str, ...]
-    truth: bool
     source: str
 
 
@@ -86,7 +85,6 @@ class Agent:
     topics: tuple[Topic, ...]
     favor: Favor | None
     complications: tuple[Complication, ...]
-    latent: str | None
     avoids: tuple[str, ...] = ()   # places it will not follow the player into
     knows: tuple[str, ...] = ()    # told to anyone who asks; ontology.md 3.4
 
@@ -98,7 +96,6 @@ class Thing:
     aliases: tuple[str, ...]
     look: str
     at: str | None
-    latent: str | None
 
 
 @dataclass(frozen=True)
@@ -219,6 +216,10 @@ class Universe:
             if x in table:
                 return getattr(table[x], "aliases", ())
         return ()
+
+    def terms(self, x: str) -> tuple[str, ...]:
+        """Every word the story names x by: its name, then its aliases."""
+        return (self.name(x), *self.aliases(x))
 
     def rank(self, x: str) -> int:
         """Story declaration order; ties every output order to the story (ontology.md 4)."""

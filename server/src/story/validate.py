@@ -200,7 +200,7 @@ def v4(u: Universe) -> None:
     hidden += [b for lat in u.latents.values() for b in lat.brings]
     texts = list(_public(u))
     for x in hidden:
-        for term in (u.name(x), *u.aliases(x)):
+        for term in u.terms(x):
             for owner, where, text in texts:
                 if owner != x and term in text:
                     fail("V4", where, f"names the hidden {x} ({term!r})")

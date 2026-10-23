@@ -6,6 +6,7 @@ import pytest
 from conftest import REPO
 from run_api import build_app
 from src import service as service_module
+from src.jobs import turn_job
 from src.service import RECEIPTS, Conflict, GameService, Incompatible, Missing
 from src.story.validate import load_all
 
@@ -152,7 +153,7 @@ async def test_roll_card_preview_is_the_step(svc):
     assert step["mods"] == pick["preview"]["mods"] and step["risk"] == pick["preview"]["risk"]
     assert step["total"] == step["roll"]["d1"] + step["roll"]["d2"] + 2
     assert done["view"]["card"] is None
-    assert svc._turn_job(*svc.games[gid], done["turn"]).relied == ("기계공",)
+    assert turn_job(*svc.games[gid], done["turn"]).relied == ("기계공",)
 
 
 async def test_a_blocked_step_reaches_the_narration(svc):
@@ -160,7 +161,7 @@ async def test_a_blocked_step_reaches_the_narration(svc):
     _, view = await press(svc, gid, view, "go:village", "r1")
     out = await cmd(svc, gid, view, "r2", action="talk:dohae:chat")      # the hidden dog keeps strangers off
     assert out["steps"][0]["result"] == "blocked"
-    job = svc._turn_job(*svc.games[gid], out["turn"])
+    job = turn_job(*svc.games[gid], out["turn"])
     assert job.blocked == (out["steps"][0]["label"],) and not job.relied
 
 
@@ -174,7 +175,7 @@ async def test_a_blocked_step_still_tells_the_scene_end_its_beat_brought(svc):
     step = out["steps"][0]
     assert step["result"] == "blocked" and step["changes"][0] == {"kind": "reveal", "id": "hound", "name": "사나운 누렁이"}
     assert {"kind": "clock", "id": "deadline.1", "name": "해가 진다", "from": 0, "to": 1} in step["changes"]
-    assert "해가 진다: 다가왔습니다" in svc._turn_job(*svc.games[gid], out["turn"]).happened
+    assert "해가 진다: 다가왔습니다" in turn_job(*svc.games[gid], out["turn"]).happened
 
 
 async def test_a_blocked_roll_leans_on_nothing(svc):
@@ -184,7 +185,7 @@ async def test_a_blocked_roll_leans_on_nothing(svc):
     card = out["view"]["card"]
     done = await cmd(svc, gid, out["view"], "r3", card=card["id"], pick="talk:dohae:favor;rely=thing:letter")
     assert done["steps"][0]["result"] == "blocked"
-    assert not svc._turn_job(*svc.games[gid], done["turn"]).relied
+    assert not turn_job(*svc.games[gid], done["turn"]).relied
 
 
 async def test_card_cancel_and_stale_card(svc):
@@ -207,7 +208,7 @@ async def test_chain_stops_for_a_roll_card_after_its_first_step(tmp_path):
     card = out["view"]["card"]
     assert card["kind"] == "roll" and card["options"][-1]["preview"]["risk"] == "high"
     # the walk is narrated, and the narrator learns the door is still ahead (play-3-odd 18, play-3-explorer 41)
-    job = svc._turn_job(*svc.games[gid], out["turn"])
+    job = turn_job(*svc.games[gid], out["turn"])
     assert job.unfinished == card["plan"]["step"]["label"] and job.unfinished
 
 
@@ -251,8 +252,8 @@ async def test_a_high_step_waits_for_a_confirm_card(tmp_path):
     assert done["view"]["journal"]["choices"][-1]["kind"] == "fork"
     # a growth pick alone is told briefly, not as a scene (play-3-talker 24, play-3-explorer 30, play-3-bold 7)
     grew = await cmd(svc, gid, done["view"], "g1", action=done["view"]["growth"][0]["action"])
-    job = svc._turn_job(*svc.games[gid], grew["turn"])
-    assert job.grown and job.sentences == 2 and not svc._turn_job(*svc.games[gid], done["turn"]).grown
+    job = turn_job(*svc.games[gid], grew["turn"])
+    assert job.grown and job.sentences == 2 and not turn_job(*svc.games[gid], done["turn"]).grown
 
 
 async def test_restart_gives_the_same_view(svc, tmp_path):
@@ -344,10 +345,10 @@ async def test_a_companion_who_stays_is_narrated_where_they_stayed(tmp_path, mon
     out = await cmd(svc, gid, view, "r1", text="같이 가자")
     card = out["view"]["card"]
     out = await cmd(svc, gid, out["view"], "r2", card=card["id"], pick=card["selected"])
-    assert svc._turn_job(*svc.games[gid], out["turn"]).joined == ("yunseul",)
+    assert turn_job(*svc.games[gid], out["turn"]).joined == ("yunseul",)
     out, view = await press(svc, gid, out["view"], "go:village", "r3")
     assert "yunseul" not in [p["id"] for p in view["scene"]["people"]]
-    job = svc._turn_job(*svc.games[gid], out["turn"])
+    job = turn_job(*svc.games[gid], out["turn"])
     assert job.left == {"yunseul": "dock"}
 
 

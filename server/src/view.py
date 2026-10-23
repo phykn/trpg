@@ -4,7 +4,14 @@ from .locale import ko
 from .onto.atoms import APPROACHES, PLAYER, State
 from .onto.view import Obs, Seen, observe
 from .rules.acts import Action, parse
-from .rules.candidates import active_threats, candidates, held_clock, solution_label
+from .rules.candidates import (
+    active_threats,
+    blockers,
+    candidates,
+    held_clock,
+    solution_label,
+    topic_of,
+)
 from .rules.recommend import recommend
 from .rules.roll import DC, band, risk, rolls
 
@@ -125,7 +132,7 @@ def action_label(u, o: Obs, p: dict, a: Action) -> str:
         elif topic in ("come", "stay"):
             text = ko.fill(ko.ACTION[topic], h=u.name(h))
         else:
-            t = next(t for t in u.agents[h].topics if t.id == topic)
+            t = topic_of(u, h, topic)
             text = ko.fill(ko.ACTION["talk"], h=u.name(h), title=t.title)
         tone = a.get("tone")
         text = text if tone == "polite" or claim else f"{ko.TONES[tone]} {text}"
@@ -375,8 +382,7 @@ def _scene(u, o: Obs, p: dict, here: str) -> dict:
                        "blocks": [u.name(b) for b in u.obstacles[x].blocks]}
                       for x in seen if x in u.obstacles and u.obstacles[x].sub == "plain" and f.where(x) == here],
         "exits": [{"id": q, "name": u.name(q),
-                   "blocked": any(b in o.seen and f.where(b) and (f.fill(b) or 0) < u.boxes(b)
-                                  for b, ob in u.obstacles.items() if q in ob.blocks)}
+                   "blocked": any(b in o.seen for b in blockers(u, f, q))}
                   for q in seen if u.kind(q) == "place" and f.has("link", here, q)],
         "tags": [{"owner": x, "slot": i, "kind": kind, "life": life, "name": tag_name(p, ("mark", x, kind, life, i))}
                  for x in seen if x != PLAYER for i, kind, life in f.marks(x)],

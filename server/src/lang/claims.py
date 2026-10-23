@@ -10,7 +10,7 @@ JOSA = {"을": "(?:을|를)", "이": "(?:이|가)", "은": "(?:은|는)", "와":
 
 
 def words(u, x: str) -> tuple[str, ...]:
-    return (ko.YOU,) if x == PLAYER else (u.name(x), *u.aliases(x))
+    return (ko.YOU,) if x == PLAYER else u.terms(x)
 
 
 _CACHE: dict[tuple[str, str], object] = {}

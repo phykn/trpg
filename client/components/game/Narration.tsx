@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { useEnter } from '@/components/ui/motion';
 import { colors, motion } from '@/design/tokens';
 import { ko } from '@/locale/ko';
+import { told } from '@/logic/reveal';
 import type { Narration as N } from '@/logic/useGame';
 import type { Entry, Roll } from '@/logic/useLog';
 import { Face } from './Dice';
@@ -93,7 +94,7 @@ export function Chat({ entries, live, roll, waiting, narration, hold, failed, on
   narration: N; hold: boolean; failed: boolean; onTyped: () => void; onRetry: () => void;
 }) {
   const scroll = useRef<ScrollView>(null);
-  const full = live ? [narration.text, narration.recap].filter(Boolean).join('\n\n') : '';
+  const full = live ? told(narration) : '';
   // The typing belongs to one text and is reset in the same render the text changes, so a new turn never inherits
   // the last one's count. A recap appended to the narration carries on from where the typing was.
   const [typed, setTyped] = useState({ full, shown: 0, told: false });

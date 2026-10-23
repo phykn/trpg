@@ -89,11 +89,35 @@ def sentences_of(text: str) -> list[str]:
     return out
 
 
-def repeated(sentence: str, previous: list[str]) -> str | None:
-    """The longest stretch, spaces aside, that this sentence copies from recent narration, if long enough."""
-    a, b = re.sub(r"\s+", "", sentence), re.sub(r"\s+", "", " ".join(previous))
-    m = SequenceMatcher(None, a, b, autojunk=False).find_longest_match(0, len(a), 0, len(b))
-    return a[m.a:m.a + m.size] if m.size >= REPEAT_CHARS else None
+def repeated(sentence: str, previous: list[str], story: list[str] = (), who: list[str] = ()) -> str | None:
+    """The longest stretch, spaces aside, that this sentence copies from recent narration, if long enough once the
+    story's own wording, names and 당신 are left out: those say what the story wrote and who, not how, and counted,
+    "\"윤슬이 고개를 저으며 당신" and a person's 아는 것 retold were sent back for rewriting (qa_test/runs/loop-1)."""
+    a, b = squash(sentence), squash(" ".join(previous))
+    blocks = SequenceMatcher(None, a, b, autojunk=False).get_matching_blocks()
+    for m in sorted(blocks, key=lambda m: -m.size):
+        if m.size < REPEAT_CHARS:
+            break
+        span = a[m.a:m.a + m.size]
+        if len(own(span, story, who)) >= REPEAT_CHARS:
+            return span
+    return None
+
+
+def squash(text: str) -> str:
+    return re.sub(r"\s+", "", text)
+
+
+def own(span: str, story: list[str], who: list[str]) -> str:
+    """What is left of a span without punctuation, names and 당신, and without any stretch of 4+ characters it
+    shares with the story's wording."""
+    rest = re.sub(r"[^\w]", "", span)
+    for w in sorted((squash(w) for w in who), key=len, reverse=True):
+        rest = rest.replace(w, "")
+    for t in story:
+        while (m := SequenceMatcher(None, rest, t, autojunk=False).find_longest_match(0, len(rest), 0, len(t))).size >= 4:
+            rest = rest[:m.a] + rest[m.a + m.size:]
+    return rest
 
 
 def change_line(u, c: dict) -> str | None:
@@ -174,7 +198,7 @@ def forbidden(u, o: Obs) -> dict[str, str]:
     seen = set(o.seen)
     hidden = {x for x in u.shows if x not in seen}
     hidden |= {b for lat in u.latents.values() for b in lat.brings if b not in seen}
-    return {w: x for x in hidden for w in (u.name(x), *u.aliases(x)) if len(w) >= 2}
+    return {w: x for x in hidden for w in u.terms(x) if len(w) >= 2}
 
 
 def absent(job: Job) -> set:
@@ -236,12 +260,23 @@ def pairs(text: str) -> dict[tuple[str, str], str]:
     return out
 
 
+def names_of(u) -> list[str]:
+    return [n for x in (*u.places, *u.agents, *u.things, *u.obstacles) for n in u.terms(x)]
+
+
+def story_wording(u) -> list[str]:
+    """The story's text that the narrator's context lists: senses, looks and what people know."""
+    texts = [*(c for q in u.places.values() for c in q.senses), *(k for a in u.agents.values() for k in a.knows),
+             *(x.look for x in (*u.things.values(), *u.obstacles.values()) if x.look)]
+    return [re.sub(r"[^\w]", "", t) for t in texts]
+
+
 def worn(u, previous: list[str]) -> list[str]:
     """Phrases in two of the recent narrations. Below the repetition check's 10 characters, "집어삼킬 듯" came back in
     nearly every turn (qa_test/runs/play-1-*). Part of a name or of a place's senses is the story's wording, and names
     and 당신 alone say who, not how; a phrase that only shares a word with them is the narration's own: when it was
     skipped, "젖은 손" came three turns running (play-5-talker 28–30)."""
-    names = [n for x in (*u.places, *u.agents, *u.things, *u.obstacles) for n in (u.name(x), *u.aliases(x))]
+    names = names_of(u)
     story = {k for t in (*names, *(c for q in u.places.values() for c in q.senses)) for k in pairs(t)}
     who = {ko.YOU, *(w for n in names for w in n.split() if len(w) >= 2)}
     seen = [pairs(t) for t in previous]
@@ -256,10 +291,10 @@ def worn(u, previous: list[str]) -> list[str]:
 
 def fresh_cue(senses: list[str], previous: list[str]) -> str | None:
     """The first sensory cue of the place that recent narration has not yet shown, if any."""
-    seen = [re.sub(r"\s+", "", t) for t in previous]
+    seen = [squash(t) for t in previous]
 
     def shown(cue: str) -> bool:
-        c = re.sub(r"\s+", "", cue)
+        c = squash(cue)
         grams = {c[i:i + 2] for i in range(len(c) - 1)}
         return any(sum(g in t for g in grams) * 2 >= len(grams) for t in seen)
     return next((c for c in senses if not shown(c)), None)
@@ -365,7 +400,7 @@ def spoken(u, speakers: list[str], said: list[str]) -> dict[str, list[str]]:
         if not quotes:
             continue
         bare = QUOTED.sub(" ", s)
-        named = [x for x in u.agents if any(w in bare for w in (u.name(x), *u.agents[x].aliases))]
+        named = [x for x in u.agents if any(w in bare for w in u.terms(x))]
         who = [x for x in named if x in speakers] if named else speakers
         if len(who) == 1:
             out.setdefault(who[0], []).extend(quotes)
@@ -436,6 +471,7 @@ class Narrator:
         u, facts = job.u, job.o.facts
         bad = forbidden(u, job.o)
         gone = absent(job)
+        story, who = story_wording(u), [ko.YOU, *names_of(u)]
         per: dict[int, list[str]] = {}
         for i, s in enumerate(said):
             bare = QUOTED.sub(" ", s)
@@ -468,7 +504,7 @@ class Narrator:
                 else:
                     why.append(ko.fill(ko.FEEDBACK["claim"], facts=s))
             span = repeated(s, job.previous + [q for x in job.speakers for q in QUOTED.findall(u.agents[x].voice)]
-                            + [q for rows in job.said.values() for _, qs in rows for q in qs])
+                            + [q for rows in job.said.values() for _, qs in rows for q in qs], story, who)
             if span:
                 why.append(ko.fill(ko.FEEDBACK["repeat"], span=span))
             for q in QUOTED.findall(s):

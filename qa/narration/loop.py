@@ -21,7 +21,7 @@ from run import Recording, commit
 from src.interpret import Interpreter
 from src.service import GameService
 from src.story.validate import load_all
-from typed import outcome, sentences
+from typed import narrated, outcome
 
 ROOT = common.RUNS / "loop-1"
 STORY = "lighthouse"
@@ -61,7 +61,7 @@ async def turn(svc, narrator, gid: str, view: dict, k: int, text: str) -> tuple[
     body = {"action": text[1:]} if text.startswith("!") else {"text": text}
     res = await svc.command(gid, {"request_id": f"t{k}", "revision": view["revision"], **body})
     interp = time.monotonic() - t0
-    steps, card = list(res["steps"]), res["view"].get("card")
+    steps = list(res["steps"])
     cards = []
     # a detour's clarify leads on to a roll card, so cards are taken until none is left
     while (card := res["view"].get("card")) and len(cards) < 3:
@@ -75,17 +75,7 @@ async def turn(svc, narrator, gid: str, view: dict, k: int, text: str) -> tuple[
            "beats": [view["player"]["beats"], res["view"]["player"]["beats"]]}
     row["outcome"] = outcome(row["steps"])
     if res.get("turn"):
-        narrator.reset()
-        t0 = time.monotonic()
-        events = [e async for e in await svc.narration(gid, res["turn"])]
-        row["narr_s"] = round(time.monotonic() - t0, 2)
-        _, g = await svc.load(gid)
-        entry = g.presentation["narration"].get(str(res["turn"]))
-        if entry is None:
-            row["error"] = events[-1].get("message") if events else "no events"
-        else:
-            row.update(text_out=entry["text"], attempts=entry["attempts"], dropped=entry["dropped"],
-                       chars=len(entry["text"]), sentences=sentences(entry["text"]), prompt=narrator.prompts[-1:])
+        row.update(await narrated(svc, narrator, gid, res["turn"]))
     return row, res["view"]
 
 

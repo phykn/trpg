@@ -11,10 +11,10 @@ import common
 import mirror as M
 from src.cards import rely_options
 from src.interpret import SAY, Interpreter, rely_name
-from src.lang.context import _hidden_from_player, _past, scene
-from src.narrate import Narrator
+from src.lang.context import _past, scene
+from src.narrate import Job, Narrator
 from src.onto.atoms import APPROACHES, PLAYER
-from src.onto.view import observe
+from src.onto.view import hidden, observe
 from src.rules.acts import make
 from src.rules.candidates import space, traits_of
 from src.service import fresh_presentation
@@ -70,7 +70,7 @@ def scene_of(u, o) -> dict:
         people.append({"name": a.name, "aliases": list(a.aliases), "persona": a.persona, "voice": a.voice,
                        "desire": a.desire, "fear": a.fear, "topics": [t.title for t in a.topics],
                        "favor": a.favor.label if (h, "favor") in open_topics else None,
-                       "wants": [u.name(w) for w in a.wants if not _hidden_from_player(u, o, w)],
+                       "wants": [u.name(w) for w in a.wants if not hidden(u, w, PLAYER, o.facts)],
                        "trust": f.regards(h, PLAYER, "trust") or 0})
     things = [{"name": u.name(t), "aliases": list(u.aliases(t)), "look": u.things[t].look,
                "where": "player" if f.where(t) == PLAYER else "here"} for t in seen if t in u.things]
@@ -239,7 +239,7 @@ async def check_rely(u, o, g, s, text, n) -> list[str]:
 async def check_narration(u, o, g, n) -> list[str]:
     here = o.facts.where(PLAYER)
     focus = {PLAYER, here, *(h for h in o.seen if h in u.agents)}
-    job = SimpleNamespace(u=u, o=o, focus=focus, p=g.presentation, happened=["당신이 주위를 둘러보았습니다"], ending=None)
+    job = Job(u, o, g.presentation, ["당신이 주위를 둘러보았습니다"], [], focus)
     kev = Kev()
     said = "바람이 거세집니다."
     await Narrator(None, kev).judge(job, [said], set())
