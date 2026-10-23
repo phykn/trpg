@@ -27,6 +27,7 @@ from .onto.universe import CreationError, Universe, check_creation
 from .onto.view import observe, record
 from .rules.acts import parse
 from .rules.candidates import admits
+from .rules.recommend import recommend
 from .rules.resolve import event_of, resolve
 from .rules.roll import risk, roll, rolls
 from .rules.schemas import small_talk
@@ -438,7 +439,8 @@ class GameService:
                 if e["type"] != "result":
                     await stream.push(e, done=e["type"] == "error")
                     continue
-                entry = {k: e[k] for k in ("text", "attempts", "dropped", "tags")} | ({"said": e["said"]} if e.get("said") else {})
+                entry = {k: e[k] for k in ("text", "attempts", "dropped", "tags")} | \
+                    {k: e[k] for k in ("said", "hint") if e.get(k)}
                 async with self.lock(game_id):
                     u, g = await self.load(game_id)
                     p = g.presentation
@@ -504,12 +506,18 @@ class GameService:
         looked = tuple(dict.fromkeys(r["action"].split(":")[1] for r in turn["steps"]
                                      if r["action"].startswith("look:") and r["result"] != "blocked"))
         actions = [parse(r["action"]) for r in turn["steps"]]
-        reply = "act"
+        reply, hint = "act", None
         if all(small_talk(a) for a in actions) and not blocked:
             reply = "talk"
         elif all(a.schema == "try" and a.intent[0] == PLAYER for a in actions):
             # the idle label would leak ("말한 대로 행동을 이어갑니다"), and anyone here may answer (engine.md 5.2)
             reply, happened, speakers = "muse", [ko.HAPPENED_MUSE], sorted(people, key=u.rank)
+            # a player who talks to themself mostly does not know what to do next (engine.md 5.2)
+            hinted = {p["narration"].get(str(m), {}).get("hint") for m in range(max(1, n - PREVIOUS_TURNS), n)}
+            forward = recommend(u, o)
+            if way := next((a for a in forward if str(a) not in hinted), forward[0] if forward else None):
+                hint = (str(way), action_label(u, o, p, way))
+                ids |= {x for x in way.intent if x in u.places or x in u.agents or x in u.obstacles or x in u.things}
         # What each speaker said before the previous narration, which alone let an answer drift (engine.md 5.1).
         texts = {x["n"]: x.get("text") or "" for x in p["turns"]}
         said: dict[str, list] = {}
@@ -526,7 +534,7 @@ class GameService:
                    previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers, left=left,
                    joined=joined, unfinished=turn.get("unfinished"), grown=grown, progress=progress, blocked=blocked,
                    relied=relied, looked=looked, struck=struck, missed=missed, reply=reply, said=said, shared=shared,
-                   **size)
+                   hint=hint, **size)
 
     def _recap_job(self, u: Universe, g: Game, k: int) -> Job | None:
         p = g.presentation

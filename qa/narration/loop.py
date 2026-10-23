@@ -37,6 +37,9 @@ SCRIPTS = {
     # 7 and 8 ask about answers that have left the 3-turn narration window
     "recall": ["아버지는 어디 가셨어?", "먹을거 어디 있어?", "넌 이름이 뭐니", "무서워?", "등대 얘기 좀 해줘",
                "날씨 진짜 별로다", "아까 먹을 거 어디 있다고 했지?", "아버지 언제 나가셨다고 했지?"],
+    # lost: musing at the dock with 윤슬, in the village with 도해 and alone at the lighthouse (engine.md 5.2 hint)
+    "lost": ["흠..", "뭘 해야 하지?", "어쩌지", "마을로 가자", "음...", "막막하네", "등대로 가", "흠..", "이제 뭐하지?",
+             "어떡하지"],
     # Chapter 1 through to the lamp room. "!" lines are buttons and a trailing "*" repeats one while it is a
     # candidate, so the dice cannot stall the story; the typed lines after each shared event ask people about it.
     "long": ["안녕", "!talk:yunseul:come*", "!go:village", "도해 할아버지 안녕하세요", "!try:hound:wits*",

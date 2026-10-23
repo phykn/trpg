@@ -463,6 +463,25 @@ async def test_replies_follow_the_kind_of_line(tmp_path):
     assert svc._turn_job(*svc.games[gid], 1).reply == "act"
 
 
+async def test_a_muse_ends_on_a_way_forward_that_rotates(tmp_path):
+    """engine.md 5.2: a player who talks to themself is told one recommended way, not the same one twice running."""
+    from src.rules.recommend import recommend
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD), moves=("try:player:wits",) * 2)
+    u, g = svc.games[gid]
+    job = svc._turn_job(u, g, 1)
+    forward = [str(a) for a in recommend(u, svc._at(u, g, g.presentation["turns"][0]["t1"]))]
+    assert job.hint and job.hint[0] == forward[0]
+    now = messages(job)[1]["content"].split(ko.HEAD["now"])[1]
+    assert f"'{job.hint[1]}'" in now and "윤슬의 그 반응이" in now
+    alone = messages(replace(job, speakers=[]))[1]["content"].split(ko.HEAD["now"])[1]
+    assert "응답하는 그 한순간이" in alone
+    await events(svc, gid, 1)
+    assert g.presentation["narration"]["1"]["hint"] == forward[0]
+    assert svc._turn_job(u, g, 2).hint[0] == forward[1]
+    svc, gid, _ = await game(tmp_path / "t", FakeLLM(GOOD), moves=("talk:yunseul:chat",))
+    assert svc._turn_job(*svc.games[gid], 1).hint is None
+
+
 def test_what_a_person_knows_is_in_the_narrators_context_while_they_are_here(u):
     from src.lang.context import context, render, scene
     from src.onto.log import Log

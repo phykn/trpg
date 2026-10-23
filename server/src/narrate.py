@@ -72,6 +72,7 @@ class Job:
     reply: str = "act"               # act, talk (only small talk) or muse (only try(player)); engine.md 5.2
     said: dict = field(default_factory=dict)   # speaker → [(player sentence, [their lines])] before previous; 5.1
     shared: dict = field(default_factory=dict)  # speaker → step lines of what they lived through with you; 5.1
+    hint: tuple[str, str] | None = None   # a muse's way forward: (action, its button label); 5.2
 
 
 def sentences_of(text: str) -> list[str]:
@@ -296,7 +297,8 @@ def steering(job: Job, lines) -> list[str]:
         reply = ko.fill(ko.NOW[job.reply], names=names) if names or job.reply == "talk" else ko.NOW["muse_alone"]
         if tired:
             out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
-        return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {reply}"]
+        hint = [ko.fill(ko.NOW["hint" if names else "hint_alone"], hint=job.hint[1], names=names)] if job.hint else []
+        return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {reply}", *(f"- {x}" for x in hint)]
     here = job.o.facts.where(PLAYER)
     cue = fresh_cue(list(u.places[here].senses), job.previous) if here in u.places else None
     out.append(ko.fill(ko.NOW["cue"], cue=cue) if cue else ko.NOW["no_cue"])
@@ -549,7 +551,8 @@ class Narrator:
 
     def result(self, job: Job, said: list[str], attempts: int, dropped: int, names: list[str]) -> dict:
         return {"type": "result", "text": " ".join(said), "attempts": attempts, "dropped": dropped,
-                "tags": self.tag_names(job, names), "said": spoken(job.u, job.speakers, said)}
+                "tags": self.tag_names(job, names), "said": spoken(job.u, job.speakers, said),
+                "hint": job.hint and job.hint[0]}
 
 
 __all__ = ["Job", "Narrator", "change_ids", "change_line", "change_lines", "messages", "sentences_of", "split", "step_lines"]

@@ -282,10 +282,12 @@ The narration model is always called in non-thinking mode (`enable_thinking: fal
 | Reply | Size | What the steering asks instead of the place cue, pace and close |
 |---|---|---|
 | Talk | 3 sentences, 150 characters | Open on the person's answer: one gesture of theirs and their line, no scenery. They answer from what they know and their own worry or wish shows through; what they do not know they say so or turn to their own concern |
-| Muse | 2 sentences, 110 characters | `당신` only spoke or thought, and did nothing. A person here reacts to it briefly; with no one, one moment of the surroundings answers its feeling. `당신` does not move or act |
+| Muse | 2 sentences, 110 characters | `당신` only spoke or thought, and did nothing. A person here reacts to it briefly; with no one, one moment of the surroundings answers its feeling. `당신` does not move or act. The reply ends on the hint below |
 | Act | As above | The place cue, pace and close (5.1) |
 
 What happened tells a muse turn as "당신이 말하거나 혼잣말을 했습니다" instead of `λ(try(player))`, and every person here is a speaker. With every reply built like an act, a greeting got four sentences that opened on scenery ("밧줄 냄새" in 19 of 20 small-talk replies, "눈을 반짝이며" in 16), and musing with no one there was ignored or turned into an act: "당신은 말한 대로 행동을 이어갑니다", the idle label leaking (6 of 16; qa_test/runs/typed-1/base-summary.md).
+
+**A muse ends on a hint.** A player talks to themself mostly when they do not know what to do next, so the GM answers with a way forward. The engine picks it: the first of `recommend(U, O)` (rule.md 9) not hinted in the previous 3 narrations, else the first. It is told by its button label, so it names only what the player can already see, and its targets join the narration's ids. The steering asks for it as something noticed, never as done or ordered: with people here, through a speaker's line or gesture; alone, as the moment of the surroundings that answers. The narration entry keeps the hinted action for the rotation. With no hint, the reply is as above. Without it, every muse alone got the same shape, "목소리가 바람에 흩어집니다" (4 of 4 per game; qa_test/runs/loop-1/after-summary.md), and moved nothing.
 
 **The prose carries the game.** The screen has no pictures, so the writing must do what art and voice do elsewhere, as a narrator does in Baldur's Gate 3: one sharp concrete detail per sentence, chosen for this person and this place, instead of stock phrases ("눈을 반짝이며", "코끝을 스칩니다"); people who sound like themselves, whose lines answer and also let a want, a fear or a habit show; and a last sentence that leaves an echo or a tension rather than a summary. These are rules of craft and name no story; the story's `style` sets the tone they serve.
 
