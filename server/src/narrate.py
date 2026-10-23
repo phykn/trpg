@@ -242,7 +242,17 @@ def afar(job: Job, x: str, sentence: str) -> bool:
 
 
 def legacy_lines(job: Job) -> list[str]:
-    return [x for a in legacy(job.u, job.o) if (x := fact_line(job.u, job.p, a))]
+    """Each person the legacy names away from here also gets where they are: told only what they hold or feel,
+    the narrator set them beside the player and every attempt failed (qa_test/runs/narr-3/refactor-after 16)."""
+    u, o = job.u, job.o
+    kept = legacy(u, o)
+    out = [x for a in kept if (x := fact_line(u, job.p, a))]
+    gone = absent(job)
+    for x in dict.fromkeys(y for a in kept for y in a[1:3] if y in gone):
+        place = o.facts.where(x)
+        out.append(ko.fill(ko.AWAY["place" if place in o.seen else "unknown"], name=u.name(x),
+                           place=u.name(place) if place in o.seen else ""))
+    return out
 
 
 WORD = re.compile(r"[가-힣]+")
@@ -339,16 +349,19 @@ def steering(job: Job, lines) -> list[str]:
         hint = [ko.fill(ko.NOW["hint" if names else "hint_alone"], hint=job.hint[1], names=names)] if job.hint else []
         return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {reply}", *(f"- {x}" for x in hint)]
     here = job.o.facts.where(PLAYER)
+    # Asked for people where nobody stood, the narrator brought back whoever the last turns told (qa_test/runs/narr-3/
+    # ending-after game 0, 12–15).
+    alone = "" if any(job.o.facts.where(x) == here for x in u.agents) else "_alone"
     # Scenery and time are told when they change; asked every turn, the weather filled every narration (engine.md 5.1).
     cue = fresh_cue(list(u.places[here].senses), job.previous) if job.arrived and here in u.places else None
-    out.append(ko.fill(ko.NOW["cue"], cue=cue) if cue else ko.NOW["no_cue"])
+    out.append(ko.fill(ko.NOW["cue"], cue=cue) if cue else ko.NOW["no_cue" + alone])
     pace = [ln.text for ln in lines if ln.atom and ln.atom[0] == "fill" and ln.atom[1] in job.paced]
     if pace:
         out.append(ko.fill(ko.NOW["pace"], text=", ".join(pace)))
     elif not (job.struck or job.missed):
         # Without it the story's style ("어두워지는 하늘로 시간이 흐르는 것") still filled half the sentences
         # (qa_test/runs/loop-1/weather-after).
-        out.append(ko.NOW["still"])
+        out.append(ko.NOW["still" + alone])
     # A lamp at 1/4 already pushed back the dark (qa_test/runs/play-2-bold 6–7, play-4-odd 28).
     for x, done in job.progress.items():
         out.append(ko.fill(ko.NOW["done" if done else "partial"], name=u.name(x)))
@@ -380,7 +393,7 @@ def steering(job: Job, lines) -> list[str]:
         out.append(ko.fill(ko.NOW["unaddressed"], names=", ".join(map(u.name, silent))))
     if tired:
         out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
-    return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {ko.NOW['close']}"]
+    return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {ko.NOW['close' + alone]}"]
 
 
 def kept_word(job: Job) -> list[str]:
@@ -493,7 +506,9 @@ class Narrator:
                 why.append(ko.fill(ko.FEEDBACK["hidden"], names=", ".join(hidden)))
             away = [x for x in subjects(u, bare) if x in gone and not parting(job, x, bare) and not afar(job, x, bare)]
             if away:
-                why.append(ko.fill(ko.FEEDBACK["absent"], names=", ".join(u.name(x) for x in away)))
+                # at the ending the plain verdict left no way to keep the person, so drafts kept them beside the player
+                key = "afar" if job.ending and all(afar(job, x, ko.AFAR[0]) for x in away) else "absent"
+                why.append(ko.fill(ko.FEEDBACK[key], names=", ".join(u.name(x) for x in away)))
             wrong = [(pos, atom) for pos, atom in claims(u, s) if not accepts(facts, pos, atom)]
             for pos, atom in wrong:
                 if atom[0] == "at" and atom[1] == PLAYER:

@@ -63,6 +63,7 @@ MOVE_WITH = "{name}{와} 함께"
 # A sentence about someone left behind must tell the parting: stay, stop, wait, see off.
 PARTING = ("남", "멈춰", "멈추", "머무", "머물", "기다", "배웅", "돌아서", "따라오지", "올라오지", "들어오지")
 AFAR = ("멀리", "먼 곳")
+AWAY = {"place": "{name}{은} 지금 멀리 {place}에 있습니다", "unknown": "{name}{은} 지금 이 자리에 없습니다"}
 MOVE_LEFT = "{name}{은} 남음: {fear}"
 # A tag goes for good and a trait returns next chapter, but on the card both are one use away from gone.
 CONSUMED = {"tag": "1번 남음", **dict.fromkeys(("trait", "thing", "prop"), "이번 장 1번")}
@@ -362,7 +363,9 @@ HEAD = {"context": "[문맥]", "happened": "[일어난 일]", "tags": "[새 태�
 NOW = {"speaker": "{x}: {persona} 말투는 {voice}",
        "cue": "새로 그릴 감각: {cue}",
        "no_cue": "풍경은 이미 보여 주었으니, 이번에는 인물과 바뀐 것을 그립니다.",
+       "no_cue_alone": "풍경은 이미 보여 주었으니, 이번에는 바뀐 것을 그립니다. 이 자리에는 당신 말고 아무도 없습니다.",
        "still": "이번에는 때가 바뀌지 않았습니다. 하늘, 빛, 날씨는 쓰지 않고 [일어난 일]과 인물에 문장을 씁니다.",
+       "still_alone": "이번에는 때가 바뀌지 않았습니다. 하늘, 빛, 날씨는 쓰지 않고 [일어난 일]에 문장을 씁니다.",
        "pace": "때: {text}. 하늘, 빛, 파도는 이 흐름만큼만 바뀌고, 아직 일어나지 않은 일은 일어난 것처럼 쓰지 않습니다.",
        "worn": "최근 서술에서 거듭 쓴 표현이니 이번에는 다른 말로 씁니다: {words}",
        "left": "{name}{은} {place}에 남았습니다. 까닭: {fear}. 이제 이 자리에 없으니 헤어지는 모습만 그리고 곁에 있는 것처럼 쓰지 않습니다.",
@@ -387,6 +390,7 @@ NOW = {"speaker": "{x}: {persona} 말투는 {voice}",
        "unaddressed": "{names}{은} 이번에 당신과 말을 나누지 않았습니다. 플레이어 문장에 대답하거나 그 물음의 답을 말하지 않습니다.",
        "presumed": "플레이어 문장이 [함께 겪은 일]이나 앞 서술에 없는 일을 있었던 것처럼 말하면, {names}{은} 그런 일은 없었다고 하거나 모른다고 하고 맞장구치지 않습니다.",
        "close": "이번에 바뀐 것을 보여 주고, 마지막 문장은 인물의 반응이나 눈앞의 것으로 끝냅니다.",
+       "close_alone": "이번에 바뀐 것을 보여 주고, 마지막 문장은 눈앞의 것으로 끝냅니다.",
        "legacy": "결말에 담을 수 있는 것: {items}",
        "ending": "이 서술로 이야기가 끝납니다. 이번에 바뀐 것을 보여 준 뒤, 마지막 문장은 이 결말을 그립니다: {frame}",
        "ending_legacy": "이 서술로 이야기가 끝납니다. 첫 문장은 이번에 바뀐 것, 다음 문장은 위의 담을 수 있는 것 가운데 하나입니다. 여기 없는 사람은 '멀리'라는 말과 함께, 그가 있는 곳에서 이 결말을 맞는 모습으로만 그리고 그에게 새 일을 만들지 않습니다. 마지막 문장은 이 결말입니다: {frame}"}
@@ -411,6 +415,7 @@ FEEDBACK = {
     "handed": "당신이 지닌 물건을 넘겼다고 썼습니다: {names}",
     "claim": "사실과 다른 말을 했습니다: {facts}",
     "absent": "이 자리에 없는 사람을 움직이게 썼습니다: {names}",
+    "afar": "{names}{은} 이 자리에 없습니다. '멀리'라는 말과 함께, 그가 있는 곳에서 이 결말을 맞는 모습으로 씁니다",
     "where": "당신은 지금 {place}에 있습니다.",
     "paren": "괄호를 썼습니다. 소리와 몸짓도 문장으로 쓰십시오.",
     "repeat": "앞 서술이나 예시 대사와 같은 말을 되풀이했습니다: {span}. 새로 바뀐 것을 쓰십시오.",

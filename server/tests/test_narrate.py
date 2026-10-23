@@ -310,6 +310,16 @@ async def test_a_turn_that_stops_before_the_rest_of_the_sentence_says_so(tmp_pat
     assert ko.NOW["waits_rest"] in messages(replace(job, unfinished=""))[1]["content"]
 
 
+async def test_a_turn_with_nobody_here_asks_for_no_people(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))     # in the village with 도해
+    u, g = svc.games[gid]
+    job = turn_job(u, g, 1)
+    assert ko.NOW["close"] in messages(job)[1]["content"]
+    o = replace(job.o, facts=State.of([a for a in job.o.facts.atoms() if a[:2] != ("at", "dohae")]))
+    now = messages(replace(job, o=o))[1]["content"].split(ko.HEAD["now"])[1]
+    assert ko.NOW["close_alone"] in now and ko.NOW["close"] not in now
+
+
 async def test_an_ending_picks_up_what_the_player_left_behind(tmp_path):
     from src.onto.log import Delta
     from src.onto.view import Seen
@@ -325,7 +335,8 @@ async def test_an_ending_picks_up_what_the_player_left_behind(tmp_path):
     assert "윤슬은 당신을 신뢰합니다" in now and "도해가 아들의 편지를 지니고 있습니다" in now
     assert now.rstrip().endswith("불이 다시 켜집니다") and "아직 멀었습니다" not in now
     said = ["멀리 선착장에서 윤슬이 불빛을 올려다봅니다.", "윤슬이 당신 곁에서 웃습니다."]
-    assert list(svc.narrator.rules(job, said)[0]) == [1]
+    assert "윤슬은 지금 이 자리에 없습니다" in now and "도해는 지금" not in now
+    assert svc.narrator.rules(job, said)[0] == {1: [ko.fill(ko.FEEDBACK["afar"], names="윤슬")]}
     assert list(svc.narrator.rules(replace(job, ending=None), said)[0]) == [0, 1]
 
 
