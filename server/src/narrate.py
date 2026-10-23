@@ -21,6 +21,8 @@ ATTEMPTS = 3                 # one draft and two rewrites
 SENTENCES, CHARS = 4, 200
 SHORT_CHARS, RECAP_CHARS, RECAP_SENTENCES = 160, 100, 2
 GROWN_SENTENCES, GROWN_CHARS = 2, 100
+# A greeting got four sentences that opened on scenery (qa_test/runs/typed-1/base-summary.md); engine.md 5.2.
+REPLY_SIZE = {"talk": (3, 150), "muse": (2, 110)}
 TAG_CHARS = 12
 MAX_TOKENS = 500
 THETA_N = 0.5
@@ -67,6 +69,7 @@ class Job:
     missed: tuple[str, ...] = ()     # deadlines that ran out this turn
     relied: tuple[str, ...] = ()     # what this turn's rolls leaned on
     looked: tuple[str, ...] = ()     # things and obstacles this turn looked at
+    reply: str = "act"               # act, talk (only small talk) or muse (only try(player)); engine.md 5.2
 
 
 def sentences_of(text: str) -> list[str]:
@@ -284,6 +287,13 @@ def steering(job: Job, lines) -> list[str]:
             out.append(ko.fill(ko.NOW["legacy"], items=" / ".join(kept)))
         close = ko.fill(ko.NOW["ending_legacy" if kept else "ending"], frame=job.ending)
         return [*(f"- {x}" for x in out), f"- {close}"]
+    if job.reply != "act":
+        # Small talk and musing change nothing, so no place cue, pace or close: the reply opens on the person
+        # (engine.md 5.2).
+        names = ", ".join(u.name(x) for x in job.speakers)
+        reply = ko.fill(ko.NOW[job.reply], names=names) if names or job.reply == "talk" else ko.NOW["muse_alone"]
+        return [*(f"- {x}" for x in out), *([f"- {ko.fill(ko.NOW['worn'], words=', '.join(tired))}"] if tired else []),
+                f"- {reply}"]
     here = job.o.facts.where(PLAYER)
     cue = fresh_cue(list(u.places[here].senses), job.previous) if here in u.places else None
     out.append(ko.fill(ko.NOW["cue"], cue=cue) if cue else ko.NOW["no_cue"])

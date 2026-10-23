@@ -10,6 +10,7 @@ from src.lang.polite import polite
 from src.locale import ko
 from src.models.decision import ModelUnavailable
 from src.narrate import (
+    REPLY_SIZE,
     Narrator,
     change_line,
     change_lines,
@@ -443,3 +444,20 @@ def test_worn_phrases_are_the_narrations_own_wording_in_two_recent_narrations(u)
                     "파도 소리가 멎습니다. 당신은 렌즈를 응시합니다."]) == ["파도 소리가", "렌즈를 응시합니다"]
     # Part of a name or a sense, and names alone, stay out.
     assert worn(u, ["등대 앞에. 젖은 밧줄 냄새. 도해는 윤슬을."] * 2) == []
+
+
+async def test_replies_follow_the_kind_of_line(tmp_path):
+    """engine.md 5.2: small talk opens on the person, a muse never reads as an act, and neither paints the place."""
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD), moves=("talk:yunseul:chat",))     # 윤슬 at the dock
+    job = svc._turn_job(*svc.games[gid], 1)
+    now = messages(job)[1]["content"].split(ko.HEAD["now"])[1]
+    assert job.reply == "talk" and (job.sentences, job.chars) == REPLY_SIZE["talk"]
+    assert "윤슬의 대답으로 시작합니다" in now and ko.NOW["no_cue"] not in now and "새로 그릴 감각" not in now
+    svc, gid, _ = await game(tmp_path / "m", FakeLLM(GOOD), moves=("try:player:wits",))
+    job = svc._turn_job(*svc.games[gid], 1)
+    assert job.reply == "muse" and job.happened == [ko.HAPPENED_MUSE] and job.speakers == ["yunseul"]
+    assert "윤슬이 그 말에 짧게 반응합니다" in messages(job)[1]["content"]
+    alone = messages(replace(job, speakers=[]))[1]["content"].split(ko.HEAD["now"])[1]
+    assert ko.NOW["muse_alone"] in alone
+    svc, gid, _ = await game(tmp_path / "a", FakeLLM(GOOD))
+    assert svc._turn_job(*svc.games[gid], 1).reply == "act"

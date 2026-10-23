@@ -15,6 +15,7 @@ from .narrate import (
     GROWN_SENTENCES,
     RECAP_CHARS,
     RECAP_SENTENCES,
+    REPLY_SIZE,
     SHORT_CHARS,
     Job,
     change_ids,
@@ -28,6 +29,7 @@ from .rules.acts import parse
 from .rules.candidates import admits
 from .rules.resolve import event_of, resolve
 from .rules.roll import risk, roll, rolls
+from .rules.schemas import small_talk
 from .rules.triggers import ended
 from .story.load import StoryError
 from .view import (
@@ -499,12 +501,20 @@ class GameService:
                                      if r["result"] != "blocked" and (x := parse(r["action"]).get("rely"))))
         looked = tuple(dict.fromkeys(r["action"].split(":")[1] for r in turn["steps"]
                                      if r["action"].startswith("look:") and r["result"] != "blocked"))
+        actions = [parse(r["action"]) for r in turn["steps"]]
+        reply = "act"
+        if all(small_talk(a) for a in actions) and not blocked:
+            reply = "talk"
+        elif all(a.schema == "try" and a.intent[0] == PLAYER for a in actions):
+            # the idle label would leak ("말한 대로 행동을 이어갑니다"), and anyone here may answer (engine.md 5.2)
+            reply, happened, speakers = "muse", [ko.HAPPENED_MUSE], sorted(people, key=u.rank)
         size = {"sentences": GROWN_SENTENCES, "chars": GROWN_CHARS} if grown else \
-            {"chars": SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars}
+            dict(zip(("sentences", "chars"), REPLY_SIZE[reply])) if reply != "act" and not kinds & {"chapter", "ending"} \
+            else {"chars": SHORT_CHARS if kinds & {"chapter", "ending"} else Job.chars}
         return Job(u, o, p, happened, delta, {PLAYER, here, *people, *ids}, text=turn["text"], tags=tags,
                    previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers, left=left,
                    joined=joined, unfinished=turn.get("unfinished"), grown=grown, progress=progress, blocked=blocked,
-                   relied=relied, looked=looked, struck=struck, missed=missed, **size)
+                   relied=relied, looked=looked, struck=struck, missed=missed, reply=reply, **size)
 
     def _recap_job(self, u: Universe, g: Game, k: int) -> Job | None:
         p = g.presentation

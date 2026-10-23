@@ -271,7 +271,19 @@ Small models follow the end of a prompt best, so style and this narration come l
 
 ### 5.2 Generation
 
-The narration model is always called in non-thinking mode (`enable_thinking: false`), with an output limit of 500 tokens. Narration must fit on one screen without paging (ui.md 2), so accepted text is at most 4 sentences and 200 characters including spaces; in a turn with a chapter change or an ending, at most 160, plus a recap of at most 100 (5.5). Drafts never stream to the player; only text that passes the check goes out.
+The narration model is always called in non-thinking mode (`enable_thinking: false`), with an output limit of 500 tokens. Narration must fit on one screen without paging (ui.md 2), so accepted text is at most 4 sentences and 200 characters including spaces; in a turn with a chapter change or an ending, at most 160, plus a recap of at most 100 (5.5); a reply to small talk or musing is shorter (below). Drafts never stream to the player; only text that passes the check goes out.
+
+**Replies follow the kind of line** (3.2). A turn is a **talk reply** when every step is small talk (rule.md 4.1) that nothing blocked, a **muse reply** when it is only `try(player)`, and an **act reply** otherwise.
+
+| Reply | Size | What the steering asks instead of the place cue, pace and close |
+|---|---|---|
+| Talk | 3 sentences, 150 characters | Open on the person's answer: one gesture of theirs and their line, no scenery. They answer from what they know and their own worry or wish shows through; what they do not know they say so or turn to their own concern |
+| Muse | 2 sentences, 110 characters | `당신` only spoke or thought, and did nothing. A person here reacts to it briefly; with no one, one moment of the surroundings answers its feeling. `당신` does not move or act |
+| Act | As above | The place cue, pace and close (5.1) |
+
+What happened tells a muse turn as "당신이 말하거나 혼잣말을 했습니다" instead of `λ(try(player))`, and every person here is a speaker. With every reply built like an act, a greeting got four sentences that opened on scenery ("밧줄 냄새" in 19 of 20 small-talk replies, "눈을 반짝이며" in 16), and musing with no one there was ignored or turned into an act: "당신은 말한 대로 행동을 이어갑니다", the idle label leaking (6 of 16; qa_test/runs/typed-1/base-summary.md).
+
+**The prose carries the game.** The screen has no pictures, so the writing must do what art and voice do elsewhere, as a narrator does in Baldur's Gate 3: one sharp concrete detail per sentence, chosen for this person and this place, instead of stock phrases ("눈을 반짝이며", "코끝을 스칩니다"); people who sound like themselves, whose lines answer and also let a want, a fear or a habit show; and a last sentence that leaves an echo or a tension rather than a summary. These are rules of craft and name no story; the story's `style` sets the tone they serve.
 
 Format rules:
 

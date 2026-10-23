@@ -83,12 +83,16 @@ def pay_costs(ctx: Ctx, target: str) -> None:
         run(ctx, comp.effects)
 
 
+def small_talk(a) -> bool:
+    """A chat that neither threatens nor deceives: it changes nothing in the world (rule.md 4.1)."""
+    return a.schema == "talk" and a.intent[1] == "chat" and a.get("tone") not in ("threaten", "deceive")
+
+
 def delta0(ctx: Ctx) -> None:
     a, w, u = ctx.a, ctx.work, ctx.u
     ctx.risk = risk(u, a)
-    # Small talk changes nothing in the world; when every greeting cost a beat, players stopped speaking (rule.md 4.1).
-    small_talk = a.schema == "talk" and a.intent[1] == "chat" and a.get("tone") not in ("threaten", "deceive")
-    quiet = a.schema in ("cut", "grow") or (a.schema == "try" and a.intent[0] == PLAYER) or small_talk
+    # When every greeting cost a beat, players stopped speaking (rule.md 4.1).
+    quiet = a.schema in ("cut", "grow") or (a.schema == "try" and a.intent[0] == PLAYER) or small_talk(a)
     if not quiet:
         w.set_("stat", (PLAYER, "beats"), "+1")
     globals()[f"_{a.schema}"](ctx, *a.intent)
