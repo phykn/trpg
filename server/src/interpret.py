@@ -23,6 +23,8 @@ RELY_SHARE = 0.1
 TIMEOUT = 10.0
 SAY = ("go", "look", "take", "give", "talk", "try", "declare", "cut", "choose")
 FALLBACK_APPROACH = "wits"         # try(player) when layer 1 is unsure: no roll, no change, narration only
+SAY_TONES = ("polite", "friendly", "plead")   # threats and lies change regard, so only an act makes them (engine.md 3.3)
+REQUESTS = ("favor", "come", "stay")
 
 
 def squeeze(text: str) -> str:
@@ -30,13 +32,16 @@ def squeeze(text: str) -> str:
                    if not c.isspace() and unicodedata.category(c)[0] not in "PS")
 
 
-TAIL = r"(?:을|를|이|가|에|의|은|는|으로|로|과|와|도|만|에게|한테|께|에서)?(?![가-힣])"
+TAIL = r"(?:을|를|이|가|에|의|은|는|으로|로|과|와|도|만|에게|한테|께|에서|아|야)?(?![가-힣])"
 SHORT = r"(?:을|를|이|가|에|의|은|는|으로|로|과|와|에게|한테)"
 
 
 def mentions(word: str, text: str) -> int:
-    """A one-syllable word counts only with a particle; -1 when it is absent."""
+    """A one-syllable word counts only with a particle; -1 when it is absent. Called by name, a word ending in the
+    suffix 이 drops it ("누렁이" → "누렁아"); players call people and animals that way."""
     m = re.search(re.escape(word) + (TAIL if len(word) >= 2 else SHORT), text)
+    if m is None and len(word) >= 3 and word.endswith("이"):
+        m = re.search(re.escape(word[:-1]) + r"아(?![가-힣])", text)
     return m.start() if m else -1
 
 
@@ -91,6 +96,21 @@ def unreachable(u, o, text: str, schema: str) -> str | None:
             x, by = guarded[0]
             return ko.fill(ko.WHY["blocked"], ob=u.name(by[0]), x=u.name(x))
     return None
+
+
+def title_words(title: str) -> list[str]:
+    """The words a sentence names a topic by: its title's words without a final particle, two syllables or more, and
+    its last word, the head noun, whatever its length ("폐허", "길" for "폐허로 가는 길")."""
+    words = [re.sub(r"(?:으로|로|의|에|과|와|을|를|이|가)$", "", w) for w in title.split()]
+    return [w for w in words[:-1] if len(w) >= 2] + [words[-1]]
+
+
+def topic_named(u, h: str, topic: str, text: str) -> bool:
+    """A story topic is offered only when the sentence names it: offered every topic, the models put any question near
+    the place on its one topic (qa_test/runs/intent-1-base). By the head noun alone, 5 of 18 bench questions lost
+    theirs ("폐허 가는 길"); by any title word, 1, and no other topic came in (qa_test/runs/intent-1-probe)."""
+    t = next((t for t in u.agents[h].topics if t.id == topic), None)
+    return t is None or any(mentions(w, text) >= 0 for w in title_words(t.title))
 
 
 def addressee(u, o, text: str) -> str | None:
@@ -223,10 +243,23 @@ class Interpreter:
         forks = [action_label(u, o, p, a) for a in candidates(u, o) if a.schema == "choose"]
         if forks:
             say["choose"] = ko.fill(ko.CHOOSE_HERE, choices=", ".join(forks))
-        qs = {"s1": choice(ko.STEP_QUESTION, say), "n": choice(ko.COUNT_QUESTION, ko.COUNT)}
+        qs = {"k": choice(ko.KIND_QUESTION, ko.KIND), "s1": choice(ko.STEP_QUESTION, say),
+              "n": choice(ko.COUNT_QUESTION, ko.COUNT)}
         # Layer 1 options are scene-free, so Kev reads the sentence alone: on the skeleton evals the context
         # ρ({player, here}) lowered accuracy from 80% to 71% (qa_test/runs/interp-2-ctx).
         answers = await self.ask(self.sentence(text), qs)
+        # Only an action may roll or spend time; asked only for parts, every line became the nearest action
+        # (engine.md 3.2). A line that names a thing, an obstacle or a place is about it ("문 발로 차", "누렁아~").
+        # Below θ₁ the narration model reads the kind: on 35 typed lines Kev was right on 30 and the narration model
+        # on 33, and every Kev miss was under 0.7 (qa_test/runs/intent-1-probe). No reading leaves it to the parts.
+        kind, kp = ranked(answers.get("k"), ko.KIND)[0]
+        if kp < self.step_theta:
+            kind = await self.pick(self.sentence(text), ko.KIND_QUESTION, ko.KIND)
+        if kind in ("say", "muse") and all(x in u.agents for x in named(u, o, text)):
+            here = o.facts.where(PLAYER)
+            if kind == "muse" or not any(x in u.agents and o.facts.where(x) == here for x in o.seen):
+                return {"plan": [self.idle()]}
+            return {"plan": [{**self.partial("talk", text), "say": True}]}
         top, pr = ranked(answers.get("s1"), say)[0]
         # a silent model gives every option 0, which ranks "1" first; a refusal needs the narration model's reading too
         sure, one = pr >= self.step_theta and top in have, ranked(answers.get("n"), ko.COUNT)[0][0] == "1"
@@ -264,6 +297,10 @@ class Interpreter:
         p = g.presentation
         text, fixed = st["text"], dict(st.get("fixed", {}))
         slots = [s for s in space(u, o) if s.schema == st["schema"]]
+        if st["schema"] == "talk":
+            # small talk (a say line) is chat or a named topic; requests, threats and lies come from acts
+            slots = [s for s in slots if topic_named(u, *s.intent, text)
+                     and not (st.get("say") and s.intent[1] in REQUESTS)]
         why = unreachable(u, o, text, st["schema"])
         names = named(u, o, text)
         if not slots or (why and not any(x in s.intent for s in slots for x in names if x != PLAYER)):
@@ -289,7 +326,7 @@ class Interpreter:
         if len(intents) > 1 and "intent" not in fixed:
             qs["intent"] = choice(ko.SLOT_QUESTION["intent"], labels)
         if st["schema"] == "talk":
-            judge = {"tone": {t: ko.TONE_DESC[t] for t in ko.TONES}}
+            judge = {"tone": {t: ko.TONE_DESC[t] for t in (SAY_TONES if st.get("say") else ko.TONES)}}
         for k, opts in judge.items():
             if k not in fixed:
                 qs[k] = choice(ko.SLOT_QUESTION[k], opts)

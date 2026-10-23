@@ -168,7 +168,9 @@ async def test_a_blocked_step_still_tells_the_scene_end_its_beat_brought(svc):
     gid, view = await new(svc)
     for i, a in enumerate(["look:dock", "look:yunseul", "look:dock", "look:yunseul", "go:village"]):
         _, view = await press(svc, gid, view, a, f"r{i}")
-    out = await cmd(svc, gid, view, "r9", action="talk:dohae:chat")      # the sixth beat ends the scene (narr-3 turn 6)
+    # the sixth beat ends the scene (narr-3 turn 6); small talk spends none, so a threat, which asks first
+    view = (await cmd(svc, gid, view, "r9", action="talk:dohae:chat;tone=threaten"))["view"]
+    out = await cmd(svc, gid, view, "r10", card=view["card"]["id"], pick=view["card"]["options"][0]["id"])
     step = out["steps"][0]
     assert step["result"] == "blocked" and step["changes"][0] == {"kind": "reveal", "id": "hound", "name": "사나운 누렁이"}
     assert {"kind": "clock", "id": "deadline.1", "name": "해가 진다", "from": 0, "to": 1} in step["changes"]

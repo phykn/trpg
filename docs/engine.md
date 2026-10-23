@@ -88,7 +88,7 @@ K_σ(O) = { a ∈ K(O) | a's schema is σ }
 | Layer | Asks | Options `Ω` | When |
 |---|---|---|---|
 | 0. Rules | Should the sentence be refused; does a name appear verbatim | The story's `impossible` phrases, requests about the game, names from `λ` | Always first. Once settled, that question does not go to a model |
-| 1. Parts | How many actions, and which schema the first step is. If unsure or several, the narration model reads the sequence of steps | Count `{1, 2, 3}`; step 1 from the 9 of `Σ_말` (schemas possible here, `{σ ∣ space(σ) ≠ ∅}`, first). The narration model gets the same 9 | One decision-model call, plus one narration-model call if needed |
+| 1. Kind and parts | What kind of line it is; how many actions, and which schema the first step is. If unsure or several, the narration model reads the sequence of steps | Kind `{act, say, muse}`; count `{1, 2, 3}`; step 1 from the 9 of `Σ_말` (schemas possible here, `{σ ∣ space(σ) ≠ ∅}`, first). The narration model gets the same 9 | One decision-model call, plus one narration-model call if needed |
 | 2. Slots | The arguments of step `i` | Values of `space(V_{t+i−1})` consistent with earlier slots. For the destination, also the current place | **Just before** executing step `i`. Only when there are two or more values. If empty, stop at that step (refuse the sentence if it is the first step) |
 
 Layer 1 options are a few fixed, story-free choices, which is the kind of question a small model handles best. The one exception: when a fork waits in the scene, the `choose` option's examples are that fork's own choices, since with general examples "pour the oil on the lamp" read as a `try` (qa_test/runs/play-1-*). Arguments for steps 2 and 3 are asked from the observation after the earlier step has run: in "창고로 가서 상자를 연다" (go to the storeroom and open the box), the box becomes visible only after entering the storeroom.
@@ -103,14 +103,35 @@ Decided without a model.
 | A request about the game (`ko.META`: whole phrases for save, restart, questions about the rules, etc., so "저장고" or "처음부터 차근차근" stays in the story) | Refuse with guidance |
 | "성장" (growth) while the player has growth to spend | Refuse, pointing to the growth card |
 | The sentence equals a candidate's `λ` or a solution's `label` (ignoring spacing and punctuation) | A plan of that one action |
-| An entity's name or alias appears | Fills that layer-2 slot with that entity (when the value is among the candidates) |
+| An entity's name or alias appears, also as called by name ("윤슬아", "누렁아" for 누렁이) | Fills that layer-2 slot with that entity (when the value is among the candidates) |
 | A name before `…에게` or `…한테` ("to") | The other party of `give` or `talk` |
 | Approach words (`ko.APPROACH_WORDS`: "밀어" (push), "몰래" (sneak), "살펴" (examine), "달래" (soothe), etc.) | The approach of `try` |
 | The name of something to rely on (a held thing, a trait, a tag name, a key word of a believed proposition) | The roll card's `selected` (4.2) |
 
-### 3.2 Layer 1: parts
+### 3.2 Layer 1: kind and parts
 
-The decision model is asked for the number of actions and the first step in one call. The step options are described by `SCHEMA_ASK` in `locale/ko.py`: schema descriptions with story-free examples attached ("어딘가로 간다 (예: 북쪽 문으로 나간다, 위층으로 올라가자)" …). The options are all nine of `Σ_말`, with the schemas possible here first. The first step is **sure** when its `ω₁` is a schema possible here and `p(ω₁) ≥ θ₁` (0.7). If it is sure and the count's `ω₁` is 1, that one step is the plan.
+**Kind.** Players type anything, in any form: no quotes, no addressee, no polite form, fragments ("하이", "왜 불을 켜야해", "먹을거 어디에 있어?", "누렁아~ 이리온 쭈쭈", in the saved games of real play). Form is no signal, so the same call that asks for the parts also asks what kind of line it is, from the sentence alone, over `ko.KIND`:
+
+| Kind | What the line does |
+|---|---|
+| `act` | Does something in the scene: goes, looks, takes, gives, faces something, or asks someone for something, urges, threatens, deceives, brings someone along |
+| `say` | Speaks to someone without asking anything of them: a greeting, small talk, a passing question, an answer, thanks |
+| `muse` | Neither: talking to oneself, an exclamation, a feeling, a laugh |
+
+Only an action may roll or spend time, so a line that is not clearly one must not become one. Asked only for parts, every line became the nearest action: "먹을거 어디에 있어?" and "왜 불을 켜야해" opened a roll on the one topic there, the wall behind the lighthouse, and "와 바람 개쎄네" spent a beat looking at the yard (qa_test/runs/intent-1-base).
+
+The decision model's kind is taken when `p(ω₁) ≥ θ₁`; below that the narration model picks it from the same options, and with no pick the line goes to the parts. On 35 typed lines the decision model was right on 30 and the narration model on 33, and every miss of the decision model was below 0.7 ("문 발로 차" read as speech at 0.53; qa_test/runs/intent-1-probe).
+
+| Kind | Plan |
+|---|---|
+| `say` or `muse` naming a thing, an obstacle or a place | The parts below |
+| `say` with a person here | One `talk` step limited to small talk (3.3) |
+| `say` with no person here, or `muse` | `try(player)`: narration only, no roll, no change, no time |
+| Otherwise | The parts below |
+
+A line that names something in the scene is about it: words to an animal ("누렁아~ 이리온") are an attempt on it, and "문 발로 차" or "문이 왜 안 열려?", read as speech or musing, became idle (qa_test/runs/intent-1-a).
+
+**Parts.** The decision model is asked for the number of actions and the first step in the same call. The step options are described by `SCHEMA_ASK` in `locale/ko.py`: schema descriptions with story-free examples attached ("어딘가로 간다 (예: 북쪽 문으로 나간다, 위층으로 올라가자)" …). The options are all nine of `Σ_말`, with the schemas possible here first. The first step is **sure** when its `ω₁` is a schema possible here and `p(ω₁) ≥ θ₁` (0.7). If it is sure and the count's `ω₁` is 1, that one step is the plan.
 
 Otherwise the narration model **reads** the sentence. It gets the same descriptions, numbered in the same order, and writes the numbers of the sentence's actions in the order they happen (temperature 0). A schema identical to the one just before it is one action told in two clauses ("무릎을 꿇고 빈다", kneels and begs), so the two merge; up to three are used. If the decision model was sure but the first number is not a schema possible here, the reading counts as absent.
 
@@ -151,6 +172,10 @@ Just before executing step `i`, its slots are asked together in one call, using 
 - a `give` names a known thing the player does not hold: "{물건}을 지니고 있지 않습니다".
 
 This also happens when the schema has values here but none of them is anything the sentence names. Otherwise the slot fell to another target: "도해의 아구창을 날린다", with 도해 behind a guard dog, became a try on the letter. A hidden obstacle is not a cause: it is not in the observation, so the step runs and is blocked, which reveals it. Players met the bare refusal in every playtest and could not tell a guard from a broken game (qa/findings.md).
+
+**Topics are named.** A story topic is offered only when the sentence names it: a word of its title, without a final particle, of two syllables or more, or its last word, the head noun ("담장" or "등대" for "등대 뒤 담장"; "폐허" or "길" for "폐허로 가는 길"). `chat`, favors, `come` and `stay` are always offered. With every topic offered, the models put any question near the place on its one topic ("먹을거 어디에 있어?" → the wall, qa_test/runs/intent-1-base), and a topic rolls, so a passing question became a roll. By the head noun alone, 5 of the decision bench's 18 topic questions lost their topic ("폐허 가는 길"); by any title word, 1, and no other topic came in (qa_test/runs/intent-1-probe).
+
+**Small talk.** A `say` line is a `talk` whose topic is `chat` or a named topic, and whose tone is `polite`, `friendly` or `plead`. Threats and lies change how people regard the player (rule.md 5.1), so they come only from an `act` line. A `say` line names its person or, unnamed, goes to the people here as an intent slot.
 
 For the destination, the **current place** is offered along with the ways out, unless the sentence names a way out ("마당에서 마을로 간다", go from the yard to the village). Choosing it means the move is already done: that step is skipped, or, if no step has run, the sentence is refused with "이미 …에 있습니다" (you are already at …) when it names this place, and otherwise with "… 안에서 따로 갈 곳은 없습니다. 갈 수 있는 곳은 …입니다." (nowhere else to go inside …; the ways out are …), since a walk about the place asked where one can go (play-3-explorer 9). Offered only the ways out, the decision model picked another way even when the sentence named the current place in other words; but it is also sometimes sure of the current place for sentences that pass through here and go on ("열린 문으로 들어가 꼭대기까지 오른다", go in through the open door and climb to the top). So, as with layer-1 refusals, the current place is accepted only when the narration model picks it too (qa_test/runs/misread-1).
 

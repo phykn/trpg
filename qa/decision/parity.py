@@ -26,8 +26,8 @@ from src.view import action_label
 class Kev:
     """Records each request; answers every choice with its last option, so tone reads as deceit and claims get asked."""
 
-    def __init__(self, s1=None, n=None):
-        self.calls, self.s1, self.n = [], s1, n
+    def __init__(self, s1=None, n=None, k=None):
+        self.calls, self.s1, self.n, self.k = [], s1, n, k
 
     async def decide(self, state, questions):
         self.calls.append((state, questions))
@@ -37,6 +37,8 @@ class Kev:
                 p = self.s1
             elif k == "n" and self.n is not None:
                 p = self.n
+            elif k == "k" and self.k is not None:
+                p = self.k
             elif q["type"] == "noul":
                 p = {"true": 1.0, "false": 0.0}
             else:
@@ -249,7 +251,8 @@ async def check_narration(u, o, g, n) -> list[str]:
 
 
 async def check_plan(u, g, s, n) -> list[str]:
-    """M.plan against interpret.plan over sure and unsure, possible and impossible, one and several steps."""
+    """M.plan against interpret.plan over sure and unsure, possible and impossible, one and several steps, for a line
+    read as an act (the bench's sentences are all actions; small talk and musing stop before the parts)."""
     have = s.have()
     say = list(M.layer1("", have, s.choices())[1]["s1"]["criteria"])
     inside, outside = [σ for σ in say if σ in have], [σ for σ in say if σ not in have]
@@ -261,7 +264,7 @@ async def check_plan(u, g, s, n) -> list[str]:
                     s1 = {σ: (p if σ == top else (1 - p) / (len(say) - 1)) for σ in say}
                     count_p = {c: float(c == count) for c in ("1", "2", "3")}
                     raw = ",".join(str(say.index(σ) + 1) for σ in read) if read else ""
-                    it = Interpreter(Kev(s1=s1, n=count_p), Reader(raw))
+                    it = Interpreter(Kev(s1=s1, n=count_p, k={"act": 1.0}), Reader(raw))
                     got = [st.get("schema") or ("idle" if st.get("idle") else st)
                            for st in (await it.plan(u, g, "그냥 해 본다"))["plan"]]
                     want = M.plan(s1, count_p, read, have)

@@ -12,6 +12,7 @@ from src.interpret import (
     mentions,
     ranked,
     squeeze,
+    title_words,
 )
 from src.lang.context import MEMORY, Line, render
 from src.locale import ko
@@ -219,7 +220,8 @@ def layer1(text: str, have: set[str], choices: list[str], ask: dict | None = Non
     say = {σ: ask[σ] for σ in sorted(SAY, key=lambda σ: σ not in have)}
     if choices:
         say["choose"] = ko.fill(ko.CHOOSE_HERE, choices=", ".join(choices))
-    return sentence(text), {"s1": choice(ko.STEP_QUESTION, say), "n": choice(ko.COUNT_QUESTION, ko.COUNT)}
+    return sentence(text), {"k": choice(ko.KIND_QUESTION, ko.KIND), "s1": choice(ko.STEP_QUESTION, say),
+                            "n": choice(ko.COUNT_QUESTION, ko.COUNT)}
 
 
 def plan(s1: dict, n: dict, read: list[str] | None, have, theta: float = STEP_THETA) -> list[str]:
@@ -257,6 +259,10 @@ def layer2(s: Scene, text: str, σ: str) -> Ask | None:
         return None
     if σ == "try":
         return _try(s, text, slots)
+    if σ == "talk":
+        # a story topic only when the sentence names it (interpret.topic_named)
+        slots = [(h, t) for h, t in slots
+                 if t in ("favor", "come", "stay", "chat") or any(mentions(w, text) >= 0 for w in title_words(t))]
     intents = s.narrow(σ, slots, text)
     # The place the player is in, unless the sentence names a way out (interpret.fill).
     if σ == "go" and not any(i[0] in s.named(text) for i in intents):

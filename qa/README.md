@@ -61,7 +61,7 @@ These are heuristics, with word lists for the skeleton story in `compare.py`. Co
 .venv/bin/python qa/mutate/run.py client -j 4
 .venv/bin/python qa/mutate/run.py server T1 T6          # only these mutants
 
-# Interpretation evals: the story's 55 sentences through the real engine; a regression gate (exit 1)
+# Interpretation evals: the story's 74 sentences through the real engine; a regression gate (exit 1)
 cd server && ../.venv/bin/python -m src.story.evals ../scenarios/skeleton --out ../qa_test/runs/<run>
 
 # Decision-model bench: 216 genre sentences as the engine asks them (→ <run>/results/<model>/)

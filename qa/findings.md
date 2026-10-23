@@ -1,9 +1,10 @@
 # Open problems
 
 - **Sentences read as skipping the scene, and the skip runs with no card.**
-  - "윤슬아 여기서 기다려" ("Yunseul, wait here"): the decision model is confident in `cut` at 0.91, and so are the three sentences in the casual-speech set that ask someone to stay. Requiring both models to agree on `cut` fixes it, but then "우리 같이 기다리자" ("let's wait together") reads as talk. The gains and losses even out, so it was left as is (qa_test/runs/misread-1/REPORT.md).
+  - "윤슬아 여기서 기다려" ("Yunseul, wait here"): the decision model was confident in `cut` at 0.91, and so are the three sentences in the casual-speech set that ask someone to stay. Requiring both models to agree on `cut` fixes it, but then "우리 같이 기다리자" ("let's wait together") reads as talk. The gains and losses even out, so it was left as is (qa_test/runs/misread-1/REPORT.md). Since the kind question (engine.md 3.2) both models read it as small talk, so it is a chat, not a skip (qa_test/runs/intent-1-f 22).
   - "…기름통 챙기고 누렁이 쓰담쓰담" ("pet the dog") became `cut` as its second step. The sunset ran out and chapter 1 failed while the narration showed the petting (play-2-odd 33).
   - A skip spends the rest of the scene, yet a sentence reaches it with no confirm card.
+- **Typed lines whose kind the models misread** (engine.md 3.2). On 274 bench actions, 6 still read as speech or musing ("보물? … 내 몫으로 챙겨야지", a decision; "이 주막에 뭐 쓸 만한 거라도 있나?", a look), and "같이 갈래?" is a request only the decision model sees (qa_test/runs/intent-1-probe). With only small talk left at layer 2, the decision model was sure "동행에게 말을 건다" meant 도해 rather than the companion (intent-1-f 50), and the narration model reads "누렁아~ 이리온 쭈쭈" as talk, refused with no reason once 도해 is guarded (intent-1-f 68). A title word that is not a noun ("가는" in "폐허로 가는 길") offers its topic too.
 - **"부두로 간다" ("go to the pier", while at 선착장) → "이미 선착장에 있습니다".** Another name for the same place is read as the current place (misread-1).
 - **"바다 쪽으로 내려간다" ("head down toward the sea", from the village) → in front of the lighthouse.** The move card lets you pick 선착장, so you never end up in the wrong place (move-1 turn 7).
 - **A cancelled card's sentence stays in the chat.** Closing the move card and sending the same sentence again shows the same bubble twice (move-1 turns 2–3).

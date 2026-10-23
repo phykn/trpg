@@ -33,7 +33,7 @@
 
 # 선착장, 윤슬이 따라옴
 - {at: {path: 0, step: 0, then: [{do: "talk:yunseul:come", roll: [6, 6, 0]}]}, text: 윤슬아 여기서 기다려, expect: talk:yunseul:stay,
-   known: '1층이 "기다려"를 시간 보내기(cut)로 확신합니다'}
+   known: '말의 종류가 부탁 대신 건넨 말(say)로 읽어 말 걸기(chat)가 됩니다'}
 - {at: {path: 0, step: 0, then: [{do: "talk:yunseul:come", roll: [6, 6, 0]}]}, text: 윤슬과 같이 마을로 간다, expect: go:village}
 
 # 바닷가 마을: 도해
@@ -42,8 +42,7 @@
 - {at: {path: 0, step: 1}, text: 노인에게 아들의 편지를 건넨다, expect: give:letter:dohae}
 - {at: {path: 0, step: 1}, text: 도해에게 아드님 편지를 가져왔다고 간청하며 이야기한다, expect: "talk:dohae:chat;tone=plead"}
 - {at: {path: 0, step: 1}, text: 도해에게 내가 새로 온 등대지기라고 속인다, expect: "talk:dohae:chat;claim=c_keeper;tone=deceive"}
-- {at: {path: 0, step: 1}, text: 도해의 멱살을 잡고 열쇠를 내놓으라고 윽박지른다, expect: "talk:dohae:favor;tone=threaten",
-   known: '이야기 모델이 부탁(favor) 대신 말 걸기(chat)를 고릅니다'}
+- {at: {path: 0, step: 1}, text: 도해의 멱살을 잡고 열쇠를 내놓으라고 윽박지른다, expect: "talk:dohae:favor;tone=threaten"}
 - {at: {path: 0, step: 1}, text: 이 마을에 예전에 같이 배를 탄 동료가 있다고 떠올린다, expect: declare:l_baek}
 - {at: {path: 0, step: 1}, text: 마을 우물가에 앉아 잠깐 쉰다, expect: cut:rest}
 - {at: {path: 0, step: 1}, text: 등대 앞으로 올라간다, expect: go:yard}
@@ -75,7 +74,8 @@
 
 # 마을, 윤슬이 오래전에 따라나섬: 함께 다닌다는 것이 기억에서 밀려나 맥락의 사실 줄에만 남음
 - {at: {path: 0, step: 0, then: [{do: "talk:yunseul:come", roll: [6, 6, 0]}, go:village, go:dock, go:village]},
-   text: 동행에게 말을 건다, expect: talk:yunseul:chat}
+   text: 동행에게 말을 건다, expect: talk:yunseul:chat,
+   known: '말 걸기만 남은 2층에서 결정 모델이 "동행"을 도해로 확신합니다(0.72)'}
 - {at: {path: 0, step: 0, then: [{do: "talk:yunseul:come", roll: [6, 6, 0]}, go:village, go:dock, go:village]},
    text: 동행에게 여기서 기다리라고 한다, expect: talk:yunseul:stay}
 
@@ -88,3 +88,27 @@
 - {at: {path: 0, step: 0}, text: ㅁㄴㅇㄹ, expect: idle}
 - {at: {path: 0, step: 2}, text: 그걸 고친다, expect: clarify,
    known: '문인지 다리인지 문장에 없는데, 이야기 모델이 늘 하나를 골라 되묻기 카드까지 가지 않습니다(engine.md 3.4)'}
+
+# 막 친 말: 실제 플레이 기록처럼 따옴표도, 받는 사람도, 존댓말도 없는 문장. 행동이 분명한 말만 행동이 되고,
+# 곁에 있는 사람에게 건넨 말은 말 걸기, 그 밖의 말은 서술만 합니다.
+- {at: {path: 0, step: 0}, text: 하이, expect: "talk:yunseul:chat;tone=friendly"}
+- {at: {path: 0, step: 0}, text: 안녕, expect: "talk:yunseul:chat;tone=friendly"}
+- {at: {path: 0, step: 0}, text: 넌 이름이 뭐니, expect: talk:yunseul:chat}
+- {at: {path: 0, step: 0}, text: 왜 불을 켜야해, expect: talk:yunseul:chat}
+- {at: {path: 0, step: 0}, text: "먹을거 어디에 있어?", expect: talk:yunseul:chat}
+- {at: {path: 0, step: 0}, text: 너 여기서 뭐해, expect: talk:yunseul:chat}
+- {at: {path: 0, step: 0}, text: ㅇㅇ 알겠어 고마워, expect: "talk:yunseul:chat;tone=friendly"}
+- {at: {path: 0, step: 0}, text: 등대지기 아저씨는 어디 갔어, expect: talk:yunseul:chat}
+- {at: {path: 0, step: 0}, text: 담장 얘기 좀 해봐, expect: talk:yunseul:t_wall}
+- {at: {path: 0, step: 0}, text: 등대로, expect: go:yard,
+   known: '1층이 "등대로"를 시간 보내기(cut)로 확신합니다'}
+- {at: {path: 0, step: 0}, text: 비가 오는지 확인, expect: look}
+- {at: {path: 0, step: 0}, text: "같이 갈래?", expect: talk:yunseul:come}
+- {at: {path: 0, step: 1, then: [talk:dohae:chat]}, text: "누렁아~ 이리온 쭈쭈", expect: try,
+   known: '이야기 모델이 개에게 하는 말을 말 걸기(talk)로 읽고, 누렁이가 막은 도해 말고는 말할 사람이 없어 거절됩니다'}
+- {at: {path: 0, step: 1}, text: 개 무섭다 진짜, expect: idle}
+- {at: {path: 0, step: 2}, text: 와 바람 개쎄네, expect: idle}
+- {at: {path: 0, step: 2}, text: ㅋㅋㅋㅋ, expect: idle}
+- {at: {path: 0, step: 2}, text: "아무도 없어요?", expect: idle}
+- {at: {path: 0, step: 2}, text: 문 열어, expect: try}
+- {at: {path: 0, step: 2}, text: 문 발로 차, expect: try:door:force}

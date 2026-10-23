@@ -199,7 +199,7 @@ For a rolling action `a ∈ K(O)`, this computes from the observation alone what
 
 ### 4.1 Beats and scenes
 
-**Beats** `stat(player, beats, n)`, `0 ≤ n ≤ B`. Every step except `try(player, ·)`, `grow` and `cut` adds `beats +1` in `Δ₀`. Growth is picked on a card, not done in the scene; when it spent a beat, levelling up read as a penalty for pressing the button (play-5-bold 7).
+**Beats** `stat(player, beats, n)`, `0 ≤ n ≤ B`. Every step except `try(player, ·)`, `grow`, `cut` and small talk adds `beats +1` in `Δ₀`. **Small talk** is `talk(h, chat)` whose tone is neither `threaten` nor `deceive`: it changes nothing in the world, and when every greeting cost a beat, players stopped speaking to people (play-5-talker 1–2). Growth is picked on a card, not done in the scene; when it spent a beat, levelling up read as a penalty for pressing the button (play-5-bold 7).
 
 **Scene end** `scene_end`: `expire(scene)`, `beats = 0`, and `fill +1` on each active threat (a threat, fork or deadline with `at(w, player)`). Risk clocks are not included. `go` does not expire scene tags.
 
@@ -269,7 +269,7 @@ Earlier, every chapter change and the ending settled open promises by `keep`. Th
 
 | Schema | `Δ₀` |
 |---|---|
-| (all) | every step except `try(player, ·)`, `grow` and `cut` does `beats +1` |
+| (all) | every step except `try(player, ·)`, `grow`, `cut` and small talk (4.1) does `beats +1` |
 | `go(q)` | If a hidden obstacle blocks `q`, `reveal(player, o.hidden)` (`blocked`). Otherwise `retract(follows(h, player))` for each companion `h` with `q ∈ avoids(h)`, then `move(player, q)` (the remaining companions move along) |
 | `look(x)` | `reveal` each story proposition `p` with `x ∈ about(p)`, in story order |
 | `take(x)` | A hidden block is revealed. Otherwise `move(x, player)` |

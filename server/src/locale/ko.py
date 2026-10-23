@@ -239,6 +239,17 @@ SCHEMA_ASK = {
 # reading as a try (qa_test/runs/play-1-*).
 CHOOSE_HERE = "어떻게 할지 결정을 내린다 (예: {choices})"
 STEP_QUESTION = "플레이어 문장에서 가장 먼저 하는 행동은 무엇입니까? 뒤에 이어지는 행동은 보지 않습니다."
+# What kind of line it is, judged on the sentence alone; form (quotes, an addressee, politeness) is no signal, since
+# players type fragments (engine.md 3.2). Act lists resting, wondering what is about, deciding and recalling: without
+# them 36 of 274 bench actions read as speech or musing, with them 6 (qa_test/runs/intent-1-probe).
+KIND_QUESTION = "플레이어 문장은 어떤 말입니까?"
+KIND = {
+    "act": "장면에서 무언가를 한다 (예: 어딘가로 가거나 쉬거나 자거나 기다린다, 주변에 무엇이 있는지 둘러보거나 궁금해한다, "
+           "무언가를 살피거나 집거나 건넨다, 무언가에 맞선다, 결정을 내린다, 자신의 과거나 아는 사람을 떠올린다, "
+           "누군가에게 무언가를 해 달라고 하거나 같이 가자고 하거나 겁을 주거나 속인다)",
+    "say": "곁에 있는 누군가에게 말을 건넬 뿐 아무것도 하지 않는다 (예: 인사, 안부, 잡담, 맞장구, 고맙다는 말, 상대에게 묻는 지나가는 질문)",
+    "muse": "혼자 느끼거나 감탄할 뿐 아무것도 하지 않는다 (예: 감탄, 투덜거림, 느낌, 웃음)",
+}
 # Asking the count beats an "end" option after each step: the model stops adding steps to one-action sentences.
 COUNT_QUESTION = "플레이어 문장은 서로 다른 행동을 몇 가지 차례로 합니까?"
 COUNT = {"1": "한 가지 행동만 한다", "2": "두 가지 행동을 차례로 한다", "3": "세 가지 이상의 행동을 차례로 한다"}

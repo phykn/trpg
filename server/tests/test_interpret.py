@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from conftest import REPO
-from src.interpret import Interpreter, mentions, rules, squeeze
+from src.interpret import Interpreter, mentions, rules, squeeze, title_words
 from src.locale import ko
 from src.models.decision import ModelUnavailable
 from src.onto.log import Log
@@ -18,7 +18,8 @@ CREATION = {"approaches": {"force": 1, "finesse": 2, "wits": 1, "charm": 0}, "tr
 class FakeDecision:
 
     def __init__(self, answers=None, fail=False):
-        self.answers, self.fail, self.asked = answers or {}, fail, []
+        # a line is an act unless a test says otherwise, so the kind needs no narration-model reading
+        self.answers, self.fail, self.asked = {"k": {"act": 1.0}, **(answers or {})}, fail, []
 
     async def decide(self, state, questions):
         self.asked.append((state, questions))
@@ -58,6 +59,9 @@ async def say(svc, gid, view, text, rid="t1"):
 def test_layer0_text_helpers():
     assert squeeze("마을로 간다.") == "마을로간다"
     assert mentions("문", "문을 연다") == 0 and mentions("문", "문서를 본다") == -1
+    assert mentions("윤슬", "윤슬아 가자") == 0 and mentions("누렁이", "누렁아~ 이리온") == 0     # called by name
+    assert mentions("누렁이", "누렁아지") == -1
+    assert title_words("폐허로 가는 길") == ["폐허", "가는", "길"] and title_words("등대 뒤 담장") == ["등대", "담장"]
     assert mentions("윤슬", "윤슬에게 묻는다") == 0
 
 
@@ -102,7 +106,51 @@ async def test_sure_schema_and_named_place(tmp_path):
     out = await say(svc, gid, view, "마을 쪽으로 걸어가 봐야겠다")
     assert [s["action"] for s in out["steps"]] == ["go:village"]    # one sure action needs no reading
     assert len(decision.asked) == 1                    # the named place fills the slot; no layer-2 call
-    assert set(decision.asked[0][1]) == {"s1", "n"} and "예:" in decision.asked[0][1]["s1"]["criteria"]["go"]
+    assert set(decision.asked[0][1]) == {"k", "s1", "n"} and "예:" in decision.asked[0][1]["s1"]["criteria"]["go"]
+
+
+async def test_a_line_to_the_person_here_is_small_talk_that_spends_no_time(tmp_path):
+    # Kev would take a part, and every topic would roll: only an action may (engine.md 3.2, rule.md 4.1)
+    decision = FakeDecision({"k": {"say": 0.8}, "s1": {"try": 0.9}, "n": {"1": 0.9}, "tone": {"threaten": 0.9}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("1"))
+    out = await say(svc, gid, view, "먹을거 어디에 있어?")
+    assert [s["action"] for s in out["steps"]] == ["talk:yunseul:chat"]       # a threat needs an act, so no tone
+    assert set(decision.asked[1][1]["tone"]["criteria"]) == {"polite", "friendly", "plead"}
+    assert out["view"]["player"]["beats"] == view["player"]["beats"]
+
+
+async def test_a_line_to_no_one_or_to_oneself_is_only_narrated(tmp_path):
+    for kind, moves, text in (("muse", (), "와 바람 개쎄네"), ("say", ("go:yard",), "아무도 없어요?")):
+        decision = FakeDecision({"k": {kind: 0.9}, "s1": {"look": 0.9}, "n": {"1": 0.9}})
+        svc, gid, view = await game(tmp_path / kind, decision, FakeLLM("1"), moves)
+        out = await say(svc, gid, view, text)
+        assert out["steps"][0]["action"] == "try:player:wits" and out["steps"][0]["result"] == "none"
+        assert out["view"]["player"]["beats"] == view["player"]["beats"]
+
+
+async def test_an_unsure_kind_is_the_narration_models_reading(tmp_path):
+    decision = FakeDecision({"k": {"say": 0.6}, "s1": {"look": 0.9}, "n": {"1": 0.9}})
+    llm = FakeLLM("3")                                           # muse
+    svc, gid, view = await game(tmp_path, decision, llm)
+    out = await say(svc, gid, view, "날씨 진짜 별로다")
+    assert out["steps"][0]["action"] == "try:player:wits" and "어떤 말입니까" in llm.prompts[0][1]["content"]
+
+
+async def test_words_to_an_animal_are_an_attempt_on_it(tmp_path):
+    decision = FakeDecision({"k": {"say": 0.9}, "s1": {"try": 0.9}, "n": {"1": 0.9}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("4"), ("go:village", "talk:dohae:chat"))
+    out = await say(svc, gid, view, "누렁아~ 이리온 쭈쭈")
+    assert out["view"]["card"]["kind"] == "roll" and out["view"]["card"]["options"][0]["id"].startswith("try:hound:")
+
+
+async def test_a_topic_is_offered_only_when_the_sentence_names_it(tmp_path):
+    decision = FakeDecision({"k": {"act": 0.9}, "s1": {"talk": 0.9}, "n": {"1": 0.9}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("2"))
+    view = (await say(svc, gid, view, "윤슬에게 먹을거 어디 있는지 묻는다"))["view"]
+    assert "yunseul:t_wall" not in decision.asked[1][1]["intent"]["criteria"]
+    decision.asked.clear()
+    await say(svc, gid, view, "윤슬에게 담장 얘기 좀 해 달라고 한다", "t2")
+    assert "yunseul:t_wall" in decision.asked[1][1]["intent"]["criteria"]
 
 
 async def test_a_sentence_that_hands_a_thing_over_asks_first(tmp_path):

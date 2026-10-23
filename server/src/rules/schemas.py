@@ -86,7 +86,9 @@ def pay_costs(ctx: Ctx, target: str) -> None:
 def delta0(ctx: Ctx) -> None:
     a, w, u = ctx.a, ctx.work, ctx.u
     ctx.risk = risk(u, a)
-    quiet = a.schema in ("cut", "grow") or (a.schema == "try" and a.intent[0] == PLAYER)
+    # Small talk changes nothing in the world; when every greeting cost a beat, players stopped speaking (rule.md 4.1).
+    small_talk = a.schema == "talk" and a.intent[1] == "chat" and a.get("tone") not in ("threaten", "deceive")
+    quiet = a.schema in ("cut", "grow") or (a.schema == "try" and a.intent[0] == PLAYER) or small_talk
     if not quiet:
         w.set_("stat", (PLAYER, "beats"), "+1")
     globals()[f"_{a.schema}"](ctx, *a.intent)
