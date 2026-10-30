@@ -178,6 +178,7 @@ async def test_a_sentence_that_goes_with_someone_asks_them_first(tmp_path):
     assert [(o["id"], o.get("with")) for o in card["options"]][:2] == \
         [("go:village", None), ("talk:yunseul:come+go:village", "윤슬")]
     assert card["selected"] == "talk:yunseul:come+go:village"
+    assert card["options"][0]["effects"] == ["윤슬을 두고 감"]             # the plain way says it leaves her
     out = await svc.command(gid, {"request_id": "w", "revision": out["view"]["revision"], "card": card["id"],
                                   "pick": card["selected"]})
     card = out["view"]["card"]

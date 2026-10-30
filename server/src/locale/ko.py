@@ -69,6 +69,7 @@ CLUE = "{name} 단서"
 NO_RELY = "기대지 않음"
 MOVE_WITH = "{name}{와} 함께"
 MOVE_ASK = "{name}에게 같이 가자고 먼저 청함"
+MOVE_ALONE = "{name}{을} 두고 감"
 # A sentence about someone left behind must tell the parting: stay, stop, wait, see off.
 PARTING = ("남", "멈춰", "멈추", "머무", "머물", "기다", "배웅", "돌아서", "따라오지", "올라오지", "들어오지")
 AFAR = ("멀리", "먼 곳")

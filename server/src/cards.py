@@ -143,12 +143,12 @@ def move_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[str],
     for q in out:
         effects = [ko.fill(ko.MOVE_LEFT, name=u.name(h), fear=u.agents[h].fear) if q in avoided(u, o.facts, o.hist, h)
                    else ko.fill(ko.MOVE_WITH, name=u.name(h)) for h in sorted(company, key=u.rank)]
-        options.append({"id": str(make("go", (q,))), "label": u.name(q), "effects": effects})
-        if q != q0:
-            continue
-        for h in asked:
-            if q in avoided(u, o.facts, o.hist, h):
-                continue
+        askable = [h for h in asked if q == q0 and q not in avoided(u, o.facts, o.hist, h)]
+        # beside its asked twin, the plain way says who it leaves: picked by a player who had just chosen to carry
+        # someone, it went alone with nothing said (play-10-bold 28, 29)
+        alone = [ko.fill(ko.MOVE_ALONE, name=u.name(h)) for h in askable]
+        options.append({"id": str(make("go", (q,))), "label": u.name(q), "effects": [*effects, *alone]})
+        for h in askable:
             come, go = make("talk", (h, "come")), make("go", (q,))
             oid = f"{come}+{go}"
             options.append({"id": oid, "label": u.name(q), "with": u.name(h),

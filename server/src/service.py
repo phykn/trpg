@@ -328,7 +328,7 @@ class GameService:
                 # A thing handed over does not come back, and a sentence that only showed it was read as giving
                 # (qa_test/runs/play-3-talker 3, play-4-talker 7); a sentence read as waiting spent the scene with no
                 # card (qa/findings.md).
-                if rolling or risk(u, a) == "high" or a.schema in ("give", "cut") and kind == "text":
+                if rolling or risk(u, a) == "high" or a.schema in ("give", "cut") and origin == "text":
                     p["card_seq"] += 1
                     cid = f"c{p['card_seq']}"
                     make = roll_card if rolling else confirm_card
@@ -340,7 +340,7 @@ class GameService:
                     break
                 # A sentence picks a way by meaning, so the player sees where and with whom before leaving; one that
                 # names its way alone leaves at once unless someone stays behind (engine.md 4.4).
-                if a.schema == "go" and kind == "text":
+                if a.schema == "go" and origin == "text":       # the rest of a sentence's plan after its card, too
                     only = names_way(u, a.intent[0], ways(u, o), text)
                     asked = tuple(h for h in joiners(u, o) if says(u, h, text))
                     if not only or left_behind(u, o, a.intent[0]) or asked:

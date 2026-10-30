@@ -38,7 +38,7 @@ WEB = {
     "stuck": "응답을 받지 못했습니다.", "narrationFailed": "서술을 받지 못했습니다.",
     "conflict": "게임 상태가 바뀌어 새로 불러왔습니다.", "blocked": "이 판은 더 이어할 수 없습니다.",
     "placeholder": "무엇을 할까요?", "choose": "고른다", "whereTo": "어디로 갈까요?", "leave": "간다",
-    "thanks": "덕분에", "because": "때문에", "tagLife": {"scene": "이번 장면", "chapter": "이번 장"},
+    "thanks": "덕분에", "because": "때문에", "guarded": "실패 대가 줄임", "forced": "무리해서", "tagLife": {"scene": "이번 장면", "chapter": "이번 장"},
 }
 
 
@@ -58,6 +58,11 @@ def ro(word: str) -> str:
 
 def signed(n: int) -> str:
     return f"+{n}" if n > 0 else f"−{-n}" if n < 0 else "±0"
+
+
+def chip(m: dict) -> str:
+    """A spent reliance lowers a fail's cost, not the total; the web says so instead of ±0."""
+    return f"· {WEB['guarded']}" if m["kind"] == "guard" else signed(m["value"])
 
 
 class Run:
@@ -254,8 +259,9 @@ def roll_card(c: dict) -> str:
     lines = [f"카드(roll): {step.get('label', '')}{boxes}",
              f"  목표 {pv['dc']}" + (f" ⚠ {WEB['highRisk']}" if pv["risk"] == "high" else "") + fixed]
     for i, o in enumerate(c["options"], 1):
-        chip = next((m for m in o["preview"]["mods"] if m["kind"] == "help" and m["label"] == o["label"]), None)
-        lines.append(f"  {i}) {o['label']}" + (f" {signed(chip['value'])}" if chip else "")
+        rely = next((m for m in o["preview"]["mods"] if m["kind"] in ("help", "guard") and m["label"] == o["label"]), None)
+        # the web draws the forced twins as one "무리해서" switch over the same list
+        lines.append(f"  {i}) {o['label']}" + (f" · {WEB['forced']}" if o.get("forced") else "") + (f" {chip(rely)}" if rely else "")
                      + (f" · {o['note']}" if o.get("note") else "") + (" *" if o is chosen else ""))
     return "\n".join(lines)
 
@@ -267,7 +273,7 @@ def steps(u, res: dict) -> list[str]:
     for r in res["steps"]:
         head = f"- {r['label']}"
         if r["roll"] and r["result"] != "blocked":
-            mods = "".join(f", {m['label']} {signed(m['value'])}"
+            mods = "".join(f", {m['label']} {chip(m)}"
                            + (f" {WEB['because'] if m['kind'] == 'hinder' else WEB['thanks']}" if i in r["decisive"] else "")
                            for i, m in enumerate(r["mods"]))
             head += f" — 2d6 {r['roll']['d1']}+{r['roll']['d2']}{mods} = {r['total']} / {r['dc']}"

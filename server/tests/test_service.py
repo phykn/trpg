@@ -215,6 +215,20 @@ async def test_chain_stops_for_a_roll_card_after_its_first_step(tmp_path):
     assert job.unfinished == card["plan"]["step"]["label"] and job.unfinished
 
 
+async def test_a_sentence_s_move_after_its_roll_card_still_stops_at_a_move_card(tmp_path, monkeypatch):
+    """The rest of a sentence's plan is still the sentence's: a persuasion that rolled and then went up the hill
+    left a companion behind with no card (play-10-talker 44, 45)."""
+    monkeypatch.setattr(service_module, "roll", lambda seed, t: (6, 6, 0))
+    svc = service(tmp_path, {"묻고 떠난다": ["talk:yunseul:t_wall", "go:village"]})
+    gid, view = await new(svc)
+    out = await cmd(svc, gid, view, "t1", text="묻고 떠난다")
+    card = out["view"]["card"]
+    assert card["kind"] == "roll"
+    out = await cmd(svc, gid, out["view"], "t2", card=card["id"], pick=card["selected"])
+    assert [s["action"].split(";")[0] for s in out["steps"]] == ["talk:yunseul:t_wall"]
+    assert out["view"]["card"]["kind"] == "move" and out["view"]["card"]["selected"] == "go:village"
+
+
 async def test_a_roll_card_from_a_sentence_keeps_the_sentence_for_the_narrator(tmp_path):
     svc = service(tmp_path, {"문을 비집어 연다": ["try:door:finesse"]})
     gid, view = await new(svc)

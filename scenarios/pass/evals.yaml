@@ -1,0 +1,37 @@
+# 해석 평가 문장(story.md 6절). 원고가 아니라 시험 자료이고 시작 시 검증에 들지 않습니다.
+# 형식은 scenarios/skeleton/evals.yaml 머리말과 같습니다. path 4는 사람을 얻는 길입니다.
+
+# 역참 마당: 시작
+- {at: {path: 4, step: 0}, text: 마구간으로 간다, expect: go:stable}
+- {at: {path: 4, step: 0}, text: 주막에 들어가 몸을 녹인다, expect: go:inn}
+- {at: {path: 4, step: 0}, text: 횃불을 집어 든다, expect: take:torch}
+- {at: {path: 4, step: 0}, text: 눈더미를 온몸으로 밀어 헤친다, expect: try:drift:force}
+- {at: {path: 4, step: 0}, text: 눈더미 가장자리 바위를 딛고 넘는다, expect: try:drift:finesse}
+- {at: {path: 4, step: 0}, text: 고갯길 어귀를 자세히 살펴본다, expect: look:drift}
+- {at: {path: 4, step: 0}, text: 약 꾸러미가 무사한지 확인한다, expect: look:medicine}
+- {at: {path: 4, step: 0}, text: 휴대전화로 구조대를 부른다, expect: refused}
+
+# 주막: 달래
+- {at: {path: 4, step: 1}, text: 주모에게 관문 쪽문에 대해 묻는다, expect: talk:dallae:t_side}
+- {at: {path: 4, step: 1}, text: 잎담배 쌈지를 챙긴다, expect: take:tobacco}
+- {at: {path: 4, step: 1}, text: 소금 자루를 집어 든다, expect: take:salt}
+- {at: {path: 4, step: 1}, text: 주모에게 데운 술 한 병만 내어 달라고 부탁한다, expect: talk:dallae:favor}
+- {at: {path: 4, step: 1}, text: 주모에게 반갑게 인사한다, expect: talk:dallae:chat}
+- {at: {path: 4, step: 1}, text: 역참 마당으로 돌아간다, expect: go:station}
+
+# 마구간: 방울, 잎담배와 소금을 가짐
+- {at: {path: 4, step: 5}, text: 마부에게 잎담배를 건넨다, expect: give:tobacco:bangul}
+- {at: {path: 4, step: 5}, text: 짐말의 목을 쓰다듬으며 낮게 달랜다, expect: try:horse:charm}
+- {at: {path: 4, step: 5}, text: 넉가래를 챙긴다, expect: take:shovel}
+- {at: {path: 4, step: 5}, text: 장작을 한 아름 안아 든다, expect: take:kindling}
+- {at: {path: 4, step: 5}, text: 방울에게 고갯길 능선 길을 묻는다, expect: talk:bangul:t_ridge}
+- {at: {path: 4, step: 5}, text: 방울에게 함께 고개를 넘자고 한다, expect: talk:bangul:come}
+
+# 역참 마당: 방울이 따라옴, 소금과 설피를 가짐
+- {at: {path: 4, step: 9}, text: 소금을 뿌려 언 눈을 녹인다, expect: "try:drift:wits;rely=thing:salt"}
+- {at: {path: 4, step: 9}, text: 방울에게 여기서 기다리라고 한다, expect: talk:bangul:stay}
+
+# 고갯길: 눈밭
+- {at: {path: 4, step: 12}, text: 설피를 신고 눈밭을 걷는다, expect: "try:snowfield:finesse;rely=thing:snowshoes"}
+- {at: {path: 4, step: 12}, text: 서낭당으로 올라간다, expect: go:shrine}
+- {at: {path: 4, step: 12}, text: 방울에게 설피를 돌려준다, expect: give:snowshoes:bangul}
