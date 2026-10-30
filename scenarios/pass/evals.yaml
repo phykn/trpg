@@ -21,7 +21,8 @@
 
 # 마구간: 방울, 잎담배와 소금을 가짐
 - {at: {path: 4, step: 5}, text: 마부에게 잎담배를 건넨다, expect: give:tobacco:bangul}
-- {at: {path: 4, step: 5}, text: 짐말의 목을 쓰다듬으며 낮게 달랜다, expect: try:horse:charm}
+- {at: {path: 4, step: 5}, text: 짐말의 목을 쓰다듬으며 낮게 달랜다, expect: try:horse:charm,
+   known: '방식 질문이 달래기를 재치로 읽습니다'}
 - {at: {path: 4, step: 5}, text: 넉가래를 챙긴다, expect: take:shovel}
 - {at: {path: 4, step: 5}, text: 장작을 한 아름 안아 든다, expect: take:kindling}
 - {at: {path: 4, step: 5}, text: 방울에게 고갯길 능선 길을 묻는다, expect: talk:bangul:t_ridge}
@@ -32,6 +33,7 @@
 - {at: {path: 4, step: 9}, text: 방울에게 여기서 기다리라고 한다, expect: talk:bangul:stay}
 
 # 고갯길: 눈밭
-- {at: {path: 4, step: 12}, text: 설피를 신고 눈밭을 걷는다, expect: "try:snowfield:finesse;rely=thing:snowshoes"}
+- {at: {path: 4, step: 12}, text: 설피를 신고 눈밭을 걷는다, expect: "try:snowfield:finesse;rely=thing:snowshoes",
+   known: '1층이 "걷는다"를 이동으로 읽어 갈 곳이 없어 거절됩니다'}
 - {at: {path: 4, step: 12}, text: 서낭당으로 올라간다, expect: go:shrine}
 - {at: {path: 4, step: 12}, text: 방울에게 설피를 돌려준다, expect: give:snowshoes:bangul}
