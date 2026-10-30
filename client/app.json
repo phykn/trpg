@@ -2,7 +2,7 @@
   "expo": {
     "name": "안개 항구",
     "slug": "trpg_client",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "trpgclient",
