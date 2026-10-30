@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, type TextInput, View } from 'react-native';
 
+import { ChapterCard } from '@/components/game/ChapterCard';
 import { ClarifyCard } from '@/components/game/ClarifyCard';
 import { Clocks } from '@/components/game/Clocks';
 import { CommandBar } from '@/components/game/CommandBar';
@@ -27,6 +28,8 @@ export function Play({ game }: { game: Game }) {
   const [menu, setMenu] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [draft, setDraft] = useState('');
+  // The chapter whose title card has shown; a reopened game has seen its own (ui.md 5.6).
+  const [titled, setTitled] = useState(() => (view.last ? view.chapter.k : 0));
   const input = useRef<TextInput>(null);
   const log = useLog(game.gameId, view.story.premise);
   const turnNo = view.last?.turn ?? null;
@@ -85,6 +88,7 @@ export function Play({ game }: { game: Game }) {
     card = <GrowthCard growth={view.growth} onPick={(action) => game.command({ action })} onLater={game.laterGrowth} />;
   }
 
+  const titling = phase === 'idle' && !view.ending && rows.chapter.k !== titled;
   const mode = commandsOpen ? 'open' : phase === 'sending' ? 'sending' : phase === 'stuck' && !roller ? 'stuck' : 'locked';
 
   return (
@@ -111,7 +115,7 @@ export function Play({ game }: { game: Game }) {
         </View>
       )}
       {roller ? (
-        <Pressable accessible={false} disabled={!revealing} onPress={game.skip}
+        <Pressable accessible={false} onPress={revealing ? game.skip : undefined}
           className="absolute bottom-0 left-0 right-0 top-0 z-30 justify-center px-4" style={{ backgroundColor: colors.overlay }}>
           {roller}
         </Pressable>
@@ -120,6 +124,10 @@ export function Play({ game }: { game: Game }) {
         <Pressable accessibilityLabel={ko.close} className="absolute bottom-0 left-0 right-0 top-0 z-10" onPress={() => setSheet(false)} />
       ) : null}
       {menuOpen ? <Menu onClose={() => setMenu(false)} onTitle={() => { setMenu(false); game.toTitle(); }} /> : null}
+      {titling ? (
+        <ChapterCard key={rows.chapter.k} k={rows.chapter.k} title={rows.chapter.title} aim={rows.chapter.aim}
+          onDone={() => setTitled(rows.chapter.k)} />
+      ) : null}
     </View>
   );
 }

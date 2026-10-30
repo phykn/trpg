@@ -172,8 +172,9 @@ Borrowed from Baldur's Gate 3's check screen. The stakes read as a single target
 ```
 ┌──────────────────────────────┐
 │     녹슨 등대 문을 솜씨로 다룬다    ✕ │ Attempt: action name (its label for a solution), close
-│            ( 8 )⚠              │ Target number in a ring. ⚠ mark for high risk
+│            ( 8 )               │ Target number in a ring, in the danger color for high risk
 │            ▢  ▢                │ Dice: blank faces, gold outline, swelling and shrinking like breath
+│            굴리기               │ The dice's verb, while they can be rolled
 │     솜씨 +2  물보라 −1           │ Fixed modifiers (stat, hinder; zero chips not drawn). Borderless text
 │     ○ 뱃사람 +1 · 이번 장 1번     │ Helps: one per line, single-choice circles
 │     ◉ 등대 열쇠 +1 · 이번 장 1번  │ Tap to choose, tap the chosen one to remove
@@ -181,8 +182,9 @@ Borrowed from Baldur's Gate 3's check screen. The stakes read as a single target
 ```
 
 - The card covers the whole play screen with a dimmed scrim and sits as a panel in its center. It appears briefly while growing (0.96 → 1, 220ms). Cancel is not a text button but close (✕) in the head and Escape, and it disappears after the roll.
-- All card values come from the `preview` of the chosen entry in `card.options`. The initial choice is `card.selected`. The target number is `preview.dc`; if risk is high, the ring and number are in the danger color and a ⚠ mark sits at the ring's upper right ("되돌릴 수 없는 대가" ("an irreversible cost") goes to screen readers only). Otherwise the ring is a dim line. When the result lands, on success the ring fills gold and one gold ring spreads softly and fades (800ms); on failure the ring turns the danger color. The target's boxes are drawn only when it has two or more (one box for a target cleared by a single success is clutter). The risk tier is not written out.
+- All card values come from the `preview` of the chosen entry in `card.options`. The initial choice is `card.selected`. The target number is `preview.dc`; if risk is high, the ring and number are in the danger color ("되돌릴 수 없는 대가" ("an irreversible cost") goes to screen readers only). Otherwise the ring is a dim line. A ⚠ badge on the ring said nothing a first-time player could read (play-6-ui 9), and red already means danger (2.1). When the result lands, on success the ring fills gold and one gold ring spreads softly and fades (800ms); on failure the ring turns the danger color. The target's boxes are drawn only when it has two or more (one box for a target cleared by a single success is clutter). The risk tier is not written out.
 - Helps sit one per line as a small circle (a radio, since only one can be chosen) and a name (the circles align in one column, sized to the longest line). Tapping one chooses it; tapping the chosen one again removes it. The server's "기대지 않음" (rely on nothing) option is not drawn; it is what is chosen when no circle is. The chosen one shows only as a dot inside the circle, with no gold outline. When the choice changes, the card redraws from that `preview`.
+- The scrim behind the card skips the reveal only while it runs, and it is never a disabled control: as one, it marked every control on the card disabled to screen readers and automation (play-6-ui 9).
 - When the card opens, focus goes to the panel itself. Sending it to the first control would draw a focus ring on that control because of the Enter that sent the sentence. Tab cycles from the first control.
 - No probability, outcome line or cost line (4.6): `preview.stakes` and `preview.gain` are not drawn. No echo of the sentence either; it is already in the chat.
 - Things that are used up carry the option's `note` as text, not a symbol, because they must read without a tap: a tag "1번 남음" ("1 use left"), a trait, thing or belief "이번 장 1번" ("once this chapter"). In the hero panel a trait, thing or belief already leaned on this chapter is dimmed.
@@ -195,7 +197,7 @@ The roll card draws the same modifier row on the card and in the reveal. A modif
 ### 4.4 Dice
 
 - `Dice.tsx` is two dice drawn as rounded squares with pips. `react-native-reanimated` animates tilt, spin and bounce.
-- **Waiting**: while a roll is possible, the dice are blank faces with no pips and a gold outline, slowly swelling and shrinking like breath (1.05×, 900ms). Pips would read as a result already rolled, so the faces stay blank; this shows they are to be pressed without text like "tap to roll".
+- **Waiting**: while a roll is possible, the dice are blank faces with no pips and a gold outline, slowly swelling and shrinking like breath (1.05×, 900ms). Pips would read as a result already rolled, so the faces stay blank. Under them one gold word, "굴리기" ("roll"), names what a tap does, and it goes once they roll. Blank breathing dice alone did not say press: a first-time player took them for decoration and found the roll by trying (play-6-ui 9).
 - **Hold**: while held, they shake slightly, and the longer the hold the bigger the shake (capped at 1.5 seconds). Where supported, a short vibration (`navigator.vibrate(10)`). A short tap also rolls.
 - **Release**: sends the roll request `{card, pick}`, and the dice spin (one turn per 420ms) with faces changing randomly every 70ms. This is the only optimistic motion and it decides no value. After the roll, the card's decision area locks.
 - **Stop**: once the response has arrived and 600ms have passed since release (whichever is later), `d1` and `d2` settle in turn on the server's values (standing upright, 1.12× to 1×). The values are the `roll` of `steps[0]` (the accepted step).
@@ -213,7 +215,7 @@ The reveal does not show the result all at once; it splits it up so you can see 
 | 1 | `die` | `d1`, `d2` stop in turn | 250ms each; `d2` starts 120ms after `d1` starts |
 | 2 | `line` | the running total appears below the ring, starting at `d1 + d2` | 200ms |
 | 3 | `chip` | each chip flies from its place into the total and the total changes by its value, in `mods` order | 180ms per chip |
-| 4 | `settle` | the total stops at the server's `total`, and `result` shows: "성공" (success, gold) or "실패" (failure, danger color) quietly floats up beside the total over 400ms. No growing, glowing or shaking. Leaves time to read the result | 2200ms |
+| 4 | `settle` | the total stops at the server's `total`, and `result` lands beside it like a stamp: "성공" (success, gold) or "실패" (failure, danger color) in the serif, from 1.5× to 1× over 220ms; on failure the card shakes once (300ms). Then it holds, leaving time to read the result. Floating up quietly, the result passed like any other line, and the screen read as a chat rather than a game (2026-10-30 request) | 2200ms |
 | 5 | `decisive` | the `decisive` modifier turns bold and gets a tag: "덕분에" ("thanks to") for `stat` and `help`, "때문에" ("because of") for `hinder` | 150ms |
 | 6 | `box` | from `changes`, `fill` in the target's boxes in the card head, `clock`·`crisis`·`arrival` in the danger row (on a crisis the clock empties and "위기" ("crisis") appears beside the clock's name). Filling boxes briefly grow and settle back | 150ms per box |
 | 7 | `fold` | the card fades out and a roll line (2.1) remains in the chat | 200ms |
@@ -259,7 +261,7 @@ If there is a `view.growth`, `GrowthCard` (✲ growth) opens after narration end
 
 ### 5.4 Ending
 
-Once `view.ending` is set, after the ending narration and recap, everything below the header becomes the ending panel. It holds the ending's title under ☆ (serif, gold) and a gold rule, a recap per chapter (one per chapter in `view.recaps`, at most 100 characters, floating up in turn), and the list of fork choices (`journal`; forks with →, others with the tag icon), with a "새로 시작" ("start over") button at the bottom. The ending panel takes over the chat log's space, so with many chapters you scroll within it (the button stays fixed). The button opens Creation for the same story, skipping the title; creating there makes a new game and replaces `trpg.game_id`.
+Once `view.ending` is set, after the ending narration and recap, everything below the header becomes the ending panel. It holds the ending's title under ☆ (serif, gold) and a gold rule, a recap per chapter (one per chapter in `view.recaps`, at most 100 characters, floating up in turn), and the list of fork choices (`journal`; forks with →, others with the tag icon), with a "새로 시작" ("start over") button at the bottom. The header then shows the story's title and no aim row: the last chapter and its aim stayed on top of an ending, as if the chapter were still on (play-6-ui 29). The ending panel takes over the chat log's space, so with many chapters you scroll within it (the button stays fixed). The button opens Creation for the same story, skipping the title; creating there makes a new game and replaces `trpg.game_id`.
 
 ### 5.5 Start
 
@@ -278,6 +280,10 @@ Starting takes two screens.
 - Stats (⚡): dots on the right fill as points are spent. One approach per row with its name and a short description, starting at 0 and set with − value +; + turns off at the total or the story's maximum.
 - Traits (☆): dots fill as traits are chosen. One per row with name and text; choosing one tints the row gold and checks the square box on the right.
 - Start: available once all points are spent and `pick` traits are chosen. It sends `POST /games` and opens the play screen.
+
+### 5.6 Chapter title
+
+When a chapter begins, and when a game starts, a title card covers the play screen once commands open: the chapter number (gold), the chapter's title (serif, display size) over a short gold rule, and its aim. It rises in (400ms), holds 1800ms and fades (400ms); a tap anywhere ends it early, and under reduced motion it shows still for the same time. Reopening a game does not show it again. Only the header's small title changed with the chapter, and a tester at 320×568 never noticed chapter 2 had begun (play-6-ui 24).
 
 ## 6. Checks
 

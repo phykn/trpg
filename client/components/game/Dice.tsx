@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming,
 } from 'react-native-reanimated';
@@ -57,18 +57,19 @@ function Die({ value, tumbling, spin, ready }: { value: number | null; tumbling:
   return <Animated.View style={style}><Face value={value ?? face} ring={ready ? colors.gold.fg : undefined} /></Animated.View>;
 }
 
-export function Dice({ state, values, onRelease, label }: {
+export function Dice({ state, values, onRelease, label, cue }: {
   state: 'ready' | 'rolling' | 'stopped' | 'gone';
   values: [number | null, number | null];
   onRelease?: () => void;
   label: string;
+  cue?: string;
 }) {
   const reduced = useReducedMotion();
   const sway = useSharedValue(0);
   const breath = useSharedValue(1);
   const held = useRef(0);
 
-  // Waiting dice are blank, ringed in gold and breathing: together they say "press me" without words.
+  // Waiting dice are blank, ringed in gold and breathing, with their verb under them (ui.md 4.4).
   useEffect(() => {
     if (state !== 'ready' || reduced) return undefined;
     breath.value = withRepeat(withSequence(withTiming(1.05, { duration: 900, easing: Easing.inOut(Easing.sin) }),
@@ -105,6 +106,12 @@ export function Dice({ state, values, onRelease, label }: {
         <Die value={values[0]} tumbling={tumbling(0)} spin={1} ready={state === 'ready'} />
         <Die value={values[1]} tumbling={tumbling(1)} spin={-1} ready={state === 'ready'} />
       </Animated.View>
+      {/* Kept in place once rolled, so the card does not jump when the verb goes. */}
+      {cue ? (
+        <Text className="mt-1.5 text-center font-sans-semibold text-panel text-gold-fg" style={{ opacity: state === 'ready' ? 1 : 0 }}>
+          {cue}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }

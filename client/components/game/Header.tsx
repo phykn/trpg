@@ -13,15 +13,18 @@ export function Header({ view, menu, onMenu, hero, onHero, onGrowth }: {
   return (
     <View className="z-20 pb-0.5 pt-1">
       <View className="h-10 flex-row items-center pl-4 pr-2">
+        {/* An ending is no chapter any more: the story's title stands there, with no aim under it (ui.md 5.4). */}
         <Text numberOfLines={1} className="min-w-0 flex-1 pr-2 font-sans-semibold text-body text-fg-default">
-          <Text className="text-gold-fg">{ko.chapterNo(view.chapter.k)}</Text>  {view.chapter.title}
+          {view.ending ? view.story.title : <><Text className="text-gold-fg">{ko.chapterNo(view.chapter.k)}</Text>  {view.chapter.title}</>}
         </Text>
         <HeroButton player={view.player} open={hero} growth={!!onGrowth} onPress={onHero} />
         <IconButton icon="menu" label={ko.menu} open={menu} onPress={onMenu} />
       </View>
-      <Row icon="flag" tone={colors.gold.fg} label={ko.row.goal}>
-        <Item color={colors.fg.default}>{view.chapter.aim}</Item>
-      </Row>
+      {view.ending ? null : (
+        <Row icon="flag" tone={colors.gold.fg} label={ko.row.goal}>
+          <Item color={colors.fg.default}>{view.chapter.aim}</Item>
+        </Row>
+      )}
       {hero && onHero ? <HeroSheet player={view.player} journal={view.journal} onGrowth={onGrowth} onClose={onHero} /> : null}
     </View>
   );

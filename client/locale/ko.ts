@@ -54,6 +54,7 @@ export const ko = {
   result: { success: '성공', fail: '실패', none: '', blocked: '막힘' } as Record<string, string>,
   highRisk: '되돌릴 수 없는 대가가 걸려 있습니다',
   hold: '주사위 굴리기',
+  roll: '굴리기',
   skip: '건너뛰기',
   choose: '고른다',
   whereTo: '어디로 갈까요?',

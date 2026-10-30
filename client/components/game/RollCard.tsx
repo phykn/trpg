@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
-  Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming,
+  Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming,
 } from 'react-native-reanimated';
 
 import { IconButton, pressed } from '@/components/ui/Button';
-import { Icon } from '@/components/ui/Icon';
 import { Notice, Resend } from '@/components/ui/Notice';
 import { useDialog } from '@/components/ui/useDialog';
 import { colors, fontFamily, motion } from '@/design/tokens';
@@ -33,30 +32,26 @@ function Target({ dc, high, result }: { dc: number; high: boolean; result: strin
       <Animated.View style={[{
         position: 'absolute', width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: colors.gold.fg,
       }, ripple]} />
-      <View className="h-16 w-16 items-center justify-center rounded-full"
+      <View accessibilityLabel={high ? ko.highRisk : undefined} className="h-16 w-16 items-center justify-center rounded-full"
         style={{ borderWidth: result ? 2 : 1.5, borderColor: ring, backgroundColor: result === 'success' ? colors.gold.muted : 'transparent' }}>
         <Text className="font-mono-medium" style={{ fontSize: 28, lineHeight: 34, color: high && !result ? colors.danger.fg : colors.fg.default }}>{dc}</Text>
       </View>
-      {high ? (
-        <View accessibilityLabel={ko.highRisk} className="absolute -right-1 -top-1 h-6 w-6 items-center justify-center rounded-full bg-canvas-floating">
-          <Icon name="alert" size={16} color={colors.danger.fg} width={2} />
-        </View>
-      ) : null}
     </View>
   );
 }
 
+// The result lands like a stamp: big, then down past its size and back (ui.md 4.5).
 function Verdict({ result }: { result: string }) {
   const reduced = useReducedMotion();
   const t = useSharedValue(reduced ? 1 : 0);
   useEffect(() => {
-    if (!reduced) t.value = withTiming(1, { duration: 400, easing: ease });
+    if (!reduced) t.value = withTiming(1, { duration: motion.stamp, easing: Easing.out(Easing.back(2)) });
   }, [reduced, t]);
-  const style = useAnimatedStyle(() => ({ opacity: t.value, transform: [{ translateY: (1 - t.value) * 6 }] }));
+  const style = useAnimatedStyle(() => ({ opacity: Math.min(1, t.value * 2), transform: [{ scale: 1.5 - 0.5 * t.value }] }));
   return (
     <Animated.Text accessibilityRole="alert" style={[{
       color: result === 'success' ? colors.gold.fg : colors.danger.fg,
-      fontSize: 22, lineHeight: 30, fontFamily: fontFamily['sans-semibold'][0], letterSpacing: 2,
+      fontSize: 26, lineHeight: 30, fontFamily: fontFamily.serif[0], letterSpacing: 2,
     }, style]}>
       {ko.result[result]}
     </Animated.Text>
@@ -104,7 +99,16 @@ export function RollCard({ card, onRoll, onCancel, onResend, notice, step, frame
   useEffect(() => {
     if (!reduced) open.value = withTiming(1, { duration: motion.enter, easing: ease });
   }, [reduced, open]);
-  const enter = useAnimatedStyle(() => ({ opacity: open.value, transform: [{ scale: 0.96 + 0.04 * open.value }] }));
+  // A failure jolts the card once as it lands.
+  const jolt = useSharedValue(0);
+  const settled = frame?.settled ?? null;
+  useEffect(() => {
+    if (settled !== 'fail' || reduced) return;
+    const d = motion.jolt / 5;
+    jolt.value = withSequence(withTiming(-6, { duration: d }), withTiming(6, { duration: d }), withTiming(-4, { duration: d }),
+      withTiming(4, { duration: d }), withTiming(0, { duration: d }));
+  }, [settled, reduced, jolt]);
+  const enter = useAnimatedStyle(() => ({ opacity: open.value, transform: [{ translateX: jolt.value }, { scale: 0.96 + 0.04 * open.value }] }));
 
   return (
     <Animated.View style={enter}>
@@ -120,7 +124,7 @@ export function RollCard({ card, onRoll, onCancel, onResend, notice, step, frame
         </View>
         <Target dc={p.dc} high={high} result={frame?.settled ?? null} />
         <Dice state={frame?.blocked ? 'gone' : step || rolling ? 'rolling' : onResend ? 'stopped' : 'ready'}
-          values={frame ? frame.dice : [null, null]} label={ko.hold} onRelease={() => onRoll(pick)} />
+          values={frame ? frame.dice : [null, null]} label={ko.hold} cue={ko.roll} onRelease={() => onRoll(pick)} />
         <View className="h-[30px] items-center justify-center">
           {/* The total stays when the verdict lands beside it, so nobody has to add the dice up. */}
           <View className="flex-row items-center gap-3">

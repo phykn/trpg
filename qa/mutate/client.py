@@ -210,6 +210,22 @@ MUTANTS = [
      "notice={phase === 'card' ? game.notice : undefined}",
      "notice={undefined}",
      "a roll that comes back with an error leaves its notice under the card's scrim, where it cannot be read"),
+    ("P11", "client/screens/Play.tsx",
+     "<Pressable accessible={false} onPress={revealing ? game.skip : undefined}",
+     "<Pressable accessible={false} disabled={!revealing} onPress={game.skip}",
+     "the roll card's scrim is a disabled control, so every control on the card reads as disabled"),
+    ("P12", "client/screens/Play.tsx",
+     "const titling = phase === 'idle' && !view.ending && rows.chapter.k !== titled;",
+     "const titling = false;",
+     "a new chapter goes by with no title card"),
+    ("P13", "client/screens/Play.tsx",
+     "useState(() => (view.last ? view.chapter.k : 0))",
+     "useState(() => 0)",
+     "a reopened game shows its chapter title again"),
+    ("H01", "client/components/game/Header.tsx",
+     "{view.ending ? null : (",
+     "{false ? null : (",
+     "an ending keeps the last chapter's aim on top"),
 ]
 
 # Survivors that change nothing a player or the server can observe, with the reason.

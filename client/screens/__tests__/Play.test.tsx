@@ -3,6 +3,7 @@ import renderer, { act as flush } from 'react-test-renderer';
 import { ScrollView, Text, TextInput } from 'react-native';
 
 import { Dice, Face } from '@/components/game/Dice';
+import { Header } from '@/components/game/Header';
 import { RollCard } from '@/components/game/RollCard';
 import { motion } from '@/design/tokens';
 import { ko } from '@/locale/ko';
@@ -179,4 +180,56 @@ test('a chapter recap arriving after the narration is typed is typed too before 
   expect(game.phase).toBe('idle');
   const saved = (storeLog as jest.Mock).mock.calls.at(-1)[1] as { id: string; text?: string }[];
   expect(saved.find((e) => e.id === 'story:1')?.text).toBe(`${TEXT}\n\n지난 일입니다.`);
+});
+
+test('a new game opens on its chapter title, which goes by itself; a reopened game does not show it again', async () => {
+  const card = () => tree!.root.findAll((n: Node) => n.props.accessibilityLabel === ko.skip && typeof n.props.onPress === 'function');
+  (getGame as jest.Mock).mockResolvedValue(base);
+  await flush(async () => { tree = renderer.create(<Screen />); });
+  expect(game.phase).toBe('idle');
+  expect(card()).toHaveLength(1);
+  await flush(async () => { jest.advanceTimersByTime(motion.chapterIn + motion.chapterHold + motion.chapterOut); });
+  expect(card()).toHaveLength(0);
+  await flush(async () => { tree!.unmount(); });
+  (getGame as jest.Mock).mockResolvedValue({ ...told, last: { ...told.last!, narrated: true } });
+  await flush(async () => { tree = renderer.create(<Screen />); });
+  await flush(async () => { jest.advanceTimersByTime((1000 / motion.typeRate) * (TEXT.length + 2)); });
+  expect(game.phase).toBe('idle');
+  expect(card()).toHaveLength(0);
+});
+
+test('a new chapter shows its title once commands open, and a tap ends it', async () => {
+  const card = () => tree!.root.findAll((n: Node) => n.props.accessibilityLabel === ko.skip && typeof n.props.onPress === 'function');
+  const chapter: StepRecord = { ...walk, changes: [{ kind: 'chapter', from: 1, to: 2 }] };
+  const view: GameView = { ...base, revision: 2, chapter: { k: 2, title: 'C2', aim: 'B' }, last: { turn: 2, steps: [chapter], narrated: false } };
+  (getGame as jest.Mock).mockResolvedValue(told);
+  (sendCommand as jest.Mock).mockResolvedValue({ kind: 'turn', turn: 2, steps: [chapter], reason: null, view } as CommandResult);
+  const tick = 1000 / motion.typeRate;
+  await flush(async () => { tree = renderer.create(<Screen />); });
+  await flush(async () => { jest.advanceTimersByTime(tick * (TEXT.length + 2)); });
+  expect(card()).toHaveLength(0);
+  await say('둘러본다');
+  await flush(async () => { game.skip(); });
+  expect(card()).toHaveLength(0);                                  // not over the reveal or the narration
+  await flush(async () => { jest.advanceTimersByTime(tick * (TEXT.length + 2) * 3); });
+  expect(game.phase).toBe('idle');
+  expect(card()).toHaveLength(1);
+  expect(screenText()).toContain('C2');
+  await flush(async () => { (card()[0].props.onPress as () => void)(); });
+  expect(card()).toHaveLength(0);
+});
+
+test('the scrim behind a roll card is no disabled control, so the card does not read as disabled', async () => {
+  (getGame as jest.Mock).mockResolvedValue({ ...base, card: door });
+  await flush(async () => { tree = renderer.create(<Screen />); });
+  expect(tree!.root.findAllByType(RollCard)).toHaveLength(1);
+  expect(tree!.root.findAll((n: Node) => n.props.accessible === false && n.props.disabled === true)).toHaveLength(0);
+});
+
+test('an ending heads the screen with the story title and no aim', async () => {
+  await flush(async () => { tree = renderer.create(<Header view={{ ...base, ending: { id: 'e', title: 'E' } }} menu={false} hero={false} />); });
+  expect(screenText()).toContain('"S"');
+  expect(screenText()).not.toContain('"A"');
+  await flush(async () => { tree!.update(<Header view={base} menu={false} hero={false} />); });
+  expect(screenText()).toContain('"A"');
 });

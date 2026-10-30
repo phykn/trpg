@@ -49,5 +49,6 @@ const motion = {
   cloud: 600, die: 250, dieGap: 120, line: 200, chip: 180, settle: 2200, decisive: 150,
   box: 150, fold: 200, change: 150, blockedFade: 300, reduced: 100,
   typeRate: 60, shakeMax: 1500, stuck: 30000, enter: 220, ripple: 800,
+  stamp: 220, jolt: 300, chapterIn: 400, chapterHold: 1800, chapterOut: 400,
 };
 module.exports = { colors, spacing, radius, fontFamily, fontSize, layout, motion };
