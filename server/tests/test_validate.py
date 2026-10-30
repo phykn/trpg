@@ -10,8 +10,8 @@ from src.story.compile import build
 from src.story.load import StoryError
 
 
-def test_skeleton_passes():
-    assert list(V.load_all(REPO / "scenarios")) == ["lighthouse"]
+def test_every_story_passes():
+    assert list(V.load_all(REPO / "scenarios")) == ["snowpass", "lighthouse"]
 
 
 def first_path_door(raw, roll):

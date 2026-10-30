@@ -806,3 +806,25 @@ def test_a_flag_with_texts_is_a_public_line(creation):
     seen = Seen(0, "cut:pass", None, "none", (), Delta(frozenset({("flag", "gale", 1)}), frozenset({("flag", "gale", 0)})), ())
     assert changes(u, {"tags": []}, seen, parse("cut:pass"), None) == [
         {"kind": "flag", "id": "gale", "value": 1, "text": "돌풍이 붑니다."}]
+
+
+def test_the_snowy_pass_people_path_uses_every_addition():
+    """Golden replay of the second story's talker paths (scenarios/pass, witness paths 4–6)."""
+    from conftest import REPO
+    from src.rules.candidates import avoided
+    from src.story.load import read
+    u = build(*read(REPO / "scenarios" / "pass" / "story.yaml"))
+    play = Play(u, u.witnesses["creation"])
+    states = {}
+    for i in (4, 5, 6):
+        for st in u.witnesses["paths"][i]["steps"]:
+            aid, r = (st["do"], tuple(st["roll"])) if isinstance(st, dict) else (st, None)
+            play.do(aid, r or (1, 1, 0))
+            if aid == "give:tobacco:bangul":
+                assert avoided(u, play.obs.facts, play.obs.hist, "bangul") == ("shrine", "gate")
+        states[i] = play.s
+    s4, s5, s6 = states[4], states[5], states[6]
+    assert (s4.where("bangul"), s4.flag("uses.salt"), s4.flag("chapter")) == ("hill", 1, 2)
+    assert s5.where("salt") is None and s5.where("bangul") == "hill"            # consumed; he stayed below the shrine
+    assert not s5.has("owes", PLAYER, "bangul", "promise")                         # the snowshoes went back
+    assert not s6.has("believes", "mujin", "b_plague") and s6.flag("ending") == "shared"

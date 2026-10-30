@@ -1,0 +1,593 @@
+# 두 번째 이야기. 형식은 docs/story.md. 세 장에 걸쳐 사람마다 바라는 것, 들어줄 부탁, 풀리는 이야기가 있습니다.
+id: snowpass
+version: 1
+title: 눈 덮인 고개
+premise: 고개 너머 고을에 열병이 돌고 있습니다. 당신은 역참의 파발꾼으로, 약방이 꾸린 약 꾸러미를 지고 있습니다. 눈보라가 길을 덮기 전에 고개를 넘어 관문을 지나야 합니다.
+beats: 8
+wound_boxes: 2
+impossible: [총을, 마법, 휴대전화, 자동차, 헬리콥터]
+flags:
+  snow:
+    0: ""
+    1: 눈발이 굵어져 몇 걸음 앞이 흐립니다.
+    2: 눈보라가 몰아쳐 길과 하늘의 경계가 지워졌습니다.
+
+style: |
+  - 한겨울 산골의 역참과 고갯길입니다. 눈발, 바람 소리, 언 손끝, 짧아지는 해로 시간이 흐르는 것을 보여 줍니다.
+  - 문장은 짧고 차갑게 씁니다. 과장하거나 교훈을 말하지 않습니다.
+  - 감정은 입김, 굳은 손, 멈춘 말, 눈 묻은 옷자락 같은 몸과 물건으로 보여 줍니다.
+  - 방울은 겁이 아니라 슬픔으로 고개를 피합니다. 달래는 수다스럽지만 속이 깊습니다. 솔은 다쳐도 고집이 셉니다. 무진은 규칙에 기대어 겁을 감춥니다.
+  - 마감이 다가올수록 빛이 줄고 눈이 깊어지는 것으로 보여 줍니다.
+  - 눈보라의 세기는 사실 줄에 적힌 만큼만 씁니다. 그보다 앞서 그리지 않습니다.
+  - 기계, 총, 마법은 이 세상에 없습니다. 불빛은 화톳불과 관솔 횃불뿐입니다.
+
+player:
+  start: station
+  approaches: [2, 1, 1, 0]
+  traits:
+    pick: 2
+    options:
+      mountaineer: {name: 산사람, text: 산길과 눈을 압니다.}
+      clerk: {name: 아전 출신, text: 관아의 법도와 문서를 압니다.}
+      apothecary: {name: 약방 심부름꾼, text: 약재와 병을 압니다.}
+      hunter: {name: 사냥꾼, text: 짐승의 버릇을 압니다.}
+
+places:
+  station:
+    name: 역참 마당
+    aliases: [역참, 마당]
+    senses: [타닥거리는 화톳불, 처마 끝에 매달린 고드름, 무릎까지 쌓인 눈]
+    exits: [stable, inn]
+  stable:
+    name: 마구간
+    aliases: [외양간]
+    senses: [말의 더운 콧김, 건초 냄새, 삐걱이는 널빤지 벽]
+    exits: [station]
+    complications:
+      c_kick:
+        name: 놀란 말의 뒷발질
+        weight: light
+        effects:
+          - {tag: [player, snag, scene, 멍든 어깨]}
+  inn:
+    name: 주막
+    aliases: [주막집]
+    senses: [끓는 국밥 냄새, 김 서린 창호지, 아궁이의 붉은 불빛]
+    exits: [station]
+    rest: true
+  hill:
+    name: 고갯길
+    aliases: [고개, 산길]
+    senses: [발목을 삼키는 눈, 귀를 에는 바람, 능선 위로 흩날리는 눈가루]
+    exits: [station, shrine]
+    complications:
+      c_slip:
+        name: 눈에 미끄러진 발
+        weight: heavy
+        wound: 1
+  shrine:
+    name: 서낭당
+    aliases: [서낭당 고개, 돌무더기]
+    senses: [오색 천이 얼어붙은 나뭇가지, 쌓아 올린 돌무더기, 처마 밑의 마른 짚]
+    exits: [hill]
+    rest: true
+  gate:
+    name: 관문
+    aliases: [관문 앞, 성문]
+    senses: [높은 돌담, 망루의 깃발 펄럭이는 소리, 문틈으로 새는 화롯불 빛]
+    exits: [shrine]
+
+characters:
+  bangul:
+    name: 방울
+    aliases: [마부, 늙은 마부]
+    pronoun: 그
+    at: stable
+    voice: '느리고 낮은 하게체를 쓰며, 말끝을 흐립니다. 예: "…고개 말인가. 거긴 가지 말게."'
+    persona: ISTJ
+    desire: 고개에서 잃은 아들 몫까지 누군가 무사히 고개를 넘기를 바랍니다.
+    fear: 아들을 삼킨 고갯길에 다시 오르는 것을 두려워합니다.
+    # 잎담배를 건네 신세를 지우면, 고개를 꺼리던 마음이 풀립니다.
+    avoids:
+      - {place: hill, until: {did: ["give:tobacco:bangul"]}}
+      - shrine
+      - gate
+    knows:
+      - 아들은 삼 년 전 겨울, 고갯길 눈사태에 휩쓸렸습니다.
+      - 마구간 짐말은 눈보라 소리에 잔뜩 겁을 먹었습니다.
+      - 오늘 같은 날씨면 해 지기 전에 고개 어귀가 눈에 묻힙니다.
+    beliefs:
+      b_cursed: {title: 성난 고개, text: 고개는 해마다 사람 하나를 데려간다.}
+    wants: [tobacco]
+    topics:
+      t_ridge:
+        title: 능선 길
+        text: 고갯길 눈밭은 오른쪽 바위 능선을 따르면 허리까지 빠지지 않는다.
+        free_when: {any: [{regards: [bangul, player, trust, ">=", 1]}, {owes: [bangul, player, kindness]}]}
+    favor:
+      label: 설피를 빌려 달라고 한다
+      effects:
+        - {move: [snowshoes, player]}
+      promise:
+        name: 설피를 돌려준다
+        keep: {at: [snowshoes, bangul]}
+  dallae:
+    name: 달래
+    aliases: [주모]
+    pronoun: 그녀
+    at: inn
+    voice: '빠르고 정 많은 해요체에, 혀 차는 소리를 섞습니다. 예: "아이고, 이 날씨에 어딜 가요? 국밥이나 한 그릇 해요."'
+    persona: ESFP
+    desire: 관문 너머 고을로 시집간 딸의 안부를 듣고 싶어 합니다.
+    fear: 눈보라 속에서 길손이 얼어 죽는 것을 두려워합니다.
+    knows:
+      - 딸은 관문 너머 고을로 시집갔고, 열병 소문이 돈 뒤로 소식이 없습니다.
+      - 관문은 해가 지면 굳게 닫힙니다.
+      - 장작이 떨어져 아궁이 불이 꺼져 가고 있습니다.
+    beliefs:
+      b_daughter: {title: 딸의 소식, text: 딸은 아직 무사할 것이다.}
+    wants: [kindling]
+    topics:
+      t_side:
+        title: 관문 쪽문
+        text: 관문 오른편 쪽문의 빗장은 바깥에서 끈 하나로 들어 올릴 수 있다.
+        # 장작을 건네 신세를 지우면 굴림 없이 열립니다.
+        free_when: {any: [{regards: [dallae, player, trust, ">=", 1]}, {owes: [dallae, player, kindness]}]}
+    favor:
+      label: 데운 술 한 병을 내어 달라고 한다
+      effects:
+        - {move: [wine, player]}
+      promise:
+        name: 관문까지 가서 딸 소식을 알아 온다
+        keep: {at: [player, gate]}
+  sol:
+    name: 솔
+    aliases: [약초꾼, 젊은 약초꾼]
+    pronoun: 그
+    at: shrine
+    voice: '짧고 퉁명스러운 해요체에, 숨을 고르는 소리가 섞입니다. 예: "괜찮아요. …발목만 좀 삔 거예요."'
+    persona: INFP
+    desire: 관문 너머 고을에서 열병을 앓는 어머니에게 돌아가고 싶어 합니다.
+    fear: 다친 발로 혼자 남겨지는 것을 두려워합니다.
+    # 갈림길에서 부축해 함께 가기로 하면 관문까지 따라갑니다.
+    avoids:
+      - {place: gate, until: {did: ["choose:g_sol:carry"]}}
+    knows:
+      - 약초를 캐러 올라왔다가 눈보라에 발이 묶였습니다.
+      - 서낭당 돌무더기에 기대어 하룻밤을 버텼습니다.
+    beliefs:
+      b_mother: {title: 솔의 어머니, text: 어머니가 관문 너머 고을에서 솔을 기다린다.}
+    wants: [torch]
+    topics:
+      t_ledge:
+        title: 협곡의 디딤돌
+        text: 협곡 위쪽 바위턱은 얼음이 두꺼워 디딜 만하다.
+        free_when: {any: [{regards: [sol, player, trust, ">=", 1]}, {owes: [sol, player, kindness]}]}
+    favor:
+      label: 협곡 건널 곳을 짚어 달라고 한다
+      effects:
+        - {tag: [gorge, edge, chapter, 솔이 짚어 준 디딤돌]}
+      promise:
+        name: 솔을 관문까지 데려간다
+        keep: {at: [sol, gate]}
+  mujin:
+    name: 무진
+    aliases: [수문장, 문지기]
+    pronoun: 그
+    at: gate
+    voice: '딱딱한 하오체를 쓰며, 규칙을 먼저 말합니다. 예: "해가 지면 문은 닫히오. 법이 그렇소."'
+    persona: ESTJ
+    desire: 관문 병사들을 열병에서 지키고 싶어 합니다.
+    fear: 고개를 넘어온 길손이 열병을 옮겨 올까 두려워합니다.
+    knows:
+      - 관문은 해가 지면 닫히고, 날이 밝기 전에는 열리지 않습니다.
+      - 고을 원님은 열병이 돈 뒤로 길손을 함부로 들이지 말라고 했습니다.
+    beliefs:
+      b_plague: {title: 열병 옮기는 길손, text: 고개를 넘어온 길손은 열병을 옮긴다.}
+      b_garrison: {title: 앓아누운 병사들, text: 관문 병사 둘이 열병으로 누워 있다.}
+    wants: [wine]
+    topics:
+      t_bar:
+        title: 빗장의 버릇
+        text: 관문 빗장은 왼쪽 쐐기만 빼면 혼자서도 밀린다.
+        # 약 꾸러미를 보여 주어 의심을 거두면 굴림 없이 열립니다.
+        free_when: {not: {believes: [mujin, b_plague]}}
+    favor:
+      label: 빗장을 반쯤 풀어 달라고 한다
+      effects:
+        - {set: [fill, gate_bar, "+1"]}
+      promise:
+        name: 관문 병사들에게 약을 나눈다
+        keep: {did: ["choose:g_share:half"]}
+        break: {did: ["choose:g_share:keep"]}
+
+things:
+  medicine:
+    name: 약 꾸러미
+    aliases: [약, 약첩]
+    look: 기름먹인 보자기에 싼 약첩 꾸러미. 매듭에 고을 약방의 붉은 표가 달려 있다
+    at: player
+  torch:
+    name: 관솔 횃불
+    aliases: [횃불]
+    look: 송진이 배어 검게 그을린 관솔 횃불. 두어 번 쓰면 다 탈 것 같다
+    at: station
+    uses: 2
+  shovel:
+    name: 넉가래
+    aliases: [눈삽]
+    look: 자루가 긴 나무 넉가래. 날 끝이 닳아 둥글다
+    at: stable
+  kindling:
+    name: 마른 장작
+    aliases: [장작, 땔감]
+    look: 처마 밑에 말려 둔 소나무 장작 한 짐
+    at: stable
+  salt:
+    name: 굵은 소금 자루
+    aliases: [소금, 소금 자루]
+    look: 반쯤 남은 굵은 소금 자루. 두 번 뿌릴 만큼은 된다
+    at: inn
+    uses: 2
+  tobacco:
+    name: 잎담배 쌈지
+    aliases: [잎담배, 담배 쌈지]
+    look: 손때 묻은 가죽 쌈지에 말린 잎담배가 들어 있다
+    at: inn
+  snowshoes:
+    name: 설피
+    aliases: [눈신]
+    look: 머루 덩굴로 엮은 둥근 설피 한 켤레
+    at: bangul
+  wine:
+    name: 데운 술 병
+    aliases: [술, 술병]
+    look: 솜으로 감싸 아직 따뜻한 막걸리 한 병
+    at: dallae
+
+obstacles:
+  drift:
+    name: 눈에 묻힌 고갯길 어귀
+    aliases: [눈더미, 고갯길 어귀]
+    look: 역참 뒤 고갯길로 오르는 길목이 지붕 높이의 눈더미에 묻혔다
+    clue: 눈더미 아래쪽은 아직 단단히 얼지 않았다.
+    at: station
+    boxes: 3
+    risk: normal
+    fits: [force]
+    solutions:
+      s_shovel: {label: 넉가래로 눈을 퍼낸다, approach: force, rely: shovel}
+      s_salt: {label: 소금을 뿌려 언 눈을 녹인다, approach: wits, rely: salt}
+      s_edge: {label: 눈더미 가장자리 바위를 딛고 넘는다, approach: finesse}
+    complications:
+      c_slide: {name: 무너져 내린 눈더미, weight: heavy, wound: 1}
+  horse:
+    name: 겁먹은 짐말
+    aliases: [짐말, 말]
+    look: 눈보라 소리에 귀를 젖히고 발을 구르는 갈색 짐말
+    at: stable
+    boxes: 2
+    risk: low
+    fits: [charm]
+    clashes: [force]
+    solutions:
+      s_soothe: {label: 목을 쓰다듬으며 낮게 달랜다, approach: charm}
+      s_lead: {label: 고삐를 짧게 잡고 천천히 끌어낸다, approach: finesse}
+  snowfield:
+    name: 허리까지 쌓인 눈밭
+    aliases: [눈밭]
+    look: 고갯마루까지 이어진 눈밭. 발을 디딜 때마다 허리까지 빠진다
+    at: hill
+    boxes: 3
+    risk: normal
+    fits: [finesse]
+    solutions:
+      s_shoes: {label: 설피를 신고 눈 위를 걷는다, approach: finesse, rely: snowshoes}
+      s_plow: {label: 몸으로 눈을 헤치며 나아간다, approach: force}
+      s_ridge: {label: 바위 능선을 따라 돌아간다, approach: wits, rely: t_ridge}
+  # 숨은 장애물: 솔과의 대화를 막고, 처음 말을 걸 때 굴림 없이 드러납니다.
+  wolves:
+    name: 굶주린 늑대
+    aliases: [늑대, 늑대 떼]
+    look: 돌무더기 너머에서 이빨을 드러낸 잿빛 짐승 셋
+    at: shrine
+    hidden: 굶주린 늑대 떼가 서낭당 돌무더기 뒤에서 다친 사람을 노리고 있다.
+    boxes: 2
+    risk: normal
+    blocks: [sol]
+    solutions:
+      s_fire: {label: 횃불을 휘둘러 쫓아낸다, approach: wits, rely: torch}
+      s_shout: {label: 고함을 지르며 돌을 던진다, approach: force}
+    complications:
+      c_bite: {name: 종아리를 문 이빨, weight: heavy, wound: 1}
+  gorge:
+    name: 얼음 덮인 협곡
+    aliases: [협곡, 얼음 다리]
+    look: 서낭당 너머 관문으로 가는 길을 끊어 놓은 협곡. 얼음 다리가 반쯤 무너졌다
+    at: shrine
+    boxes: 3
+    risk: normal
+    fits: [wits]
+    solutions:
+      s_grit: {label: 소금을 뿌려 얼음을 거칠게 만든다, approach: wits, rely: salt}
+      s_ledge: {label: 위쪽 바위턱을 디디며 건넌다, approach: finesse, rely: t_ledge}
+      s_leap: {label: 무너진 틈을 단숨에 뛰어넘는다, approach: force}
+  gate_bar:
+    name: 빗장 걸린 관문
+    aliases: [빗장, 관문 빗장]
+    look: 굵은 통나무 빗장이 가로지른 두 짝 나무 문
+    at: gate
+    boxes: 4
+    risk: normal
+    fits: [charm]
+    clashes: [force]
+    solutions:
+      s_plead: {label: 수문장에게 고을 사정을 아뢴다, approach: charm}
+      s_side: {label: 쪽문 빗장을 끈으로 들어 올린다, approach: finesse, rely: t_side}
+      s_wedge: {label: 왼쪽 쐐기를 빼고 빗장을 밀어낸다, approach: force, rely: t_bar}
+      s_wine: {label: 데운 술을 건네며 문지기와 셈을 맞춘다, approach: wits, rely: wine}
+
+chapters:
+  - title: 역참을 떠나다
+    aim: 해가 기울기 전에 눈에 묻힌 고갯길 어귀를 뚫고 고갯길에 오르세요.
+    goal: {at: [player, hill]}
+    clock:
+      name: 몰아치는 눈보라
+      boxes: 5
+      crisis:
+        - {set: [flag, snow, 1]}
+        - {tag: [player, snag, chapter, 언 손]}
+    deadline: {name: 해가 기운다, boxes: 4}
+  - title: 고개를 넘다
+    aim: 길이 눈에 묻히기 전에 서낭당 너머 협곡을 건너 관문에 닿으세요.
+    goal: {at: [player, gate]}
+    clock:
+      name: 거세지는 눈보라
+      boxes: 6
+      crisis:
+        - {set: [flag, snow, 2]}
+        - {tag: [player, snag, chapter, 얼어붙은 발]}
+    deadline: {name: 길이 눈에 묻힌다, boxes: 5}
+  - title: 관문을 지나다
+    aim: 관문이 닫히기 전에 빗장을 풀고 약을 고을로 들이세요.
+    clock:
+      name: 얼어드는 몸
+      boxes: 5
+      crisis:
+        - {set: [fill, gate_bar, "-1"]}
+        - {tag: [player, snag, chapter, 곱은 손가락]}
+    deadline: {name: 관문이 닫힌다, boxes: 4, ending: shut}
+
+threats:
+  # 고갯길에 들어서면 눈처마가 무너지기 시작합니다. 눈밭을 다져 지나가거나 관문에 닿으면 뒤에 남습니다.
+  t_avalanche:
+    name: 무너지는 눈처마
+    boxes: 3
+    appears_when: {at: [player, hill]}
+    arrival:
+      - {unlink: [hill, station]}
+      - {unlink: [station, hill]}
+      - {tag: [player, snag, chapter, 눈에 파묻힌 짐]}
+
+forks:
+  g_sol:
+    name: 솔의 부탁
+    boxes: 2
+    appears_when: {all: [{at: [player, shrine]}, {at: [sol, shrine]}, {fill: [wolves, "=", full]}]}
+    choices:
+      carry:
+        name: 솔을 부축해 함께 간다
+        effects:
+          - {set: [regards, sol, player, trust, "+1"]}
+          - {tag: [player, snag, chapter, 부축한 무게]}
+      ahead:
+        name: 솔을 서낭당에 두고 먼저 간다
+        effects:
+          - {tag: [player, edge, chapter, 가벼운 발걸음]}
+    default:
+      name: 망설이는 사이 솔이 혼자 일어서다 다시 넘어진다
+      effects:
+        - {set: [regards, sol, player, trust, "-1"]}
+  g_share:
+    name: 약을 나눠 달라는 청
+    boxes: 2
+    appears_when: {all: [{at: [player, gate]}, {at: [mujin, gate]}, {fill: [gate_bar, ">=", 2]}]}
+    choices:
+      half:
+        name: 약 절반을 관문 병사들에게 남긴다
+        effects:
+          - {set: [regards, mujin, player, trust, "+2"]}
+          - {set: [fill, gate_bar, "+1"]}
+      keep:
+        name: 약을 모두 고을로 가져간다
+        effects:
+          - {set: [regards, mujin, player, trust, "-1"]}
+    default:
+      name: 대답을 미루는 사이 수문장이 등을 돌린다
+      effects:
+        - {set: [fill, gate_bar, "-1"]}
+
+claims:
+  c_clean: {text: 열병 앓는 사람과는 마주친 적도 없다고 말한다, against: b_plague}
+
+latents:
+  l_cheol:
+    name: "인맥: 고갯길 사냥막에 옛 길동무가 산다"
+    when: {at: [player, hill]}
+    text: 고갯길 사냥막의 철은 당신과 함께 파발을 뛰던 옛 길동무다.
+    brings:
+      cheol:
+        name: 철
+        aliases: [사냥막 주인]
+        pronoun: 그
+        voice: '큰 소리로 웃는 반말을 씁니다. 예: "하하, 이 눈 속에 누군가 했더니!"'
+        persona: ESTP
+        desire: 옛 길동무에게 진 빚을 갚고 싶어 합니다.
+        fear: 다시 파발을 뛰다 동무를 잃는 것을 두려워합니다.
+    effects:
+      - {move: [cheol, hill]}
+      - {set: [regards, cheol, player, trust, 3]}
+  l_flint:
+    name: "준비: 불 피울 채비를 품에 챙겨 두었다"
+    when: {at: [player, shrine]}
+    text: 당신은 떠나기 전에 부싯돌과 마른 쑥을 품에 챙겨 두었다.
+    brings:
+      flint:
+        name: 부싯깃 주머니
+        aliases: [부싯돌, 부싯깃]
+        look: 부싯돌과 마른 쑥을 넣은 작은 주머니
+    effects:
+      - {move: [flint, player]}
+
+triggers:
+  # 짐말을 달래 끌어내면 말이 눈더미를 밟아 다져 줍니다.
+  tr_horse_tramples:
+    when: {fill: [horse, "=", full]}
+    effects:
+      - {set: [fill, drift, "+1"]}
+  tr_drift_open:
+    when: {fill: [drift, "=", full]}
+    effects:
+      - {link: [station, hill]}
+  # 장작을 받은 달래가 아궁이에 불을 지피면 주막이 쉼터가 됩니다.
+  tr_fire:
+    when: {at: [kindling, dallae]}
+    effects:
+      - {consume: [kindling]}
+      - {tag: [inn, edge, chapter, 활활 타는 아궁이]}
+  # 잎담배를 받은 방울이 마당으로 나와 떠나는 길을 지켜봅니다.
+  tr_bangul_sees_off:
+    when: {all: [{did: ["give:tobacco:bangul"]}, {flag: [chapter, 1]}]}
+    effects:
+      - {move: [bangul, station]}
+  tr_snow_rises:
+    when: {flag: [snow, 1]}
+    effects:
+      - {tag: [drift, snag, chapter, 다시 쌓이는 눈]}
+  tr_snowfield_packed:
+    when: {fill: [snowfield, "=", full]}
+    effects:
+      - {retire: t_avalanche}
+      - {tag: [player, edge, chapter, 다져진 발밑]}
+  tr_avalanche_behind:
+    when: {flag: [chapter, 3]}
+    effects:
+      - {retire: t_avalanche}
+  # 늑대가 물러나면 솔이 어머니 이야기를 꺼내며 함께 가자고 청합니다.
+  tr_sol_asks:
+    when: {fill: [wolves, "=", full]}
+    effects:
+      - {reveal: [player, b_mother]}
+  tr_gorge_crossed:
+    when: {fill: [gorge, "=", full]}
+    effects:
+      - {link: [shrine, gate]}
+  tr_whiteout:
+    when: {flag: [snow, 2]}
+    effects:
+      - {tag: [gorge, snag, chapter, 눈에 묻힌 디딤돌]}
+  # 약 꾸러미의 약방 표를 보면 무진이 의심을 거둡니다. 그 뒤로는 열병 이야기가 거짓으로 들리지 않습니다.
+  tr_medicine_seen:
+    when: {did: ["show:medicine:mujin"]}
+    effects:
+      - {forget: [mujin, b_plague]}
+      - {set: [regards, mujin, player, trust, "+1"]}
+  tr_claim_lands:
+    when: {all: [{did: ["talk:mujin;claim=c_clean"]}, {not: {believes: [mujin, b_plague]}}]}
+    effects:
+      - {set: [fill, gate_bar, "+1"]}
+  # 빗장이 반쯤 풀리면 무진이 앓는 병사들 이야기를 꺼냅니다.
+  tr_garrison:
+    when: {all: [{flag: [chapter, 3]}, {fill: [gate_bar, ">=", 2]}]}
+    effects:
+      - {reveal: [player, b_garrison]}
+  tr_sol_home:
+    when: {all: [{flag: [chapter, 3]}, {at: [sol, gate]}]}
+    effects:
+      - {set: [regards, mujin, player, trust, "+1"]}
+      - {tag: [player, edge, chapter, 고을 길을 아는 솔]}
+
+endings:
+  shared:
+    title: 나눈 약
+    when: {all: [{fill: [gate_bar, "=", full]}, {did: ["choose:g_share:half"]}]}
+    frame: 관문 병사들과 고을 사람들이 같은 약을 달여 먹고, 열병이 고개 양쪽에서 함께 물러갑니다.
+  whole:
+    title: 온전한 약
+    when: {all: [{fill: [gate_bar, "=", full]}, {not: {did: ["choose:g_share:half"]}}]}
+    frame: 약 꾸러미가 온전히 고을 약방에 닿고, 고을의 열병이 물러갑니다.
+  shut:
+    title: 닫힌 관문
+    frame: 해가 지고 관문이 닫힙니다. 약 꾸러미는 문 밖에서 밤을 넘깁니다.
+  collapse:
+    title: 쓰러짐
+    frame: 당신은 눈 속에서 더 버티지 못하고 쓰러집니다. 약 꾸러미는 누군가의 손에 들려 고개를 넘습니다.
+
+witnesses:
+  creation: {approaches: {force: 2, finesse: 1, wits: 1, charm: 0}, traits: [mountaineer, apothecary]}
+  paths:
+    - reach: {goal: 1}
+      steps:
+        - {do: "try:drift:force", roll: [6, 6, 0]}    # 어울림 → 눈더미 2칸
+        - {do: "try:drift:force", roll: [6, 6, 0]}    # 3칸 → 고갯길이 열림
+        - go:hill                                      # 목표 → 2장, 눈처마 위협 등장
+    - reach: {goal: 2}
+      after: 0
+      steps:
+        - go:shrine
+        - {do: "try:gorge:wits", roll: [6, 6, 0]}     # 어울림 → 협곡 2칸
+        - {do: "try:gorge:wits", roll: [6, 6, 0]}     # 3칸 → 관문으로 가는 길
+        - go:gate                                      # 목표 → 3장
+    - reach: {ending: shared}
+      after: 1
+      steps:
+        - {do: "try:gate_bar:charm", roll: [6, 6, 0]} # 어울림 → 빗장 2칸, 병사 이야기와 갈림길
+        - choose:g_share:half                         # 빗장 +1
+        - {do: "try:gate_bar:charm", roll: [6, 6, 0]} # 4칸 → 나눈 약
+    - reach: {ending: whole}
+      after: 1
+      steps:
+        - {do: "try:gate_bar:charm", roll: [6, 6, 0]}
+        - choose:g_share:keep
+        - {do: "try:gate_bar:charm", roll: [6, 6, 0]} # 4칸 → 온전한 약
+    # 사람을 얻는 길: 잎담배로 방울의 마음을 풀어 데려가고, 소금을 다 쓰고, 약을 보여 의심을 거둡니다.
+    - reach: {goal: 1}
+      steps:
+        - go:inn
+        - take:tobacco
+        - take:salt
+        - go:station
+        - go:stable
+        - give:tobacco:bangul                          # 신세 → 방울이 마당으로 나오고, 고개를 꺼리던 마음이 풀림
+        - go:station
+        - talk:bangul:favor                            # 신세를 갚아 굴림 없이 설피를 빌림
+        - talk:bangul:come                             # 믿음 1 → 굴림 없이 따라옴
+        - {do: "try:drift:wits;rely=thing:salt", roll: [6, 6, 0]}   # 1칸, 소금 한 번
+        - {do: "try:drift:force;rely=with:bangul", roll: [6, 6, 0]} # 3칸 → 고갯길이 열림
+        - go:hill                                      # 방울도 함께 고갯길에 오름
+    - reach: {goal: 2}
+      after: 4
+      steps:
+        - give:snowshoes:bangul                        # 설피를 돌려주어 약속을 지킴
+        - go:shrine                                    # 방울은 서낭당을 꺼려 고갯길에 남음
+        - {do: "try:gorge:wits;rely=thing:salt", roll: [6, 6, 0]}   # 어울림 → 2칸, 소금을 다 씀
+        - {do: "try:gorge:wits", roll: [6, 6, 0]}     # 3칸 → 관문으로 가는 길
+        - go:gate
+    - reach: {ending: shared}
+      after: 5
+      steps:
+        - show:medicine:mujin                          # 약방 표를 보고 무진이 의심을 거둠
+        - talk:mujin:t_bar                             # 의심이 걷혀 굴림 없이 열림
+        - talk:mujin:chat;claim=c_clean;tone=deceive   # 거짓이 들키지 않고 빗장 +1
+        - {do: "try:gate_bar:charm", roll: [6, 6, 0]} # 3칸, 병사 이야기와 갈림길
+        - choose:g_share:half                          # 4칸 → 나눈 약
+    # 보통 + 어긋남 + 무리의 실패마다 상처가 쌓이고, 흉터 셋이면 쓰러집니다.
+    - reach: {ending: collapse}
+      steps:
+        - go:stable
+        - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}
+        - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}
+        - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}
+        - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}
+        - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}
+        - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}

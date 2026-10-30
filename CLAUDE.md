@@ -5,7 +5,7 @@ A story-agnostic Korean web TRPG engine. The player types a Korean sentence; rul
 ## Layout
 
 - **Design (source of truth)**: [docs/](docs/) — `ontology.md` (world, invariants, operations, save format), `story.md` (story format and validation), `rule.md` (candidates, rolls, time, people), `engine.md` (interpretation, cards, narration, turn protocol), `api.md`, `ui.md`, `fun.md` (metrics).
-- **Story**: [scenarios/skeleton/](scenarios/skeleton/) (`story.yaml` with id `lighthouse`, and `evals.yaml` for interpretation) is the only story.
+- **Stories**: [scenarios/skeleton/](scenarios/skeleton/) (id `lighthouse`, the smallest story using every device, with `evals.yaml` for interpretation) and [scenarios/pass/](scenarios/pass/) (id `snowpass`, three chapters written as a game).
 - **Server** (`server/src/`): `onto/` (world, log, saves), `rules/` (pure rules), `story/` (loading, validation, evals), `interpret.py`, `narrate.py`, `jobs.py` (what a narration reads), `cards.py`, `view.py`, `service.py`, `api.py`, `fun.py` (offline metrics).
 - **Client** (`client/`): `logic/useGame.ts` (state machine), `logic/reveal.ts`, `components/ui/` (shared icon, button, sheet, motion, dialog, notice), `components/game/`, `screens/`.
 - **Mac app** (`app/`): `build.sh` builds `TRPG.app`, which starts and stops `npm run serve` and shows the phone address, passing the loaded models as `DECISION_MODEL` and `LLM_MODEL`.

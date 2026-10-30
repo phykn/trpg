@@ -308,7 +308,7 @@ async def test_http_routes(client):
     async with client:
         assert (await client.get("/stories", auth=("u", "x"))).status_code == 401
         stories = (await client.get("/stories")).json()
-        assert stories[0]["id"] == "lighthouse" and stories[0]["pick"] == 2
+        assert {x["id"]: x["pick"] for x in stories} == {"snowpass": 2, "lighthouse": 2}
         r = await client.post("/games", json={"request_id": "abc", "story": "lighthouse", "creation": CREATION})
         assert r.status_code == 422
         r = await client.post("/games", json={"request_id": "abc", "story": "lighthouse",

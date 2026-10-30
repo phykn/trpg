@@ -1,6 +1,6 @@
 # Story format
 
-The story files are the whole story; the engine code contains none of it. This document defines the file format of `scenarios/<folder>/` and the validation run at startup. The smallest story that follows this format is [scenarios/skeleton/story.yaml](../scenarios/skeleton/story.yaml).
+The story files are the whole story; the engine code contains none of it. This document defines the file format of `scenarios/<folder>/` and the validation run at startup. The smallest story that follows this format is [scenarios/skeleton/story.yaml](../scenarios/skeleton/story.yaml). [scenarios/pass/story.yaml](../scenarios/pass/story.yaml) is a fuller one: three chapters, four people each with a want, a favor and a topic that a kindness opens, and the devices the skeleton leaves out (`uses`, `consume`, `forget`, an `avoids` with `until`, a flag with texts).
 
 ```
 scenarios/<folder>/   any folder name; the story id is the id in story.yaml
