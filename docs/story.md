@@ -67,7 +67,7 @@ An effect is a sequence of operations, composed in order, each one reading the s
 | `{set: [regards, g, h, axis, v]}` | `set_(regards, …)` | Character |
 | `{set: [flag, name, v]}` | `set_(flag, …)` | A flag declared in `flags`, with a value among the declared ones |
 | `{reveal: [g, p]}` | `reveal(g, p)` | Proposition |
-| `{tag: [x, tag, lifetime, default name]}` | `tag(x, tag, lifetime)` | The lifetime is `scene` or `chapter`. The default name is used until narration names the tag |
+| `{tag: [x, tag, lifetime, default name]}` | `tag(x, tag, lifetime)` | The lifetime is `scene` or `chapter`. The default name is used until narration names the tag. A snag's name says what goes wrong and an edge's what helps: a snag named "흔들리는 불꽃" read as the lamp catching (goal-6-odd 50) |
 | `{link: [p, q]}`, `{unlink: [p, q]}` | `link`, `unlink` | Places |
 | `{retire: o}` | `retire(o)` | Obstacle, threat, fork |
 
@@ -146,7 +146,7 @@ Starting possessions are the `things` with `at: player`. Beats, wounds and growt
 | `at` | Starting place. A character who starts offstage is brought in by a latent (3.10) | |
 | `avoids` | Places they will not enter even while traveling with the player (rule.md 5.1, companions). Matching these to their `fear` brings the character to life. When absent, they follow anywhere. The story never puts them in such a place, at the start or by a `move` (V3): 윤슬, brought to the lamp room she avoided, was shown agreeing to come along "but not into the lamp room" while she stood in it (goal-4-talker 46, goal-5-odd 37, goal-5-explorer 43) | |
 | `regards` | Starting values toward the player, `{trust, fear}`, `−3…3`. 0 when absent | |
-| `beliefs` | `{id: sentence}`. Propositions they believe from the start. Private: they ground exposure and are never told | |
+| `beliefs` | `{id: sentence}` or `{id: {title, text}}`. Propositions they believe from the start. Private: they ground exposure and are never told. A belief the player can come to share should have a `title`, the short name chips and the journal use; without one its sentence served as a label ("…꺼져 있다.에 기대어", goal-6-bold 16) | |
 | `knows` | Up to 4 sentences of everyday knowledge they tell anyone who asks (ontology.md 3.4). Public, so never a hidden fact, and it names no other person, since the narrator moves anyone its context names (V4); knowledge that should cost trust or a roll is a topic. Without it a person asked about their own life made it up | |
 | `wants` | Things they welcome when handed them (rule.md 5.1 `give`). Shown on screen and in prompts only while the thing is not hidden from the player | |
 | `topics` | `{id: {title, text or reveals, free_when}}`. `reveals: x` reveals `x.hidden` | `free_when`: visible |

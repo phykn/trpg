@@ -376,7 +376,7 @@ async def test_a_fork_in_the_scene_lends_its_choices_as_the_examples_of_choose()
     from src.story.evals import interpret, replay
     u = STORIES["lighthouse"]
     decision = FakeDecision({"s1": {"choose": 0.9}, "n": {"1": 0.9}})
-    await interpret(Interpreter(decision), u, replay(u, {"path": 0, "step": 4, "then": [{"do": "try:lamp:wits", "roll": [6, 6, 0]}]}),
+    await interpret(Interpreter(decision), u, replay(u, {"path": 0, "step": 4, "then": [{"do": "try:lens:finesse", "roll": [6, 6, 0]}]}),
                     "등불에 기름을 붓는다")
     choose = decision.asked[0][1]["s1"]["criteria"]["choose"]
     assert "기름을 모두 등불에 붓는다" in choose and "절반을 마을 봉화에 남긴다" in choose
@@ -396,7 +396,8 @@ async def test_a_guarded_target_offers_the_ways_around_the_guard(tmp_path):
     card = out["view"]["card"]
     assert out["kind"] == "card" and card["kind"] == "clarify" and not out["steps"]
     assert card["question"] == "사나운 누렁이가 도해를 막고 있습니다. 어떻게 할까요?"
-    assert [o["label"] for o in card["options"]] == ["낮은 목소리로 달래며 다가간다", "말린 생선을 던져 시선을 돌린다"]
+    # the bait needs the dried fish in hand, so only the soothing holds
+    assert [o["label"] for o in card["options"]] == ["낮은 목소리로 달래며 다가간다"]
     out = await svc.command(gid, {"request_id": "pick", "revision": out["view"]["revision"], "card": card["id"],
                                   "pick": card["options"][0]["id"]})
     assert out["view"]["card"]["kind"] == "roll" and out["view"]["card"]["selected"] == "try:hound:charm"
@@ -408,7 +409,7 @@ async def test_a_guarded_target_offers_the_ways_around_the_guard(tmp_path):
     st = await svc.interpreter.fill(u, g, {"schema": "talk", "text": "윤슬에게 등대에 대해 묻는다", "fixed": {}})
     assert st == {"refused": "윤슬은 여기 없습니다."}
     st = await svc.interpreter.fill(u, g, {"schema": "talk", "text": "왜 못하지?", "fixed": {}})
-    assert st["clarify"]["slot"] == "detour" and set(st["clarify"]["resume"]) == {"try:hound:charm", "try:hound:wits"}
+    assert st["clarify"]["slot"] == "detour" and set(st["clarify"]["resume"]) == {"try:hound:charm"}
     # the guard keeps things from being handed over too
     out = await svc.command(gid, {"request_id": "g", "revision": out["view"]["revision"], "action": "give:letter:dohae"})
     assert out["kind"] == "refused"

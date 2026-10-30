@@ -53,7 +53,10 @@ ACTION = {
     "grow_trait": "특성 바꾸기: {name}",
     "grow_scar": "흉터 지우기: {name}",
 }
-SWAP = "{old} → {new}"
+# What a swap gains comes first: "뱃사람 → 토박이" read as giving a skill up (qa_test/runs/goal-6-bold 9).
+SWAP = "{new} 얻고 {old} 내려놓기"
+# A scar's growth said nothing of what it does (qa_test/runs/goal-6-bold 9).
+SCAR_GROWTH = "흉터의 불리함이 사라집니다"
 RELYING = "{rely}에 기대어 "
 # Something known about a thing is named apart from the thing: the roll card listed both under the thing's name, and a
 # clue about an obstacle read as the obstacle helping against itself (qa_test/runs/play-3-explorer 13, 37; play-3-talker 30).
@@ -347,6 +350,7 @@ CHANGE = {
     "ending": "이야기가 끝납니다: {name}",
 }
 STEP_LINE = "{label}: {result}"
+# The change frames are records: "…가 생겼습니다" and a tag's raw name reached the screen (qa_test/runs/goal-6-odd 3).
 NARRATOR = """당신은 한국어 TRPG의 서술자입니다. [일어난 일]을 장면으로 보여 줍니다.
 - 플레이어를 '당신'이라 부르고, 대사 밖의 모든 문장을 합니다체(-습니다/-ㅂ니다)로 끝냅니다.
 - {sentences}문장 이하, 공백 포함 {chars}자 이하로 씁니다.
@@ -356,6 +360,7 @@ NARRATOR = """당신은 한국어 TRPG의 서술자입니다. [일어난 일]을
 - 이 자리의 인물은 [문맥]의 성격, 말투, 마음대로 반응합니다. 당신이 말을 걸거나 무언가를 건네면 그 인물이 큰따옴표 대사로 직접 답합니다. 인물은 제자리에서 표정, 몸짓, 짧은 대사로 반응하고, 대사마다 누가 말하는지 앞뒤 문장에서 밝힙니다. 대사의 말씨는 [문맥]의 말투를 따르되 예시 대사를 그대로 옮기지 않고, 인물은 당신을 호칭 없이 부릅니다.
 - 인물은 [문맥]과 [일어난 일]에 적힌 것만 압니다. 그 밖의 것을 물으면 모른다고 하거나 말을 돌립니다.
 - [일어난 일]에 성공이나 실패가 있으면 첫 문장에서 그 결과가 분명히 드러나게 씁니다. 실패는 일이 틀어지는 모습으로 씁니다.
+- [일어난 일]은 기록입니다. '생겼습니다', '사라졌습니다', '뜻대로 되어 갑니다' 같은 기록 말투와 태그 이름을 문장 끝에 그대로 옮기지 않고, 눈앞의 모습으로 풀어 씁니다.
 - [플레이어 문장]은 뜻을 헤아려 읽습니다. 줄임말, 오타, 말투를 그대로 옮기지 않고 당신의 자연스러운 행동과 말로 보여 줍니다.
 - 플레이어가 묻거나 알고 싶어 하는 것은 [문맥]으로 답할 수 있는 만큼 장면 속에서 답합니다. [문맥]에 없는 것은 당신이 아직 알아낼 수 없는 모습으로 씁니다.
 - 그림 없이 글로만 보여 주는 게임이니 글솜씨로 승부합니다. '눈을 반짝이며', '코끝을 스칩니다' 같은 흔한 표현 대신, 이 인물과 이 자리에만 있을 선명한 것 하나를 문장마다 고릅니다.

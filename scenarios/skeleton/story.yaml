@@ -72,14 +72,16 @@ characters:
     knows:
       - 아들은 몇 해 전 뭍으로 일하러 떠났고, 편지 한 장 없습니다.
       - 등대 불은 사흘 전 밤에 꺼졌습니다.
+      - 등대에 쓸 기름을 조금 남겨 두었지만, 아무에게나 내주지는 않습니다.
     beliefs:
-      b_no_keeper: 이 섬에 새 등대지기는 오지 않는다.
+      b_no_keeper: {title: 새 등대지기, text: 이 섬에 새 등대지기는 오지 않는다.}
     wants: [letter]
     topics:
       t_oil:
         title: 등대 기름
         reveals: oil
-        free_when: {regards: [dohae, player, trust, ">=", 1]}
+        # 편지를 건네 신세를 지우면 기름 이야기가 굴림 없이 열립니다.
+        free_when: {any: [{regards: [dohae, player, trust, ">=", 1]}, {owes: [dohae, player, kindness]}]}
     favor:
       label: 등대 열쇠를 빌려 달라고 한다
       effects:
@@ -107,7 +109,7 @@ characters:
       - 아버지는 새벽에 고깃배를 몰고 나갔고 아직 돌아오지 않았습니다.
       - 등대 불이 꺼진 뒤로 아무도 등대에 오르지 않았습니다.
     beliefs:
-      b_beacon: 마을 봉화는 기름이 떨어져 꺼져 있다.
+      b_beacon: {title: 꺼진 마을 봉화, text: 마을 봉화는 기름이 떨어져 꺼져 있다.}
     wants: [oil]
     topics:
       t_wall:
@@ -131,7 +133,12 @@ things:
     aliases: [밀랍 통]
     look: 뚜껑을 밀랍으로 막은 작은 통
     at: village
-    hidden: 도해가 등대 기름통을 마을 창고 궤짝에 넣어 두었다.
+    hidden: 도해가 등대 기름통을 마을의 그물 더미 밑에 숨겨 두었다.
+  fish:
+    name: 말린 생선
+    aliases: [생선]
+    look: 장대에 꿰어 말린 생선 몇 마리. 비린내가 바람에 실려 온다
+    at: village
 
 obstacles:
   door:
@@ -153,25 +160,38 @@ obstacles:
   bridge:
     name: 흔들리는 나무다리
     aliases: [다리]
-    look: 밧줄 하나가 끊어진 좁은 다리
+    look: 등대 앞 곶과 섬을 잇는 하나뿐인 길. 밧줄 하나가 끊어져 흔들린다
     at: yard
     risk: low
     fits: [force]
     solutions:
       s_rope: {label: 밧줄로 다리를 동여맨다, approach: force}
       s_wedge: {label: 쐐기를 박아 기둥을 세운다, approach: wits}
+  # 렌즈를 먼저 닦아야 심지에 불을 붙일 수 있습니다. 2장이 한 카드의 되풀이가 되지 않도록 두 모양으로 나눕니다.
+  lens:
+    name: 검댕 낀 렌즈
+    aliases: [렌즈]
+    look: 검댕이 두껍게 앉은 커다란 렌즈. 틀이 녹슬어 빛이 나갈 쪽을 잃었다
+    at: lamp_room
+    boxes: 2
+    risk: normal
+    fits: [finesse]
+    blocks: [lamp]
+    solutions:
+      s_wipe: {label: 렌즈의 검댕을 닦아 낸다, approach: finesse}
+      s_turn: {label: 녹슨 렌즈 틀을 힘껏 돌려 바다 쪽에 맞춘다, approach: force}
   lamp:
     name: 꺼진 등불
-    aliases: [등불, 렌즈]
-    look: 검댕이 앉은 커다란 렌즈와 마른 심지
+    aliases: [등불, 심지]
+    look: 마른 심지와 바닥이 드러난 기름받이
     at: lamp_room
-    boxes: 4
+    boxes: 3
     risk: normal
     fits: [wits]
     clashes: [charm]
     solutions:
       s_oil: {label: 기름을 붓고 심지를 다듬는다, approach: wits, rely: oil}
-      s_lens: {label: 렌즈를 닦고 불씨를 살린다, approach: finesse}
+      s_spark: {label: 부싯돌로 불씨를 살린다, approach: finesse}
     complications:
       c_lens_crack:
         name: 렌즈에 간 금
@@ -189,7 +209,7 @@ obstacles:
     blocks: [dohae]
     solutions:
       s_soothe: {label: 낮은 목소리로 달래며 다가간다, approach: charm}
-      s_bait: {label: 말린 생선을 던져 시선을 돌린다, approach: wits}
+      s_bait: {label: 말린 생선을 던져 시선을 돌린다, approach: wits, rely: fish}
 
 chapters:
   - title: 등대에 오르다
@@ -212,13 +232,16 @@ chapters:
     deadline: {name: 배가 암초에 닿는다, boxes: 3, ending: wreck}
 
 threats:
+  # 다리가 무너지면 등대 앞 곶은 마을과 선착장에서 끊깁니다. 열쇠, 기름, 사람은 모두 건너편에 있습니다.
   t_bridge_fall:
     name: 무너지는 다리
-    boxes: 3
+    boxes: 2
     appears_when: {at: [player, yard]}
     arrival:
       - {unlink: [village, yard]}
       - {unlink: [yard, village]}
+      - {unlink: [dock, yard]}
+      - {unlink: [yard, dock]}
 
 forks:
   g_oil:
@@ -272,12 +295,18 @@ triggers:
     when: {flag: [chapter, 2]}
     effects:
       - {retire: t_bridge_fall}
-  # 등불에 처음 손대면 윤슬이 겁을 누르고 올라와 봉화에 쓸 기름을 청합니다.
+  # 렌즈에 처음 손대면 윤슬이 겁을 누르고 올라와 봉화에 쓸 기름을 청합니다.
   tr_yunseul_climbs:
-    when: {did: ["try:lamp"]}
+    when: {did: ["try:lens"]}
     effects:
       - {move: [yunseul, lamp_room]}
       - {reveal: [player, b_beacon]}
+  # 기름통이 아직 마을에 숨어 있으면 윤슬이 찾아 들고 올라옵니다. 가르는 물음에는 가를 기름이 있어야 합니다.
+  tr_yunseul_brings_oil:
+    when: {all: [{did: ["try:lens"]}, {at: [oil, village]}]}
+    effects:
+      - {move: [oil, yunseul]}
+      - {reveal: [player, oil.hidden]}
   tr_spray:
     when: {at: [player, yard]}
     effects:
@@ -286,7 +315,7 @@ triggers:
   tr_gale:
     when: {flag: [gale, 1]}
     effects:
-      - {tag: [lamp, snag, chapter, 흔들리는 불꽃]}
+      - {tag: [lamp, snag, chapter, 꺼질 듯한 불꽃]}
 
 endings:
   two_lights:
@@ -316,14 +345,16 @@ witnesses:
     - reach: {ending: two_lights}
       after: 0
       steps:
-        - {do: "try:lamp:wits", roll: [6, 6, 0]}      # 13, 어울림 → 2칸, 윤슬이 올라와 기름 갈림길 등장
+        - {do: "try:lens:finesse", roll: [6, 6, 0]}   # 어울림 → 렌즈 2칸, 윤슬이 기름통을 들고 올라와 갈림길 등장
         - choose:g_oil:beacon
-        - {do: "try:lamp:wits", roll: [6, 6, 0]}      # 4칸, 봉화를 고름 → 두 개의 불
+        - {do: "try:lamp:wits", roll: [6, 6, 0]}      # 등불 2칸
+        - {do: "try:lamp:wits", roll: [6, 6, 0]}      # 3칸, 봉화를 고름 → 두 개의 불
     - reach: {ending: lone_light}
       after: 0
       steps:
-        - {do: "try:lamp:wits", roll: [6, 6, 0]}      # 2칸, 윤슬이 올라와 기름 갈림길 등장
-        - choose:g_oil:all_in                         # 등불 +2 → 4칸 → 등대의 불
+        - {do: "try:lens:finesse", roll: [6, 6, 0]}   # 렌즈 2칸, 윤슬이 올라와 기름 갈림길 등장
+        - choose:g_oil:all_in                         # 등불 +2
+        - {do: "try:lamp:wits", roll: [6, 6, 0]}      # 3칸 → 등대의 불
     # 높음(보통 + 어긋남 + 무리)의 실패: 위험 시계 +2, 무거운 복잡화를 u로 고름.
     # 후보는 엔진의 [상처 +1, 장면 끝], 원고의 [c_door_cut] 차례이고 u = 0이 상처 +1.
     - reach: {ending: collapse}

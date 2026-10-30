@@ -242,8 +242,9 @@ def test_an_open_promise_outlives_chapters_and_the_ending(u, play):
         play.do(aid, r)
     trust = play.s.regards("dohae", PLAYER, "trust")
     assert play.s.flag("chapter") == 2 and play.s.has("owes", PLAYER, "dohae", "promise")
-    play.do("try:lamp:wits", (6, 6, 0))
+    play.do("try:lens:finesse", (6, 6, 0))
     play.do("choose:g_oil:all_in")
+    play.do("try:lamp:wits", (6, 6, 0))
     assert ended(play.s) and play.s.has("owes", PLAYER, "dohae", "promise")
     assert play.s.regards("dohae", PLAYER, "trust") == trust and not play.s.marks(PLAYER)
     assert ("owes", PLAYER, "dohae", "promise") in legacy(u, play.obs)
@@ -338,6 +339,8 @@ def test_a_fitting_approach_fills_one_box_more(u, creation):
     for st in path_steps(u, 0):
         aid, r = (st["do"], tuple(st["roll"])) if isinstance(st, dict) else (st, None)
         play.do(aid, r)
+    play.do("try:lens:finesse", (6, 6, 0))                                # the lens fits finesse
+    assert play.s.fill("lens") == 2
     play.do("try:lamp:wits", (6, 6, 0))                                   # the lamp fits wits
     assert play.s.fill("lamp") == 2
     play.do("try:lamp:finesse", (6, 6, 0))
@@ -675,7 +678,7 @@ def test_one_scar_is_not_a_collapse(u, creation):
                    ("try:door:finesse", (6, 6, 0)), ("go:lamp_room", None)):
         play.do(aid, r)
     assert play.s.flag("chapter") == 2 and play.s.stat(PLAYER, "wounds") == 1 and not play.s.marks(PLAYER)
-    play.do("try:lamp:charm", (1, 1, 0))                                  # high: u = 0 picks a wound, the second
+    play.do("try:lens:finesse;strain=forced", (1, 1, 0))                  # high: u = 0 picks a wound, the second
     assert not ended(play.s) and play.s.marks(PLAYER) == [(1, "snag", "scar")] and play.s.stat(PLAYER, "wounds") == 0
 
 

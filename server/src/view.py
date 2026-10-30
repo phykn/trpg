@@ -45,7 +45,9 @@ def prop_label(u, pid: str) -> str:
     if pid in u.latents:
         return u.latents[pid].name
     p = u.props[pid]
-    return ko.fill(ko.CLUE, name=u.name(p.about[0])) if p.about else p.text
+    if p.title:
+        return p.title
+    return ko.fill(ko.CLUE, name=u.name(p.about[0])) if p.about else p.text.rstrip(".")
 
 
 def holders(u, pid: str) -> list[str]:
@@ -361,7 +363,7 @@ def game_view(u, g) -> dict:
             for a in recommend(u, o)],
         "growth": [] if ending or (f.stat(PLAYER, "growth") or 0) < 1 else [
             {"action": str(a), "label": action_label(u, o, p, a), **dict(zip(("kind", "name"), growth_name(u, o, p, a))),
-             "text": u.traits[a.intent[2]][1] if a.intent[0] == "trait" else ""}
+             "text": u.traits[a.intent[2]][1] if a.intent[0] == "trait" else ko.SCAR_GROWTH if a.intent[0] == "scar" else ""}
             for a in candidates(u, o) if a.schema == "grow"],
         "card": (p.get("card") or {}).get("public"),
         "last": None if last is None else {

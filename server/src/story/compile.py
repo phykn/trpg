@@ -366,8 +366,15 @@ class _Builder:
                     u.props[f"{i}.clue"] = Prop(f"{i}.clue", self.text(v["clue"], f"{sec}.{i}.clue"),
                                                 (i,), (), (), "clue")
         for cid, cv in sections["characters"].items():
-            for b, text in self.map(cv.get("beliefs"), f"characters.{cid}.beliefs").items():
-                u.props[b] = Prop(b, self.text(text, f"characters.{cid}.beliefs.{b}"), (), (), (), "belief")
+            for b, bv in self.map(cv.get("beliefs"), f"characters.{cid}.beliefs").items():
+                bw = f"characters.{cid}.beliefs.{b}"
+                # A belief used as a reliance was labelled by its sentence, full stop and all ("…꺼져 있다.에 기대어",
+                # qa_test/runs/goal-6-bold 16), so it may carry a short title.
+                if isinstance(bv, dict):
+                    bv = self.map(bv, bw, {"title", "text"}, ("title", "text"))
+                    u.props[b] = Prop(b, self.text(bv["text"], bw), (), (), (), "belief", self.text(bv["title"], f"{bw}.title"))
+                else:
+                    u.props[b] = Prop(b, self.text(bv, bw), (), (), (), "belief")
             for t, tv in self.map(cv.get("topics"), f"characters.{cid}.topics").items():
                 if "text" in tv:
                     u.props[t] = Prop(t, self.text(tv["text"], f"characters.{cid}.topics.{t}"), (), (), (), "topic")

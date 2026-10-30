@@ -65,12 +65,13 @@
 - {at: {path: 0, step: 3}, text: 열린 문으로 들어가 꼭대기까지 오른다, expect: go:lamp_room}
 - {at: {path: 0, step: 3}, text: 안으로 들어간다, expect: go:lamp_room}
 
-# 등불실: 꺼진 등불. 등불에 한 번 손댄 뒤에는 윤슬과 기름 갈림길
-- {at: {path: 0, step: 5}, text: 렌즈를 닦고 불씨를 살린다, expect: try:lamp:finesse}
-- {at: {path: 0, step: 5, then: [{do: "try:lamp:wits", roll: [6, 6, 0]}]}, text: 남은 기름을 몽땅 등불에 붓는다, expect: choose:g_oil:all_in}
-- {at: {path: 0, step: 5, then: [{do: "try:lamp:wits", roll: [6, 6, 0]}]}, text: 기름 절반은 마을 봉화를 위해 남겨 둔다, expect: choose:g_oil:beacon}
+# 등불실: 검댕 낀 렌즈가 꺼진 등불을 막음. 렌즈에 한 번 손댄 뒤에는 윤슬과 기름 갈림길
+- {at: {path: 0, step: 5}, text: 렌즈의 검댕을 소매로 닦아 낸다, expect: try:lens:finesse}
+- {at: {path: 0, step: 5, then: [{do: "try:lens:finesse", roll: [6, 6, 0]}]}, text: 남은 기름을 몽땅 등불에 붓는다, expect: choose:g_oil:all_in}
+- {at: {path: 0, step: 5, then: [{do: "try:lens:finesse", roll: [6, 6, 0]}]}, text: 기름 절반은 마을 봉화를 위해 남겨 둔다, expect: choose:g_oil:beacon}
 - {at: {path: 0, step: 5}, text: 꺼진 등불의 구조를 꼼꼼히 살핀다, expect: look:lamp}
-- {at: {path: 0, step: 5}, text: 등불 심지를 꾀를 내어 고쳐 본다, expect: try:lamp:wits}
+- {at: {path: 0, step: 5, then: [{do: "try:lens:finesse", roll: [6, 6, 0]}, choose:g_oil:all_in]}, text: 등불 심지를 꾀를 내어 고쳐 본다, expect: try:lamp:wits}
+- {at: {path: 0, step: 5}, text: 등불 심지를 꾀를 내어 고쳐 본다, expect: clarify}
 
 # 마을, 윤슬이 오래전에 따라나섬: 함께 다닌다는 것이 기억에서 밀려나 맥락의 사실 줄에만 남음
 - {at: {path: 0, step: 0, then: [{do: "talk:yunseul:come", roll: [6, 6, 0]}, go:village, go:dock, go:village]},

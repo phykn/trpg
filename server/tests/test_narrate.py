@@ -584,18 +584,18 @@ def test_quotes_go_to_the_speaker_their_sentence_names(u):
 
 async def test_what_a_speaker_said_before_the_previous_narration_is_handed_back(tmp_path):
     """ontology.md 3.4: an answer held inside the 3-turn window and drifted past it (qa_test/runs/loop-1)."""
-    llm = FakeLLM("윤슬이 손끝으로 마을 쪽을 가리킵니다. \"마을 안쪽 창고에 말린 생선이 있어요.\"")
+    llm = FakeLLM("윤슬이 손끝으로 마을 쪽을 가리킵니다. \"마을 안쪽 창고에 낡은 노가 있어요.\"")
     svc, gid, _ = await game(tmp_path, llm, moves=("talk:yunseul:chat",) * 5)
     for n in range(1, 5):
         await events(svc, gid, n)
     entry = svc.games[gid][1].presentation["narration"]["1"]
-    assert entry["said"] == {"yunseul": ["마을 안쪽 창고에 말린 생선이 있어요."]}
+    assert entry["said"] == {"yunseul": ["마을 안쪽 창고에 낡은 노가 있어요."]}
     job = turn_job(*svc.games[gid], 5)
     assert list(job.said) == ["yunseul"] and len(job.said["yunseul"]) == 1          # turns 2–4 are the previous ones
     prompt = messages(job)[1]["content"]
-    assert ko.HEAD["said"] in prompt and "윤슬: 마을 안쪽 창고에 말린 생선이 있어요." in prompt
+    assert ko.HEAD["said"] in prompt and "윤슬: 마을 안쪽 창고에 낡은 노가 있어요." in prompt
     assert "앞서 나눈 말]에서 한 말과 어긋나지 않게" in prompt.split(ko.HEAD["now"])[1]
-    per, _ = svc.narrator.rules(replace(job, previous=[]), ["윤슬이 말합니다. \"마을 안쪽 창고에 말린 생선이 있어요.\""])
+    per, _ = svc.narrator.rules(replace(job, previous=[]), ["윤슬이 말합니다. \"마을 안쪽 창고에 낡은 노가 있어요.\""])
     assert any("마을안쪽창고에" in w for w in per[0])
     assert turn_job(*svc.games[gid], 4).said == {}
 

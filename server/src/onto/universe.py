@@ -19,6 +19,7 @@ class Prop:
     shows: tuple[str, ...]
     against: tuple[str, ...]
     source: str
+    title: str = ""                   # a short name for chips and lists; a belief's sentence leaked as one
 
 
 @dataclass(frozen=True)

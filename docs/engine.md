@@ -302,6 +302,7 @@ What happened tells a muse turn as "당신이 말하거나 혼잣말을 했습�
 Format rules:
 
 - 합니다체 and `당신`; no numbers, no lists of options, never the player's feelings.
+- What happened is a record: its frames ("…생겼습니다", "뜻대로 되어 갑니다") and tag names are told as what is seen, not copied. They reached the screen as written (goal-6-odd 3).
 - When there is a success or failure, the first sentence makes it clear; a failure shows things going wrong.
 - The player's sentence is read for its meaning, not copied, and shown as the actions and words of `당신`. Questions are answered from facts in the context; anything else is not yet knowable.
 - A person spoken to or handed something answers directly, from where they stand, in double-quoted dialogue attributed to them and true to their persona and voice, without copying sample lines and without any form of address for you.
