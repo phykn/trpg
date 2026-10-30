@@ -259,6 +259,10 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
             if ("fill", o, u.boxes(o)) in add and a.schema != "choose":
                 out.append({"kind": "arrival", "id": o, "name": u.name(o)})
     for at in sorted(add, key=str):
+        if at[0] == "at" and at[2] == PLAYER and u.obstacles.get(at[1]) and u.obstacles[at[1]].sub == "fork":
+            out.append({"kind": "fork", "id": at[1], "name": u.name(at[1]),
+                        "choices": [n for _, n, _ in u.obstacles[at[1]].choices]})
+    for at in sorted(add, key=str):
         if at[0] == "mark":
             kind = "scar" if at[3] == "scar" else "tag_add"
             out.append({"kind": kind, "owner": at[1], "slot": at[4], "tag": at[2], "life": at[3],

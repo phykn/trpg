@@ -48,6 +48,8 @@ The frame table `𝔗` in `locale/ko.py` gives each predicate a **present frame*
 | `follows` | {h}은(는) 당신과 함께 다닙니다 | 함께 다니기로 했습니다 (…했지만 {places}에는 가지 않습니다, for one who avoids places) / 이제 따라다니지 않습니다 |
 | `spent` | Screen only; not put in the context | |
 
+A fork coming to the player (`at(g, player)` added for a fork `g`) is the one appearance with a change frame: 고를 때입니다: '{choice}' 또는 '{choice}'. Without it a fork was only a red clock named after its default; no tester saw a choice in it, and one narration made it oil seeping from the village ground (goal-4-talker 44, goal-4-explorer 16, 31). A threat's appearance has no line; its clock shows it.
+
 Particles are chosen by the final-consonant (받침) function in `locale/ko.py`. A tag name is the presentation-layer name (section 6), or else the story's default name or the engine's default name ("이점" (advantage), "불리함" (disadvantage); "유리함" was narrated as glass, 유리, play-5-odd 9).
 
 **Action names** `λ(a)` are one frame per schema: `go` "{q}(으)로 간다", `try` "{x}을 {approach}(으)로 다룬다" ("상대한다" for a person; "말한 대로 해 본다" for the player alone, which changes nothing), the story's `label` for a solution (kept under "무리해서" when forced), `talk` "{h}에게 {topic title}을 묻는다", and so on. Buttons, clarify cards, the decision model's options and step records all use `λ`.
@@ -311,6 +313,7 @@ Format rules:
 - A step that something hidden blocked is named in the steering as not having happened: no one answers and nothing is done; the narration shows what stood in the way. A blocked talk was answered in full, so testers could not tell what the dog had stopped (play-4-explorer 10, play-4-talker 21). The step still spent its beat, so its lines in what happened carry the scene end, arrival, chapter change or ending that beat brought; with only the reveal, the sunset went from 0 to 1/3 untold (`narr-3` turn 6).
 - What a roll leaned on is named in the steering as the resource the attempt drew on, to be shown once in use; a step something hidden blocked rolled nothing and leaned on nothing. A leaned-on letter never appeared in the prose (play-4-talker 6, play-4-odd 4).
 - What a look found is named in the steering: each thing or obstacle a look step reached, with its look text, to be shown. A letter was read and none of its words were told, because its look sat among every entity's public parameters (play-5-talker 35).
+- A fork that came this turn is named in the steering with its choices, and the narration ends on that question, asked by someone present if anyone is; the usual close gives way. Told only as a change, it fell behind the lamp's first light and a person's arrival, and no narration asked it (goal-4-check 6, goal-4-talker 44).
 - A turn that only spent growth gets two sentences and 100 characters and is told as the change settling in, without the place cue or a replay of the last scene. Told as a turn, a growth pick replayed taking the oil or listed the scenery again (play-3-talker 24, play-3-explorer 30, play-3-bold 7).
 - A turn that stopped before the rest of the sentence (at a card, after a failure, or at a step that could not be read) says which action has not happened yet, or that the rest has not, so the narration stops short of it. Given the whole sentence, the narration lit the lamp on the look before its roll card (play-3-odd 18, play-3-explorer 41).
 

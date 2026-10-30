@@ -73,6 +73,7 @@ def turn_job(u: Universe, g: Game, n: int) -> Job | None:
     came = [c for c in changes if c["kind"] in ("crisis", "arrival")]
     struck = tuple(dict.fromkeys(c["name"] for c in came if not c["id"].startswith("deadline.")))
     missed = tuple(dict.fromkeys(c["name"] for c in came if c["id"].startswith("deadline.")))
+    asked = tuple(tuple(c["choices"]) for c in changes if c["kind"] == "fork")
     # A blocked step rolls nothing, so nothing was leaned on (rule.md 3.4).
     relied = tuple(dict.fromkeys(rely_label(u, p, o.facts, x) for r in turn["steps"]
                                  if r["result"] != "blocked" and (x := parse(r["action"]).get("rely"))))
@@ -106,7 +107,7 @@ def turn_job(u: Universe, g: Game, n: int) -> Job | None:
     return Job(u, o, p, happened, delta, {PLAYER, here, *people, *ids}, text=turn["text"], tags=tags,
                previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers, left=left,
                joined=joined, unfinished=turn.get("unfinished"), grown=grown, progress=progress, blocked=blocked,
-               relied=relied, looked=looked, struck=struck, missed=missed, reply=reply, said=said, shared=shared,
+               relied=relied, looked=looked, asked=asked, struck=struck, missed=missed, reply=reply, said=said, shared=shared,
                hint=hint, arrived=went is not None, paced=paced, **size)
 
 def recap_job(u: Universe, g: Game, k: int) -> Job | None:

@@ -69,6 +69,7 @@ class Job:
     missed: tuple[str, ...] = ()     # deadlines that ran out this turn
     relied: tuple[str, ...] = ()     # what this turn's rolls leaned on
     looked: tuple[str, ...] = ()     # things and obstacles this turn looked at
+    asked: tuple[tuple[str, ...], ...] = ()   # choice names of the forks that came this turn; engine.md 5.2
     reply: str = "act"               # act, talk (only small talk) or muse (only try(player)); engine.md 5.2
     said: dict = field(default_factory=dict)   # speaker → [(player sentence, [their lines])] before previous; 5.1
     shared: dict = field(default_factory=dict)  # speaker → step lines of what they lived through with you; 5.1
@@ -120,6 +121,10 @@ def own(span: str, story: list[str], who: list[str]) -> str:
     return rest
 
 
+def either(names) -> str:
+    return " 또는 ".join(f"'{n}'" for n in names)
+
+
 def change_line(u, c: dict) -> str | None:
     k = c["kind"]
     if k == "fill":
@@ -129,6 +134,8 @@ def change_line(u, c: dict) -> str | None:
         return ko.fill(ko.CHANGE["recede"], name=c["name"])
     if k == "arrival" and c["id"].startswith("deadline."):
         return ko.fill(ko.CHANGE["deadline"], name=c["name"])
+    if k == "fork":
+        return ko.fill(ko.CHANGE["fork"], choices=either(c["choices"]))
     if k in ("clock", "crisis", "arrival", "chapter", "ending"):
         return ko.fill(ko.CHANGE[k], name=c["name"])
     if k in ("tag_add", "tag_remove"):
@@ -371,6 +378,8 @@ def steering(job: Job, lines) -> list[str]:
         out.append(ko.fill(ko.NOW["struck"], names=", ".join(job.struck)))
     if job.missed:
         out.append(ko.fill(ko.NOW["missed"], names=", ".join(job.missed)))
+    for names in job.asked:
+        out.append(ko.fill(ko.NOW["asked"], choices=either(names)))
     # A blocked talk was still answered in full, so the testers could not tell what had stopped it
     # (qa_test/runs/play-4-explorer 10, play-4-talker 21).
     for label in job.blocked:
@@ -393,7 +402,8 @@ def steering(job: Job, lines) -> list[str]:
         out.append(ko.fill(ko.NOW["unaddressed"], names=", ".join(map(u.name, silent))))
     if tired:
         out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
-    return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {ko.NOW['close' + alone]}"]
+    close = ko.NOW["close_asked"] if job.asked else ko.NOW["close" + alone]
+    return [*(f"- {x}" for x in [*out, *kept_word(job)]), f"- {close}"]
 
 
 def kept_word(job: Job) -> list[str]:

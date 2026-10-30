@@ -293,6 +293,19 @@ async def test_what_came_to_pass_is_steered_to_be_told(tmp_path):
     assert job.struck == ("몰려오는 폭풍",) and job.missed == ("해가 진다",)
 
 
+async def test_a_fork_that_came_is_asked_at_the_end(tmp_path):
+    """Told only as a change, a fork fell behind the turn's other news and no narration asked it (goal-4-check 6)."""
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
+    u, g = svc.games[gid]
+    g.presentation["turns"][0]["steps"][0]["changes"] += [
+        {"kind": "fork", "id": "g_oil", "name": "기름을 흘린다", "choices": ["기름을 모두 등불에 붓는다", "절반을 마을 봉화에 남긴다"]}]
+    job = turn_job(u, g, 1)
+    assert job.asked == (("기름을 모두 등불에 붓는다", "절반을 마을 봉화에 남긴다"),)
+    now = messages(job)[1]["content"].split(ko.HEAD["now"])[1]
+    assert "고를 일이 생겼습니다: '기름을 모두 등불에 붓는다' 또는 '절반을 마을 봉화에 남긴다'." in now
+    assert now.rstrip().endswith(ko.NOW["close_asked"])
+
+
 async def test_a_growth_turn_is_steered_to_the_change_alone(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
     job = replace(turn_job(*svc.games[gid], 1), grown=True)
@@ -351,6 +364,9 @@ def test_a_lowered_threat_recedes_instead_of_approaching(u):
     # a deadline's name is often a clause ("해가 진다"), so no particle follows it, and its arrival says the goal was missed
     assert change_line(u, {"kind": "arrival", "id": "deadline.1", "name": "해가 진다"}) == \
         "해가 진다: 목표를 이루지 못한 채 시간이 다 되었습니다"
+    # a fork that came without a word was a red clock with no subject (goal-4-talker 44)
+    fork = {"kind": "fork", "id": "g_oil", "name": "기름을 흘린다", "choices": ["기름을 모두 등불에 붓는다", "절반을 마을 봉화에 남긴다"]}
+    assert change_line(u, fork) == "고를 때입니다: '기름을 모두 등불에 붓는다' 또는 '절반을 마을 봉화에 남긴다'"
 
 
 def test_a_way_cut_both_ways_is_one_line(u):

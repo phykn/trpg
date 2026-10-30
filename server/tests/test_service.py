@@ -247,7 +247,10 @@ async def test_a_high_step_waits_for_a_confirm_card(tmp_path):
     assert swap["text"] and all(g["text"] == "" for g in growth if g["kind"] == "approach")
     # The fork comes up with 윤슬 after the first try on the lamp (story.md 3.8).
     out = await cmd(svc, gid, out["view"], "t9", action="try:lamp:wits")
-    view = (await cmd(svc, gid, out["view"], "p9", card=out["view"]["card"]["id"], pick="try:lamp:wits"))["view"]
+    res = await cmd(svc, gid, out["view"], "p9", card=out["view"]["card"]["id"], pick="try:lamp:wits")
+    assert [c["choices"] for c in res["steps"][0]["changes"] if c["kind"] == "fork"] == \
+        [["기름을 모두 등불에 붓는다", "절반을 마을 봉화에 남긴다"]]
+    view = res["view"]
     _, view = await press(svc, gid, view, "go:yard", "r9")
     out = await leave(svc, gid, await cmd(svc, gid, view, "c9", text="올라가 고른다"), "c9.go")
     assert [s["action"] for s in out["steps"]] == ["go:lamp_room"]
