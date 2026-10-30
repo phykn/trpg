@@ -22,6 +22,7 @@ from .load import StoryError, read, story_files
 
 MAX_STORY_COMPLICATIONS = 58      # u is 0…59 and the engine adds two per weight (rule.md 3.3)
 FUZZ_RUNS, FUZZ_STEPS = 24, 300
+CHAPTER_STEPS = 20                # F10's floor: the fewest beat-raising steps a chapter should allow (fun.md 3.3)
 
 
 class Run:
@@ -376,6 +377,16 @@ STAGES = (v1, v2, v3, v4, v5, v6)
 def validate(u: Universe) -> None:
     for stage in STAGES:
         stage(u)
+
+
+def warnings(u: Universe) -> list[str]:
+    """What the story allows but plays short; it still loads."""
+    out = []
+    for k in range(1, len(u.chapters) + 1):
+        cap = u.beats * u.boxes(f"deadline.{k}")
+        if cap < CHAPTER_STEPS:
+            out.append(f"chapter {k}: beats × deadline boxes = {cap}, below the {CHAPTER_STEPS} steps of F10")
+    return out
 
 
 def load(path: Path) -> Universe:

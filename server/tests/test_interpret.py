@@ -115,7 +115,7 @@ async def test_a_line_to_the_person_here_is_small_talk_that_spends_no_time(tmp_p
     svc, gid, view = await game(tmp_path, decision, FakeLLM("1"))
     out = await say(svc, gid, view, "먹을거 어디에 있어?")
     assert [s["action"] for s in out["steps"]] == ["talk:yunseul:chat"]       # a threat needs an act, so no tone
-    assert set(decision.asked[1][1]["tone"]["criteria"]) == {"polite", "friendly", "plead"}
+    assert len(decision.asked) == 1                                         # nothing left to ask
     assert out["view"]["player"]["beats"] == view["player"]["beats"]
 
 
@@ -156,22 +156,56 @@ async def test_a_topic_is_offered_only_when_the_sentence_names_it(tmp_path):
 async def test_a_sentence_that_hands_a_thing_over_asks_first(tmp_path):
     decision = FakeDecision({"s1": {"give": 0.9}, "n": {"1": 0.9}})
     svc, gid, view = await game(tmp_path, decision, FakeLLM("1"))
-    out = await say(svc, gid, view, "윤슬에게 아들의 편지를 보여준다")      # read as giving (play-4-talker 7)
+    out = await say(svc, gid, view, "윤슬에게 아들의 편지를 건넨다")
     card = out["view"]["card"]
-    assert card["kind"] == "confirm" and card["options"][0]["id"] == "give:letter:yunseul" and not out["steps"]
-    assert card["options"][0]["effects"] == ["아들의 편지가 윤슬에게 감"]
+    assert card["kind"] == "confirm" and not out["steps"]
+    assert [(x["id"], x["effects"]) for x in card["options"]] == \
+        [("give:letter:yunseul", ["아들의 편지가 윤슬에게 감"]), ("show:letter:yunseul", [])]
     out = await svc.command(gid, {"request_id": "ok", "revision": out["view"]["revision"], "card": card["id"],
-                                  "pick": "give:letter:yunseul"})
-    assert [s["action"] for s in out["steps"]] == ["give:letter:yunseul"]
+                                  "pick": "show:letter:yunseul"})
+    assert [s["action"] for s in out["steps"]] == ["show:letter:yunseul"]
+    assert out["view"]["card"] is None
+    from src.jobs import turn_job
+    assert turn_job(*svc.games[gid], out["turn"]).shown == ("아들의 편지",)       # the sentence said 건넨다
+
+
+async def test_a_sentence_that_goes_with_someone_asks_them_first(tmp_path):
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}, "intent": {"village": 0.9}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("1"))
+    out = await svc.command(gid, {"request_id": "t1", "revision": view["revision"], "text": "윤슬과 같이 마을로 간다"})
+    card = out["view"]["card"]
+    assert card["kind"] == "move" and not out["steps"]                # it went alone, the second half dropped
+    assert [(o["id"], o.get("with")) for o in card["options"]][:2] == \
+        [("go:village", None), ("talk:yunseul:come+go:village", "윤슬")]
+    assert card["selected"] == "talk:yunseul:come+go:village"
+    out = await svc.command(gid, {"request_id": "w", "revision": out["view"]["revision"], "card": card["id"],
+                                  "pick": card["selected"]})
+    card = out["view"]["card"]
+    assert card["kind"] == "roll" and card["plan"]["rest"] == ["바닷가 마을로 간다"]
+
+
+async def test_a_sentence_that_skips_the_scene_asks_first(tmp_path):
+    decision = FakeDecision({"s1": {"cut": 0.9}, "n": {"1": 0.9}, "intent": {"pass": 0.9}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("1"))
+    out = await say(svc, gid, view, "날이 저물 때까지 그냥 기다린다")
+    card = out["view"]["card"]
+    assert card["kind"] == "confirm" and not out["steps"] and card["options"][0]["id"] == "cut:pass"
+    assert card["options"][0]["effects"] == ["장면이 끝남", "다가오는 일들이 한 칸씩 다가옴"]
+
+
+async def test_a_sentence_that_shows_a_thing_keeps_it(tmp_path):
+    svc, gid, view = await game(tmp_path, FakeDecision({}), FakeLLM("1"))
+    out = await say(svc, gid, view, "윤슬에게 아들의 편지를 보여준다")      # read as giving (play-4-talker 7)
+    assert [s["action"] for s in out["steps"]] == ["show:letter:yunseul"] and out["view"]["card"] is None
 
 
 async def test_several_actions_are_the_narration_models_list(tmp_path):
-    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"2": 0.8}, "tone": {"friendly": 0.8},
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"2": 0.8}, "tone": {"polite": 0.8},
                              "intent": {"dohae:chat": 0.9}})
     llm = FakeLLM("1, 1, 4")              # go, go (one action in two clauses), talk
     svc, gid, view = await game(tmp_path, decision, llm)
     out = await say(svc, gid, view, "마을로 가서 도해에게 말을 건다")
-    assert [s["action"] for s in out["steps"]] == ["go:village", "talk:dohae:chat;tone=friendly"]
+    assert [s["action"] for s in out["steps"]] == ["go:village", "talk:dohae:chat"]
     state, qs = decision.asked[-1]                     # the second step's slots are asked after the first runs
     assert set(qs) == {"intent", "tone"} and "도해의 말투" in state
     assert all(k.startswith("dohae:") for k in qs["intent"]["criteria"])
@@ -349,13 +383,13 @@ async def test_the_roll_card_keeps_only_the_reliances_the_model_sees_helping(tmp
     out = await say(svc, gid, view, "기계공 솜씨로 문을 비집어 연다")
     card = out["view"]["card"]
     # The named trait is kept without asking; the model kept the letter and dropped 뱃사람.
-    assert [o["label"] for o in card["options"]] == ["기계공", "아들의 편지", "기대지 않음"]
+    assert [o["label"] for o in card["options"] if not o["forced"]] == ["기계공", "아들의 편지", "기대지 않음"]
     assert card["selected"] == "try:door:finesse;rely=trait:tinker"
     state, qs = decision.asked[-1]
     assert "기계공 솜씨로" in state and list(qs["rely"]["criteria"]) == ["r0", "r1", "none"]
     # The same attempt in other words keeps what was offered and asks only about 뱃사람 again.
     out = await say(svc, gid, out["view"], "문을 살살 비집어 연다", "s2")
-    assert [o["label"] for o in out["view"]["card"]["options"]] == ["기계공", "아들의 편지", "기대지 않음"]
+    assert [o["label"] for o in out["view"]["card"]["options"] if not o["forced"]] == ["기계공", "아들의 편지", "기대지 않음"]
     state, qs = decision.asked[-1]
     assert "살살" in state and list(qs["rely"]["criteria"]) == ["r0", "none"]
 

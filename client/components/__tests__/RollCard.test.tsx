@@ -110,3 +110,38 @@ test('a decisive chip says whether it helped or hindered', async () => {
   expect(texts(tree!)).toContain(`storm −1 ${ko.because}`);
   await flush(async () => { tree!.unmount(); });
 });
+
+test('forcing toggles to the same reliance in the other strain and says what it buys', async () => {
+  const onRoll = jest.fn();
+  const forcedPreview = { ...preview(3, 'high', 1), gain: { kind: 'fill' as const, boxes: 3, fit: 1, forced: 1 } };
+  const c = { ...card(), options: [
+    { id: 'try:door:finesse;rely=thing:key', label: 'key', rely: 'thing:key', forced: false, preview: preview(3, 'normal', 1) },
+    { id: 'try:door:finesse', label: 'none', rely: null, forced: false, preview: preview(2) },
+    { id: 'try:door:finesse;rely=thing:key;strain=forced', label: 'key', rely: 'thing:key', forced: true, preview: forcedPreview },
+    { id: 'try:door:finesse;strain=forced', label: 'none', rely: null, forced: true, preview: { ...forcedPreview, z: 2 } },
+  ] } as Card;
+  let tree: ReturnType<typeof renderer.create>;
+  await flush(async () => { tree = renderer.create(<RollCard card={c} onRoll={onRoll} onCancel={jest.fn()} />); });
+  const box = () => tree!.root.find((n: { props: { accessibilityRole?: string; onPress?: unknown } }) =>
+    n.props.accessibilityRole === 'checkbox' && typeof n.props.onPress === 'function');
+  expect(box().props.accessibilityLabel).toBe(`${ko.forced} · ${ko.forcedGain}`);
+  expect(box().props.accessibilityState.checked).toBe(false);
+  await flush(async () => { box().props.onPress(); });
+  expect(box().props.accessibilityState.checked).toBe(true);
+  expect(labelled(tree!, ko.highRisk)).toBe(true);
+  const radios = tree!.root.findAll((n: { props: { accessibilityRole?: string; onPress?: unknown } }) =>
+    n.props.accessibilityRole === 'radio' && typeof n.props.onPress === 'function', { deep: false });
+  expect(radios).toHaveLength(1);
+  expect(radios[0].props.accessibilityState.checked).toBe(true);
+  await flush(async () => { tree!.unmount(); });
+});
+
+test('a spent reliance reads as a lower stake, not a number', async () => {
+  const guard = { ...preview(2), mods: [{ kind: 'stat' as const, label: 'finesse', value: 2 }, { kind: 'guard' as const, label: 'key', value: 0 }] };
+  const c = { ...card(), options: [{ ...card().options[0], preview: guard }, card().options[1]] } as Card;
+  let tree: ReturnType<typeof renderer.create>;
+  await flush(async () => { tree = renderer.create(<RollCard card={c} onRoll={jest.fn()} onCancel={jest.fn()} />); });
+  expect(labelled(tree!, `key · ${ko.guarded}`)).toBe(true);
+  expect(texts(tree!)).not.toContain('±0');
+  await flush(async () => { tree!.unmount(); });
+});

@@ -190,6 +190,7 @@ class Universe:
     engine_complications: dict[str, Complication] = field(default_factory=dict)
     shows: dict[str, tuple[str, ...]] = field(default_factory=dict)   # entity → props that show it
     favor_patterns: dict[str, int] = field(default_factory=dict)       # agent → pattern index
+    show_patterns: dict[tuple[str, str], int] = field(default_factory=dict)   # (thing, agent it pleases) → index
     witnesses: dict | None = None
     raw: dict | None = None
 

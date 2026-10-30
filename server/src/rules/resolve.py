@@ -22,6 +22,7 @@ class Step:
     after: State
     roll: tuple[int, int, int] | None
     names: tuple[tuple[str, int, str | None], ...]   # tags placed this step: (x, slot, default name)
+    happen: tuple[tuple, ...] = ()   # typed happenings, in the order they fired
 
 
 def resolve(u, s: State, h: frozenset, a: Action, r: tuple[int, int, int] | None) -> Step:
@@ -33,8 +34,8 @@ def resolve(u, s: State, h: frozenset, a: Action, r: tuple[int, int, int] | None
         scan(ctx, start_true)
     after = ctx.work.state()
     return Step(Delta.between(s, after), ctx.mods.atoms() if ctx.mods else (), ctx.rolled, ctx.result,
-                ctx.risk, after, r if ctx.rolled else None, tuple(ctx.work.names))
+                ctx.risk, after, r if ctx.rolled else None, tuple(ctx.work.names), tuple(ctx.work.happen))
 
 
 def event_of(u, s: State, t: int, a: Action, step: Step) -> Event:
-    return Event(t, format(a), step.roll, step.result, step.delta, witnesses(u, s, step.after), step.mods)
+    return Event(t, format(a), step.roll, step.result, step.delta, witnesses(u, s, step.after), step.mods, step.happen)

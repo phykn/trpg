@@ -59,16 +59,16 @@ There is one per executed step. It is built only from the `Step` (result, risk, 
   "result": "success", "risk": "normal", "dc": 8,
   "roll": {"d1": 4, "d2": 3},
   "mods": [{"kind": "stat", "label": "솜씨", "value": 2},
-           {"kind": "help", "label": "등대 열쇠", "value": 1},
+           {"kind": "help", "label": "윤슬의 도움", "value": 1},
            {"kind": "hinder", "label": "흩날리는 물보라", "value": -1}],
   "total": 9, "decisive": [0],
   "changes": [{"kind": "fill", "id": "door", "name": "녹슨 등대 문", "from": 0, "to": 2, "fit": 1}]
 }
 ```
 
-- `mods` is a list of chips, in the order `stat`, help, hinder. Several hinder atoms still make a single hinder chip (value −1, names joined with `·`). The `stat` chip is present even when its value is 0; help and hinder have no chip when they are 0. It has the same shape and order as the card's `preview.mods`, so the client pairs chips by index to move them.
+- `mods` is a list of chips, in the order `stat`, help or guard, hinder. Several hinder atoms still make a single hinder chip (value −1, names joined with `·`). The `stat` chip is present even when its value is 0; help and hinder have no chip when they are 0. A `guard` chip (a spent reliance, rule.md 3.2) always has value 0: it lowers a fail's cost, not the total. It has the same shape and order as the card's `preview.mods`, so the client pairs chips by index to move them.
 - Only the server (`view.py`) computes `total` and `decisive`. The result is `success` if `total ≥ dc`, otherwise `fail`. `decisive` lists the indices (from 0) in `mods` of the chips whose removal would change the result against `dc`. In the example above, without the 2 from 솜씨 (finesse) the total would be 7, short of the target 8, and the roll would have failed.
-- `changes` groups the atoms of `δ` into client-facing kinds, and `from` and `to` are visible values. Kinds: `fill` (obstacle boxes; `fit` is how many extra boxes the fitting approach filled), `clock`, `crisis` (`name` is the clock name), `tag_add`, `tag_remove`, `wound`, `scar`, `move` (`with: true` when a companion moves along with the player), `follow` (`state`: `start` or `stop`, with the person's `id` and `name`), `reveal`, `link`, `regards`, `promise`, `arrival` (`name` is the threat name), `fork` (a fork came to the player; `choices` are its choice names), `chapter` (`from: k, to: k+1`), `ending` (`id`). Beats go only through `view.player`.
+- `changes` groups the atoms of `δ` into client-facing kinds, and `from` and `to` are visible values. Kinds: `fill` (obstacle boxes; `fit` is how many extra boxes the fitting approach filled), `clock`, `crisis` (`name` is the clock name), `tag_add` (`replaced`: the overwritten tag's name, when the ring was full), `tag_remove`, `wound`, `fall` (the wounds reset by a fall; it replaces `wound`), `scar`, `scene_end` (before the clocks it moved), `move` (`with: true` when a companion moves along with the player), `follow` (`state`: `start` or `stop`, with the person's `id` and `name`), `reveal`, `link`, `regards`, `promise`, `arrival` (`name` is the threat name), `fork` (a fork came to the player; `choices` are its choice names), `chapter` (`from: k, to: k+1`), `ending` (`id`). Beats go only through `view.player`.
 - A step without a roll has `dc: null`, `roll: null`, `mods: []`, `total: null`, `decisive: []`, and its `result` is `none`. A hidden block has `result: "blocked"`, and its `changes` begin with `{kind: "reveal", id: <obstacle id>, name}`, followed by whatever the beat it spent brought (a scene end's clocks and tags, an arrival, a chapter change, an ending).
 - The dice's `u` and `seed` are not sent. `u` only picks a complication and plays no part in the player's experience.
 
@@ -114,19 +114,21 @@ Cards (engine.md 4):
   "echo": {"text": "열쇠로 살살 돌려 본다", "slots": [{"slot": "approach", "label": "솜씨"}, {"slot": "strain", "label": "자연스럽게"}]},
   "plan": {"step": {"action": "try:door:finesse", "label": "녹슨 등대 문을 솜씨로 다룬다", "target": {"id": "door", "name": "녹슨 등대 문", "fill": 0, "boxes": 3}},
            "rest": ["등대 꼭대기로 간다"]},
-  "options": [{"id": "try:door:finesse;rely=thing:key", "label": "등대 열쇠", "consumed": true, "note": "이번 장 1번", "preview": {…}},
-              {"id": "try:door:finesse", "label": "기대지 않음", "consumed": false, "note": null, "preview": {…}}],
+  "options": [{"id": "try:door:finesse;rely=thing:key", "label": "등대 열쇠", "consumed": true, "note": "이번 장 1번",
+               "rely": "thing:key", "forced": false, "preview": {…}},
+              {"id": "try:door:finesse", "label": "기대지 않음", "consumed": false, "note": null, "rely": null, "forced": false,
+               "preview": {…}}],
   "selected": "try:door:finesse;rely=thing:key" }
 ```
 
-A clarification card's `options` are `{id: action id, label}`, and confirm and move cards' `options` are `[{id: action id, label, effects: [name]}]`. None of the three has a `preview`. A move card's `selected` is the destination the sentence chose, and it is the first option; when the sentence named that place alone, a card comes only for a companion who stays behind, and that place is its only option (engine.md 4.4). A roll card option's `consumed` says relying on it uses it up, and `note` is the text for that ("1번 남음", 1 use left, for a tag; "이번 장 1번", once this chapter, for a trait, thing or belief); its `preview` holds the fields from rule.md 3.4.
+A clarification card's `options` are `{id: action id, label}`, and confirm and move cards' `options` are `[{id: action id, label, effects: [name]}]`. A give's confirm card has a second option, the show of the same thing (engine.md 4.3). A move card's option to go with someone asked first has `with` (that person's name) and an id that joins its plan's action ids with `+`; it is accepted like any other `pick`. None of the three has a `preview`. A move card's `selected` is the destination the sentence chose, and it is the first option; when the sentence named that place alone, a card comes only for a companion who stays behind, and that place is its only option (engine.md 4.4). A roll card option's `consumed` says relying on it uses it up, and `note` is the text for that ("1번 남음", 1 use left, for a tag; "이번 장 1번", once this chapter, for a trait, thing or belief); `rely` is its reliance value (null for none), and `forced` whether it is the forced twin of the same reliance: a card where forcing buys a box lists every option twice, the natural ones first (engine.md 4.2). Its `preview` holds the fields from rule.md 3.4.
 
 ```
 { "risk": "normal",
-  "mods": [{"kind": "stat", "label": "솜씨", "value": 2}, {"kind": "help", "label": "등대 열쇠", "value": 1}, {"kind": "hinder", "label": "흩날리는 물보라", "value": -1}],
-  "z": 2, "dc": 8,
+  "mods": [{"kind": "stat", "label": "솜씨", "value": 2}, {"kind": "guard", "label": "등대 열쇠", "value": 0}, {"kind": "hinder", "label": "흩날리는 물보라", "value": -1}],
+  "z": 1, "dc": 8,
   "stakes": {"clock": 1, "weight": "light" | "heavy" | null},
   "clock": {"id": "clock.1", "name": "몰려오는 폭풍", "boxes": 4, "fill": 1},
-  "gain": {"kind": "fill", "boxes": 2, "fit": 1} | {"kind": "tag", "remove": "젖은 발" | null}
+  "gain": {"kind": "fill", "boxes": 2, "fit": 1, "forced": 0} | {"kind": "tag", "remove": "젖은 발" | null}
         | {"kind": "topic"} | {"kind": "favor", "effects": ["등대 열쇠를 받음"]} | {"kind": "follow"} }
 ```

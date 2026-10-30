@@ -60,7 +60,7 @@ def call(**answers):
 def test_fragile_answers_lie_within_005_of_the_threshold_that_decides_them():
     calls = [
         call(s1={"go": 0.72, "look": 0.28}, n={"1": 0.51, "2": 0.49}),
-        call(intent={"yard": 0.501, "dock": 0.499}, tone={"polite": 0.52, "friendly": 0.48},
+        call(intent={"yard": 0.501, "dock": 0.499}, tone={"polite": 0.52, "threaten": 0.48},
              strain={"forced": 0.46, "natural": 0.54}, target={"door": 0.5}, approach={"wits": 0.5}),
         call(c_keeper={"true": 0.53, "false": 0.47}, c_other={"true": 0.2, "false": 0.8}),
         call(rely={"r0": 0.12, "r1": 0.3, "none": 0.58}),

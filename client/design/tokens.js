@@ -16,7 +16,8 @@ const colors = {
   health: { fg: '#256b2c' },
   gold: { fg: '#8a5300', muted: '#eadcbf' },
   // Every meaning below owns its hue (ui.md 2.1): kinds, modifiers and health never borrow gold or danger.
-  chip: { stat: '#4a3fc0', help: '#4d6800', hinder: '#a8226f' },
+  // A guard is a reliance too, so it shares help's hue; it lowers a fail's cost instead of adding.
+  chip: { stat: '#4a3fc0', help: '#4d6800', guard: '#4d6800', hinder: '#a8226f' },
   kind: { person: '#1a669c', thing: '#0b7166', obstacle: '#87309f' },
   // Full boxes say whose side the fill is on: gold is the player's progress, red is trouble.
   box: { empty: '#b9b4a6', full: '#8a5300', danger: '#b3261e' },

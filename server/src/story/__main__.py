@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from .load import StoryError, story_files
-from .validate import load
+from .validate import load, warnings
 
 
 def main() -> int:
@@ -21,6 +21,8 @@ def main() -> int:
             try:
                 u = load(path)
                 print(f"{path}: ok ({u.id})")
+                for w in warnings(u):
+                    print(f"{path}: warning: {w}")
             except (OSError, StoryError) as e:
                 failed = True
                 print(f"{path}: {e}")

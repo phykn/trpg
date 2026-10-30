@@ -4,13 +4,15 @@ from dataclasses import dataclass
 
 # Schema → number of intent arguments (None: grow, whose shape depends on the item).
 SCHEMAS: dict[str, int | None] = {
-    "go": 1, "look": 1, "take": 1, "give": 2, "talk": 2, "try": 2,
+    "go": 1, "look": 1, "take": 1, "give": 2, "show": 2, "talk": 2, "try": 2,
     "declare": 1, "cut": 1, "choose": 2, "pay": 1, "grow": None,
 }
 JUDGE = {"talk": ("claim", "rely", "tone"), "try": ("rely", "strain")}
 # ν₀ per judgment key; None means the argument is absent.
 NEUTRAL = {"tone": "polite", "strain": "natural", "claim": None, "rely": None}
-TONES = ("polite", "friendly", "plead", "threaten", "deceive")
+# The judged tones. A friendly or pleading line moved no rule a polite one did not, so the narration reads that from
+# the sentence; saves from before keep "friendly" and "plead" in their action ids.
+TONES = ("polite", "threaten", "deceive")
 STRAINS = ("natural", "forced")
 
 

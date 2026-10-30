@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from ..onto.atoms import PLAYER, Atom, State
 from ..onto.view import Obs
 from .acts import Action
-from .candidates import held_clock, reach, rely_atom, talk_rolls
-from .costs import TABLE
+from .candidates import FREE, held_clock, reach, rely_atom, talk_rolls
+from .costs import cost
 
 RISKS = ("low", "normal", "high")
 DC = {"low": 7, "normal": 8, "high": 9}   # the total to reach, by risk
@@ -39,29 +39,37 @@ def risk(u, a: Action) -> str:
     return "low"
 
 
+# A threat is pressed with force and a lie with wits; every other talk is charm. With charm alone, the creation screen
+# decided how every person could be met.
+TONE_APPROACH = {"threaten": "force", "deceive": "wits"}
+
+
 def approach_of(a: Action) -> str:
-    return "charm" if a.schema == "talk" else a.intent[1]
+    return TONE_APPROACH.get(a.get("tone"), "charm") if a.schema == "talk" else a.intent[1]
 
 
 @dataclass(frozen=True)
 class Mods:
     stat: Atom                        # ("stat", player, approach, n)
-    help: Atom | None                 # the atom rely points at
+    help: Atom | None                 # a bond or a companion: +1
     hinder: tuple[Atom, ...]          # every hindering atom; together they count once
+    guard: Atom | None = None         # something spent: a fail costs less instead (rule.md 3.3)
 
     @property
     def z(self) -> int:
         return self.stat[3] + (self.help is not None) - bool(self.hinder)
 
     def atoms(self) -> tuple[Atom, ...]:
-        """The event's mods, in rule order: stat, help, hinder."""
-        return (self.stat,) + ((self.help,) if self.help else ()) + self.hinder
+        """The event's mods, in rule order: stat, help, guard, hinder."""
+        return (self.stat,) + ((self.help,) if self.help else ()) + ((self.guard,) if self.guard else ()) + self.hinder
 
     def chips(self) -> list[tuple[str, tuple[Atom, ...], int]]:
-        """(kind, atoms, value) chips for api.md 3: stat always, help and hinder when present."""
+        """(kind, atoms, value) chips for api.md 3: stat always, help, guard and hinder when present."""
         out = [("stat", (self.stat,), self.stat[3])]
         if self.help:
             out.append(("help", (self.help,), 1))
+        if self.guard:
+            out.append(("guard", (self.guard,), 0))
         if self.hinder:
             out.append(("hinder", self.hinder, -1))
         return out
@@ -84,6 +92,8 @@ def modifiers(u, facts: State, a: Action) -> Mods:
         n = facts.regards(target, PLAYER, axis)
         if n is not None and n < 0:
             hinder.append(("regards", target, PLAYER, axis, n))
+    if help_ is not None and not rely.startswith(FREE):
+        return Mods(stat, None, tuple(hinder), help_)
     return Mods(stat, help_, tuple(hinder))
 
 
@@ -123,7 +133,7 @@ def rolls(u, facts: State, hist: frozenset, a: Action) -> bool:
 def preview(u, o: Obs, a: Action) -> Preview:
     r = risk(u, a)
     mods = modifiers(u, o.facts, a)
-    n, weight = TABLE[r]
+    n, weight = cost(r, mods.guard is not None)
     c = held_clock(u, o.facts)
     clock = None
     if c is not None:
@@ -144,8 +154,10 @@ def gain(u, o: Obs, a: Action) -> dict:
     ob = u.obstacles.get(x)
     if ob is not None:
         fit = int(a.intent[1] in ob.fits)
+        forced = int(a.get("strain") == "forced")
         left = ob.boxes - (o.facts.fill(x) or 0)
-        return {"kind": "fill", "boxes": min(1 + fit, left), "fit": min(fit, max(left - 1, 0))}
+        return {"kind": "fill", "boxes": min(1 + fit + forced, left), "fit": min(fit, max(left - 1, 0)),
+                "forced": min(forced, max(left - 1 - fit, 0))}
     snags = [(i, life) for i, kind, life in o.facts.marks(x) if kind == "snag"]
     return {"kind": "tag", "remove": ("mark", x, "snag", snags[0][1], snags[0][0]) if snags else None}
 

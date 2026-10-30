@@ -271,6 +271,15 @@ async def test_a_blocked_step_and_what_a_roll_leaned_on_are_steered(tmp_path):
     assert "가로막혀" not in messages(job)[1]["content"]
 
 
+async def test_a_sentence_s_attempt_keeps_its_manner(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
+    job = turn_job(*svc.games[gid], 1)
+    assert ko.NOW["manner"] in messages(replace(job, tried=True))[1]["content"]
+    assert ko.NOW["manner"] not in messages(job)[1]["content"]
+    assert "편지을" not in (now := messages(replace(job, shown=("아들의 편지",)))[1]["content"]) and \
+        "당신은 아들의 편지를 보여 주기만 했습니다" in now
+
+
 async def test_what_a_look_found_is_steered_to_be_shown(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD), moves=("look:letter",))
     job = turn_job(*svc.games[gid], 1)

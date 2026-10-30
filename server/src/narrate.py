@@ -76,6 +76,8 @@ class Job:
     hint: tuple[str, str] | None = None   # a muse's way forward: (action, its button label); 5.2
     arrived: bool = False            # the player came to this place this turn: its scenery is new
     paced: tuple[str, ...] = ()      # clocks and deadlines whose pace word this turn changed
+    tried: bool = False              # a sentence's attempt on something rolled this turn
+    shown: tuple[str, ...] = ()      # names of the things this turn only showed
 
 
 def sentences_of(text: str) -> list[str]:
@@ -138,6 +140,10 @@ def change_line(u, c: dict) -> str | None:
         return ko.fill(ko.CHANGE["fork"], choices=either(c["choices"]))
     if k in ("clock", "crisis", "arrival", "chapter", "ending"):
         return ko.fill(ko.CHANGE[k], name=c["name"])
+    if k in ("scene_end", "fall"):
+        return ko.CHANGE[k]
+    if k == "tag_add" and c.get("replaced"):
+        return ko.fill(ko.CHANGE["tag_replace"], owner=name(u, c["owner"]), old=c["replaced"], name=c["name"])
     if k in ("tag_add", "tag_remove"):
         owner = name(u, c["owner"])
         agent = k == "tag_add" and (c["owner"] == PLAYER or u.kind(c["owner"]) == "agent")
@@ -387,6 +393,12 @@ def steering(job: Job, lines) -> list[str]:
     # A leaned-on letter never appeared in the prose (qa_test/runs/play-4-talker 6, play-4-odd 4).
     for x in job.relied:
         out.append(ko.fill(ko.NOW["relied"], rely=x))
+    # The odds never read the verb, so the narrator chose its own: "kicked" became "shouldered".
+    if job.tried:
+        out.append(ko.NOW["manner"])
+    # A thing shown from a sentence that said "건넨다" was told as taken from the player's hand (real UI, rules-2).
+    if job.shown:
+        out.append(ko.fill(ko.NOW["shown"], names=", ".join(job.shown)))
     # A letter was read and none of its words were told; its look sat among every other entity's (qa_test/runs/
     # play-5-talker 35).
     for x in job.looked:

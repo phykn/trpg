@@ -133,3 +133,7 @@ def test_server_text_takes_particles_from_the_value_before_them():
     fixed = re.compile(r"\{[a-z_]+\}(과|와|을|를|이|가|은|는|으로)(?![가-힣])|\{[a-z_]+\}(과|와|을|를|이|가|은|는)의")
     bad = [s for name in dir(ko) if name.isupper() for s in strings(getattr(ko, name)) if fixed.search(s)]
     assert bad == []
+
+
+def test_a_short_chapter_cap_warns_without_failing(u):
+    assert V.warnings(u) == [f"chapter {k}: beats × deadline boxes = 18, below the 20 steps of F10" for k in (1, 2)]

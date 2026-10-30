@@ -47,7 +47,7 @@ def play(u, creation):
 
 @pytest.mark.parametrize("aid", [
     "go:village", "look:door", "take:oil", "give:letter:dohae", "declare:l_baek", "cut:pass", "cut:rest",
-    "talk:dohae:t_oil;tone=friendly", "talk:dohae:favor", "talk:dohae:chat;claim=c_keeper;tone=deceive",
+    "talk:dohae:t_oil;tone=threaten", "talk:dohae:favor", "talk:dohae:chat;claim=c_keeper;tone=deceive",
     "try:door:finesse;rely=thing:key", "try:door:force;strain=forced", "choose:g_oil:beacon",
     "pay:c_wave", "pay:engine.beat", "grow:finesse", "grow:trait:sailor:islander", "grow:scar:2",
     "try:door:finesse;rely=tag:door:1",
@@ -96,7 +96,7 @@ def test_oracle_path(play):
     a = parse("try:door:finesse;rely=trait:tinker")
     o = play.obs
     pv = preview(play.u, o, a)
-    assert pv.risk == "normal" and [c[2] for c in pv.mods.chips()] == [2, 1, -1] and pv.z == 2
+    assert pv.risk == "normal" and [c[2] for c in pv.mods.chips()] == [2, 0, -1] and pv.z == 1
     step = play.do(format(a), (4, 3, 0))
     s = play.s
     assert pv.dc == 8 and step.result == "success" and step.risk == "normal" and step.mods == pv.mods.atoms()
@@ -116,12 +116,12 @@ def test_a_fail_applies_its_cost_at_once(play):
 
 
 def test_the_decisive_chips_are_those_whose_removal_flips_the_result(play):
-    """api.md 3: with the spray hindering, finesse 2 and tinker 1 roll against 8."""
+    """api.md 3: with the spray hindering, finesse 2 and a guarding tinker (0) roll against 8."""
     play.do("go:village")
     play.do("go:yard")
-    play.do("try:door:finesse;rely=trait:tinker", (3, 2, 0))          # 7 fails; without the spray, 8 would succeed
+    play.do("try:door:finesse;rely=trait:tinker", (4, 2, 0))          # 7 fails; without the spray, 8 would succeed
     assert step_record(play.u, {"tags": []}, play.log.seen[PLAYER][-1], "", None)["decisive"] == [2]
-    play.do("try:door:finesse;rely=thing:letter", (4, 3, 0))          # 9 succeeds; without finesse, 7 would fail
+    play.do("try:door:finesse;rely=thing:letter", (4, 3, 0))          # 8 succeeds; without finesse, 6 would fail
     assert step_record(play.u, {"tags": []}, play.log.seen[PLAYER][-1], "", None)["decisive"] == [0]
 
 
@@ -202,7 +202,7 @@ def test_risk_reads_only_the_action(u):
     assert risk(u, parse("try:door:force;strain=forced")) == "high"
     assert risk(u, parse("talk:dohae:chat;tone=threaten")) == "high"
     assert risk(u, parse("talk:dohae:chat;tone=deceive")) == "high"
-    assert risk(u, parse("talk:dohae:chat;tone=friendly")) == "normal"
+    assert risk(u, parse("talk:dohae:chat")) == "normal"
     assert risk(u, parse("choose:g_oil:beacon")) == "high"
     assert risk(u, parse("go:yard")) == "low"
 
@@ -433,9 +433,9 @@ def visible(u, s):
 CLOCK_COST = {"low": 1, "normal": 1, "high": 2}     # boxes a fail adds to the held clock (rule.md 3.3)
 
 
-def quiet(a) -> bool:
-    """Steps that raise no beat (rule.md 4.1)."""
-    return a.schema in ("cut", "grow") or (a.schema == "try" and a.intent[0] == PLAYER)
+def paced(a, step) -> bool:
+    """Steps that raise a beat: moves, rolls, and steps a hidden block stopped (rule.md 4.1)."""
+    return a.schema == "go" or step.rolled or step.result == "blocked"
 
 
 def may_lose(u, a, s0, step) -> set:
@@ -464,7 +464,7 @@ def check_time(u, a, s0, step):
     for o in active_threats(u, s1):
         assert s1.fill(o) < u.boxes(o), f"{o} is full but has not arrived"
     new_chapter = s1.flag("chapter") != s0.flag("chapter")
-    scene_end = not new_chapter and (a.schema == "cut" or not quiet(a) and s1.stat(PLAYER, "beats") == 0)
+    scene_end = not new_chapter and (a.schema == "cut" or paced(a, step) and s1.stat(PLAYER, "beats") == 0)
     lose = may_lose(u, a, s0, step)
     for (x, slot), (kind, life) in s0.mark_.items():
         if (x, slot) in lose:
@@ -476,7 +476,9 @@ def check_time(u, a, s0, step):
     if new_chapter:
         return
     c = held_clock(u, s0)
-    n = s0.fill(c) + (CLOCK_COST[step.risk] if step.result == "fail" else 0) + (a.schema == "declare")
+    guarded = bool(a.get("rely")) and not a.get("rely").startswith(("bond:", "with:"))
+    fail = 1 if guarded else CLOCK_COST[step.risk]          # something spent makes a fail cost one box (rule.md 3.3)
+    n = s0.fill(c) + (fail if step.result == "fail" else 0) + (a.schema == "declare")
     # A full clock brings its crisis and starts over; short of full, nothing else moves it.
     assert s1.fill(c) == (0 if n >= u.boxes(c) else n), f"{c}: {s0.fill(c)} → {s1.fill(c)} after {format(a)}"
 
@@ -512,7 +514,7 @@ def test_random_play_keeps_the_properties(u, creation, seed):
         check_time(u, a, s0, step)
         # A scene ends within B beat-raising steps and a deadline of n boxes arrives within n scenes (fun.md 3.3).
         chapter = s0.flag("chapter")
-        beats[chapter] += not quiet(a)
+        beats[chapter] += paced(a, step)
         assert beats[chapter] <= u.boxes(f"deadline.{chapter}") * u.beats
     assert ended(play.s), "no ending within 300 steps"
     assert space(u, play.obs) is not None
@@ -590,10 +592,10 @@ def test_a_companion_goes_along_until_a_place_it_avoids(u, play):
     assert stops == ["dohae"]
 
 
-def test_a_missed_goal_costs_time_and_opens_no_growth(u, creation):
+def test_a_missed_goal_costs_time_and_still_grows(u, creation):
     late = Run(u, creation)
     pass_until(late, lambda s: s.flag("chapter") == 2)
-    assert late.s.fill("deadline.2") == 1 and not late.s.stat(PLAYER, "growth")
+    assert late.s.fill("deadline.2") == 1 and late.s.stat(PLAYER, "growth") == 1
     on_time = Run(u, creation)
     for a, r in (("go:village", None), ("go:yard", None), ("try:door:finesse", (6, 6, 0)), ("go:lamp_room", None)):
         on_time.step(parse(a), r)
@@ -682,6 +684,30 @@ def test_one_scar_is_not_a_collapse(u, creation):
     assert not ended(play.s) and play.s.marks(PLAYER) == [(1, "snag", "scar")] and play.s.stat(PLAYER, "wounds") == 0
 
 
+def test_a_fall_and_the_scene_end_it_brings_are_named(u, creation):
+    """Wounds reset by a fall read as a heal, and the clocks it moved had no cause (rule.md 6)."""
+    from src.narrate import change_lines
+    from src.view import step_record
+    play = Play(u, creation)
+    for aid, r in (("go:village", None), ("go:yard", None), ("try:door:force;strain=forced", (1, 1, 0)),
+                   ("try:door:finesse", (6, 6, 0)), ("go:lamp_room", None), ("try:lens:finesse;strain=forced", (1, 1, 0))):
+        play.do(aid, r)
+    kinds = [c["kind"] for c in step_record(u, {"tags": []}, play.log.seen[PLAYER][-1], "", None)["changes"]]
+    assert "fall" in kinds and "wound" not in kinds and kinds.index("scene_end") < kinds.index("clock")
+    lines = change_lines(u, step_record(u, {"tags": []}, play.log.seen[PLAYER][-1], "", None)["changes"])
+    assert "당신이 쓰러졌다가 간신히 몸을 일으킵니다" in lines and "당신의 상처가 조금 나았습니다" not in lines
+
+
+def test_a_snag_never_pushes_out_an_edge_and_a_replaced_tag_is_told(u, s0):
+    from src.onto.change import Work
+    w = Work(u, s0)
+    for kind in ("edge", "snag", "snag"):
+        w.tag(PLAYER, kind, "scene")
+    assert w.tag(PLAYER, "snag", "scene") == 2 and w.happen == [("tag_replaced", PLAYER, 2, "snag", "scene")]
+    assert w.tag(PLAYER, "edge", "scene") == 2
+    assert [k for _, k, _ in w.state().marks(PLAYER)] == ["edge", "edge", "snag"]
+
+
 def test_an_attempt_names_its_target_and_approach(u, s0):
     from src.view import action_label
     o = observe(u, s0, Log())
@@ -701,7 +727,7 @@ def test_a_fork_choice_says_where_a_thing_goes(u):
 
 
 def test_every_help_chip_carries_its_option_name(u, play):
-    """The roll card draws a help's value beside the option of the same name (ui.md 4.2)."""
+    """The roll card draws a help's or a guard's value beside the option of the same name (ui.md 4.2)."""
     from src.cards import roll_card
     play.do("talk:yunseul:come", (6, 6, 0))
     play.do("go:yard")
@@ -709,4 +735,18 @@ def test_every_help_chip_carries_its_option_name(u, play):
     helped = [o for o in card["options"] if o["label"] != "기대지 않음"]
     assert "윤슬의 도움" in [o["label"] for o in helped]
     for o in helped:
-        assert [m["label"] for m in o["preview"]["mods"] if m["kind"] == "help"] == [o["label"]]
+        assert [(m["label"], m["kind"]) for m in o["preview"]["mods"] if m["kind"] in ("help", "guard")] == \
+            [(o["label"], "guard" if o["consumed"] else "help")]
+
+
+def test_forcing_is_offered_where_it_buys_a_box(u, play):
+    from src.cards import roll_card
+    for aid, r in (("go:village", None), ("go:yard", None), ("try:door:finesse", (6, 6, 0)), ("go:lamp_room", None)):
+        play.do(aid, r)
+    card = roll_card(u, play.obs, {"tags": []}, parse("try:lens:force"), [], [], {}, "c1")["public"]
+    forced = next(o["preview"] for o in card["options"] if o["id"] == "try:lens:force;strain=forced")
+    plain = next(o["preview"] for o in card["options"] if o["id"] == "try:lens:force")
+    assert (plain["gain"]["boxes"], forced["gain"]["boxes"], forced["gain"]["forced"]) == (1, 2, 1)
+    assert forced["dc"] == plain["dc"] + 1 and card["selected"] == "try:lens:force"
+    fits = roll_card(u, play.obs, {"tags": []}, parse("try:lens:finesse"), [], [], {}, "c2")["public"]
+    assert not any(o["forced"] for o in fits["options"])               # the fit already takes both boxes

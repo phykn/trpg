@@ -13,6 +13,11 @@ TABLE = {
 }
 
 
+def cost(risk: str, guarded: bool) -> tuple[int, str | None]:
+    """Something spent on the roll makes a fail cost what a low fail costs: the clock moves one box, nothing else."""
+    return TABLE["low"] if guarded else TABLE[risk]
+
+
 def pool(u, weight: str, target: str | None, facts: State, hist: frozenset) -> list:
     here = facts.where(PLAYER)
     story = list(u.places[here].complications) if here in u.places else []
@@ -25,11 +30,12 @@ def pool(u, weight: str, target: str | None, facts: State, hist: frozenset) -> l
     return out + [c for c in story if c.weight == weight and holds(c.when, facts, hist)]
 
 
-def settle(u, work: Work, result: str, risk: str, roll_u: int, target: str | None, world_hist: frozenset):
+def settle(u, work: Work, result: str, risk: str, roll_u: int, target: str | None, world_hist: frozenset,
+           guarded: bool = False):
     """The caller applies the returned complication."""
     if result != "fail":
         return None
-    n, weight = TABLE[risk]
+    n, weight = cost(risk, guarded)
     clock = held_clock(u, work.state())
     if clock is not None:
         work.set_("fill", (clock,), f"+{n}")

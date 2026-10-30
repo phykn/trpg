@@ -80,6 +80,10 @@ def turn_job(u: Universe, g: Game, n: int) -> Job | None:
     looked = tuple(dict.fromkeys(r["action"].split(":")[1] for r in turn["steps"]
                                  if r["action"].startswith("look:") and r["result"] != "blocked"))
     actions = [parse(r["action"]) for r in turn["steps"]]
+    shown = tuple(dict.fromkeys(u.name(a.intent[0]) for a, r in zip(actions, turn["steps"])
+                                if a.schema == "show" and r["result"] != "blocked"))
+    tried = bool(turn["text"]) and any(a.schema == "try" and a.intent[0] != PLAYER and r["roll"]
+                                       for a, r in zip(actions, turn["steps"]))
     reply, hint = "act", None
     if all(small_talk(a) for a in actions) and not blocked:
         reply = "talk"
@@ -108,7 +112,7 @@ def turn_job(u: Universe, g: Game, n: int) -> Job | None:
                previous=previous, ending=u.endings[ending].frame if ending else None, speakers=speakers, left=left,
                joined=joined, unfinished=turn.get("unfinished"), grown=grown, progress=progress, blocked=blocked,
                relied=relied, looked=looked, asked=asked, struck=struck, missed=missed, reply=reply, said=said, shared=shared,
-               hint=hint, arrived=went is not None, paced=paced, **size)
+               hint=hint, arrived=went is not None, paced=paced, tried=tried, shown=shown, **size)
 
 def recap_job(u: Universe, g: Game, k: int) -> Job | None:
     p = g.presentation
@@ -153,7 +157,7 @@ def marks(u, r: dict) -> bool:
     kinds = {c["kind"] for c in r["changes"]}
     person = any(a in u.agents for a in r["action"].split(";")[0].split(":")[1:])
     acted = person and (kinds & {"move", "follow", "promise", "regards", "reveal"} or r["roll"] is not None)
-    return notable_step(u, r) or bool(acted) or "wound" in kinds
+    return notable_step(u, r) or bool(acted) or bool({"wound", "fall"} & kinds)
 
 
 def notable_step(u, r: dict) -> bool:

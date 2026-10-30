@@ -27,7 +27,7 @@ The format has no field for anything a story must not write. Chapter transitions
 |---|---|
 | Approach | `force` 완력, `finesse` 솜씨, `wits` 재치, `charm` 매력 |
 | Risk | `low` 낮음, `normal` 보통 (an obstacle's default risk; `high` comes only from the rules, rule.md 3.2) |
-| Tone | `polite` 정중, `friendly` 친근, `plead` 간청, `threaten` 위협, `deceive` 속임 |
+| Tone | `polite` 정중, `threaten` 위협, `deceive` 속임 |
 | Strain | `natural` 자연스러움, `forced` 무리 |
 | Axis | `trust` 신뢰, `fear` 두려움 |
 | Tag | `edge` 유리, `snag` 불리 |
@@ -241,7 +241,7 @@ The action ids used by witnesses, receipts, buttons and patterns are `schema:int
 
 ```
 go:village   look:door   take:oil   give:letter:dohae   declare:l_baek   cut:pass   cut:rest
-talk:dohae:t_oil;tone=friendly   talk:dohae:favor   talk:dohae:chat;tone=deceive;claim=c_keeper
+talk:dohae:t_oil;tone=threaten   talk:dohae:favor   talk:dohae:chat;tone=deceive;claim=c_keeper
 try:door:finesse;rely=thing:key   try:door:force;strain=forced   choose:g_oil:beacon   grow:finesse
 ```
 
@@ -271,6 +271,8 @@ At startup the server runs these on every story in this order, and does not star
 | V4 | Names | The names and aliases of hidden entities (those with `hidden` or inside `brings`) do not appear in the public parameters of 2.1; aliases do not overlap; a character's `knows` names no other character; no `impossible` phrase is a substring of a name, an alias or a solution `label` (because layer 0 matches by substring, engine.md 3.1) |
 | V5 | Witnesses | The replay in section 5 |
 | V6 | Fuzzing | Random action sequences (picked from `K`, with random dice) run to an ending; at every step, `S ⊨ C` and `K ≠ ∅`; at every step with a roll, the preview's risk, modifier chip list and total equal the values from execution (rule.md 10, preview = execution) |
+
+Validation also warns, without stopping, when a chapter's `B × deadline boxes` is below F10's floor of 20 steps (fun.md 3.3): the story then cannot hold a chapter that long.
 
 V1–V4 make one pass over the story, and V5 computes `K` and `R` for as many steps as the witnesses have. That deadlines produce endings, and that there are "no dead ends", is guaranteed by structure (rule.md 10).
 

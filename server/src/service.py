@@ -10,13 +10,14 @@ from pathlib import Path
 from .cards import (
     clarify_card,
     confirm_card,
+    joiners,
     left_behind,
     move_card,
     rely_options,
     roll_card,
     ways,
 )
-from .interpret import names_way, unreachable
+from .interpret import names_way, says, unreachable
 from .jobs import recap_job, turn_job
 from .locale import ko
 from .narrate import Job
@@ -240,6 +241,8 @@ class GameService:
                 return self._refused(u, g, "card")
             if card["kind"] == "clarify":
                 plan = [card["resume"][body["pick"]], *card["rest"]]
+            elif body["pick"] in card.get("plans", {}):
+                plan = [*card["plans"][body["pick"]], *card["rest"]]
             else:
                 plan = [{"action": body["pick"], "accepted": True}, *card["rest"]]
             echo = card["public"]["echo"]
@@ -317,8 +320,9 @@ class GameService:
             if not st.get("accepted"):
                 rolling = rolls(u, o.facts, o.hist, a)
                 # A thing handed over does not come back, and a sentence that only showed it was read as giving
-                # (qa_test/runs/play-3-talker 3, play-4-talker 7).
-                if rolling or risk(u, a) == "high" or a.schema == "give" and kind == "text":
+                # (qa_test/runs/play-3-talker 3, play-4-talker 7); a sentence read as waiting spent the scene with no
+                # card (qa/findings.md).
+                if rolling or risk(u, a) == "high" or a.schema in ("give", "cut") and kind == "text":
                     p["card_seq"] += 1
                     cid = f"c{p['card_seq']}"
                     make = roll_card if rolling else confirm_card
@@ -332,9 +336,10 @@ class GameService:
                 # names its way alone leaves at once unless someone stays behind (engine.md 4.4).
                 if a.schema == "go" and kind == "text":
                     only = names_way(u, a.intent[0], ways(u, o), text)
-                    if not only or left_behind(u, o, a.intent[0]):
+                    asked = tuple(h for h in joiners(u, o) if says(u, h, text))
+                    if not only or left_behind(u, o, a.intent[0]) or asked:
                         p["card_seq"] += 1
-                        p["card"] = move_card(u, o, p, a, rest, labels, step_echo, f"c{p['card_seq']}", only)
+                        p["card"] = move_card(u, o, p, a, rest, labels, step_echo, f"c{p['card_seq']}", only, asked)
                         self._opened(p, origin)
                         unfinished = p["card"]["public"]["plan"]["step"]["label"]
                         break

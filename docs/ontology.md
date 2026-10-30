@@ -97,7 +97,7 @@ Each one says "no such combination of atoms exists", so each also holds on a sub
 - **Action** `a`: a schema with its arguments filled in, one to one with a canonical action id (story.md 3.12). The set of all actions `Act` is finite.
 - **Dice** `rₜ = H(seed, t)`. `H` is a fixed function (rule.md 3.1), and each game has one `seed`.
 - **Rules** `R(S, h, a, r) = (Δ, mods)`. `mods ⊆ Atom` are the atoms that adjusted the roll.
-- **Event** `e = (t, a, r, Δ, W, mods, result)`. The witnesses `W` are the agents in the places where the player was just before and just after the action.
+- **Event** `e = (t, a, r, Δ, W, mods, result, happen)`. The witnesses `W` are the agents in the places where the player was just before and just after the action.
 - **Log** `L`: a sequence of events. `L₀ = ε`.
 - **History summary** `h(L) ⊆ Pat`: the patterns, among the story's `did` patterns and the engine patterns (rule.md 5.1), that some event in `L` matches. Patterns read only an event's action id and result, never `t`, and a pattern never leaves once it is in.
 
@@ -128,7 +128,10 @@ class Event:
     delta: Delta                 # minimal difference
     witnesses: tuple[str, ...]   # sorted
     mods: tuple[Atom, ...]       # atoms that adjusted the roll, in rule order
+    happen: tuple[tuple, ...]    # typed happenings, in order; saved only when not empty
 ```
+
+**Happenings** are what a step did that `Δ` cannot tell: `("scene_end",)`, `("fall",)`, `("guard",)` (a spent reliance guarded the roll, rule.md 3.2), and `("tag_replaced", x, slot, kind, life)` (a full ring's slot was overwritten). Step records read them for their change lines (api.md 3): a scene end moved three clocks at once with no cause on screen, a fall reset the wounds and read as a heal, and an earned edge vanished under a snag without a line. Saves from before have none, and load unchanged.
 
 A step's `Δ` is the sequential composition of effect operations, but it is stored reduced to the **difference**: `add = S* ∖ S`, `remove = S ∖ S*`. The resulting state is the same, and an atom removed and re-added within one step leaves no trace in the log or the narration. `result` is stored so that `none` (achieved without a roll) and `blocked` (a hidden block came to light) can be told apart without interpreting `Δ`.
 
@@ -184,6 +187,7 @@ class Seen:
     witnesses: tuple[str, ...]    # W ∩ E_e
     delta: Delta                  # Δ ∩ F-rule_e
     mods: tuple[Atom, ...]        # mods ∩ F-rule_e
+    happen: tuple[tuple, ...]     # happen, without a tag_replaced on an entity not in E_e
 ```
 
 Projections are computed when an event is appended and kept in a cache. Only the player's projection `seen[player]` is built; it feeds the narration input `δ`, step records, recaps and the memory lines of the context. People have no prompts of their own, so there are no per-person projections. Memory is used only in prompts; `R` and conditions read only `h(L)`. The cache is not saved and is rebuilt on load.
@@ -224,7 +228,7 @@ The only code that changes the world is the operations in `change.py`. Each oper
 | `set_(pred, key, v)` | sets a `regards`, `fill`, `stat` or `flag` value. If `v` is `"+n"` or `"-n"`, it is added to the current value, and the result is clamped to its range in 1.3. Does nothing if the value is unchanged |
 | `drop_stat(g, s)` | removes `g`'s `stat` entry `s` (a trait given up in growth) |
 | `reveal(g, p)` | adds `believes(g, p)` |
-| `tag(x, kind, life)` | uses the lowest-numbered empty slot. If all are full, it clears the lowest-numbered slot that is not a `scar` and uses that. If only `scar` tags remain, it does nothing |
+| `tag(x, kind, life)` | uses the lowest-numbered empty slot. If all are full, it overwrites the lowest `snag` slot, or for an `edge` the lowest `edge` slot when no snag is left; a `scar` is never overwritten and a `snag` never overwrites an `edge`. Otherwise it does nothing. An overwrite records `tag_replaced` |
 | `untag(x, slot)` | clears that slot |
 | `link(p, q)`, `unlink(p, q)` | adds or removes a `link` |
 | `retire(o)` | removes `at[o]`. For a threat or fork, it also clears the fired flag of its appearance trigger |

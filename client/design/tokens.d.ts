@@ -5,7 +5,7 @@ export const colors: {
   danger: { fg: string };
   health: { fg: string };
   gold: { fg: string; muted: string };
-  chip: { stat: string; help: string; hinder: string };
+  chip: { stat: string; help: string; guard: string; hinder: string };
   kind: { person: string; thing: string; obstacle: string };
   box: { empty: string; full: string; danger: string };
   overlay: string;

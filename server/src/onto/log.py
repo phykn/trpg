@@ -38,16 +38,21 @@ class Event:
     delta: Delta
     witnesses: tuple[str, ...]    # sorted
     mods: tuple[Atom, ...]        # atoms that adjusted the roll, in rule order
+    happen: tuple[tuple, ...] = ()   # typed happenings (rule.md 8); saves from before them have none
 
     def to_json(self) -> dict:
-        return {"t": self.t, "action": self.action, "roll": list(self.roll) if self.roll else None,
-                "result": self.result, "delta": self.delta.to_json(), "witnesses": list(self.witnesses),
-                "mods": [list(m) for m in self.mods]}
+        out = {"t": self.t, "action": self.action, "roll": list(self.roll) if self.roll else None,
+               "result": self.result, "delta": self.delta.to_json(), "witnesses": list(self.witnesses),
+               "mods": [list(m) for m in self.mods]}
+        if self.happen:
+            out["happen"] = [list(h) for h in self.happen]
+        return out
 
     @staticmethod
     def from_json(d: dict) -> Event:
         return Event(d["t"], d["action"], tuple(d["roll"]) if d["roll"] else None, d["result"],
-                     Delta.from_json(d["delta"]), tuple(d["witnesses"]), tuple(tuple(m) for m in d["mods"]))
+                     Delta.from_json(d["delta"]), tuple(d["witnesses"]), tuple(tuple(m) for m in d["mods"]),
+                     tuple(tuple(h) for h in d.get("happen", ())))
 
 
 @dataclass(frozen=True)

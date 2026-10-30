@@ -51,6 +51,9 @@ def prop_label(u, pid: str) -> str:
 
 
 def holders(u, pid: str) -> list[str]:
+    """Whose words a proposition is: a topic's holder, or the person a desire belongs to."""
+    if u.props[pid].source == "desire":
+        return [pid[:-len(".desire")]]
     return [a.id for a in u.agents.values() if any(t.prop == pid for t in a.topics)]
 
 
@@ -98,7 +101,7 @@ def chips(u, p: dict, mods) -> list[dict]:
     return out
 
 
-def chips_of_atoms(u, p: dict, mods: tuple) -> list[dict]:
+def chips_of_atoms(u, p: dict, mods: tuple, guarded: bool = False) -> list[dict]:
     if not mods:
         return []
     stat, rest = mods[0], mods[1:]
@@ -106,7 +109,7 @@ def chips_of_atoms(u, p: dict, mods: tuple) -> list[dict]:
     hinders = [m for m in rest if (m[0] == "mark" and m[2] == "snag") or (m[0] == "regards" and m[4] < 0)]
     helps = [m for m in rest if m not in hinders]
     if helps:
-        groups.append(("help", tuple(helps), 1))
+        groups.append(("guard", tuple(helps), 0) if guarded else ("help", tuple(helps), 1))
     if hinders:
         groups.append(("hinder", tuple(hinders), -1))
     return chips(u, p, groups)
@@ -120,8 +123,8 @@ def action_label(u, o: Obs, p: dict, a: Action) -> str:
         return ko.fill(ko.ACTION["look"], x=u.name(i[0]))
     if s == "take":
         return ko.fill(ko.ACTION["take"], x=u.name(i[0]))
-    if s == "give":
-        return ko.fill(ko.ACTION["give"], h=u.name(i[1]), x=u.name(i[0]))
+    if s in ("give", "show"):
+        return ko.fill(ko.ACTION[s], h=u.name(i[1]), x=u.name(i[0]))
     if s == "talk":
         h, topic = i
         claim = a.get("claim")
@@ -211,7 +214,7 @@ def effect_names(u, effects) -> list[str]:
 
 def step_record(u, p: dict, seen: Seen, label: str, ending: str | None) -> dict:
     a = parse(seen.action)
-    mods = chips_of_atoms(u, p, seen.mods)
+    mods = chips_of_atoms(u, p, seen.mods, ("guard",) in seen.happen)
     roll = {"d1": seen.roll[0], "d2": seen.roll[1]} if seen.roll else None
     total = decisive = None
     level = risk(u, a)
@@ -242,8 +245,14 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
                 return at[-1]
         return None
 
-    fills = sorted({at[1] for at in add | rem if at[0] == "fill"}, key=u.rank)
+    # A scene end moves every threat at once; without its line three clocks moved with no cause the player could read.
+    # It comes after the step's own progress and before the clocks it moved.
+    fills = sorted({at[1] for at in add | rem if at[0] == "fill"}, key=lambda o: (u.obstacles[o].sub != "plain", u.rank(o)))
+    scene = ("scene_end",) in seen.happen
     for o in fills:
+        if scene and u.obstacles[o].sub != "plain":
+            out.append({"kind": "scene_end"})
+            scene = False
         before, after = value(rem, "fill", o), value(add, "fill", o)
         if before is None or after is None:
             continue
@@ -255,6 +264,8 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
             out.append({"kind": "crisis", "id": o, "name": ob.name, "from": before, "to": after})
         else:
             out.append({"kind": "clock", "id": o, "name": ob.name, "from": before, "to": after})
+    if scene:
+        out.append({"kind": "scene_end"})
     for at in sorted(rem, key=str):
         if at[0] == "at" and at[2] == PLAYER and u.obstacles.get(at[1]) and u.obstacles[at[1]].sub in ("threat", "fork", "deadline"):
             o = at[1]
@@ -264,17 +275,23 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
         if at[0] == "at" and at[2] == PLAYER and u.obstacles.get(at[1]) and u.obstacles[at[1]].sub == "fork":
             out.append({"kind": "fork", "id": at[1], "name": u.name(at[1]),
                         "choices": [n for _, n, _ in u.obstacles[at[1]].choices]})
+    replaced = {(h[1], h[2]) for h in seen.happen if h[0] == "tag_replaced"}
     for at in sorted(add, key=str):
         if at[0] == "mark":
             kind = "scar" if at[3] == "scar" else "tag_add"
-            out.append({"kind": kind, "owner": at[1], "slot": at[4], "tag": at[2], "life": at[3],
-                        "name": tag_name(p, at)})
+            c = {"kind": kind, "owner": at[1], "slot": at[4], "tag": at[2], "life": at[3], "name": tag_name(p, at)}
+            old = next((b for b in rem if b[0] == "mark" and (b[1], b[4]) == (at[1], at[4])), None)
+            if (at[1], at[4]) in replaced and old:
+                c["replaced"] = tag_name(p, old)
+            out.append(c)
     for at in sorted(rem, key=str):
         if at[0] == "mark" and not any(b[0] == "mark" and b[1] == at[1] and b[4] == at[4] for b in add):
             out.append({"kind": "tag_remove", "owner": at[1], "slot": at[4], "tag": at[2], "life": at[3],
                         "name": tag_name(p, at)})
     w0, w1 = value(rem, "stat", PLAYER, "wounds"), value(add, "stat", PLAYER, "wounds")
-    if w0 is not None and w1 is not None:
+    if ("fall",) in seen.happen:
+        out.append({"kind": "fall"})        # the wounds reset with it, which read as a heal
+    elif w0 is not None and w1 is not None:
         out.append({"kind": "wound", "from": w0, "to": w1})
     went = value(add, "at", PLAYER)
     for at in sorted(add, key=str):

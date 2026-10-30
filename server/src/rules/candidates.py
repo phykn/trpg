@@ -41,6 +41,8 @@ def reach(u, facts: State, target: str) -> list[str]:
 # What the player has is spent until the chapter changes once leaned on; people are not, and a tag is removed instead
 # (rule.md 2).
 SPENDS = ("trait:", "thing:", "prop:")
+# Who stands with the player raises the odds; anything spent lowers a fail's cost instead (rule.md 3.2, 3.3).
+FREE = ("bond:", "with:")
 
 
 def rely_atom(u, facts: State, rely: str, target: str):
@@ -134,6 +136,7 @@ def space(u, o: Obs) -> list[Slot]:
     held = [x for x in seen if x in u.things and f.where(x) == PLAYER]
     people = [h for h in seen if h in u.agents and f.where(h) == here and open_(h)]
     out += [Slot("give", (x, h)) for x in held for h in people]
+    out += [Slot("show", (x, h)) for x in held for h in people]
     claims = (None, *u.claims)
     for h in people:
         topics = [t.id for t in u.agents[h].topics]

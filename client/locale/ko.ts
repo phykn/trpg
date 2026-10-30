@@ -5,6 +5,7 @@ function batchim(word: string): number | null {
 const eul = (w: string) => `${w}${batchim(w) ? '을' : '를'}`;
 // ㄹ batchim (8) takes 로 like an open syllable.
 const ro = (w: string) => { const b = batchim(w); return `${w}${b && b !== 8 ? '으로' : '로'}`; };
+const wa = (w: string) => `${w}${batchim(w) ? '과' : '와'}`;
 
 export const ko = {
   brand: '말과 주사위',
@@ -60,6 +61,11 @@ export const ko = {
   whereTo: '어디로 갈까요?',
   goTo: (place: string) => `${ro(place)} 갈까요?`,
   leave: '간다',
+  leaveWith: (name: string) => `${wa(name)} 같이 간다`,
   thanks: '덕분에',
+  // A spent reliance adds nothing to the roll; it makes a fail cost what a low fail costs (rule.md 3.3).
+  guarded: '실패 대가 줄임',
+  forced: '무리해서',
+  forcedGain: '성공하면 한 칸 더',
   because: '때문에',
 } as const;

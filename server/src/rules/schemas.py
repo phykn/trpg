@@ -7,6 +7,7 @@ from ..onto.change import Work
 from ..onto.view import facts_of
 from .acts import Action
 from .candidates import (
+    FREE,
     SPENDS,
     active_threats,
     blockers,
@@ -37,6 +38,7 @@ class Ctx:
 
 
 def scene_end(u, w: Work) -> None:
+    w.happen.append(("scene_end",))
     w.expire("scene")
     w.set_("stat", (PLAYER, "beats"), 0)
     tick_threats(u, w)
@@ -68,6 +70,8 @@ def hidden_block(ctx: Ctx, x: str) -> bool:
 def roll_now(ctx: Ctx) -> None:
     ctx.mods = modifiers(ctx.u, ctx.s, ctx.a)
     ctx.result = outcome(ctx.r, ctx.mods, ctx.risk)
+    if ctx.mods.guard:
+        ctx.work.happen.append(("guard",))      # the event's mods are atoms alone, and saves from before helped
 
 
 def pay_costs(ctx: Ctx, target: str) -> None:
@@ -78,7 +82,8 @@ def pay_costs(ctx: Ctx, target: str) -> None:
         ctx.work.untag(x, int(slot))
     elif rely and rely.startswith(SPENDS):
         ctx.work.insert(("spent", PLAYER, rely.partition(":")[2]))
-    comp = settle(ctx.u, ctx.work, ctx.result, ctx.risk, ctx.r[2], target, ctx.h)
+    guarded = bool(rely) and not rely.startswith(FREE)
+    comp = settle(ctx.u, ctx.work, ctx.result, ctx.risk, ctx.r[2], target, ctx.h, guarded)
     if comp is not None:
         run(ctx, comp.effects)
 
@@ -91,11 +96,17 @@ def small_talk(a) -> bool:
 def delta0(ctx: Ctx) -> None:
     a, w, u = ctx.a, ctx.work, ctx.u
     ctx.risk = risk(u, a)
-    # When every greeting cost a beat, players stopped speaking (rule.md 4.1).
-    quiet = a.schema in ("cut", "grow") or (a.schema == "try" and a.intent[0] == PLAYER) or small_talk(a)
-    if not quiet:
+    # Beats on rolls and moves only, and a step a hidden block stopped. When looking and taking cost a beat, a player
+    # who walked the map and looked at each thing once had spent 10 of the chapter's 18 before a roll;
+    # when every greeting did, players stopped speaking (rule.md 4.1). The beat comes first, so a scene the step ends
+    # starts at zero.
+    paced = a.schema == "go" or (a.schema == "try" and a.intent[0] != PLAYER) or \
+        (a.schema == "talk" and talk_rolls(u, facts_of(u, ctx.s, PLAYER), ctx.h, *a.intent))
+    if paced:
         w.set_("stat", (PLAYER, "beats"), "+1")
     globals()[f"_{a.schema}"](ctx, *a.intent)
+    if ctx.result == "blocked" and not paced:
+        w.set_("stat", (PLAYER, "beats"), "+1")
 
 
 def _go(ctx, q):
@@ -129,6 +140,15 @@ def _give(ctx, x, h):
         w.insert(("owes", h, PLAYER, "kindness"))
 
 
+def _show(ctx, x, h):
+    """Showing is not giving: nothing moves, and a person who wants the thing warms to the sight once (rule.md 5.1)."""
+    if hidden_block(ctx, h):
+        ctx.result = "blocked"
+        return
+    if x in ctx.u.agents[h].wants and ctx.u.show_patterns[(x, h)] not in ctx.h:
+        ctx.work.set_("regards", (h, PLAYER, "trust"), "+1")
+
+
 def _talk(ctx, h, topic):
     u, w, a = ctx.u, ctx.work, ctx.a
     if hidden_block(ctx, h):
@@ -144,7 +164,9 @@ def _talk(ctx, h, topic):
             w.retract(("owes", h, PLAYER, "kindness"))
         elif won:
             run(ctx, favor.effects)
-            w.insert(("owes", PLAYER, h, "promise"))
+            # Fear or a lie pays instead of a promise; both cost trust below (rule.md 5.1).
+            if a.get("tone") not in ("threaten", "deceive"):
+                w.insert(("owes", PLAYER, h, "promise"))
     elif topic == "come":
         if won:
             w.insert(("follows", h, PLAYER))
@@ -154,6 +176,9 @@ def _talk(ctx, h, topic):
         w.reveal(PLAYER, topic_of(u, h, topic).prop)
     if ctx.rolled:
         pay_costs(ctx, h)
+    # A failed talk teaches what moves the person, so the next try is informed, not the same roll (rule.md 5.1).
+    if ctx.result == "fail" and f"{h}.desire" in u.props:
+        w.reveal(PLAYER, f"{h}.desire")
     tone = a.get("tone")
     claim = a.get("claim")
     caught = tone == "deceive" and claim is not None and ctx.s.has("believes", h, u.claims[claim])
@@ -178,7 +203,8 @@ def _try(ctx, x, approach):
     if ctx.result == "success":
         ob = ctx.u.obstacles.get(x)
         if ob is not None:
-            w.set_("fill", (x,), f"+{1 + (approach in ob.fits)}")
+            # Forcing buys a box: it costs a risk step and a heavy fail, so it must gain something.
+            w.set_("fill", (x,), f"+{1 + (approach in ob.fits) + (ctx.a.get('strain') == 'forced')}")
         else:
             snags = [i for i, kind, _ in w.state().marks(x) if kind == "snag"]
             if snags:

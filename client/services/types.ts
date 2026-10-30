@@ -5,7 +5,7 @@ export type Story = {
 };
 export type Creation = { name: string; approaches: Record<string, number>; traits: string[] };
 
-export type Chip = { kind: 'stat' | 'help' | 'hinder'; label: string; value: number };
+export type Chip = { kind: 'stat' | 'help' | 'guard' | 'hinder'; label: string; value: number };
 export type Change = { kind: string; [key: string]: unknown };
 export type StepRecord = {
   t: number; action: string; label: string; result: 'success' | 'fail' | 'none' | 'blocked';
@@ -17,12 +17,13 @@ export type Preview = {
   risk: 'low' | 'normal' | 'high'; mods: Chip[]; z: number; dc: number;
   stakes: { clock: number; weight: string | null };
   clock: { id: string; name: string; boxes: number; fill: number } | null;
-  gain: { kind: 'fill'; boxes: number; fit: number } | { kind: 'tag'; remove: string | null }
+  gain: { kind: 'fill'; boxes: number; fit: number; forced?: number } | { kind: 'tag'; remove: string | null }
     | { kind: 'topic' } | { kind: 'favor'; effects: string[] } | { kind: 'follow' };
 };
 export type Target = { id: string; name: string; fill?: number; boxes?: number } | null;
 export type CardOption = {
   id: string; label: string; consumed?: boolean; note?: string | null; preview?: Preview; effects?: string[];
+  with?: string; rely?: string | null; forced?: boolean;
 };
 export type Card = {
   id: string; kind: 'roll' | 'clarify' | 'confirm' | 'move';

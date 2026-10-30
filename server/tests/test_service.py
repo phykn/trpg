@@ -142,18 +142,21 @@ async def test_roll_card_preview_is_the_step(svc):
     card = out["view"]["card"]
     assert card["kind"] == "roll" and card["selected"] == "try:door:finesse"
     ids = [o["id"] for o in card["options"]]
-    assert ids[-1] == "try:door:finesse" and "try:door:finesse;rely=trait:tinker" in ids
+    # one box opens the door, so forcing would buy nothing and is not offered
+    assert ids[-1] == "try:door:finesse" and "try:door:finesse;rely=trait:tinker" in ids and not any(
+        o["forced"] for o in card["options"])
     pick = next(o for o in card["options"] if o["id"] == "try:door:finesse;rely=trait:tinker")
-    assert [m["value"] for m in pick["preview"]["mods"]] == [2, 1, -1]
+    assert [m["value"] for m in pick["preview"]["mods"]] == [2, 0, -1]
     assert pick["note"] == "이번 장 1번" and pick["preview"]["risk"] == "normal"
     bad = await cmd(svc, gid, out["view"], "r4", card=card["id"], pick="try:door:force")
     assert bad["kind"] == "refused"
     done = await cmd(svc, gid, out["view"], "r5", card=card["id"], pick=pick["id"])
     step = done["steps"][0]
     assert step["mods"] == pick["preview"]["mods"] and step["risk"] == pick["preview"]["risk"]
-    assert step["total"] == step["roll"]["d1"] + step["roll"]["d2"] + 2
+    assert step["total"] == step["roll"]["d1"] + step["roll"]["d2"] + 1
     assert done["view"]["card"] is None
-    assert turn_job(*svc.games[gid], done["turn"]).relied == ("기계공",)
+    job = turn_job(*svc.games[gid], done["turn"])
+    assert job.relied == ("기계공",) and not job.tried                  # a button's attempt has its own words
 
 
 async def test_a_blocked_step_reaches_the_narration(svc):
@@ -167,7 +170,7 @@ async def test_a_blocked_step_reaches_the_narration(svc):
 
 async def test_a_blocked_step_still_tells_the_scene_end_its_beat_brought(svc):
     gid, view = await new(svc)
-    for i, a in enumerate(["look:dock", "look:yunseul", "look:dock", "look:yunseul", "go:village"]):
+    for i, a in enumerate(["go:village", "go:dock", "go:village", "go:dock", "go:village"]):
         _, view = await press(svc, gid, view, a, f"r{i}")
     # the sixth beat ends the scene (narr-3 turn 6); small talk spends none, so a threat, which asks first
     view = (await cmd(svc, gid, view, "r9", action="talk:dohae:chat;tone=threaten"))["view"]

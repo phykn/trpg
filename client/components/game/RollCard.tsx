@@ -66,7 +66,7 @@ function Mods({ mods, shown, decisive = [] }: { mods: Chip[]; shown?: number; de
         return (
           <Text key={`${m.label}${i}`} className={`text-panel ${key ? 'font-sans-semibold' : 'font-sans'}`}
             style={{ color: colors.chip[m.kind], opacity: shown !== undefined && i >= shown ? 0.35 : 1 }}>
-            {m.label} {signed(m.value)}{key ? ` ${m.kind === 'hinder' ? ko.because : ko.thanks}` : ''}
+            {m.label} {m.kind === 'guard' ? `· ${ko.guarded}` : signed(m.value)}{key ? ` ${m.kind === 'hinder' ? ko.because : ko.thanks}` : ''}
           </Text>
         );
       })}
@@ -80,15 +80,22 @@ export function RollCard({ card, onRoll, onCancel, onResend, notice, step, frame
   card: Card; onRoll: (pick: string) => void; onCancel: () => void; onResend?: () => void; notice?: string | null;
   step?: StepRecord; frame?: Frame; rolling?: boolean;
 }) {
-  const none = card.options.find(plain) ?? card.options[card.options.length - 1];
-  const [pick, setPick] = useState(card.selected ?? none.id);
-  const chosen = card.options.find((o) => o.id === pick) ?? none;
+  const first = card.options.find(plain) ?? card.options[card.options.length - 1];
+  const [pick, setPick] = useState(card.selected ?? first.id);
+  const chosen = card.options.find((o) => o.id === pick) ?? first;
+  // Forcing is a toggle over the same reliances: each option has a twin in the other strain.
+  const group = card.options.filter((o) => !!o.forced === !!chosen.forced);
+  const none = group.find(plain) ?? first;
+  const twin = card.options.find((o) => (o.rely ?? null) === (chosen.rely ?? null) && !!o.forced !== !!chosen.forced);
+  const forcedGain = (chosen.forced ? chosen : twin)?.preview?.gain;
+  const buys = forcedGain?.kind === 'fill' && (forcedGain.forced ?? 0) > 0;
   const p = chosen.preview as Preview;
   const target = card.plan.step?.target;
   const high = p.risk === 'high';
   const locked = rolling || !!step || !!onResend;
-  const relyChip = (o: CardOption) => o.preview?.mods.find((m) => m.kind === 'help' && m.label === o.label);
+  const relyChip = (o: CardOption) => o.preview?.mods.find((m) => (m.kind === 'help' || m.kind === 'guard') && m.label === o.label);
   const fixed = p.mods.filter((m) => m.value !== 0 && m.kind !== 'help');
+  const relyText = (c: Chip) => (c.kind === 'guard' ? ` · ${ko.guarded}` : ` ${signed(c.value)}`);
   const fill = target?.fill ?? 0;
   const own = step ? step.changes.findIndex((c) => c.kind === 'fill' && c.id === target?.id) : -1;
   const gained = frame && own >= 0 ? frame.boxes[own] ?? 0 : 0;
@@ -139,12 +146,12 @@ export function RollCard({ card, onRoll, onCancel, onResend, notice, step, frame
             {fixed.length ? <Mods mods={fixed} /> : null}
             {/* One help at most, so the rows are radio buttons; they share the widest row's width to line up. */}
             <View>
-              {card.options.filter((o) => !plain(o)).map((o) => {
+              {group.filter((o) => !plain(o)).map((o) => {
                 const chip = relyChip(o);
                 const on = o.id === pick;
                 return (
                   <Pressable key={o.id} accessibilityRole="radio" accessibilityState={{ checked: on, disabled: locked }}
-                    accessibilityLabel={[o.label, chip ? signed(chip.value) : '', o.note ? `· ${o.note}` : ''].filter(Boolean).join(' ')}
+                    accessibilityLabel={`${o.label}${chip ? relyText(chip) : ''}${o.note ? ` · ${o.note}` : ''}`}
                     disabled={locked} onPress={() => setPick(on ? none.id : o.id)} style={pressed}
                     className="min-h-[32px] flex-row items-center gap-2 px-2">
                     <View className="h-4 w-4 items-center justify-center rounded-full border"
@@ -152,13 +159,26 @@ export function RollCard({ card, onRoll, onCancel, onResend, notice, step, frame
                       {on ? <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.chip.help }} /> : null}
                     </View>
                     <Text className={`font-sans text-panel ${on ? 'text-fg-default' : 'text-fg-muted'}`}>
-                      {o.label}{chip ? <Text style={{ color: colors.chip.help }}> {signed(chip.value)}</Text> : null}
+                      {o.label}{chip ? <Text style={{ color: colors.chip[chip.kind] }}>{relyText(chip)}</Text> : null}
                       {o.note ? <Text className="text-fg-subtle"> · {o.note}</Text> : null}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
+            {twin ? (
+              <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!chosen.forced, disabled: locked }}
+                accessibilityLabel={buys ? `${ko.forced} · ${ko.forcedGain}` : ko.forced} disabled={locked} onPress={() => setPick(twin.id)}
+                style={pressed} className="min-h-[32px] flex-row items-center gap-2 px-2">
+                <View className="h-4 w-4 items-center justify-center rounded-sm border"
+                  style={{ borderColor: chosen.forced ? colors.danger.fg : colors.border.strong }}>
+                  {chosen.forced ? <View className="h-2 w-2" style={{ backgroundColor: colors.danger.fg }} /> : null}
+                </View>
+                <Text className={`font-sans text-panel ${chosen.forced ? 'text-fg-default' : 'text-fg-muted'}`}>
+                  {ko.forced}{buys ? <Text className="text-fg-subtle"> · {ko.forcedGain}</Text> : null}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
         {notice ? <Notice text={notice} /> : null}

@@ -6,7 +6,8 @@ import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { Card } from '@/services/types';
 
-// A choice that cannot be taken back: its effects in plain lines, one button to commit.
+// A choice that cannot be taken back: its effects in plain lines, one button to commit. Other options (showing a
+// thing instead of giving it) are quieter buttons under it, each named by what it does.
 export function ConfirmCard({ card, onPick, onCancel }: { card: Card; onPick: (id: string) => void; onCancel: () => void }) {
   const o = card.options[0];
   return (
@@ -22,6 +23,9 @@ export function ConfirmCard({ card, onPick, onCancel }: { card: Card; onPick: (i
         </View>
       ) : null}
       <Button icon="check" label={ko.choose} onPress={() => onPick(o.id)} />
+      {card.options.slice(1).map((x) => (
+        <Button key={x.id} tone="secondary" label={x.label} onPress={() => onPick(x.id)} />
+      ))}
     </Sheet>
   );
 }

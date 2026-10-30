@@ -16,6 +16,8 @@ class Work:
         self.flag = dict(s.flag_)
         self.sets = {p: set(v) for p, v in s.sets_.items()}
         self.names: list[tuple[str, int, str | None]] = []   # tags placed this step: (x, slot, default name)
+        # What fired, as typed happenings: the step records read them instead of guessing from the atoms (rule.md 8).
+        self.happen: list[tuple] = []
         self._frozen: State | None = None
 
     def state(self) -> State:
@@ -66,16 +68,19 @@ class Work:
         self.insert(("believes", g, p))
 
     def tag(self, x: str, kind: str, life: str, name: str | None = None) -> int | None:
-        """Lowest empty slot; when full, replace the lowest non-scar slot; all scars: nothing."""
+        """Lowest empty slot; when full, replace the lowest snag, or for an edge the lowest edge, never a scar and never
+        an edge with a snag; else nothing.
+        An edge the player earned vanished under a snag without a line."""
         used = {i: self.mark[(y, i)] for (y, i) in self.mark if y == x}
         free = [i for i in (1, 2, 3) if i not in used]
         if free:
             slot = free[0]
         else:
-            open_ = [i for i in (1, 2, 3) if used[i][1] != "scar"]
+            open_ = [i for i in (1, 2, 3) if used[i][1] != "scar" and (kind == "edge" or used[i][0] == "snag")]
             if not open_:
                 return None
-            slot = open_[0]
+            slot = min(open_, key=lambda i: (used[i][0] != "snag", i))
+            self.happen.append(("tag_replaced", x, slot, *used[slot]))
         self._touch()
         self.mark[(x, slot)] = (kind, life)
         self.names.append((x, slot, name))

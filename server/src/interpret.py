@@ -10,7 +10,7 @@ from .locale import ko
 from .models.decision import ModelUnavailable, choice, noul, probs_of
 from .onto.atoms import APPROACHES, PLAYER
 from .onto.view import observe
-from .rules.acts import JUDGE, make
+from .rules.acts import JUDGE, TONES, make
 from .rules.candidates import (
     Slot,
     blockers,
@@ -33,7 +33,6 @@ RELY_SHARE = 0.1
 TIMEOUT = 10.0
 SAY = ("go", "look", "take", "give", "talk", "try", "declare", "cut", "choose")
 FALLBACK_APPROACH = "wits"         # try(player) when layer 1 is unsure: no roll, no change, narration only
-SAY_TONES = ("polite", "friendly", "plead")   # threats and lies change regard, so only an act makes them (engine.md 3.3)
 REQUESTS = ("favor", "come", "stay")
 
 
@@ -358,8 +357,9 @@ class Interpreter:
         qs, judge = {}, {}
         if len(intents) > 1 and "intent" not in fixed:
             qs["intent"] = choice(ko.SLOT_QUESTION["intent"], labels)
-        if st["schema"] == "talk":
-            judge = {"tone": {t: ko.TONE_DESC[t] for t in (SAY_TONES if st.get("say") else ko.TONES)}}
+        if st["schema"] == "talk" and not st.get("say"):
+            # threats and lies change regard, so only an act makes them (engine.md 3.3)
+            judge = {"tone": {t: ko.TONE_DESC[t] for t in TONES}}
         for k, opts in judge.items():
             if k not in fixed:
                 qs[k] = choice(ko.SLOT_QUESTION[k], opts)

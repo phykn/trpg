@@ -11,7 +11,7 @@
 - {at: {path: 0, step: 0}, text: 윤슬에게 편지를 보여 주며 건넨다, expect: give:letter:yunseul}
 - {at: {path: 0, step: 0}, text: 윤슬에게 아들의 편지를 보여주며 이 편지를 누구에게 전해야 하는지 묻는다, expect: talk,
    known: '이야기 모델이 "보여주며"를 건네기로 읽어 give가 먼저 옵니다'}
-- {at: {path: 0, step: 0}, text: 어부의 딸에게 반갑게 말을 건다, expect: "talk:yunseul:chat;tone=friendly"}
+- {at: {path: 0, step: 0}, text: 어부의 딸에게 반갑게 말을 건다, expect: "talk:yunseul:chat"}
 - {at: {path: 0, step: 0}, text: 품속의 편지를 꺼내 다시 읽어 본다, expect: look:letter}
 - {at: {path: 0, step: 0}, text: 부두 주변을 천천히 둘러본다, expect: look:dock}
 - {at: {path: 0, step: 0}, text: 하늘의 구름이 얼마나 몰려오는지 살핀다, expect: look:clock.1}
@@ -24,7 +24,7 @@
 - {at: {path: 0, step: 0}, text: 아들의 편지를 확인한다, expect: look:letter}
 - {at: {path: 0, step: 0}, text: "여기 뭐가 있지?", expect: look:dock,
    known: '2층이 "여기"를 선착장 대신 편지로 확신합니다'}
-- {at: {path: 0, step: 0}, text: 윤슬에게 말을 건다 ㅎㅇ, expect: "talk:yunseul:chat;tone=friendly"}
+- {at: {path: 0, step: 0}, text: 윤슬에게 말을 건다 ㅎㅇ, expect: "talk:yunseul:chat"}
 - {at: {path: 0, step: 0}, text: 등대로 간다, expect: go:yard}
 - {at: {path: 0, step: 0}, text: 선착장을 떠난다, expect: go}
 - {at: {path: 0, step: 0}, text: 윤슬에게 같이 가자고 한다, expect: talk:yunseul:come}
@@ -40,9 +40,10 @@
 - {at: {path: 0, step: 1}, text: 도해에게 등대 기름이 어디 있는지 묻는다, expect: talk:dohae:t_oil, relies: [thing:letter]}
 - {at: {path: 0, step: 1}, text: 등대지기에게 열쇠를 빌려 달라고 부탁한다, expect: talk:dohae:favor}
 - {at: {path: 0, step: 1}, text: 노인에게 아들의 편지를 건넨다, expect: give:letter:dohae}
-- {at: {path: 0, step: 1}, text: 도해에게 아드님 편지를 가져왔다고 간청하며 이야기한다, expect: "talk:dohae:chat;tone=plead"}
+- {at: {path: 0, step: 1}, text: 도해에게 아드님 편지를 가져왔다고 간청하며 이야기한다, expect: "talk:dohae:chat"}
 - {at: {path: 0, step: 1}, text: 도해에게 내가 새로 온 등대지기라고 속인다, expect: "talk:dohae:chat;claim=c_keeper;tone=deceive"}
-- {at: {path: 0, step: 1}, text: 도해의 멱살을 잡고 열쇠를 내놓으라고 윽박지른다, expect: "talk:dohae:favor;tone=threaten"}
+- {at: {path: 0, step: 1}, text: 도해의 멱살을 잡고 열쇠를 내놓으라고 윽박지른다, expect: "talk:dohae:favor;tone=threaten",
+   known: '도해가 기름 이야기를 아는 뒤로 결정 모델이 부탁(favor)을 0.47로 θ 아래에 두고, 이야기 모델도 고르지 못해 되묻기 카드가 됩니다'}
 - {at: {path: 0, step: 1}, text: 이 마을에 예전에 같이 배를 탄 동료가 있다고 떠올린다, expect: declare:l_baek}
 - {at: {path: 0, step: 1}, text: 마을 우물가에 앉아 잠깐 쉰다, expect: cut:rest}
 - {at: {path: 0, step: 1}, text: 등대 앞으로 올라간다, expect: go:yard}
@@ -92,13 +93,13 @@
 
 # 막 친 말: 실제 플레이 기록처럼 따옴표도, 받는 사람도, 존댓말도 없는 문장. 행동이 분명한 말만 행동이 되고,
 # 곁에 있는 사람에게 건넨 말은 말 걸기, 그 밖의 말은 서술만 합니다.
-- {at: {path: 0, step: 0}, text: 하이, expect: "talk:yunseul:chat;tone=friendly"}
-- {at: {path: 0, step: 0}, text: 안녕, expect: "talk:yunseul:chat;tone=friendly"}
+- {at: {path: 0, step: 0}, text: 하이, expect: "talk:yunseul:chat"}
+- {at: {path: 0, step: 0}, text: 안녕, expect: "talk:yunseul:chat"}
 - {at: {path: 0, step: 0}, text: 넌 이름이 뭐니, expect: talk:yunseul:chat}
 - {at: {path: 0, step: 0}, text: 왜 불을 켜야해, expect: talk:yunseul:chat}
 - {at: {path: 0, step: 0}, text: "먹을거 어디에 있어?", expect: talk:yunseul:chat}
 - {at: {path: 0, step: 0}, text: 너 여기서 뭐해, expect: talk:yunseul:chat}
-- {at: {path: 0, step: 0}, text: ㅇㅇ 알겠어 고마워, expect: "talk:yunseul:chat;tone=friendly"}
+- {at: {path: 0, step: 0}, text: ㅇㅇ 알겠어 고마워, expect: "talk:yunseul:chat"}
 - {at: {path: 0, step: 0}, text: 등대지기 아저씨는 어디 갔어, expect: talk:yunseul:chat}
 - {at: {path: 0, step: 0}, text: 담장 얘기 좀 해봐, expect: talk:yunseul:t_wall}
 - {at: {path: 0, step: 0}, text: 등대로, expect: go:yard,

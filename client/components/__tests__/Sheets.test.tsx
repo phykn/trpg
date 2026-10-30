@@ -47,3 +47,15 @@ test('a confirm card lists what the choice costs and commits with its option id'
   await flush(async () => { (pressable(tree!, ko.close)[0].props.onPress as () => void)(); });
   expect(onCancel).toHaveBeenCalled();
 });
+
+test('a give confirm card also offers to show the thing only', async () => {
+  const onPick = jest.fn();
+  const give = { ...confirm, options: [
+    { id: 'give:letter:yunseul', label: '윤슬에게 아들의 편지를 준다', effects: ['아들의 편지가 윤슬에게 감'] },
+    { id: 'show:letter:yunseul', label: '윤슬에게 아들의 편지를 보여 준다', effects: [] },
+  ] } as Card;
+  let tree: ReturnType<typeof renderer.create>;
+  await flush(async () => { tree = renderer.create(<ConfirmCard card={give} onPick={onPick} onCancel={jest.fn()} />); });
+  await flush(async () => { (pressable(tree!, '윤슬에게 아들의 편지를 보여 준다')[0].props.onPress as () => void)(); });
+  expect(onPick).toHaveBeenCalledWith('show:letter:yunseul');
+});

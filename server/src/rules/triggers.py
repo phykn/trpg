@@ -54,12 +54,11 @@ def chapter_to(ctx: Ctx, k: int, extra, late: bool = False) -> None:
     w.retire(f"deadline.{k - 1}")
     w.move(f"clock.{k}", PLAYER)
     w.move(f"deadline.{k}", PLAYER)
-    # A missed goal costs time and opens no growth: with growth it looked like success (qa_test/runs/play-1-*,
-    # play-4-explorer 29, 41).
+    # A missed goal costs time: with nothing lost it looked like success (qa_test/runs/play-1-*, play-4-explorer
+    # 29, 41). It costs that one thing; withholding growth too punished a losing player twice.
     if late and ctx.u.boxes(f"deadline.{k}") > 1:
         w.set_("fill", (f"deadline.{k}",), "+1")
-    if not late:
-        w.set_("stat", (PLAYER, "growth"), "+1")
+    w.set_("stat", (PLAYER, "growth"), "+1")
     apply(ctx, extra)
 
 
@@ -83,6 +82,7 @@ def t_fall(ctx: Ctx) -> bool:
     w = ctx.work
     if w.state().stat(PLAYER, "wounds") != ctx.u.wound_boxes:
         return False
+    w.happen.append(("fall",))
     w.set_("stat", (PLAYER, "wounds"), 0)
     w.tag(PLAYER, "snag", "scar", "@scar")
     scene_end(ctx.u, w)

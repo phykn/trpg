@@ -15,6 +15,7 @@ class Seen:
     witnesses: tuple[str, ...]    # W ∩ E_e
     delta: Delta                  # Δ ∩ F-rule_e
     mods: tuple[Atom, ...]        # mods ∩ F-rule_e
+    happen: tuple[tuple, ...] = ()   # the happenings about what the observer could see
 
 
 @dataclass(frozen=True)
@@ -82,7 +83,8 @@ def project(u, before: State, after: State, e: Event, o: str) -> Seen:
 
     return Seen(e.t, e.action, e.roll, e.result, tuple(w for w in e.witnesses if w in seen),
                 Delta(frozenset(filter(rule, e.delta.add)), frozenset(filter(rule, e.delta.remove))),
-                tuple(filter(rule, e.mods)))
+                tuple(filter(rule, e.mods)),
+                tuple(h for h in e.happen if h[0] != "tag_replaced" or h[1] in seen))
 
 
 def witnesses(u, before: State, after: State) -> tuple[str, ...]:

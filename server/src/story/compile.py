@@ -465,11 +465,17 @@ class _Builder:
             if eid != "collapse" and e.when is None and eid not in pointed:
                 self.fail(f"endings.{eid}: an ending without when must be named by a deadline")
 
-        # One engine favor pattern per character with a favor (rule.md 5.1).
+        # One engine favor pattern per character with a favor, and one per wanted thing shown (rule.md 5.1).
         for aid, ag in u.agents.items():
             if ag.favor is not None:
                 u.favor_patterns[aid] = len(u.patterns)
                 u.patterns.append(compile_pattern(f"talk:{aid}:favor", ("success", "none")))
+            for x in ag.wants:
+                u.show_patterns[(x, aid)] = len(u.patterns)
+                u.patterns.append(compile_pattern(f"show:{x}:{aid}", None))
+            # What a failed talk teaches (rule.md 5.1): the person's desire, as something the player can know.
+            u.props[f"{aid}.desire"] = Prop(f"{aid}.desire", ko.fill(ko.DESIRE_FACT, name=ag.name, desire=ag.desire),
+                                            (), (), (), "desire", ko.fill(ko.DESIRE_TITLE, name=ag.name))
 
         # Triggers, in weaving order (story.md 3.11).
         woven = []

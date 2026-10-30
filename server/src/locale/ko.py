@@ -8,6 +8,7 @@ APPROACH_HINT = {
     "wits": "살피고 꾀내기",
     "charm": "말로 얻는 마음",
 }
+# "friendly" and "plead" label the steps of saves from before they were dropped
 TONES = {"polite": "정중하게", "friendly": "친근하게", "plead": "간청하며", "threaten": "위협하며", "deceive": "속여서"}
 STRAINS = {"natural": "자연스럽게", "forced": "무리해서"}
 RESULTS = {"success": "성공", "fail": "실패", "none": "", "blocked": "막힘"}
@@ -34,6 +35,7 @@ ACTION = {
     "look": "{x}{을} 살핀다",
     "take": "{x}{을} 집는다",
     "give": "{h}에게 {x}{을} 건넨다",
+    "show": "{h}에게 {x}{을} 보여 준다",
     "talk": "{h}에게 {title}에 대해 묻는다",
     "favor": "{h}에게 {label}",
     "chat": "{h}{와} 이야기한다",
@@ -58,11 +60,15 @@ SWAP = "{new} 얻고 {old} 내려놓기"
 # A scar's growth said nothing of what it does (qa_test/runs/goal-6-bold 9).
 SCAR_GROWTH = "흉터의 불리함이 사라집니다"
 RELYING = "{rely}에 기대어 "
+# What a failed talk teaches about a person (rule.md 5.1), as a fact and as the name a reliance chip uses.
+DESIRE_FACT = "{name}{은} {desire}"
+DESIRE_TITLE = "{name}의 바람"
 # Something known about a thing is named apart from the thing: the roll card listed both under the thing's name, and a
 # clue about an obstacle read as the obstacle helping against itself (qa_test/runs/play-3-explorer 13, 37; play-3-talker 30).
 CLUE = "{name} 단서"
 NO_RELY = "기대지 않음"
 MOVE_WITH = "{name}{와} 함께"
+MOVE_ASK = "{name}에게 같이 가자고 먼저 청함"
 # A sentence about someone left behind must tell the parting: stay, stop, wait, see off.
 PARTING = ("남", "멈춰", "멈추", "머무", "머물", "기다", "배웅", "돌아서", "따라오지", "올라오지", "들어오지")
 AFAR = ("멀리", "먼 곳")
@@ -92,6 +98,9 @@ EFFECT = {
     "retire": "{o}{이} 사라짐",
     "flag": "상황이 바뀜",
 }
+
+CUT_EFFECTS = {"pass": ("장면이 끝남", "다가오는 일들이 한 칸씩 다가옴"),
+               "rest": ("장면이 끝남", "상처 하나가 나음", "다가오는 일들이 두 칸씩 다가옴")}
 
 REFUSED = {
     "candidate": "지금은 할 수 없는 행동입니다.",
@@ -277,8 +286,7 @@ SLOT_QUESTION = {
 CLAIM_QUESTION = '플레이어는 이렇게 말합니까? "{text}"'
 YES, NO = "그렇다", "아니다"
 STRAIN_DESC = {"natural": "자연스럽게 할 수 있음", "forced": "할 수는 있지만 무리함", "impossible": "이 장면에서 할 수 없음"}
-TONE_DESC = {"polite": "정중하게 묻거나 부탁함", "friendly": "친근하게 말함", "plead": "간청하거나 호소함",
-             "threaten": "겁을 주거나 위협함", "deceive": "거짓말을 하거나 속임"}
+TONE_DESC = {"polite": "정중하게 말하거나 부탁하거나 호소함", "threaten": "겁을 주거나 위협함", "deceive": "거짓말을 하거나 속임"}
 APPROACH_DESC = {"force": "힘으로 밀어붙이거나 부수거나 버팀", "finesse": "손재주, 몸놀림, 몰래 움직임",
                  "wits": "관찰, 계획, 꾀, 시선 돌리기", "charm": "말이나 태도로 마음을 움직임"}
 NOT_IN_WORLD = "이 이야기에는 그런 것이 없습니다."
@@ -324,6 +332,9 @@ CHANGE = {
     "tag_add_agent": "{owner}에게 {name}{이} 생겼습니다",
     "scar": "당신에게 {name}{이} 남았습니다",
     "tag_remove": "{owner}의 {name}{이} 사라졌습니다",
+    "tag_replace": "{owner}의 {old}{이} 밀려나고 {name}{이} 자리 잡았습니다",
+    "scene_end": "장면이 넘어가고, 다가오던 일들이 한 걸음씩 더 다가옵니다",
+    "fall": "당신이 쓰러졌다가 간신히 몸을 일으킵니다",
     "wound_up": "당신이 다쳤습니다",
     "wound_down": "당신의 상처가 조금 나았습니다",
     "move_get": "{to}{이} {name}{을} 얻었습니다",
@@ -391,6 +402,8 @@ NOW = {"speaker": "{x}: {persona} 말투는 {voice}",
        "struck": "이번에 닥친 일: {names}. 그 일로 눈앞의 무엇이 달라졌는지 한 문장으로 꼭 보여 줍니다.",
        "missed": "때가 다 된 일: {names}. 이번 장의 목표를 이루지 못했다는 것을 한 문장으로 꼭 보여 줍니다.",
        "blocked": "'{label}'는 무언가에 가로막혀 이루어지지 않았습니다. 상대가 대답하거나 그 일이 된 것처럼 쓰지 않고, 무엇이 가로막았는지 보여 줍니다.",
+       "shown": "당신은 {names}{을} 보여 주기만 했습니다. 손에서 놓지 않았고 상대에게 넘어가지 않았습니다.",
+       "manner": "시도는 플레이어 문장이 말한 동작 그대로 그립니다. 그 동작을 다른 동작으로 바꾸지 않고, 결과만 [일어난 일]을 따릅니다.",
        "relied": "이번 시도는 {rely}{을} 밑천으로 삼았습니다. 그것이 어떻게 쓰였는지 한 번 보여 줍니다.",
        "looked": "당신이 살펴본 {name}: {text}. 살펴서 알게 된 이 모습이나 글을 꼭 보여 줍니다.",
        "grown": "이번 일은 당신이 고른 성장뿐입니다. 앞 장면을 다시 쓰지 않고, 그 변화가 당신 안에 자리 잡는 짧은 순간만 손이나 숨, 시선으로 그립니다.",

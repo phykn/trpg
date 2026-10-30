@@ -83,6 +83,7 @@ Height is fixed to the visible window height, and regions stack from top to bott
   | Obstacles | `kind.obstacle` | purple `#87309f` |
   | Stat modifier (and stat values in the hero panel) | `chip.stat` | indigo `#4a3fc0` |
   | Help modifier (and the roll card's radios) | `chip.help` | olive `#4d6800` |
+  | Guard modifier (a spent reliance) | `chip.guard` | olive `#4d6800`, help's hue: both are reliances |
   | Hinder modifier | `chip.hinder` | magenta `#a8226f` |
 
 - **Kinds are told apart by color** (the table above). Pills show only names, not attitudes; a person traveling with you (`with`) gets a person icon before the pill.
@@ -177,8 +178,9 @@ Borrowed from Baldur's Gate 3's check screen. The stakes read as a single target
 │            ▢  ▢                │ Dice: blank faces, gold outline, swelling and shrinking like breath
 │            굴리기               │ The dice's verb, while they can be rolled
 │     솜씨 +2  물보라 −1           │ Fixed modifiers (stat, hinder; zero chips not drawn). Borderless text
-│     ○ 뱃사람 +1 · 이번 장 1번     │ Helps: one per line, single-choice circles
-│     ◉ 등대 열쇠 +1 · 이번 장 1번  │ Tap to choose, tap the chosen one to remove
+│     ○ 윤슬의 도움 +1              │ Helps: one per line, single-choice circles
+│     ◉ 등대 열쇠 · 실패 대가 줄임 · 이번 장 1번 │ Tap to choose, tap the chosen one to remove
+│     □ 무리해서 · 성공하면 한 칸 더   │ Forcing: a checkbox, only where it buys a box
 └──────────────────────────────┘
 ```
 
@@ -187,13 +189,15 @@ Borrowed from Baldur's Gate 3's check screen. The stakes read as a single target
 - Helps sit one per line as a small circle (a radio, since only one can be chosen) and a name (the circles align in one column, sized to the longest line). Tapping one chooses it; tapping the chosen one again removes it. The server's "기대지 않음" (rely on nothing) option is not drawn; it is what is chosen when no circle is. The chosen one shows only as a dot inside the circle, with no gold outline. When the choice changes, the card redraws from that `preview`.
 - The scrim behind the card skips the reveal only while it runs, and it is never a disabled control: as one, it marked every control on the card disabled to screen readers and automation (play-6-ui 9).
 - When the card opens, focus goes to the panel itself. Sending it to the first control would draw a focus ring on that control because of the Enter that sent the sentence. Tab cycles from the first control.
-- No probability, outcome line or cost line (4.6): `preview.stakes` and `preview.gain` are not drawn. No echo of the sentence either; it is already in the chat.
+- A spent reliance (a trait, thing, belief or tag) adds nothing to the total; it lowers a fail's cost (rule.md 3.2), so its row reads "실패 대가 줄임" (lowers the fail's cost) where a help reads its `+1`, and in the reveal its chip carries the same words instead of `±0`.
+- **Forcing** is a square checkbox under the helps, "무리해서" (forcing), with "성공하면 한 칸 더" (a box more on success) when the forced options' `gain.forced` is above 0. Checking it switches to the forced twin of the chosen reliance (api.md 4), so the ring shows the higher target and the danger colour if the risk is now high. The box is drawn in the danger colour when checked. It appears only when the card has forced options.
+- No probability or general outcome line (4.6): `preview.stakes` and `preview.gain` are not drawn, except the two phrases above, which say what a choice on the card trades. No echo of the sentence either; it is already in the chat.
 - Things that are used up carry the option's `note` as text, not a symbol, because they must read without a tap: a tag "1번 남음" ("1 use left"), a trait, thing or belief "이번 장 1번" ("once this chapter"). In the hero panel a trait, thing or belief already leaned on this chapter is dimmed.
 - Even at 320×568 the panel fits on screen. With many helps, text shrinks to 12px.
 
 ### 4.3 Chips
 
-The roll card draws the same modifier row on the card and in the reveal. A modifier is borderless text, one `mods` entry (name and signed value), colored per kind (`stat`, `help`, `hinder`) from `colors.chip` (the table in 2.1). The card's `preview.mods` and the step record's `mods` are the same list (api.md 3), so each modifier carries over unchanged from the card to the reveal. Name pills in the scene row are `Pill` from `Row.tsx`.
+The roll card draws the same modifier row on the card and in the reveal. A modifier is borderless text, one `mods` entry (name and signed value), colored per kind (`stat`, `help`, `guard`, `hinder`) from `colors.chip` (the table in 2.1). The card's `preview.mods` and the step record's `mods` are the same list (api.md 3), so each modifier carries over unchanged from the card to the reveal. Name pills in the scene row are `Pill` from `Row.tsx`.
 
 ### 4.4 Dice
 
@@ -255,7 +259,7 @@ Moving, looking around, picking up, handing over, small talk, free topics, choic
 
 ### 5.2 Clarify, confirm, move
 
-All three are a `Sheet` with no dice, and cancel is close (✕). `MoveCard` has a → head. With one option (the sentence named the place and a companion stays behind, engine.md 4.4) it asks "{place}으로 갈까요?" ("Go to {place}?") and has one "간다" ("Go") button. With more, under "어디로 갈까요?" ("Where to?"), it has one `Choice` row per exit; the place the sentence chose is the gold (`primary`) row at the top. Small text under a row says whether companions come along or stay ("윤슬과 함께", "with Yunseul"). One tap leaves. `ClarifyCard` shows options (at most three) as rows with a right arrow (`Choice`); `ConfirmCard` puts a bulleted list of the choice's effects under a ⚠ head and has one "고른다" ("Choose") button. Clarify does not repeat the sent sentence (it is already in the chat).
+All three are a `Sheet` with no dice, and cancel is close (✕). `MoveCard` has a → head. With one option (the sentence named the place and a companion stays behind, engine.md 4.4) it asks "{place}으로 갈까요?" ("Go to {place}?") and has one "간다" ("Go") button. With more, under "어디로 갈까요?" ("Where to?"), it has one `Choice` row per exit; the place the sentence chose is the gold (`primary`) row at the top. Small text under a row says whether companions come along or stay ("윤슬과 함께", "with Yunseul"). One tap leaves. `ClarifyCard` shows options (at most three) as rows with a right arrow (`Choice`); `ConfirmCard` puts a bulleted list of the choice's effects under a ⚠ head and has one "고른다" ("Choose") button; any further option (a give's "…보여 준다", show only) is a secondary button under it, named by the action. A move card's option to go with someone asked first reads "{name}과 같이 간다" ("Go with {name}"): with one place, it is a second button beside "간다", gold when the sentence asked for it; with several, its row carries the words after the place name. Clarify does not repeat the sent sentence (it is already in the chat).
 
 ### 5.3 Growth
 
