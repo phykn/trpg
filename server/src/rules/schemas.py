@@ -155,11 +155,14 @@ def _talk(ctx, h, topic):
     if ctx.rolled:
         pay_costs(ctx, h)
     tone = a.get("tone")
+    claim = a.get("claim")
+    caught = tone == "deceive" and claim is not None and ctx.s.has("believes", h, u.claims[claim])
+    if ctx.rolled and won and tone != "threaten" and not caught:
+        w.set_("regards", (h, PLAYER, "trust"), "+1")
     if tone == "threaten":
         w.set_("regards", (h, PLAYER, "fear"), "+1")
         w.set_("regards", (h, PLAYER, "trust"), "-1")
-    claim = a.get("claim")
-    if tone == "deceive" and claim is not None and ctx.s.has("believes", h, u.claims[claim]):
+    if caught:
         w.set_("regards", (h, PLAYER, "trust"), "-2")
         w.tag(PLAYER, "snag", "chapter", "@suspicion")
 

@@ -225,9 +225,10 @@ def test_favor_promise_is_kept_by_giving_back(play):
     assert play.s.fill("hound") == 1
     play.do("talk:dohae:favor", (6, 6, 0))
     assert play.s.where("key") == PLAYER and play.s.has("owes", PLAYER, "dohae", "promise")
+    assert play.s.regards("dohae", PLAYER, "trust") == 1          # the won roll
     assert not admits(play.u, play.obs, parse("talk:dohae:favor"))
     play.do("give:key:dohae")
-    assert not play.s.rows("owes") and play.s.regards("dohae", PLAYER, "trust") == 1
+    assert not play.s.rows("owes") and play.s.regards("dohae", PLAYER, "trust") == 2
     assert not admits(play.u, play.obs, parse("talk:dohae:favor"))        # one favor per character (story.md 3.4)
 
 
@@ -261,6 +262,20 @@ def test_a_threat_frightens_and_costs_trust_even_when_it_fails(play):
     """rule.md 5.1 step 4: whatever the result."""
     assert play.do("talk:yunseul:t_wall;tone=threaten", (1, 1, 0)).result == "fail"
     assert play.s.regards("yunseul", PLAYER, "fear") == 1 and play.s.regards("yunseul", PLAYER, "trust") == -1
+
+
+def test_a_won_talk_earns_trust_and_a_failed_one_does_not(play):
+    """rule.md 5.1 step 4: a rolled success raises trust, so the next topic gated on trust opens without a roll."""
+    assert play.do("talk:yunseul:come", (1, 1, 0)).result == "fail"
+    assert play.s.regards("yunseul", PLAYER, "trust") == 0
+    assert play.do("talk:yunseul:come", (6, 6, 0)).result == "success"
+    assert play.s.regards("yunseul", PLAYER, "trust") == 1
+    assert not rolls(play.u, facts_of(play.u, play.s, PLAYER), play.log.hist, parse("talk:yunseul:t_wall"))
+
+
+def test_a_won_threat_earns_no_trust(play):
+    assert play.do("talk:yunseul:t_wall;tone=threaten", (6, 6, 0)).result == "success"
+    assert play.s.regards("yunseul", PLAYER, "trust") == -1
 
 
 def test_a_failed_favor_can_be_asked_again(play):
