@@ -4,7 +4,6 @@ version: 1
 title: 꺼진 등대
 premise: 등대의 불이 꺼졌습니다. 폭풍이 몰려오는 바다에는 아직 돌아오지 못한 고깃배들이 있습니다. 해가 지기 전에, 불을 다시 밝혀야 합니다.
 beats: 6
-wound_boxes: 2
 impossible: [총을, 마법, 헬리콥터, 휴대전화]
 flags:
   gale: [0, 1]
@@ -362,8 +361,5 @@ witnesses:
         - go:village
         - go:yard
         - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}
-        - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}   # 상처 2 → 흉터 1
         - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}
-        - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}   # 흉터 2
-        - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}
-        - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}   # 흉터 3, 슬롯이 모두 흉터 → 쓰러짐
+        - {do: "try:door:force;strain=forced", roll: [1, 1, 0]}   # 상처 3, 슬롯이 모두 상처 → 쓰러짐

@@ -77,15 +77,16 @@ class Work:
             del self.at[x]
 
     def tag(self, x: str, kind: str, life: str, name: str | None = None) -> int | None:
-        """Lowest empty slot; when full, replace the lowest snag, or for an edge the lowest edge, never a scar and never
-        an edge with a snag; else nothing.
+        """Lowest empty slot; when full, replace the lowest snag, or for an edge the lowest edge, never a wound and
+        never an edge with a snag; else nothing. A wound takes any slot but a wound, since three of them end the game.
         An edge the player earned vanished under a snag without a line."""
         used = {i: self.mark[(y, i)] for (y, i) in self.mark if y == x}
         free = [i for i in (1, 2, 3) if i not in used]
         if free:
             slot = free[0]
         else:
-            open_ = [i for i in (1, 2, 3) if used[i][1] != "scar" and (kind == "edge" or used[i][0] == "snag")]
+            open_ = [i for i in (1, 2, 3) if used[i][1] != "wound"
+                     and (kind == "edge" or life == "wound" or used[i][0] == "snag")]
             if not open_:
                 return None
             slot = min(open_, key=lambda i: (used[i][0] != "snag", i))

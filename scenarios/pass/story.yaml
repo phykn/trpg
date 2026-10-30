@@ -4,7 +4,6 @@ version: 1
 title: 눈 덮인 고개
 premise: 고개 너머 고을에 열병이 돌고 있습니다. 당신은 역참의 파발꾼으로, 약방이 꾸린 약 꾸러미를 지고 있습니다. 눈보라가 길을 덮기 전에 고개를 넘어 관문을 지나야 합니다.
 beats: 8
-wound_boxes: 2
 impossible: [총을, 마법, 휴대전화, 자동차, 헬리콥터]
 flags:
   snow:
@@ -581,13 +580,10 @@ witnesses:
         - talk:mujin:chat;claim=c_clean;tone=deceive   # 거짓이 들키지 않고 빗장 +1
         - {do: "try:gate_bar:charm", roll: [6, 6, 0]} # 3칸, 병사 이야기와 갈림길
         - choose:g_share:half                          # 4칸 → 나눈 약
-    # 보통 + 어긋남 + 무리의 실패마다 상처가 쌓이고, 흉터 셋이면 쓰러집니다.
+    # 보통 + 어긋남 + 무리의 실패마다 상처가 하나씩 남고, 상처 셋이면 쓰러집니다.
     - reach: {ending: collapse}
       steps:
         - go:stable
-        - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}
-        - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}
-        - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}
         - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}
         - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}
         - {do: "try:horse:force;strain=forced", roll: [1, 1, 0]}

@@ -100,6 +100,9 @@ def confirm_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[st
     elif a.schema == "give":
         effects = [("move", *a.intent)]
     names = list(ko.CUT_EFFECTS[a.intent[0]]) if a.schema == "cut" else effect_names(u, effects)
+    # a rest with no wound to heal promised one all the same
+    if a.schema == "cut" and not any(life == "wound" for _, _, life in o.facts.marks(PLAYER)):
+        names = [n for n in names if n != ko.HEALS]
     options = [{"id": str(a), "label": action_label(u, o, p, a), "effects": names}]
     if a.schema == "give":
         # a sentence that only showed a thing was read as giving it away (qa_test/runs/play-4-talker 7)

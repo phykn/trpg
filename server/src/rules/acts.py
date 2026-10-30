@@ -67,7 +67,7 @@ def _grow_shape(intent) -> bool:
         return True
     if intent[0] == "trait":
         return len(intent) == 3
-    if intent[0] == "scar":
+    if intent[0] == "wound":
         return len(intent) == 2 and intent[1] in ("1", "2", "3")
     return False
 

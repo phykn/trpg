@@ -12,12 +12,11 @@ APPROACH_HINT = {
 TONES = {"polite": "정중하게", "friendly": "친근하게", "plead": "간청하며", "threaten": "위협하며", "deceive": "속여서"}
 STRAINS = {"natural": "자연스럽게", "forced": "무리해서"}
 RESULTS = {"success": "성공", "fail": "실패", "none": "", "blocked": "막힘"}
-SHEET = {"beats": "박자", "wounds": "상처", "growth": "성장"}
 
 # Default tag names: by kind, and the "@" keys the rules give to the tags they place.
 # "유리함" was narrated as glass, 유리 (qa_test/runs/play-5-odd 9).
 TAG_DEFAULT = {"edge": "이점", "snag": "불리함"}
-TAG_KEYS = {"@suspicion": "의심", "@broken_promise": "약속을 어김", "@scar": "흉터"}
+TAG_KEYS = {"@suspicion": "의심", "@broken_promise": "약속을 어김", "@wound": "상처"}
 
 # How a person regards the player, by trust; fear above this shows instead. "무덤덤" at zero read as a mood that the
 # persona's cheer contradicted in every playtest (play-2-*, play-3-*), so zero names the stance.
@@ -53,12 +52,12 @@ ACTION = {
     "choose": "{name}",
     "grow": "{approach} {before}→{after}",
     "grow_trait": "특성 바꾸기: {name}",
-    "grow_scar": "흉터 지우기: {name}",
+    "grow_wound": "상처 다스리기: {name}",
 }
 # What a swap gains comes first: "뱃사람 → 토박이" read as giving a skill up (qa_test/runs/goal-6-bold 9).
 SWAP = "{new} 얻고 {old} 내려놓기"
-# A scar's growth said nothing of what it does (qa_test/runs/goal-6-bold 9).
-SCAR_GROWTH = "흉터의 불리함이 사라집니다"
+# A healing growth said nothing of what it does (qa_test/runs/goal-6-bold 9).
+WOUND_GROWTH = "상처의 불리함이 사라집니다"
 RELYING = "{rely}에 기대어 "
 # What a failed talk teaches about a person (rule.md 5.1), as a fact and as the name a reliance chip uses.
 DESIRE_FACT = "{name}{은} {desire}"
@@ -100,8 +99,9 @@ EFFECT = {
     "flag": "상황이 바뀜",
 }
 
+HEALS = "상처 하나가 나음"
 CUT_EFFECTS = {"pass": ("장면이 끝남", "다가오는 일들이 한 칸씩 다가옴"),
-               "rest": ("장면이 끝남", "상처 하나가 나음", "다가오는 일들이 두 칸씩 다가옴")}
+               "rest": ("장면이 끝남", HEALS, "다가오는 일들이 두 칸씩 다가옴")}
 
 REFUSED = {
     "candidate": "지금은 할 수 없는 행동입니다.",
@@ -331,11 +331,9 @@ CHANGE = {
     "deadline": "{name}: 목표를 이루지 못한 채 시간이 다 되었습니다",
     "tag_add": "{owner}에 {name}{이} 생겼습니다",
     "tag_add_agent": "{owner}에게 {name}{이} 생겼습니다",
-    "scar": "당신에게 {name}{이} 남았습니다",
     "tag_remove": "{owner}의 {name}{이} 사라졌습니다",
     "tag_replace": "{owner}의 {old}{이} 밀려나고 {name}{이} 자리 잡았습니다",
     "scene_end": "장면이 넘어가고, 다가오던 일들이 한 걸음씩 더 다가옵니다",
-    "fall": "당신이 쓰러졌다가 간신히 몸을 일으킵니다",
     "wound_up": "당신이 다쳤습니다",
     "wound_down": "당신의 상처가 조금 나았습니다",
     "move_get": "{to}{이} {name}{을} 얻었습니다",

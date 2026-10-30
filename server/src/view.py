@@ -174,8 +174,8 @@ def growth_name(u, o, p, a) -> tuple[str, str]:
     i = a.intent
     if i[0] == "trait":
         return "trait", ko.fill(ko.SWAP, old=u.traits[i[1]][0], new=u.traits[i[2]][0])
-    if i[0] == "scar":
-        return "scar", tag_name(p, ("mark", PLAYER, "snag", "scar", int(i[1])))
+    if i[0] == "wound":
+        return "wound", tag_name(p, ("mark", PLAYER, "snag", "wound", int(i[1])))
     v = o.facts.stat(PLAYER, i[0]) or 0
     return "approach", ko.fill(ko.ACTION["grow"], approach=ko.APPROACHES[i[0]], before=v, after=v + 1)
 
@@ -278,7 +278,7 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
     replaced = {(h[1], h[2]) for h in seen.happen if h[0] == "tag_replaced"}
     for at in sorted(add, key=str):
         if at[0] == "mark":
-            kind = "scar" if at[3] == "scar" else "tag_add"
+            kind = "wound" if at[3] == "wound" else "tag_add"
             c = {"kind": kind, "owner": at[1], "slot": at[4], "tag": at[2], "life": at[3], "name": tag_name(p, at)}
             old = next((b for b in rem if b[0] == "mark" and (b[1], b[4]) == (at[1], at[4])), None)
             if (at[1], at[4]) in replaced and old:
@@ -286,13 +286,8 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
             out.append(c)
     for at in sorted(rem, key=str):
         if at[0] == "mark" and not any(b[0] == "mark" and b[1] == at[1] and b[4] == at[4] for b in add):
-            out.append({"kind": "tag_remove", "owner": at[1], "slot": at[4], "tag": at[2], "life": at[3],
+            out.append({"kind": "heal" if at[3] == "wound" else "tag_remove", "owner": at[1], "slot": at[4], "tag": at[2], "life": at[3],
                         "name": tag_name(p, at)})
-    w0, w1 = value(rem, "stat", PLAYER, "wounds"), value(add, "stat", PLAYER, "wounds")
-    if ("fall",) in seen.happen:
-        out.append({"kind": "fall"})        # the wounds reset with it, which read as a heal
-    elif w0 is not None and w1 is not None:
-        out.append({"kind": "wound", "from": w0, "to": w1})
     went = value(add, "at", PLAYER)
     for at in sorted(add, key=str):
         if at[0] == "at" and u.kind(at[1]) in ("agent", "thing"):
@@ -386,7 +381,7 @@ def game_view(u, g) -> dict:
             for a in recommend(u, o)],
         "growth": [] if ending or (f.stat(PLAYER, "growth") or 0) < 1 else [
             {"action": str(a), "label": action_label(u, o, p, a), **dict(zip(("kind", "name"), growth_name(u, o, p, a))),
-             "text": u.traits[a.intent[2]][1] if a.intent[0] == "trait" else ko.SCAR_GROWTH if a.intent[0] == "scar" else ""}
+             "text": u.traits[a.intent[2]][1] if a.intent[0] == "trait" else ko.WOUND_GROWTH if a.intent[0] == "wound" else ""}
             for a in candidates(u, o) if a.schema == "grow"],
         "card": (p.get("card") or {}).get("public"),
         "last": None if last is None else {
@@ -434,7 +429,8 @@ def _player(u, o: Obs, p: dict) -> dict:
                  for i, kind, life in f.marks(PLAYER)],
         "things": [{"id": x, "name": u.name(x), "spent": f.has("spent", PLAYER, x)}
                    for x in sorted(o.seen, key=u.rank) if x in u.things and f.where(x) == PLAYER],
-        "wounds": f.stat(PLAYER, "wounds") or 0, "wound_boxes": u.wound_boxes,
+        # Wounds are tags now; the pair stays so health reads as before: three wounds fill the ring and end the game.
+        "wounds": sum(life == "wound" for _, _, life in f.marks(PLAYER)), "wound_boxes": 3,
         "beats": f.stat(PLAYER, "beats") or 0, "beats_max": u.beats,
         "growth": f.stat(PLAYER, "growth") or 0,
     }

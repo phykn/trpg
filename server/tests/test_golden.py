@@ -56,15 +56,15 @@ async def test_metrics_on_the_witness_saves(tmp_path, monkeypatch):
         await replay(svc, monkeypatch, STORIES[sid], i)
     m = measure(sorted(tmp_path.glob("*.json")), STORIES, now=0)
     assert m["games"] == len(PATHS) and not m["skipped"]
-    assert m["F1"]["sentences"] == 0 and m["F2"]["steps"] == {"button": 115}
+    assert m["F1"]["sentences"] == 0 and m["F2"]["steps"] == {"button": 109}
     assert m["F3"]["approaches"] == {"door": 2, "drift": 2, "gate_bar": 1, "gorge": 1, "horse": 1, "lamp": 1, "lens": 1}
-    assert m["F4"]["rolls"] == 49 and m["F5"]["gaps"] == [2, 2, 2, 3, 3]
+    assert m["F4"]["rolls"] == 43 and m["F5"]["gaps"] == [2, 3]
     # every lighthouse play past chapter 1 sees the bridge leave on a chapter flag: withdrawn, not driven back
-    assert m["F6"] == {"value": 0.0, "answered": 0, "arrived": 1, "pending": 2, "withdrawn": 8}
+    assert m["F6"] == {"value": None, "answered": 0, "arrived": 0, "pending": 3, "withdrawn": 8}
     assert (m["F7"]["choices"], m["F7"]["read"]) == (5, 4)
     assert m["F8"]["promises_made"] == 0
     assert m["F9"]["snowpass"]["endings"] == {"shared": 2, "whole": 1, "collapse": 1}
     assert m["F9"]["lighthouse"]["endings"] == {"two_lights": 1, "lone_light": 1, "collapse": 1}
     assert m["F10"]["chapters"] == 22 and m["F10"]["deadline"] == 0.0 and m["F11"]["quit"] == 0.0
-    assert m["F13"]["rolls"] == 49 and m["F14"]["closed"] == 0
+    assert m["F13"]["rolls"] == 43 and m["F14"]["closed"] == 0
     assert m["F15"]["interpret"]["n"] == 0 and m["F15"]["stuck"] == 0

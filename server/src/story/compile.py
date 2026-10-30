@@ -32,6 +32,7 @@ RESERVED = {"player", "chat", "favor", "come", "stay", "pass", "rest", "chapter"
 WEIGHTS = ("light", "heavy")
 STORY_RISKS = ("low", "normal")   # only a clash or forced strain makes a step high
 KNOWS = 4                         # a person's told-freely sentences (story.md 3.4)
+WOUND = ("tag", PLAYER, "snag", "wound", "@wound")
 
 
 class _Builder:
@@ -215,10 +216,10 @@ class _Builder:
 
     def build(self) -> Universe:
         r = self.map(self.raw, "story", allowed={
-            "id", "version", "title", "premise", "beats", "wound_boxes", "flags", "style", "impossible",
+            "id", "version", "title", "premise", "beats", "flags", "style", "impossible",
             "player", "places", "characters", "things", "obstacles", "chapters", "threats", "forks",
             "claims", "latents", "triggers", "endings", "witnesses"},
-            required=("id", "version", "title", "premise", "beats", "wound_boxes", "style", "player",
+            required=("id", "version", "title", "premise", "beats", "style", "player",
                       "places", "characters", "things", "obstacles", "chapters", "endings", "witnesses"))
         if not isinstance(r["id"], str) or not ID.fullmatch(r["id"]):
             self.fail("story.id: must be lowercase letters, digits and _")
@@ -241,7 +242,6 @@ class _Builder:
             id=r["id"], version=self.int(r["version"], "version", 1), title=self.text(r["title"], "title"),
             premise=self.text(r["premise"], "premise"), style=self.text(r["style"], "style"),
             digest=self.digest, beats=self.int(r["beats"], "beats", 2),
-            wound_boxes=self.int(r["wound_boxes"], "wound_boxes", 1),
             impossible=self.texts(r.get("impossible"), "impossible"), start="",
             approaches=approaches, pick=pick, traits=traits, raw=self.raw)
 
@@ -413,7 +413,7 @@ class _Builder:
             u.obstacles[oid] = self.obstacle(oid, ov)
         for cid, weight, eff in (("engine.snag", "light", ("tag", PLAYER, "snag", "scene", None)),
                                  ("engine.beat", "light", ("set", "stat", (PLAYER, "beats"), "+1")),
-                                 ("engine.wound", "heavy", ("set", "stat", (PLAYER, "wounds"), "+1")),
+                                 ("engine.wound", "heavy", WOUND),
                                  ("engine.end", "heavy", ("scene_end",))):
             u.engine_complications[cid] = Complication(cid, cid, weight, TRUE, (eff,), None)
         for pid, pv in sections["places"].items():
@@ -624,7 +624,7 @@ class _Builder:
             cv = self.map(cv, cw, {"name", "weight", "when", "effects", "wound"}, ("name", "weight"))
             effects = self.effects(cv.get("effects"), f"{cw}.effects")
             if cv.get("wound") is not None:
-                effects += (("set", "stat", (PLAYER, "wounds"), f"+{self.int(cv['wound'], f'{cw}.wound', 1)}"),)
+                effects += (WOUND,) * self.int(cv["wound"], f"{cw}.wound", 1)
             if not effects:
                 self.fail(f"{cw}: needs effects or wound")
             out.append(Complication(cid, self.text(cv["name"], cw), self.choice(cv["weight"], WEIGHTS, cw),

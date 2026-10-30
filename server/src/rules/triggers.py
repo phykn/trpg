@@ -78,17 +78,12 @@ def t_risk(ctx: Ctx) -> bool:
     return True
 
 
-def t_fall(ctx: Ctx) -> bool:
-    w = ctx.work
-    if w.state().stat(PLAYER, "wounds") != ctx.u.wound_boxes:
+def t_collapse(ctx: Ctx) -> bool:
+    s = ctx.work.state()
+    marks = s.marks(PLAYER)
+    if ended(s) or len(marks) < 3 or any(life != "wound" for _, _, life in marks):
         return False
-    w.happen.append(("fall",))
-    w.set_("stat", (PLAYER, "wounds"), 0)
-    w.tag(PLAYER, "snag", "scar", "@scar")
-    scene_end(ctx.u, w)
-    marks = w.state().marks(PLAYER)
-    if len(marks) == 3 and all(life == "scar" for _, _, life in marks):
-        end(ctx, "collapse")
+    end(ctx, "collapse")
     return True
 
 
@@ -118,7 +113,7 @@ def t_promise(ctx: Ctx) -> bool:
     return bool(due)
 
 
-ENGINE = (t_risk, t_fall, t_scene, t_arrive, t_promise)
+ENGINE = (t_risk, t_collapse, t_scene, t_arrive, t_promise)
 
 
 def bound(u) -> int:

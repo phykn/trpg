@@ -142,7 +142,7 @@ def change_line(u, c: dict) -> str | None:
         return ko.fill(ko.CHANGE["fork"], choices=either(c["choices"]))
     if k in ("clock", "crisis", "arrival", "chapter", "ending"):
         return ko.fill(ko.CHANGE[k], name=c["name"])
-    if k in ("scene_end", "fall"):
+    if k == "scene_end":
         return ko.CHANGE[k]
     if k == "flag":
         return c["text"]
@@ -150,16 +150,14 @@ def change_line(u, c: dict) -> str | None:
         return ko.fill(ko.CHANGE["consume"], name=c["name"])
     if k == "forget":
         return ko.fill(ko.CHANGE["forget"], name=c["name"], text=c["text"])
-    if k == "tag_add" and c.get("replaced"):
+    if k in ("tag_add", "wound") and c.get("replaced"):
         return ko.fill(ko.CHANGE["tag_replace"], owner=name(u, c["owner"]), old=c["replaced"], name=c["name"])
     if k in ("tag_add", "tag_remove"):
         owner = name(u, c["owner"])
         agent = k == "tag_add" and (c["owner"] == PLAYER or u.kind(c["owner"]) == "agent")
         return ko.fill(ko.CHANGE["tag_add_agent" if agent else k], owner=owner, name=c["name"])
-    if k == "scar":
-        return ko.fill(ko.CHANGE["scar"], name=c["name"])
-    if k == "wound":
-        return ko.CHANGE["wound_up" if c["to"] > c["from"] else "wound_down"]
+    if k in ("wound", "heal"):
+        return ko.CHANGE["wound_up" if k == "wound" else "wound_down"]
     if k == "move":
         to = c["to"]
         if to == PLAYER or u.kind(to) == "agent":

@@ -45,7 +45,7 @@ Atom = tuple[str, ...]          # ("at", "key", "dohae"), ("fill", "door", 2)
 
 `State` is an immutable value. `apply(S, Δ) = (S ∖ Δ⁻) ∪ Δ⁺` returns a new state, and a step is computed on a copy-on-write working copy `Work(S)` (section 4).
 
-**Defaults are atoms too.** `fill`, the player's `stat` (the four approaches, `beats`, `wounds`, `growth`) and each person's two `regards` axes toward the player enter `S₀` as atoms with value 0. This keeps a condition such as `{fill: [o, "=", 0]}` from depending on whether the atom exists. There is no `regards` from the player toward people, since nothing writes it.
+**Defaults are atoms too.** `fill`, the player's `stat` (the four approaches, `beats`, `growth`) and each person's two `regards` axes toward the player enter `S₀` as atoms with value 0. This keeps a condition such as `{fill: [o, "=", 0]}` from depending on whether the atom exists. There is no `regards` from the player toward people, since nothing writes it.
 
 ### 1.2 Predicates
 
@@ -53,11 +53,11 @@ Atom = tuple[str, ...]          # ("at", "key", "dohae"), ("fill", "door", 2)
 |---|---|---|
 | `at(x, y)` | `("at", x, y)` | agent, thing or obstacle `x` is in place `y`. If `y` is an agent, `y` carries `x` |
 | `link(p, q)` | `("link", p, q)` | one can go from place `p` to `q` |
-| `mark(x, k, l, i)` | `("mark", x, kind, life, slot)` | one tag on `x`. kind `edge` (advantage) or `snag` (disadvantage), life `scene`, `chapter` or `scar` (permanent), slot `1…3` |
+| `mark(x, k, l, i)` | `("mark", x, kind, life, slot)` | one tag on `x`. kind `edge` (advantage) or `snag` (disadvantage), life `scene`, `chapter` or `wound` (until healed; rule.md 6), slot `1…3` |
 | `believes(g, p)` | `("believes", g, p)` | agent `g` believes proposition `p` |
 | `regards(g, h, axis, n)` | `("regards", g, h, axis, n)` | how `g` sees `h`. axis `trust` or `fear`, `n ∈ −3…3` |
 | `fill(o, n)` | `("fill", o, n)` | filled boxes of obstacle `o` |
-| `stat(g, s, n)` | `("stat", g, s, n)` | a sheet entry. `s` is one of the four approaches (`force`, `finesse`, `wits`, `charm`), `beats`, `wounds`, `growth`, or a trait id (value 1) |
+| `stat(g, s, n)` | `("stat", g, s, n)` | a sheet entry. `s` is one of the four approaches (`force`, `finesse`, `wits`, `charm`), `beats`, `growth`, or a trait id (value 1) |
 | `flag(f, v)` | `("flag", f, v)` | `chapter`, `ending`, story flags, and fired flags `fired_*` |
 | `owes(g, h, k)` | `("owes", g, h, k)` | what `g` owes `h`. `k` is `promise` (a promise tied to `h`'s favor) or `kindness` (goodwill received) |
 | `follows(h, g)` | `("follows", h, g)` | agent `h` travels with `g` (the player). When `g` moves, `h` moves along |
@@ -74,11 +74,10 @@ Atom = tuple[str, ...]          # ("at", "key", "dohae"), ("fill", "door", 2)
 | boxes `fill` | `0…boxes` (`1…6` per obstacle) |
 | approach value | `0…3` |
 | `beats` | `0…B` (the story's scene length) |
-| `wounds` | `0…wound_boxes` |
 | `growth` | `0…` |
 | slot | `1…3` |
 | approach | `{force, finesse, wits, charm}` |
-| tag | kind `{edge, snag}`, life `{scene, chapter, scar}` |
+| tag | kind `{edge, snag}`, life `{scene, chapter, wound}` |
 | flag value | a finite set the story declares |
 
 The `set_` operation clamps its result at both ends of the range (section 4).
@@ -131,7 +130,7 @@ class Event:
     happen: tuple[tuple, ...]    # typed happenings, in order; saved only when not empty
 ```
 
-**Happenings** are what a step did that `Δ` cannot tell: `("scene_end",)`, `("fall",)`, `("guard",)` (a spent reliance guarded the roll, rule.md 3.2), and `("tag_replaced", x, slot, kind, life)` (a full ring's slot was overwritten). Step records read them for their change lines (api.md 3): a scene end moved three clocks at once with no cause on screen, a fall reset the wounds and read as a heal, and an earned edge vanished under a snag without a line. Saves from before have none, and load unchanged.
+**Happenings** are what a step did that `Δ` cannot tell: `("scene_end",)`, `("guard",)` (a spent reliance guarded the roll, rule.md 3.2), and `("tag_replaced", x, slot, kind, life)` (a full ring's slot was overwritten). Step records read them for their change lines (api.md 3): a scene end moved three clocks at once with no cause on screen, and an earned edge vanished under a snag without a line. Saves from before have none, and load unchanged; a `("fall",)` in an old save is ignored.
 
 A step's `Δ` is the sequential composition of effect operations, but it is stored reduced to the **difference**: `add = S* ∖ S`, `remove = S ∖ S*`. The resulting state is the same, and an atom removed and re-added within one step leaves no trace in the log or the narration. `result` is stored so that `none` (achieved without a roll) and `blocked` (a hidden block came to light) can be told apart without interpreting `Δ`.
 
@@ -217,7 +216,7 @@ A cycle (the player types, the engine answers) must run many times without the a
 
 **What was said** `said` is the quoted lines a person spoke in accepted narration, kept per turn in the presentation layer (engine.md 6) with the player's sentence that drew them. It is model output, so it is never a fact and never an argument of `R` (Bounded model influence, section 7). It binds only the narration: when that person speaks again, their earlier lines are handed over so they neither contradict nor repeat themselves. It reaches the check only through the repetition rule, never as context, so a line once accepted cannot vouch for a new one.
 
-**What happened together** `shared(g)` is the long memory of a person: the events of `M` that `g` witnessed and that marked them, chosen by rule, never by a model. An event marks `g` when it is notable (the recap's rule, engine.md 5.5: an obstacle overcome, a promise, a scar, an arrival, a choice, a declaration, a claim), when it acts on a person and changes something (a thing handed over, a regard, following, a revealed topic) or rolls (a request granted or refused), or when the player is wounded in their sight. `M` is a projection of the log, so these are facts, and narration and its check both read them; nothing a model wrote is in them. Without it, a person forgot what they had lived through once it left the last three narrations: asked "누렁이 아까 무서웠죠?" after the dog was calmed in front of him, 도해 answered "…무슨 헛소리를 하는 건가" (qa_test/runs/loop-1, long-base).
+**What happened together** `shared(g)` is the long memory of a person: the events of `M` that `g` witnessed and that marked them, chosen by rule, never by a model. An event marks `g` when it is notable (the recap's rule, engine.md 5.5: an obstacle overcome, a promise, a wound, an arrival, a choice, a declaration, a claim), when it acts on a person and changes something (a thing handed over, a regard, following, a revealed topic) or rolls (a request granted or refused), or when the player is wounded in their sight (a wound is notable too). `M` is a projection of the log, so these are facts, and narration and its check both read them; nothing a model wrote is in them. Without it, a person forgot what they had lived through once it left the last three narrations: asked "누렁이 아까 무서웠죠?" after the dog was calmed in front of him, 도해 answered "…무슨 헛소리를 하는 건가" (qa_test/runs/loop-1, long-base).
 
 ## 4. Effects and operations
 
@@ -231,7 +230,7 @@ The only code that changes the world is the operations in `change.py`. Each oper
 | `reveal(g, p)` | adds `believes(g, p)` |
 | `forget(g, p)` | removes `believes(g, p)` |
 | `consume(x)` | removes `at[x]`: the thing leaves the world |
-| `tag(x, kind, life)` | uses the lowest-numbered empty slot. If all are full, it overwrites the lowest `snag` slot, or for an `edge` the lowest `edge` slot when no snag is left; a `scar` is never overwritten and a `snag` never overwrites an `edge`. Otherwise it does nothing. An overwrite records `tag_replaced` |
+| `tag(x, kind, life)` | uses the lowest-numbered empty slot. If all are full, it overwrites the lowest `snag` slot, or for an `edge` the lowest `edge` slot when no snag is left; a `wound` is never overwritten and a `snag` never overwrites an `edge`, except that a `wound` takes an edge's slot when no other snag is left. Otherwise it does nothing. An overwrite records `tag_replaced` |
 | `untag(x, slot)` | clears that slot |
 | `link(p, q)`, `unlink(p, q)` | adds or removes a `link` |
 | `retire(o)` | removes `at[o]`. For a threat or fork, it also clears the fired flag of its appearance trigger |
@@ -259,7 +258,7 @@ Story effects (story.md 2.4) translate directly into these operations. `{set: [r
 | `triggers` | the list of wired triggers (5.3) |
 | `patterns` | `Pat`: every `did` in the story plus the engine patterns |
 | `flags` | flag name → finite set of values |
-| `limits` | `B`, `wound_boxes`, slot count |
+| `limits` | `B`, slot count |
 
 ### 5.1 Engine ids
 
@@ -280,7 +279,7 @@ Entities, propositions and triggers that the engine creates use ids containing `
 
 1. The story's `at`, `exits` (→ `link`), and people's `beliefs` and `regards` become atoms.
 2. `fill 0` for every obstacle (clocks, deadlines, threats and forks included). `at(·, player)` for the first chapter's clock and deadline.
-3. The player's `stat`: the four approaches from the `creation` allocation, 1 for each trait, and 0 for `beats`, `wounds` and `growth`.
+3. The player's `stat`: the four approaches from the `creation` allocation, 1 for each trait, and 0 for `beats` and `growth`.
 4. Each person's two `regards` axes toward the player (0 if unset). People a latent brings in are included too, without `at` and hidden.
 5. `flag(chapter, 1)` and the initial values of story flags.
 

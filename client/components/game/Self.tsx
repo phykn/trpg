@@ -13,12 +13,12 @@ import { Item, Row, TagItems } from './Row';
 const left = (player: GameView['player']) => player.wound_boxes - player.wounds;
 
 // Health counts what is left, so it must not look like a clock's boxes, which count what has gone wrong.
-// The sheet's row already leads with the heart, so only the button draws its own.
-function Health({ player, bare }: { player: GameView['player']; bare?: boolean }) {
+// The sheet shows the wounds themselves among its tags, so health draws only on the button.
+function Health({ player }: { player: GameView['player'] }) {
   const n = left(player);
   return (
     <View className="flex-row items-center gap-[3px]">
-      {bare ? null : <View className="mr-0.5"><Icon name="heart" size={12} color={colors.health.fg} width={2.2} /></View>}
+      <View className="mr-0.5"><Icon name="heart" size={12} color={colors.health.fg} width={2.2} /></View>
       {Array.from({ length: player.wound_boxes }, (_, i) => (
         <View key={i} className="h-2 w-2 rounded-full border"
           style={{ borderColor: colors.health.fg, backgroundColor: i < n ? colors.health.fg : 'transparent' }} />
@@ -61,9 +61,6 @@ export function HeroSheet({ player, journal, onGrowth, onClose }: {
             </Pressable>
           ) : null}
         </View>
-        <Row inset icon="heart" tone={colors.health.fg} label={ko.health}>
-          <View className="h-[22px] justify-center"><Health bare player={player} /></View>
-        </Row>
         {player.tags.length ? (
           <Row inset icon="tag" label={ko.row.state}>
             <TagItems tags={player.tags} />

@@ -31,7 +31,7 @@ The format has no field for anything a story must not write. Chapter transitions
 | Strain | `natural` 자연스러움, `forced` 무리 |
 | Axis | `trust` 신뢰, `fear` 두려움 |
 | Tag | `edge` 유리, `snag` 불리 |
-| Lifetime | `scene` 장면, `chapter` 장 (the permanent `scar` is for the engine's scars only) |
+| Lifetime | `scene` 장면, `chapter` 장 (the `wound` life is for the engine's wounds only) |
 | Weight | `light` 가벼움, `heavy` 무거움 |
 | Result | `success` 성공, `fail` 실패, `none` 굴림 없이 이룸 (done without a roll), `blocked` 막힘. `mixed` is not a result |
 
@@ -75,7 +75,7 @@ An effect is a sequence of operations, composed in order, each one reading the s
 
 `v` is a value, or `"+n"` / `"-n"` for an integer value. A relative value is added to the value at the moment it applies and stops at the limit. This lets an effect lower a threat's `fill` without knowing its current value.
 
-What this table leaves out is the format's safeguard. Story effects have no `stat` (beats, wounds and approaches change only through the rules and a complication's `wound`); risk clocks and deadlines have no story id, so nothing can point at them; threats and forks are not targets of `move`; and the flags `chapter` and `ending` and the fired flags are reserved and cannot be `set`.
+What this table leaves out is the format's safeguard. Story effects have no `stat` (beats and approaches change only through the rules), and a wound comes only from a complication's `wound`; risk clocks and deadlines have no story id, so nothing can point at them; threats and forks are not targets of `move`; and the flags `chapter` and `ending` and the fired flags are reserved and cannot be `set`.
 
 ### 2.5 Propositions
 
@@ -97,7 +97,7 @@ A story has no separate propositions section. A proposition comes into being as 
 | Key | Contents |
 |---|---|
 | `id`, `version`, `title`, `premise` | Story id (independent of the folder name, unique across stories), version (an integer recorded in saves; compatibility uses the file digest, ontology.md 6), title, public premise |
-| `beats`, `wound_boxes` | Scene length `B ≥ 2`, number of wound boxes `≥ 1` |
+| `beats` | Scene length `B ≥ 2` |
 | `flags` | Story flags `{name: [value, …]}`, or `{name: {value: text, …}}` to give values a line. The first value is the starting value; the values are a contiguous integer range or strings. A flag with texts is public: while it holds a value with a text, that text is a fact line in every context and its change is a step line, so weather, light and the state of a place are state the narration cannot run ahead of. Its texts are public text (V4) and its value may be read by a visible condition (V3) |
 | `style` | The writing style, passed verbatim to the narration model (multi-line) |
 | `impossible` | Phrases for things that do not exist in this world (engine.md 3.1) |
@@ -126,7 +126,7 @@ Every field is required except these:
 | `approaches` | Four values, e.g. `[2, 1, 1, 0]`, each `0…3`. The player distributes their sum over the four approaches, and no approach may exceed the largest value |
 | `traits` | `{pick: n ≥ 1, options: {id: {name, text}}}`, with more options than `pick`. Write traits as the protagonist's background (job, ties, knowledge) so they do not overlap the stats (approaches) |
 
-Starting possessions are the `things` with `at: player`. Beats, wounds and growth start at 0.
+Starting possessions are the `things` with `at: player`. Beats and growth start at 0, and the player starts unwounded.
 
 ### 3.3 Places
 
@@ -176,7 +176,7 @@ Both the roll decision and the screen evaluate `free_when` on visible state (V3 
 - A **solution** is an instance of `try(this obstacle, approach)` with a `label` and a condition `when` attached. `rely` names what it leans on (a thing or a proposition id), and holding or believing that is implicitly added to `when`. Result, risk and cost are the same as for `try`, and a `try(this obstacle, approach)` that is not a solution is a candidate too. Solutions add no candidates; they only give them names.
 - The effect of filling up is written as a trigger `{when: {fill: [o, "=", full]}}`.
 - **Blocking**: `blocks` applies while the obstacle is in place and not full (ontology.md 1.2). It blocks `go` for a place, `take` for a thing, `talk` for a character and `try` for an obstacle. An action blocked by a visible obstacle is not a candidate. When a hidden obstacle is blocking, attempting the action makes the player believe `o.hidden`, which reveals it; that attempt advances the beat and has no roll.
-- A **complication** `{id: {name, weight, when, effects, wound}}` attaches to a place, a character or an obstacle, and what it attaches to is an implicit condition (place: being there; character: being face to face; obstacle: being the target of the roll). `wound: n` adds n wounds, and it is the only story effect that raises wounds. `when` is evaluated against the world on a failed roll (rule.md 3.3).
+- A **complication** `{id: {name, weight, when, effects, wound}}` attaches to a place, a character or an obstacle, and what it attaches to is an implicit condition (place: being there; character: being face to face; obstacle: being the target of the roll). `wound: n` adds n wounds (rule.md 6), and it is the only story effect that wounds the player. `when` is evaluated against the world on a failed roll (rule.md 3.3).
 
 ### 3.7 Chapters
 

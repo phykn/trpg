@@ -177,7 +177,7 @@ def space(u, o: Obs) -> list[Slot]:
         out += [Slot("grow", (ap,)) for ap in APPROACHES if (f.stat(PLAYER, ap) or 0) < 3]
         mine = traits_of(u, f)
         out += [Slot("grow", ("trait", t, n)) for t in mine for n in u.traits if n not in mine]
-        out += [Slot("grow", ("scar", str(i))) for i, _, life in f.marks(PLAYER) if life == "scar"]
+        out += [Slot("grow", ("wound", str(i))) for i, _, life in f.marks(PLAYER) if life == "wound"]
     return out
 
 

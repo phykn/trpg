@@ -49,7 +49,7 @@ def play(u, creation):
     "go:village", "look:door", "take:oil", "give:letter:dohae", "declare:l_baek", "cut:pass", "cut:rest",
     "talk:dohae:t_oil;tone=threaten", "talk:dohae:favor", "talk:dohae:chat;claim=c_keeper;tone=deceive",
     "try:door:finesse;rely=thing:key", "try:door:force;strain=forced", "choose:g_oil:beacon",
-    "pay:c_wave", "pay:engine.beat", "grow:finesse", "grow:trait:sailor:islander", "grow:scar:2",
+    "pay:c_wave", "pay:engine.beat", "grow:finesse", "grow:trait:sailor:islander", "grow:wound:2",
     "try:door:finesse;rely=tag:door:1",
 ])
 def test_canonical_ids_round_trip(aid):
@@ -59,7 +59,7 @@ def test_canonical_ids_round_trip(aid):
 def test_neutral_and_order_are_normalized():
     assert format(parse("try:door:force;strain=natural")) == "try:door:force"
     assert format(parse("talk:dohae:chat;tone=deceive;claim=c_keeper")) == "talk:dohae:chat;claim=c_keeper;tone=deceive"
-    for bad in ("fly:away", "go", "go:a:b", "try:door:force;tone=friendly", "grow:scar:4", "go:x;", ""):
+    for bad in ("fly:away", "go", "go:a:b", "try:door:force;tone=friendly", "grow:wound:4", "go:x;", ""):
         with pytest.raises(ValueError):
             parse(bad)
 
@@ -358,13 +358,14 @@ def test_a_success_on_something_else_lifts_its_lowest_snag(u, play):
     assert play.s.marks("letter") == [(2, "snag", "chapter")]
 
 
-def test_rest_heals_and_brings_threats_closer(play):
+def test_rest_heals_a_wound_and_brings_threats_closer(play):
     play.do("go:yard")                     # the bridge threat appears
+    play.do("try:door:force;strain=forced", (1, 1, 0))                    # high: u = 0 picks a wound
+    assert "wound" in [life for _, _, life in play.s.marks(PLAYER)]
     play.do("go:village")
-    w = play.s.stat(PLAYER, "wounds")
     play.do("cut:rest")
     assert play.s.fill("t_bridge_fall") == 2 and play.s.fill("deadline.1") == 2
-    assert play.s.stat(PLAYER, "beats") == 0 and play.s.stat(PLAYER, "wounds") == max(w - 1, 0)
+    assert play.s.stat(PLAYER, "beats") == 0 and play.s.marks(PLAYER) == []
 
 
 def test_chapter_change_opens_growth(u, creation):
@@ -439,7 +440,7 @@ def paced(a, step) -> bool:
 
 
 def may_lose(u, a, s0, step) -> set:
-    """Tag slots this step may clear without an expiry: what it relied on, the snag a success lifts, a healed scar,
+    """Tag slots this step may clear without an expiry: what it relied on, the snag a success lifts, a healed wound,
     and slots it tagged again (ontology.md 4)."""
     out = {(x, slot) for x, slot, _ in step.names}
     rely = a.get("rely") or ""
@@ -449,8 +450,10 @@ def may_lose(u, a, s0, step) -> set:
     if a.schema == "try" and step.result == "success" and a.intent[0] not in u.obstacles:
         snags = [i for i, kind, _ in s0.marks(a.intent[0]) if kind == "snag"]
         out |= {(a.intent[0], snags[0])} if snags else set()
-    if a.schema == "grow" and a.intent[0] == "scar":
+    if a.schema == "grow" and a.intent[0] == "wound":
         out.add((PLAYER, int(a.intent[1])))
+    if a.schema == "cut" and a.intent[0] == "rest":
+        out |= {(PLAYER, i) for i, _, life in s0.marks(PLAYER) if life == "wound"}
     return out
 
 
@@ -458,7 +461,7 @@ def check_time(u, a, s0, step):
     """When things happen (rule.md 4, 6, 8): crises, scene ends, arrivals and collapse."""
     s1 = step.after
     marks = s1.marks(PLAYER)
-    assert (s1.flag("ending") == "collapse") == (len(marks) == 3 and all(life == "scar" for _, _, life in marks))
+    assert (s1.flag("ending") == "collapse") == (len(marks) == 3 and all(life == "wound" for _, _, life in marks))
     if ended(s1):
         return
     for o in active_threats(u, s1):
@@ -673,29 +676,41 @@ def test_a_repeating_trigger_fires_on_each_rise_not_while_it_holds(creation):
     assert trust == [1, 1, 1, 1, 2]
 
 
-def test_one_scar_is_not_a_collapse(u, creation):
-    """rule.md 6: collapse only once every slot is a scar."""
+def test_a_wound_outlasts_the_chapter_and_two_are_not_a_collapse(u, creation):
+    """rule.md 6: a wound is a snag that stays until healed; collapse only once every slot is a wound."""
     play = Play(u, creation)
     for aid, r in (("go:village", None), ("go:yard", None), ("try:door:force;strain=forced", (1, 1, 0)),
                    ("try:door:finesse", (6, 6, 0)), ("go:lamp_room", None)):
         play.do(aid, r)
-    assert play.s.flag("chapter") == 2 and play.s.stat(PLAYER, "wounds") == 1 and not play.s.marks(PLAYER)
+    assert play.s.flag("chapter") == 2 and [life for _, _, life in play.s.marks(PLAYER)] == ["wound"]
     play.do("try:lens:finesse;strain=forced", (1, 1, 0))                  # high: u = 0 picks a wound, the second
-    assert not ended(play.s) and play.s.marks(PLAYER) == [(1, "snag", "scar")] and play.s.stat(PLAYER, "wounds") == 0
+    assert not ended(play.s) and [life for _, _, life in play.s.marks(PLAYER)] == ["wound", "wound"]
+    play.do("try:lens:finesse;strain=forced", (1, 1, 0))
+    assert play.s.flag("ending") == "collapse"
 
 
-def test_a_fall_and_the_scene_end_it_brings_are_named(u, creation):
-    """Wounds reset by a fall read as a heal, and the clocks it moved had no cause (rule.md 6)."""
+def test_a_wound_and_its_healing_are_named(u, creation):
+    """A wound is a tag, so its line comes from the mark it adds or removes, not from a counter."""
     from src.narrate import change_lines
     from src.view import step_record
     play = Play(u, creation)
-    for aid, r in (("go:village", None), ("go:yard", None), ("try:door:force;strain=forced", (1, 1, 0)),
-                   ("try:door:finesse", (6, 6, 0)), ("go:lamp_room", None), ("try:lens:finesse;strain=forced", (1, 1, 0))):
+    for aid, r in (("go:yard", None), ("try:door:force;strain=forced", (1, 1, 0)), ("go:village", None), ("cut:rest", None)):
         play.do(aid, r)
-    kinds = [c["kind"] for c in step_record(u, {"tags": []}, play.log.seen[PLAYER][-1], "", None)["changes"]]
-    assert "fall" in kinds and "wound" not in kinds and kinds.index("scene_end") < kinds.index("clock")
-    lines = change_lines(u, step_record(u, {"tags": []}, play.log.seen[PLAYER][-1], "", None)["changes"])
-    assert "당신이 쓰러졌다가 간신히 몸을 일으킵니다" in lines and "당신의 상처가 조금 나았습니다" not in lines
+    hurt, rest = (step_record(u, {"tags": []}, play.log.seen[PLAYER][i], "", None)["changes"] for i in (1, 3))
+    assert "당신이 다쳤습니다" in change_lines(u, hurt) and "wound" in [c["kind"] for c in hurt]
+    assert "당신의 상처가 조금 나았습니다" in change_lines(u, rest)
+
+
+def test_a_rest_promises_healing_only_to_the_wounded(u, creation):
+    from src.cards import confirm_card
+    from src.locale import ko
+    play = Play(u, creation)
+    effects = lambda: confirm_card(u, play.obs, {"tags": []}, parse("cut:rest"), [], [], {}, "c1")["public"]["options"][0]["effects"]
+    play.do("go:village")
+    assert ko.HEALS not in effects()
+    for aid, r in (("go:yard", None), ("try:door:force;strain=forced", (1, 1, 0)), ("go:village", None)):
+        play.do(aid, r)
+    assert ko.HEALS in effects()
 
 
 def test_a_snag_never_pushes_out_an_edge_and_a_replaced_tag_is_told(u, s0):

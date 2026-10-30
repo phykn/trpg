@@ -6,7 +6,7 @@ from .atoms import APPROACHES, AXES, KINDS, PLAYER, State
 from .cond import Cond
 from .log import Pattern
 
-SHEET = ("beats", "wounds", "growth")
+SHEET = ("beats", "growth")
 
 Effect = tuple
 
@@ -171,7 +171,6 @@ class Universe:
     style: str
     digest: str
     beats: int
-    wound_boxes: int
     impossible: tuple[str, ...]
     start: str
     approaches: tuple[int, ...]
@@ -254,8 +253,6 @@ class Universe:
                 return (0, 3)
             if s == "beats":
                 return (0, self.beats)
-            if s == "wounds":
-                return (0, self.wound_boxes)
             if s == "growth":
                 return (0, 10 ** 6)
             return (1, 1)
@@ -326,7 +323,7 @@ def conforms(u: Universe, s: State) -> list[str]:
             elif not lim[0] <= v <= lim[1]:
                 problems.append(f"{pred} {key}={v} is out of range")
     for (x, i), (k, life) in s.mark_.items():
-        if i not in (1, 2, 3) or k not in KINDS or life not in ("scene", "chapter", "scar"):
+        if i not in (1, 2, 3) or k not in KINDS or life not in ("scene", "chapter", "wound"):
             problems.append(f"bad mark on {x}")
     for h, g in s.rows("follows"):
         if s.where(h) != s.where(g):

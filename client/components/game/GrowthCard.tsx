@@ -11,10 +11,10 @@ type Growth = GameView['growth'][number];
 
 // Growth reads by kind: the same icons as the hero sheet head each group, so no group needs a title.
 const KINDS: { kind: Growth['kind']; icon: IconName }[] = [
-  { kind: 'approach', icon: 'bolt' }, { kind: 'trait', icon: 'star' }, { kind: 'scar', icon: 'tag' },
+  { kind: 'approach', icon: 'bolt' }, { kind: 'trait', icon: 'star' }, { kind: 'wound', icon: 'tag' },
 ];
 
-// Raising a stat is a 2×2 grid; swaps and scars are one per line because their names are longer. A swap says what
+// Raising a stat is a 2×2 grid; swaps and healings are one per line because their names are longer. A swap says what
 // the new trait knows, as the start screen does.
 function Tile({ g, onPick }: { g: Growth; onPick: (action: string) => void }) {
   return (

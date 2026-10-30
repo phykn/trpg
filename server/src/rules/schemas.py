@@ -235,7 +235,9 @@ def _declare(ctx, lid):
 def _cut(ctx, how):
     scene_end(ctx.u, ctx.work)
     if how == "rest":
-        ctx.work.set_("stat", (PLAYER, "wounds"), "-1")
+        wounds = [i for i, _, life in ctx.work.state().marks(PLAYER) if life == "wound"]
+        if wounds:
+            ctx.work.untag(PLAYER, wounds[0])
         tick_threats(ctx.u, ctx.work)       # on top of the scene end's tick (rule.md, cut(rest))
 
 
@@ -252,7 +254,7 @@ def _grow(ctx, *item):
     if item[0] == "trait":
         w.drop_stat(PLAYER, item[1])
         w.set_("stat", (PLAYER, item[2]), 1)
-    elif item[0] == "scar":
+    elif item[0] == "wound":
         w.untag(PLAYER, int(item[1]))
     else:
         w.set_("stat", (PLAYER, item[0]), "+1")

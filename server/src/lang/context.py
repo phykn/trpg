@@ -45,8 +45,6 @@ def fact_line(u, p: dict, atom: Atom) -> str | None:
             return ko.fill(ko.FRAME["trait"], name=u.traits[s][0])
         if s in ko.APPROACHES:
             return ko.fill(ko.FRAME["stat"], item=ko.APPROACHES[s], n=atom[3])
-        if s == "wounds":
-            return ko.fill(ko.FRAME["stat"], item=ko.SHEET[s], n=atom[3])
         return None
     if k == "owes":
         g, h, kind = atom[1:]
@@ -125,6 +123,7 @@ def scene(u, o: Obs, focus, p: dict) -> list[Line]:
     """The narrator's ρ (engine.md 2): only the people in the scene, the ways out of it, and words for numbers."""
     x = set(focus) & set(o.seen)
     out: list[Line] = []
+    hurt = False
     for ln in context(u, o, focus, p):
         a = ln.atom
         if a is not None:
@@ -145,11 +144,13 @@ def scene(u, o: Obs, focus, p: dict) -> list[Line]:
                 n, boxes = a[2], u.boxes(a[1])
                 word = ko.OVERCOME[2 if n >= boxes else 1 if n >= boxes - 1 else 0]
                 ln = Line("fact", ko.fill(ko.FRAME["pace"], o=u.name(a[1]), word=word), a)
-            if a[0] == "stat":
-                if a[2] == "wounds" and a[3] > 0:
-                    ln = Line("fact", ko.FRAME["wounded"], a)
-                elif a[2] not in u.traits:
+            if a[0] == "stat" and a[2] not in u.traits:
+                continue
+            if a[0] == "mark" and a[1] == PLAYER and a[3] == "wound":
+                if hurt:
                     continue
+                hurt = True
+                ln = Line("fact", ko.FRAME["wounded"], a)
         out.append(ln)
     paced = {ln.atom[1] for ln in out if ln.atom and ln.atom[0] == "fill"}
     for c in o.facts.held_by(PLAYER):

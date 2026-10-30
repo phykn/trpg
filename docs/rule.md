@@ -1,6 +1,6 @@
 # Rules
 
-The rules fill in the candidates `K` and the transition `R`. A roll uses two six-sided dice, a target number set by risk, and the costs and complications of failure (section 3). Beats, scenes and threats move time forward (section 4). Conversation leaves relationships and promises behind (section 5). The protagonist has declarations, scars and growth (section 6). State and operations belong to [ontology.md](ontology.md); story parameters belong to [story.md](story.md).
+The rules fill in the candidates `K` and the transition `R`. A roll uses two six-sided dice, a target number set by risk, and the costs and complications of failure (section 3). Beats, scenes and threats move time forward (section 4). Conversation leaves relationships and promises behind (section 5). The protagonist has declarations, wounds and growth (section 6). State and operations belong to [ontology.md](ontology.md); story parameters belong to [story.md](story.md).
 
 ```
 server/src/rules/
@@ -42,7 +42,7 @@ class Action:
 | `declare` | Declares a latent (section 6) | latent | - |
 | `cut` | Skips ahead past the scene (section 4) | `pass` or `rest` | - |
 | `choose` | Picks one option at a fork (section 4) | fork, option | - |
-| `grow` | Growth (section 6) | `grow:<approach>`, `grow:trait:<drop>:<gain>`, `grow:scar:<slot>` | - |
+| `grow` | Growth (section 6) | `grow:<approach>`, `grow:trait:<drop>:<gain>`, `grow:wound:<slot>` | - |
 
 The old schema `pay` survives only in the action-id grammar (`acts.py`) so that saves from before this rule still load. It has no candidates and no `Δ₀`.
 
@@ -67,7 +67,7 @@ The old schema `pay` survives only in the action-id grammar (`acts.py`) so that 
 | `cut(pass)` | always |
 | `cut(rest)` | `here` is a resting place |
 | `choose(g, c)` | an option `c` of a fork `g` with `at(g, player) ∈ F` |
-| `grow(item)` | `growth ≥ 1`. Approaches below 3; for a trait, one trait the player has now paired with one other trait candidate from the story; for a scar, its slot |
+| `grow(item)` | `growth ≥ 1`. Approaches below 3; for a trait, one trait the player has now paired with one other trait candidate from the story; for a wound, its slot |
 
 Judgment arguments multiply onto the actions above.
 
@@ -165,10 +165,10 @@ A **complication** is `(condition, effect, weight)`. The story declares them on 
 |---|---|---|---|
 | `light` | `engine.snag` | 꼬임 (snag) | `snag` scene tag on the player |
 | | `engine.beat` | 지체 (delay) | `beats +1` |
-| `heavy` | `engine.wound` | 다침 (injury) | `wounds +1` |
+| `heavy` | `engine.wound` | 다침 (injury) | a wound (section 6) |
 | | `engine.end` | 끊긴 장면 (scene cut short) | scene end (4.1) |
 
-A story complication's effect is its `effects`, plus `wounds +n` when it has `wound: n`. **Costs apply only on `fail`**. Risk sets them, and the engine applies them at once. The player does not choose.
+A story complication's effect is its `effects`, plus `n` wounds when it has `wound: n`. **Costs apply only on `fail`**. Risk sets them, and the engine applies them at once. The player does not choose.
 
 | Risk | Cost of `fail` |
 |---|---|
@@ -212,7 +212,7 @@ For a rolling action `a ∈ K(O)`, this computes from the observation alone what
 
 **Scene end** `scene_end`: `expire(scene)`, `beats = 0`, and `fill +1` on each active threat (a threat, fork or deadline with `at(w, player)`). Risk clocks are not included. `go` does not expire scene tags.
 
-`cut(pass)` ends the scene at once ("밤이 될 때까지 기다린다", "I wait until nightfall"). `cut(rest)` is a candidate only when `here` is a resting place; on top of the scene end it does `wounds −1` and one more `fill +1` on active threats.
+`cut(pass)` ends the scene at once ("밤이 될 때까지 기다린다", "I wait until nightfall"). `cut(rest)` is a candidate only when `here` is a resting place; on top of the scene end it heals the wound in the lowest slot and does one more `fill +1` on active threats.
 
 ### 4.2 Risk clocks and threats
 
@@ -271,8 +271,8 @@ Earlier, every chapter change and the ending settled open promises by `keep`. Th
 ## 6. The protagonist
 
 - **Declaration** `declare(ℓ)`: `reveal(player, ℓ)`, `ℓ.effects`, held clock `+1`. When the player says "옛 친구가 이 마을에 산다" ("an old friend lives in this town"), it looks as if a fact is added to the world, but all that happens is that a latent the story placed from the start comes to light (the scope rule of story.md 3.10).
-- **Scar** `τ_fall`: `wounds = 0`, `tag(player, snag, scar)`, scene end. When picking a slot to overwrite, `tag` skips `scar` slots, and adds nothing if only those remain. If all the player's slots are `scar` at the end of that trigger's effects, `end(collapse)`. The story supplies the name and narration template of `collapse`.
-- **Growth** `grow(item)`: a candidate only when `growth ≥ 1`, and does `growth −1`. The item is one of: `+1` to one approach, a trait swap (remove one `stat` atom and add another), or `untag` of one scar. Reaching a chapter's goal opens growth (4.3).
+- **Wound**: `tag(player, snag, wound, @wound)`. It hinders like any snag and lasts until healed: `cut(rest)` or growth removes one. A wound overwrites any slot that is not a wound when the ring is full, a snag before an edge, so every wound lands, and other tags never overwrite it. `τ_collapse` ends the game (`end(collapse)`) once all three slots are wounds. The story supplies the name and narration template of `collapse`. Wounds were a counter that reset into a permanent scar on a fall; the reset read as a heal, and in games of 5 to 13 rolls the fall almost never came.
+- **Growth** `grow(item)`: a candidate only when `growth ≥ 1`, and does `growth −1`. The item is one of: `+1` to one approach, a trait swap (remove one `stat` atom and add another), or `untag` of one wound. Reaching a chapter's goal opens growth (4.3).
 
 ## 7. Schema results `Δ₀`
 
@@ -291,7 +291,7 @@ Earlier, every chapter change and the ending settled open promises by `keep`. Th
 | `try(o, approach)` | A hidden block is revealed (no roll). Otherwise roll. On `success`, an obstacle gets `fill +(1 + [approach ∈ fits(o)] + [strain = forced])`, capped by what is left: forcing keeps its risk step and heavy fail, so it must buy something; any other target has its lowest-slot `snag` `untag`ged, or, if there is none, gets `tag(o, edge, scene)`. Costs follow 3.3 |
 | `declare(ℓ)` | section 6 |
 | `cut(pass)` | scene end |
-| `cut(rest)` | scene end, `wounds −1`, active threats `fill +1` |
+| `cut(rest)` | scene end, the lowest-slot wound removed, active threats `fill +1` |
 | `choose(g, c)` | `c.effects`, `retire(g)` |
 | `grow(item)` | section 6 |
 
@@ -304,7 +304,7 @@ A trigger is an ordered `(condition, effect)`. Story triggers (in the order of o
 | Trigger | Condition | Effect |
 |---|---|---|
 | `τ_risk` | the held clock is full | that chapter's `crisis`, clock `fill = 0` |
-| `τ_fall` | `wounds = wound_boxes` | scar (section 6) |
+| `τ_collapse` | all three of the player's slots are wounds and no ending yet | `end(collapse)` (section 6) |
 | `τ_scene` | `beats = B` | scene end |
 | `τ_arrive` | some active threat is full | for each such threat, in story order, its arrival effect (`arrival` for a threat, `default` for a fork, `chapter_to` or `end` for a deadline), then `retire` |
 | `τ_promise` | some `owes(player, ·, promise)` has `keep` or `break` true | settled as in 5.2. If both are true, the promise is kept |
@@ -320,7 +320,7 @@ def resolve(U, S, h, a, r) -> Step:
 4. **Scan** `scan`: walk the list in order, apply the effect of the first trigger that fires to `work`, and go back to the top of the list. Stop when nothing fires, and stop at once when `flag ending` is set. A story trigger `τᵢ` fires when it has not fired this step, `start_true[i]` is false and `holds(τᵢ.when, work, h*)` is true. An engine trigger fires when its condition is true in `work`.
 5. `delta = diff(S, work)`. `mods` are the atoms of 3.2.
 
-The scan ends after at most `m + 3 + w + q` firings and is deterministic: `m` story triggers, one firing each of `τ_risk`, `τ_fall` and `τ_scene`, `w` arrivals (threats, forks, deadlines) and `q` promise settlements. Effects after `Δ₀` raise no clock, beats or wounds, arrivals retire their threats, and settling a promise removes its `owes`, so none fires twice. The code raises an exception past that bound; it is a bug that fuzzing (story.md V6) should catch. At the end every engine trigger condition is false, so every step starts with no clock full.
+The scan ends after at most `m + 3 + w + q` firings and is deterministic: `m` story triggers, one firing each of `τ_risk`, `τ_collapse` and `τ_scene`, `w` arrivals (threats, forks, deadlines) and `q` promise settlements. Effects after `Δ₀` raise no clock or beats and add no wound, arrivals retire their threats, and settling a promise removes its `owes`, so none fires twice. The code raises an exception past that bound; it is a bug that fuzzing (story.md V6) should catch. At the end every engine trigger condition is false, so every step starts with no clock full.
 
 `Step.result` is one of `success`, `fail` (rolled), `none` (done without a roll) or `blocked` (a hidden block was revealed), and it is stored in the event. `risk` is recomputed from `a`, so it is not stored.
 

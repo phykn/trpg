@@ -164,7 +164,7 @@ def marks(u, r: dict) -> bool:
     kinds = {c["kind"] for c in r["changes"]}
     person = any(a in u.agents for a in r["action"].split(";")[0].split(":")[1:])
     acted = person and (kinds & {"move", "follow", "promise", "regards", "reveal"} or r["roll"] is not None)
-    return notable_step(u, r) or bool(acted) or bool({"wound", "fall"} & kinds)
+    return notable_step(u, r) or bool(acted) or ("wound" in kinds)
 
 
 def notable_step(u, r: dict) -> bool:
@@ -172,6 +172,6 @@ def notable_step(u, r: dict) -> bool:
     if schema in ("declare", "choose", "pay") or ";claim=" in r["action"]:
         return True
     # An obstacle overcome is the chapter's work; left out, a recap skipped the door the player broke (play-3-bold 6).
-    return any(c["kind"] in ("promise", "scar", "arrival")
+    return any(c["kind"] in ("promise", "wound", "arrival")
                or (c["kind"] == "fill" and (c["to"] - c["from"] >= 2 or c["to"] >= u.boxes(c["id"]) > c["from"]))
                for c in r["changes"])

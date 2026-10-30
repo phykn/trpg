@@ -61,11 +61,11 @@ def test_random_operations_keep_conformance(u, s0):
             w.set_("regards", ("dohae", PLAYER, "trust"), rng.choice(["+5", "-5", 2]))
         elif op == 4:
             w.tag(rng.choice([PLAYER, "door", "dock"]), rng.choice(["edge", "snag"]),
-                  rng.choice(["scene", "chapter", "scar"]))
+                  rng.choice(["scene", "chapter", "wound"]))
         elif op == 5:
             w.expire(rng.choice(["scene", "chapter"]))
         elif op == 6:
-            w.set_("stat", (PLAYER, "wounds"), rng.choice(["+1", "+4", "-3"]))
+            w.set_("stat", (PLAYER, "beats"), rng.choice(["+1", "+9", "-3"]))
         elif op == 7:
             h = rng.choice(["dohae", "yunseul"])
             if s.where(h) == s.where(PLAYER):
@@ -78,16 +78,25 @@ def test_random_operations_keep_conformance(u, s0):
         assert conforms(u, s) == [], op
 
 
-def test_tag_skips_scars_and_stops_when_all_slots_are_scars(u, s0):
+def test_tag_skips_wounds_and_stops_when_all_slots_are_wounds(u, s0):
     w = Work(u, s0)
     for _ in range(3):
-        w.tag(PLAYER, "snag", "scar")
-    assert w.tag(PLAYER, "edge", "scene") is None
+        w.tag(PLAYER, "snag", "wound")
+    assert w.tag(PLAYER, "edge", "scene") is None and w.tag(PLAYER, "snag", "wound") is None
     w = Work(u, s0)
-    w.tag(PLAYER, "snag", "scar")
+    w.tag(PLAYER, "snag", "wound")
     w.tag(PLAYER, "snag", "scene")
     w.tag(PLAYER, "edge", "chapter")
     assert w.tag(PLAYER, "edge", "scene") == 2
+
+
+def test_a_wound_takes_an_edge_s_slot_when_no_snag_is_left(u, s0):
+    """rule.md 6: every wound lands, so three of them always end the game."""
+    w = Work(u, s0)
+    w.tag(PLAYER, "snag", "wound")
+    w.tag(PLAYER, "edge", "scene")
+    w.tag(PLAYER, "edge", "chapter")
+    assert w.tag(PLAYER, "snag", "wound") == 2 and ("tag_replaced", PLAYER, 2, "edge", "scene") in w.happen
 
 
 def test_each_operation_sees_the_one_before(u, s0):

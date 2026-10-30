@@ -8,7 +8,7 @@ Fun cannot be proven. This document breaks fun into elements, separates out whic
 |---|---|---|
 | **Agency** | The player's sentence becomes an action as meant, and that action changes the world | Interpretation, improvisation, multiple solutions, choosing what to rely on |
 | **Tension** | Outcomes are uncertain and the stakes are visible | 2d6, risk, risk clocks, threats, deadlines, roll cards |
-| **Consequence** | Failures and choices change the situation, and those changes come back into play later | Costs, complications, forks, scars, history patterns |
+| **Consequence** | Failures and choices change the situation, and those changes come back into play later | Costs, complications, forks, wounds, history patterns |
 | **Relationships** | People treat the player differently depending on what the player has done | Trust and fear, favors, promises, bonds |
 | **Growth** | The protagonist and the player get better with each chapter goal they reach | Growth, what was relied on, declarations |
 | **Rhythm** | Tension and release alternate, and the story ends without dragging | Beats and scenes, deadlines, rest |
@@ -74,7 +74,7 @@ Every metric is computed offline from the saved log `L` (each event's `a`, `r`, 
 | F4 | Roll outcomes (굴림의 결과) | Share of rolls that fail | 25–50% | Approach values, the story's base risk |
 | F5 | Crisis spacing (위기의 간격) | Rolls between `τ_risk` (risk clock crises) | 4–8 | Risk clock boxes (3.2) |
 | F6 | Threat response (위협 반응) | Share of threats that appeared whose `fill` the player lowered, or that the player drove back, before they arrived. A retire counts as driven back only when a trigger that retires the threat reads the same step's action (a `did`); one retired on a chapter flag left with its place and is left out | 30–70% | Threat boxes, number of solutions |
-| F7 | Consequence reuse (결과의 재사용) | Share of scars, declarations and fork choices that fall in a history pattern (extracted statically from the story) read by a condition evaluated later (ending, complication, topic) | 50% or more | The story's patterns and ending conditions |
+| F7 | Consequence reuse (결과의 재사용) | Share of paid costs, declarations and fork choices that fall in a history pattern (extracted statically from the story) read by a condition evaluated later (ending, complication, topic) | 50% or more | The story's patterns and ending conditions |
 | F8 | Relationship change (관계의 변화) | Per play, the number of people whose `regards` differ from the start, and the share of favor promises made that the player kept | 2 or more people, 40–80% | People's desires and favors |
 | F9 | Ending spread (결말의 분산) | Entropy of the ending distribution over several plays of the same story, divided by its maximum | 0.5 or more | Forks and ending conditions |
 | F10 | Chapter length (장의 길이) | Beat-raising steps per chapter, and the share of chapters ended by a deadline | 20–40 steps, 50% or less | `B`, deadline boxes |
