@@ -1,5 +1,5 @@
 // Opens the Mac API to the deployed Worker: API, quick tunnel, and the tunnel URL in KV.
-// Keeps both sides current: server/story edits restart the API, client edits redeploy the Worker.
+// Keeps both sides current: the client deploys at start, server/story edits restart the API, client edits redeploy the Worker.
 const { spawn, spawnSync } = require('node:child_process');
 const path = require('node:path');
 const { health } = require('./common.cjs');
@@ -83,11 +83,11 @@ let deploying = false;
 let deployAgain = false;
 
 // One build at a time; edits made during a build trigger exactly one more.
-function deployClient() {
+function deployClient(reason = '화면 코드가 바뀌어 배포합니다') {
   if (stopping) return;
   if (deploying) { deployAgain = true; return; }
   deploying = true;
-  console.log('\n화면 코드가 바뀌어 배포합니다 (1분쯤).');
+  console.log(`\n${reason} (1분쯤).`);
   let log = '';
   const child = track(spawn(process.execPath, [path.join(__dirname, 'deploy.cjs')], { cwd: client, stdio: ['ignore', 'pipe', 'pipe'] }), 'deploy');
   child.stdout.on('data', (chunk) => { log += chunk; });
@@ -172,6 +172,7 @@ async function main() {
   await startApi();
   watchSources();
   watchClient();
+  deployClient('최신 화면을 배포합니다');
   await runTunnel(binary);
 }
 
