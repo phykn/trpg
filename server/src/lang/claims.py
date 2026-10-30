@@ -81,7 +81,7 @@ def claims(u, sentence: str) -> list[tuple[bool, Atom]]:
     # Event verbs inside a quote are a person's words about the world, not something happening now.
     bare = QUOTED.sub(" ", sentence)
     here = mentioned(u, bare)
-    if any(v in bare for v in ko.OPENS):
+    if any(v in bare for v in ko.OVERCOMES):
         out += [(True, ("fill", x, u.boxes(x))) for _, x in here
                 if x in u.obstacles and u.obstacles[x].sub == "plain"]
     arrive = [m.start() for v in ko.ARRIVES for m in re.finditer(re.escape(v), bare)]

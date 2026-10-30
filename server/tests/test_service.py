@@ -423,4 +423,5 @@ async def test_every_sentence_that_does_nothing_counts_as_refused(tmp_path):
     assert out["kind"] == "turn" and not out["steps"]
     _, g = await svc.load(gid)
     said = [r for r in g.presentation["requests"] if r.get("text") == "문으로"]
+    assert all(r.pop("secs") >= 0 for r in said)       # the interpretation's wait (fun.md F15)
     assert said == [{"kind": "refused", "text": "문으로"}, {"kind": "text", "text": "문으로", "outcome": "refused"}]

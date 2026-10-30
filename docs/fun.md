@@ -73,7 +73,7 @@ Every metric is computed offline from the saved log `L` (each event's `a`, `r`, 
 | F3 | Solution variety (해법의 다양성) | Number of distinct solutions and approaches used on each obstacle across plays | 2 or more | The story's solutions and fits |
 | F4 | Roll outcomes (굴림의 결과) | Share of rolls that fail | 25–50% | Approach values, the story's base risk |
 | F5 | Crisis spacing (위기의 간격) | Rolls between `τ_risk` (risk clock crises) | 4–8 | Risk clock boxes (3.2) |
-| F6 | Threat response (위협 반응) | Share of threats that appeared whose `fill` the player lowered, or that the player drove back, before they arrived | 30–70% | Threat boxes, number of solutions |
+| F6 | Threat response (위협 반응) | Share of threats that appeared whose `fill` the player lowered, or that the player drove back, before they arrived. A retire counts as driven back only when a trigger that retires the threat reads the same step's action (a `did`); one retired on a chapter flag left with its place and is left out | 30–70% | Threat boxes, number of solutions |
 | F7 | Consequence reuse (결과의 재사용) | Share of scars, declarations and fork choices that fall in a history pattern (extracted statically from the story) read by a condition evaluated later (ending, complication, topic) | 50% or more | The story's patterns and ending conditions |
 | F8 | Relationship change (관계의 변화) | Per play, the number of people whose `regards` differ from the start, and the share of favor promises made that the player kept | 2 or more people, 40–80% | People's desires and favors |
 | F9 | Ending spread (결말의 분산) | Entropy of the ending distribution over several plays of the same story, divided by its maximum | 0.5 or more | Forks and ending conditions |
@@ -82,6 +82,7 @@ Every metric is computed offline from the saved log `L` (each event's `a`, `r`, 
 | F12 | Survey | 5-point scale after the ending: "내 선택이 이야기를 바꿨다" (my choices changed the story), "다시 하고 싶다" (I want to play again), "인물이 나를 기억했다" (the people remembered me) | Mean of 4 or more | The element (section 1) of the lowest-rated item |
 | F13 | Relying (기대기) | Among rolls with something to rely on, the share where the player relied on it, and the share where the decisive chip was the relied-on thing | 30–70%, recorded | Low: things to rely on are not visible or feel too precious to spend; high: relying is free |
 | F14 | Card abandonment (카드 이탈) | Share of roll cards closed in favor of a different command | 20% or less | The card shows something other than what the sentence meant → interpretation (engine.md 3) |
+| F15 | Wait and stuck (대기와 막힘) | Median and 90th percentile seconds of a sentence's interpretation and of a narration; per game, the runs of 3 sentences in a row that move nothing (refused, idle or a clarification) | Interpretation median 3 s or less, narration median 7 s or less, 0.5 stuck runs or fewer | Interpretation calls per sentence, narration rewrites; the story's names and the suggestions |
 
 | Element | Metrics |
 |---|---|
@@ -90,7 +91,7 @@ Every metric is computed offline from the saved log `L` (each event's `a`, `r`, 
 | Consequence | F7, F9 |
 | Relationships | F8, F12 |
 | Growth | F4 (trend by chapter), F12 |
-| Rhythm | F5, F10, F11 |
+| Rhythm | F5, F10, F11, F15 |
 
 ## 5. Hypotheses and decisions
 

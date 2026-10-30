@@ -397,6 +397,14 @@ def test_event_verbs_in_a_quote_are_not_claims():
     assert not any(a[0] == "fill" for _, a in claims(u, "\"녹슨 등대 문은 예전에 열렸지.\" 그가 말합니다."))
 
 
+def test_an_obstacle_giving_way_claims_it_is_overcome(u, s0):
+    from src.lang.claims import accepts, claims
+    full = ("fill", "hound", u.boxes("hound"))
+    said = claims(u, "사나운 누렁이가 꼬리를 내리고 달아납니다.")
+    assert (True, full) in said and not accepts(s0, True, full)
+    assert not any(a[0] == "fill" for _, a in claims(u, "사나운 누렁이가 낮게 으르렁거립니다."))
+
+
 def test_arriving_somewhere_is_a_claim_on_where_you_are():
     from src.lang.claims import claims
     u = STORIES["lighthouse"]

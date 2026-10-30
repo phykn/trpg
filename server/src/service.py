@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import secrets
+import time
 from pathlib import Path
 
 from .cards import (
@@ -260,11 +261,16 @@ class GameService:
         text = body.get("text")
         if self.interpreter is None:
             return self._refused(u, g, "text")
+        start = time.monotonic()
         out = await self.interpreter.plan(u, g, text)
+        secs = round(time.monotonic() - start, 2)     # the wait before a card or a reveal (fun.md F15)
         if out.get("refused"):
-            p["requests"].append({"kind": "refused", "text": text})
+            p["requests"].append({"kind": "refused", "text": text, "secs": secs})
             return self._refused(u, g, out["refused"])
+        n = len(p["requests"])
         result = await self._run(u, g, out["plan"], {"text": text, "slots": out.get("slots", [])}, "text", text)
+        for r in p["requests"][n:]:
+            r.setdefault("secs", secs)          # a refusal _run wrote for this sentence
         if result["kind"] != "refused":
             # How the sentence ended, for the interpretation metric (fun.md F1).
             card = p.get("card")
@@ -272,7 +278,7 @@ class GameService:
                        else "clarify" if card and card["kind"] == "clarify"
                        # a waiting card the sentence discarded and nothing done: refused, though the response is a turn
                        else "refused" if not result["steps"] and card is None else "accepted")
-            p["requests"].append({"kind": "text", "text": text, "outcome": outcome})
+            p["requests"].append({"kind": "text", "text": text, "outcome": outcome, "secs": secs})
         return result
 
     async def _run(self, u: Universe, g: Game, plan: list, echo: dict, kind: str, text: str | None) -> dict:
@@ -433,13 +439,14 @@ class GameService:
 
     async def _make(self, game_id: str, sid: tuple, store: str, key: str, job: Job) -> None:
         stream = self.streams[sid]
+        start = time.monotonic()
         try:
             async for e in self.narrator.narrate(job):
                 if e["type"] != "result":
                     await stream.push(e, done=e["type"] == "error")
                     continue
                 entry = {k: e[k] for k in ("text", "attempts", "dropped", "tags")} | \
-                    {k: e[k] for k in ("said", "hint") if e.get(k)}
+                    {k: e[k] for k in ("said", "hint") if e.get(k)} | {"secs": round(time.monotonic() - start, 2)}
                 async with self.lock(game_id):
                     u, g = await self.load(game_id)
                     p = g.presentation

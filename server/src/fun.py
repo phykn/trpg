@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .onto.atoms import PLAYER
+from .onto.cond import atoms_of
 from .onto.log import matches
 from .onto.save import SaveError, rebuild
 from .onto.universe import initial
@@ -17,6 +18,7 @@ from .story.load import StoryError
 from .story.validate import load_all
 
 QUIT_DAYS = 7
+STUCK = 3        # sentences in a row that move nothing (fun.md F15)
 ROLLED = ("success", "mixed", "fail")    # mixed only in saves from before the two-result rule
 FORCED = ("pay", "grow")          # steps a card forces; neither a sentence nor a button chose them
 
@@ -25,7 +27,7 @@ TARGETS = {
     "F1": (0.85, None), "F2": (0.50, None), "F3": (2, None), "F4": (0.25, 0.50), "F5": (4, 8),
     "F6": (0.30, 0.70), "F7": (0.50, None), "F8_people": (2, None), "F8_kept": (0.40, 0.80),
     "F9": (0.50, None), "F10_steps": (20, 40), "F10_deadline": (None, 0.50), "F11_chapter1": (None, 0.20),
-    "F13_relied": (0.30, 0.70),
+    "F13_relied": (0.30, 0.70), "F15_interpret": (None, 3.0), "F15_narrate": (None, 7.0), "F15_stuck": (None, 0.5),
 }
 
 
@@ -35,6 +37,13 @@ def ratio(n: int, d: int) -> float | None:
 
 def mean(xs: list[float]) -> float | None:
     return round(sum(xs) / len(xs), 2) if xs else None
+
+
+def quantile(xs: list[float], q: float) -> float | None:
+    if not xs:
+        return None
+    xs = sorted(xs)
+    return round(xs[min(len(xs) - 1, int(q * len(xs)))], 2)
 
 
 class Play:
@@ -121,7 +130,7 @@ def f5(plays) -> dict:
 
 
 def f6(plays) -> dict:
-    answered = arrived = pending = 0
+    answered = arrived = pending = withdrawn = 0
     for pl in plays:
         u = pl.u
         threats = {o for o, ob in u.obstacles.items() if ob.sub == "threat"}
@@ -140,8 +149,9 @@ def f6(plays) -> dict:
                 if (o, e.t) in arrivals:
                     done = "arrived"
                 elif ("at", o, PLAYER) in e.delta.remove:
-                    done = "retired"
-            if not seen:
+                    done = "retired" if driven(u, o, e) else "withdrawn"
+            withdrawn += done == "withdrawn"
+            if not seen or done == "withdrawn":
                 continue
             if done == "retired" or (done == "arrived" and lowered):
                 answered += 1
@@ -150,7 +160,15 @@ def f6(plays) -> dict:
             else:
                 pending += 1
     return {"value": ratio(answered, answered + arrived), "answered": answered, "arrived": arrived,
-            "pending": pending}
+            "pending": pending, "withdrawn": withdrawn}
+
+
+def driven(u, o: str, e) -> bool:
+    """A threat's retire is the player's when a trigger that retires it reads this step's own action (a did).
+    One retired on a chapter flag left with the place, which said nothing of the player (round 6's bridge)."""
+    return any(any(x[:2] == ("retire", o) for x in t.effects)
+               and any(c[0] == "did" and matches(u.patterns[c[1]], e.action, e.result) for c in atoms_of(t.when))
+               for t in u.triggers)
 
 
 def f7(plays) -> dict:
@@ -249,6 +267,25 @@ def f13_14(plays) -> dict:
             "F14": {"value": ratio(closed, opened), "roll_cards": opened, "closed": closed}}
 
 
+def f15(plays) -> dict:
+    """The wait a sentence costs (interpretation) and a turn's narration, and how often a game got stuck."""
+    interpret = [r["secs"] for pl in plays for r in pl.requests if r["kind"] in ("text", "refused") and "secs" in r]
+    narrate = [x["secs"] for pl in plays for store in ("narration", "recap")
+               for x in pl.g.presentation.get(store, {}).values() if "secs" in x]
+    stuck = []
+    for pl in plays:
+        n = run = 0
+        for r in pl.requests:
+            if r["kind"] not in ("text", "refused") or not r.get("text"):
+                continue
+            run = 0 if r.get("outcome") == "accepted" else run + 1
+            n += run == STUCK
+        stuck.append(n)
+    return {"interpret": {"median": quantile(interpret, 0.5), "p90": quantile(interpret, 0.9), "n": len(interpret)},
+            "narrate": {"median": quantile(narrate, 0.5), "p90": quantile(narrate, 0.9), "n": len(narrate)},
+            "stuck": mean(stuck), "stuck_games": stuck}
+
+
 def measure(saves: list[Path], stories: dict, now: float) -> dict:
     plays, skipped = [], []
     for path in saves:
@@ -265,7 +302,7 @@ def measure(saves: list[Path], stories: dict, now: float) -> dict:
     return {"games": len(plays), "skipped": skipped,
             "F1": f1(plays), "F2": f2(plays), "F3": f3(plays), "F4": f4(plays), "F5": f5(plays),
             "F6": f6(plays), "F7": f7(plays), "F8": f8(plays), "F9": f9(plays), "F10": f10(plays),
-            "F11": f11(plays, now), **rest}
+            "F11": f11(plays, now), **rest, "F15": f15(plays)}
 
 
 def verdict(value, key: str) -> str:
@@ -291,12 +328,18 @@ def table(m: dict) -> str:
     lines.append(f"| F13 결정적 칩이 기댄 것 | {m['F13']['decisive'] if m['F13']['decisive'] is not None else '-'} | recorded |")
     f14 = m["F14"]["value"]
     lines.append(f"| F14 카드 이탈 | {'-' if f14 is None else f14} | {'-' if f14 is None else 'ok' if f14 <= 0.2 else 'out'} |")
+    f15 = m["F15"]
+    for name, key, v in (("F15 해석 대기(중앙값 초)", "F15_interpret", f15["interpret"]),
+                         ("F15 서술 대기(중앙값 초)", "F15_narrate", f15["narrate"])):
+        lines.append(f"| {name} | {'-' if v['median'] is None else v['median']} (p90 {v['p90'] or '-'}) | "
+                     f"{verdict(v['median'], key)} |")
+    lines.append(f"| F15 막힘(판당) | {'-' if f15['stuck'] is None else f15['stuck']} | {verdict(f15['stuck'], 'F15_stuck')} |")
     return "\n".join(lines)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="Fun metrics F1-F11, F13, F14 from saved games (fun.md 4). F12 is a survey and is not here.",
+        description="Fun metrics F1-F11, F13-F15 from saved games (fun.md 4). F12 is a survey and is not here.",
         epilog="Saves written before request records existed have no sentence outcomes, card origins or card "
                "openings, so F1, F2, F13 and F14 count only what was recorded.")
     ap.add_argument("saves", type=Path, help="a save directory or file")

@@ -32,3 +32,19 @@ async def test_metrics_read_sentence_outcomes_card_origins_and_closed_cards(tmp_
     assert m["F13"]["rolls"] == 1 and m["F13"]["relied"] == 1.0
     assert m["F14"] == {"value": 0.5, "roll_cards": 2, "closed": 1}
     assert m["F4"]["rolls"] == 1 and m["F11"]["chapter1"] == 0.0
+
+
+async def test_the_wait_and_the_stuck_runs_are_read_off_the_requests(tmp_path):
+    svc = service(tmp_path, {"ask": ["talk:yunseul:t_wall"]})
+
+    async def plan(u, g, text):
+        return {"refused": "unknown"} if text == "huh" else {"plan": [{"action": "talk:yunseul:t_wall"}]}
+    svc.interpreter.plan = plan
+    gid, view = await new(svc)
+    for n in range(4):                                                       # four misreads: one stuck run
+        out = await cmd(svc, gid, view, f"h{n}", text="huh")
+        view = out["view"]
+    await cmd(svc, gid, view, "a", text="ask")
+    m = measure(sorted(tmp_path.glob("*.json")), STORIES, now=0)
+    assert m["F15"]["interpret"]["n"] == 5 and m["F15"]["interpret"]["median"] >= 0
+    assert m["F15"]["stuck_games"] == [1]
