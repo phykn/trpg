@@ -23,7 +23,7 @@ SENTENCES, CHARS = 4, 200
 SHORT_CHARS, RECAP_CHARS, RECAP_SENTENCES = 160, 100, 2
 GROWN_SENTENCES, GROWN_CHARS = 2, 100
 # A greeting got four sentences that opened on scenery (qa_test/runs/typed-1/base-summary.md); engine.md 5.2.
-REPLY_SIZE = {"talk": (3, 150), "muse": (2, 110)}
+REPLY_SIZE = {"talk": (3, 150), "muse": (2, 110), "within": (2, 110)}
 TAG_CHARS = 12
 MAX_TOKENS = 500
 THETA_N = 0.5
@@ -72,7 +72,7 @@ class Job:
     relied: tuple[str, ...] = ()     # what this turn's rolls leaned on
     looked: tuple[str, ...] = ()     # things and obstacles this turn looked at
     asked: tuple[tuple[str, ...], ...] = ()   # choice names of the forks that came this turn; engine.md 5.2
-    reply: str = "act"               # act, talk (only small talk) or muse (only try(player)); engine.md 5.2
+    reply: str = "act"               # act, talk (only small talk), muse (only try(player)) or within; engine.md 5.2
     said: dict = field(default_factory=dict)   # speaker → [(player sentence, [their lines])] before previous; 5.1
     shared: dict = field(default_factory=dict)  # speaker → step lines of what they lived through with you; 5.1
     hint: tuple[str, str] | None = None   # a muse's way forward: (action, its button label); 5.2
@@ -397,7 +397,8 @@ def steering(job: Job, lines) -> list[str]:
         # Small talk and musing change nothing, so no place cue, pace or close: the reply opens on the person
         # (engine.md 5.2).
         names = ", ".join(u.name(x) for x in job.speakers)
-        reply = ko.fill(ko.NOW[job.reply], names=names) if names or job.reply == "talk" else ko.NOW["muse_alone"]
+        reply = ko.NOW["muse_alone"] if job.reply == "muse" and not names else \
+            ko.fill(ko.NOW[job.reply], names=names, place=u.name(job.o.facts.where(PLAYER)))
         if tired:
             out.append(ko.fill(ko.NOW["worn"], words=", ".join(tired)))
         if job.text and names:

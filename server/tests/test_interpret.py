@@ -268,14 +268,12 @@ async def test_going_where_the_player_is_moves_nowhere(tmp_path):
         svc, gid, view = await game(tmp_path / str(i), decision, FakeLLM(pick))
         out = await say(svc, gid, view, text)
         assert list(decision.asked[1][1]["intent"]["criteria"]) == ["village", "yard", "dock"]
-        assert [s["action"] for s in out["steps"]][:1] == ([first] if first else [])
-        if not first:
-            assert out["kind"] == "refused" and out["reason"] == "이미 선착장에 있습니다."
-    # a walk about the place names no place, so the answer is where one can go (play-3-explorer 9)
+        # staying is a move about the place, told and not refused (play-10-human)
+        assert [s["action"] for s in out["steps"]][:1] == [first or "try:player:wits"]
     decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}, "intent": {"dock": 0.9}})
     svc, gid, view = await game(tmp_path / "about", decision, FakeLLM("3"))
     out = await say(svc, gid, view, "창고 뒤쪽으로 돌아가 본다")
-    assert out["kind"] == "refused" and out["reason"] == "여기서 갈 수 있는 곳은 바닷가 마을, 등대 앞입니다."
+    assert out["kind"] == "turn" and out["steps"][0]["within"]
     decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}})
     svc, gid, view = await game(tmp_path / "exit", decision)
     out = await say(svc, gid, view, "선착장에서 마을로 간다")
@@ -475,6 +473,22 @@ async def test_a_sentence_going_nowhere_new_meets_the_blocked_way(tmp_path):
     card = (await say(svc, gid, view, "이제 출발한다"))["view"]["card"]
     assert card["question"] == "녹슨 등대 문이 등불실로 가는 길을 막고 있습니다. 어떻게 할까요?"
     assert [o["label"] for o in card["options"]] == ["어깨로 문을 들이받는다"]
+
+
+async def test_a_move_about_the_place_is_told_not_refused(tmp_path):
+    """"아궁이로 가자" in the inn was answered with the ways out, as if the hearth were out of reach
+    (qa_test/runs/play-10-human)."""
+    from src.jobs import turn_job
+    from src.narrate import steering
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}})
+    # the narration model's pick of where: the dock itself, after the village and the yard
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("3"))
+    out = await say(svc, gid, view, "뱃전 쪽으로 걸어간다")
+    assert out["kind"] == "turn" and [r["action"] for r in out["steps"]] == ["try:player:wits"]
+    assert out["view"]["scene"]["place"]["id"] == "dock" and out["steps"][0]["changes"] == []
+    job = turn_job(*svc.games[gid], out["turn"])
+    assert job.reply == "within" and job.happened == ["당신이 선착장 안에서 자리를 옮겼습니다"]
+    assert any("선착장 안에서 플레이어 문장이 말한 자리로" in x for x in steering(job, []))
 
 
 async def test_a_stuck_player_is_offered_the_next_things_to_try(tmp_path):

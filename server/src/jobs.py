@@ -89,6 +89,8 @@ def turn_job(u: Universe, g: Game, n: int) -> Job | None:
     reply, hint = "act", None
     if all(small_talk(a) for a in actions) and not blocked:
         reply = "talk"
+    elif any(r.get("within") for r in turn["steps"]):
+        reply, happened = "within", [ko.fill(ko.HAPPENED_WITHIN, place=u.name(here))]
     elif all(a.schema == "try" and a.intent[0] == PLAYER for a in actions):
         # the idle label would leak ("말한 대로 행동을 이어갑니다"), and anyone here may answer (engine.md 5.2)
         reply, happened, speakers = "muse", [ko.HAPPENED_MUSE], sorted(people, key=u.rank)

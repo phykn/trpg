@@ -299,8 +299,12 @@ class GameService:
             if "action" not in st:
                 st = await self.interpreter.fill(u, g, st)
                 if st.get("already"):
-                    already = st["already"]     # going where the player is: done, on to the next step
-                    continue
+                    if rest or records:
+                        already = st["already"]     # going where the player is: done, on to the next step
+                        continue
+                    # A move about the place alone in its sentence is told, not refused: "아궁이로 가자" in the inn
+                    # was answered with the ways out, as if the hearth were out of reach (qa_test/runs/play-10-human).
+                    st = {**self.interpreter.idle(), "within": True}
                 if st.get("refused"):
                     if not records:
                         p["requests"].append({"kind": "refused", "text": text})
@@ -350,6 +354,8 @@ class GameService:
                         unfinished = p["card"]["public"]["plan"]["step"]["label"]
                         break
             records.append(self._step(u, g, a))
+            if st.get("within"):
+                records[-1]["within"] = True
             s = g.state
             if ended(s) or records[-1]["result"] in ("fail", "blocked"):
                 unfinished = None if ended(s) or not rest else labels[0] if "action" in rest[0] else ""
