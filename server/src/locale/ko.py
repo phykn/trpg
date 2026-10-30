@@ -384,7 +384,7 @@ STYLE = "[문체]"
 HEAD = {"context": "[문맥]", "happened": "[일어난 일]", "tags": "[새 태그]", "previous": "[앞 서술] (이미 보여 준 글)",
         "said": "[앞서 나눈 말]", "shared": "[함께 겪은 일]",
         "now": "[이번 서술]",
-        "player": "[플레이어 문장]", "ending": "[결말]", "feedback": "[고칠 점]", "notable": "[이 장의 일]"}
+        "player": "[플레이어 문장]", "attempt": "[당신이 한 시도] (동작은 이대로, 결과는 [일어난 일]대로)", "ending": "[결말]", "feedback": "[고칠 점]", "notable": "[이 장의 일]"}
 # The steering block closes the prompt: a small model follows the end of its prompt best (narr-2 REPORT).
 # Clock and deadline names are events ("배가 암초에 닿는다") that were narrated as happening (qa_test/runs/play-1-bold
 # 13–27). Only the steering says so: in the context lines, "아직 일어나지 않았고" made the check call ordinary

@@ -162,6 +162,26 @@ async def test_check_reads_only_the_view(tmp_path):
     assert set(qs) == {"0", "1"} and all(set(q["criteria"]) == {"fine", "contradicts", "invents"} for q in qs.values())
 
 
+async def test_the_check_holds_a_rolled_attempt_to_the_sentence_s_manner(tmp_path):
+    from test_service import FakeInterpreter
+    decision = FakeDecision()
+    svc = GameService(STORIES, tmp_path, FakeInterpreter({"문을 발로 걷어찬다": ["try:door:force"]}),
+                      Narrator(FakeLLM(GOOD), decision), seeds=lambda: 7)
+    out = await svc.create("r", "lighthouse", CREATION)
+    gid, view = out["game_id"], out["view"]
+    for i, a in enumerate(["go:village", "go:yard"]):
+        view = (await svc.command(gid, {"request_id": f"m{i}", "revision": view["revision"], "action": a}))["view"]
+    out = await svc.command(gid, {"request_id": "t", "revision": view["revision"], "text": "문을 발로 걷어찬다"})
+    card = out["view"]["card"]
+    out = await svc.command(gid, {"request_id": "p", "revision": out["view"]["revision"], "card": card["id"],
+                                  "pick": card["selected"]})
+    await events(svc, gid, out["turn"])
+    state = decision.asked[-1][0]
+    assert ko.HEAD["attempt"] + "\n문을 발로 걷어찬다" in state
+    await events(svc, gid, 1)                           # a button's move carries no sentence to hold
+    assert ko.HEAD["attempt"] not in decision.asked[-1][0]
+
+
 async def test_routes_stream_ndjson(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
     app = build_app(service=svc, basic_auth_user="u", basic_auth_pass="p", cors_origins=[])

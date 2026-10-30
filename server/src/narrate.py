@@ -618,6 +618,10 @@ class Narrator:
         if job.ending:
             kept = legacy_lines(job)
             state += "\n" + "\n".join([ko.HEAD["ending"], job.ending, *(f"- {x}" for x in kept)])
+        # The manner is the player's: an attempt narrated with another verb than the sentence's ("kicked" told as
+        # "shouldered") contradicts it, though the odds never read the verb.
+        if job.tried and job.text:
+            state += "\n" + "\n".join([ko.HEAD["attempt"], job.text])
         qs = {}
         for i, s in enumerate(said):
             if i not in skip:
