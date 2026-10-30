@@ -12,7 +12,7 @@ from .rules.candidates import (
     solution_label,
     topic_of,
 )
-from .rules.recommend import recommend
+from .rules.recommend import next_steps
 from .rules.roll import DC, band, risk, rolls
 
 # The order clocks show in, most pressing first.
@@ -378,7 +378,7 @@ def game_view(u, g) -> dict:
         "journal": _journal(u, o, p),
         "buttons": [] if ending else [
             {"action": str(a), "label": action_label(u, o, p, a), "rolls": rolls(u, f, o.hist, a)}
-            for a in recommend(u, o)],
+            for a in next_steps(u, o)],
         "growth": [] if ending or (f.stat(PLAYER, "growth") or 0) < 1 else [
             {"action": str(a), "label": action_label(u, o, p, a), **dict(zip(("kind", "name"), growth_name(u, o, p, a))),
              "text": u.traits[a.intent[2]][1] if a.intent[0] == "trait" else ko.WOUND_GROWTH if a.intent[0] == "wound" else ""}

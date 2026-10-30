@@ -9,6 +9,7 @@ from .lang.context import about, context, render
 from .locale import ko
 from .models.decision import ModelUnavailable, choice, noul, probs_of
 from .onto.atoms import APPROACHES, PLAYER
+from .onto.cond import holds
 from .onto.view import observe
 from .rules.acts import JUDGE, TONES, make
 from .rules.candidates import (
@@ -22,8 +23,8 @@ from .rules.candidates import (
     space,
     topic_of,
 )
-from .rules.recommend import obstacles_here, ways
-from .view import action_label, rely_label
+from .rules.recommend import next_steps, obstacles_here
+from .view import action_label, prop_label, rely_label
 
 THETA = 0.5
 # Layer 1's first step: from 0.5 to 0.7 Kev's sure answer was wrong where the narration model's reading was right 24
@@ -107,6 +108,31 @@ def stuck(p: dict) -> bool:
     """The player's last sentence changed nothing: refused, or an idle muse."""
     last = next((r for r in reversed(p["requests"]) if r["kind"] in ("text", "refused")), None)
     return last is not None and (last["kind"] == "refused" or last.get("outcome") in ("idle", "refused"))
+
+
+def ways_needed(u, o, ob: str) -> str | None:
+    """What the obstacle's other ways need and the player lacks: things not hidden and topics, unspent."""
+    f = o.facts
+    hidden = {b for lat in u.latents.values() for b in lat.brings} | {
+        x for x, props in u.shows.items() if any(u.props[p].source == "hidden" for p in props)}
+    topics = {t.prop for a in u.agents.values() for t in a.topics}
+    have, know = [], []
+    for s in u.obstacles[ob].solutions:
+        rely = solution_action(ob, s).get("rely")
+        if rely is None or solution_holds(u, o, ob, s) or not holds(s.when, f, o.hist):
+            continue
+        kind, _, x = rely.partition(":")
+        if f.has("spent", PLAYER, x):
+            continue
+        if kind == "thing" and x not in hidden:
+            have.append(u.name(x))
+        elif kind == "prop" and x in topics:
+            know.append(prop_label(u, x))
+    if have and know:
+        return ko.fill(ko.NEEDS["both"], things=", ".join(have), props=", ".join(know))
+    if have or know:
+        return ko.fill(ko.NEEDS["thing" if have else "prop"], x=", ".join(have or know))
+    return None
 
 
 def blocked_why(u, x: str, ob: str) -> str:
@@ -277,7 +303,7 @@ class Interpreter:
         # Asked "이제 뭐하지?" right after a refusal, three muses answered with scenery and the player gave up
         # (qa_test/runs/play-10-human): stuck, the next things to try come as a card.
         if steps and len(steps) == 1 and steps[0].get("idle") and stuck(g.presentation):
-            return {"plan": [{"ways": steps[0]["action"], "idle": True, "text": text}]}
+            return {"plan": [{"stuck": steps[0]["action"], "idle": True, "text": text}]}
         return out
 
     async def layer1(self, u, g, text: str) -> dict:
@@ -348,11 +374,11 @@ class Interpreter:
         """Returning the step without "action" stops the plan; "already" skips it."""
         o = observe(u, g.state, g.log)
         p = g.presentation
-        if "ways" in st:
-            picks = ways(u, o)
+        if "stuck" in st:
+            picks = next_steps(u, o)
             if not picks:
-                return {"action": st["ways"], "idle": True}
-            return {"clarify": {"slot": "ways", "question": ko.WAYS,
+                return {"action": st["stuck"], "idle": True}
+            return {"clarify": {"slot": "next", "question": ko.NEXT_STEPS,
                                 "options": [{"id": str(a), "label": solution_label(u, o, a) or action_label(u, o, p, a)}
                                             for a in picks],
                                 # a way picked here is the move card's answer already; a roll still gets its card
@@ -369,7 +395,7 @@ class Interpreter:
         if not slots or (why and not any(x in s.intent for s in slots for x in names if x != PLAYER)):
             g = guarded(u, o, text, st["schema"])
             if g and why == blocked_why(u, *g) and (
-                    ask := self.detour(u, o, text, g[1], ko.fill(ko.DETOUR, why=why))):
+                    ask := self.detour(u, o, text, g[1], why)):
                 return {"clarify": ask}
             if st["schema"] == "go" and not why and (ask := self.nowhere(u, o, text, names)):
                 return {"clarify": ask}
@@ -558,17 +584,22 @@ class Interpreter:
         (qa_test/runs/play-10-human). An obstacle the sentence names here comes first ("설피를 신고 눈밭을 걷는다"),
         then the first blocked way out."""
         if ob := next((x for x in names if x in obstacles_here(u, o)), None):
-            return self.detour(u, o, text, ob, ko.fill(ko.DETOUR_AT, ob=u.name(ob)))
+            return self.detour(u, o, text, ob)
         if b := blocked_exit(u, o):
-            return self.detour(u, o, text, b[1], ko.fill(ko.DETOUR, why=blocked_why(u, *b)))
+            return self.detour(u, o, text, b[1], blocked_why(u, *b))
         return None
 
     @staticmethod
-    def detour(u, o, text: str, ob: str, question: str) -> dict | None:
+    def detour(u, o, text: str, ob: str, why: str | None = None) -> dict | None:
         """The ways around what blocks the target, as a clarify card: the hint instead of a refusal (engine.md 4.1)."""
         sols = [s for s in u.obstacles[ob].solutions if solution_holds(u, o, ob, s)]
         if not sols:
             return None
+        # Offered only the bare climb, a player never learned that the shovel or the salt would do
+        # (qa_test/runs/play-10-human); what the other ways need is what to look for.
+        needs = ways_needed(u, o, ob)
+        question = ko.fill(ko.DETOUR, why=" ".join(filter(None, (why, needs)))) if why else \
+            " ".join(filter(None, (needs, ko.fill(ko.DETOUR_AT, ob=u.name(ob)))))
         resume = {str(solution_action(ob, s)): {"schema": "try", "text": text, "rely": s.rely,
                                                 "fixed": {"target": ob, "approach": s.approach, "strain": "natural"}}
                   for s in sols}

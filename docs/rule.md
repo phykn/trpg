@@ -332,7 +332,7 @@ The scan ends after at most `m + 3 + w + q` firings and is deterministic: `m` st
 - **Talk**: the first topic, in story order, of the character present that the player does not yet believe
 - **Forward**: if a fork is active, `choose` its first option. Otherwise the first solution whose `when` is true in the view, or failing that, the first `go` toward a place named in the chapter goal's condition. A chapter with no goal ends in an ending, so its places are those of the obstacles the endings' conditions fill
 
-The same list feeds the hint a muse reply ends on (engine.md 5.2).
+`next_steps(U, O) → list[Action]`, at most three, fills `recommend(U, O)` up with the other solutions of the plain obstacles here whose condition and `rely` hold, then the open ways out. It feeds the buttons (`view.buttons`), the hint a muse reply ends on (engine.md 5.2) and the card for a stuck player (engine.md 4.1). With `recommend` alone, the snowy pass yard had one button and one hint, so three muses in a row got the same hint (qa_test/runs/play-10-human).
 
 Every judgment argument on a button is `ν₀`, except the `rely` that defines the button (the solution's `rely`, or the tag). Anyone can pick what to rely on in the roll card (engine.md 4.2), so a typed sentence differs from a button only in freely setting the approach, target, tone and claim (fun.md H2 measures this).
 

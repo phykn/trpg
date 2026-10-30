@@ -428,7 +428,8 @@ async def test_a_guarded_target_offers_the_ways_around_the_guard(tmp_path):
     # not a try on another target (the letter) but the guard and the ways around it
     card = out["view"]["card"]
     assert out["kind"] == "card" and card["kind"] == "clarify" and not out["steps"]
-    assert card["question"] == "사나운 누렁이가 도해를 막고 있습니다. 어떻게 할까요?"
+    # what the other way needs is named, so the player knows what to look for (play-10-human)
+    assert card["question"] == "사나운 누렁이가 도해를 막고 있습니다. 말린 생선이 있으면 다른 방법도 있습니다. 어떻게 할까요?"
     # the bait needs the dried fish in hand, so only the soothing holds
     assert [o["label"] for o in card["options"]] == ["낮은 목소리로 달래며 다가간다"]
     # with its odds, so ways round can be compared on one card (rule.md 3.2)
@@ -460,7 +461,7 @@ async def test_a_blocked_way_offers_only_the_ways_around_that_hold(tmp_path):
     for i, text in enumerate(["등불 방으로 올라간다", "날아서 꼭대기 등불실로"]):
         view = (await say(svc, gid, view, text, f"t{i}"))["view"]
         card = view["card"]
-        assert card["question"] == "녹슨 등대 문이 등불실로 가는 길을 막고 있습니다. 어떻게 할까요?"
+        assert card["question"] == "녹슨 등대 문이 등불실로 가는 길을 막고 있습니다. 등대 열쇠가 있거나 등대 뒤 담장을 알면 다른 방법도 있습니다. 어떻게 할까요?"
         # no key and no word of the wall yet: only the shoulder
         assert [o["label"] for o in card["options"]] == ["어깨로 문을 들이받는다"]
 
@@ -471,7 +472,7 @@ async def test_a_sentence_going_nowhere_new_meets_the_blocked_way(tmp_path):
     # the narration model's pick of where: the yard itself, after the village and the dock
     svc, gid, view = await game(tmp_path, decision, FakeLLM("3"), moves=["go:yard"])
     card = (await say(svc, gid, view, "이제 출발한다"))["view"]["card"]
-    assert card["question"] == "녹슨 등대 문이 등불실로 가는 길을 막고 있습니다. 어떻게 할까요?"
+    assert card["question"] == "녹슨 등대 문이 등불실로 가는 길을 막고 있습니다. 등대 열쇠가 있거나 등대 뒤 담장을 알면 다른 방법도 있습니다. 어떻게 할까요?"
     assert [o["label"] for o in card["options"]] == ["어깨로 문을 들이받는다"]
 
 
@@ -489,6 +490,18 @@ async def test_a_move_about_the_place_is_told_not_refused(tmp_path):
     job = turn_job(*svc.games[gid], out["turn"])
     assert job.reply == "within" and job.happened == ["당신이 선착장 안에서 자리를 옮겼습니다"]
     assert any("선착장 안에서 플레이어 문장이 말한 자리로" in x for x in steering(job, []))
+
+
+def test_the_snowy_yard_names_what_to_look_for():
+    """Offered only the bare climb and one hint, the player never learned the shovel or the salt would do
+    (qa_test/runs/play-10-human)."""
+    from src.interpret import Interpreter as It
+    from src.rules.recommend import next_steps
+    u = STORIES["snowpass"]
+    o = observe(u, initial(u, {"name": "하루", **u.raw["witnesses"]["creation"]}), Log())
+    assert It.detour(u, o, "눈더미를 넘는다", "drift")["question"] == \
+        "넉가래, 굵은 소금 자루가 있으면 다른 방법도 있습니다. 눈에 묻힌 고갯길 어귀를 어떻게 할까요?"
+    assert [str(a) for a in next_steps(u, o)] == ["try:drift:finesse", "go:stable", "go:inn"]
 
 
 async def test_a_stuck_player_is_offered_the_next_things_to_try(tmp_path):

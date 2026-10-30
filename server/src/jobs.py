@@ -19,7 +19,7 @@ from .onto.save import Game, replay
 from .onto.universe import Universe
 from .onto.view import observe
 from .rules.acts import parse
-from .rules.recommend import recommend
+from .rules.recommend import next_steps
 from .rules.schemas import small_talk
 from .view import action_label, rely_label
 
@@ -96,7 +96,7 @@ def turn_job(u: Universe, g: Game, n: int) -> Job | None:
         reply, happened, speakers = "muse", [ko.HAPPENED_MUSE], sorted(people, key=u.rank)
         # a player who talks to themself mostly does not know what to do next (engine.md 5.2)
         hinted = {p["narration"].get(str(m), {}).get("hint") for m in range(max(1, n - PREVIOUS_TURNS), n)}
-        forward = recommend(u, o)
+        forward = next_steps(u, o)
         if way := next((a for a in forward if str(a) not in hinted), forward[0] if forward else None):
             hint = (str(way), action_label(u, o, p, way))
             ids |= {x for x in way.intent if x in u.places or x in u.agents or x in u.obstacles or x in u.things}

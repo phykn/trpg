@@ -15,7 +15,7 @@ def recommend(u, o: Obs) -> list[Action]:
     return picks
 
 
-def ways(u, o: Obs) -> list[Action]:
+def next_steps(u, o: Obs) -> list[Action]:
     """The next things to try, at most three: the recommendations, the other ways over the obstacles here, then the
     ways out."""
     f, here = o.facts, o.facts.where(PLAYER)
