@@ -81,6 +81,12 @@ def rely_values(u, facts: State, target: str) -> list[str]:
     return out
 
 
+def avoided(u, facts: State, hist: frozenset, h: str) -> tuple[str, ...]:
+    """The places h will not go into now: an avoids whose until holds has ended (story.md)."""
+    a = u.agents[h]
+    return tuple(q for q in a.avoids if q not in a.until or not holds(a.until[q], facts, hist))
+
+
 def topic_of(u, h: str, topic: str):
     for t in u.agents[h].topics:
         if t.id == topic:

@@ -4,7 +4,7 @@ from .locale import ko
 from .onto.atoms import PLAYER
 from .onto.view import Obs
 from .rules.acts import Action, make
-from .rules.candidates import admits, space
+from .rules.candidates import admits, avoided, space
 from .rules.roll import gain, preview
 from .view import action_label, chips, effect_names, rely_label, tag_name
 
@@ -115,7 +115,7 @@ def ways(u, o: Obs) -> list[str]:
 
 
 def left_behind(u, o: Obs, q: str) -> bool:
-    return any(g == PLAYER and q in u.agents[h].avoids for h, g in o.facts.rows("follows"))
+    return any(g == PLAYER and q in avoided(u, o.facts, o.hist, h) for h, g in o.facts.rows("follows"))
 
 
 def joiners(u, o: Obs) -> list[str]:
@@ -134,13 +134,13 @@ def move_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[str],
     company = [h for h, g in o.facts.rows("follows") if g == PLAYER]
     options, plans, selected = [], {}, str(a)
     for q in out:
-        effects = [ko.fill(ko.MOVE_LEFT, name=u.name(h), fear=u.agents[h].fear) if q in u.agents[h].avoids
+        effects = [ko.fill(ko.MOVE_LEFT, name=u.name(h), fear=u.agents[h].fear) if q in avoided(u, o.facts, o.hist, h)
                    else ko.fill(ko.MOVE_WITH, name=u.name(h)) for h in sorted(company, key=u.rank)]
         options.append({"id": str(make("go", (q,))), "label": u.name(q), "effects": effects})
         if q != q0:
             continue
         for h in asked:
-            if q in u.agents[h].avoids:
+            if q in avoided(u, o.facts, o.hist, h):
                 continue
             come, go = make("talk", (h, "come")), make("go", (q,))
             oid = f"{come}+{go}"

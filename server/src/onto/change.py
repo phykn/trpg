@@ -67,6 +67,15 @@ class Work:
     def reveal(self, g: str, p: str) -> None:
         self.insert(("believes", g, p))
 
+    def forget(self, g: str, p: str) -> None:
+        self.retract(("believes", g, p))
+
+    def consume(self, x: str) -> None:
+        """The thing leaves the world."""
+        if x in self.at:
+            self._touch()
+            del self.at[x]
+
     def tag(self, x: str, kind: str, life: str, name: str | None = None) -> int | None:
         """Lowest empty slot; when full, replace the lowest snag, or for an edge the lowest edge, never a scar and never
         an edge with a snag; else nothing.
@@ -140,6 +149,10 @@ class Work:
             self.set_(e[1], e[2], e[3])
         elif k == "reveal":
             self.reveal(e[1], e[2])
+        elif k == "forget":
+            self.forget(e[1], e[2])
+        elif k == "consume":
+            self.consume(e[1])
         elif k == "tag":
             self.tag(e[1], e[2], e[3], e[4])
         elif k == "link":

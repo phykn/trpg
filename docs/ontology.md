@@ -169,9 +169,10 @@ class Obs:
 | Predicate | Visible when |
 |---|---|
 | `at`, `link`, `mark`, `fill` | every entity position is in `E` |
-| `stat(g, ·)`, `believes(g, ·)`, `due(g, ·)`, `spent(g, ·)` | `g = o` |
+| `stat(g, ·)`, `due(g, ·)`, `spent(g, ·)` | `g = o` |
+| `believes(g, ·)` | `g = o` or `g ∈ E`: a person's mind can be read where they are, by their topics and fears |
 | `regards(g, h, ·)`, `owes(g, h, ·)`, `follows(g, h)` | `g = o` or `h = o` |
-| `flag` | never |
+| `flag(f, ·)` | `f` has texts (story.md 2.2); other flags never |
 
 3. **`B`** beliefs: the `p` of each `believes(o, p)`, in the order they came to be believed (the event that first added it to the log, or story order for beliefs held from the start). Each `text(p)` is handed over, but `⟦p⟧` is never mixed into `F`.
 4. **`M`** memory: for each event with `o ∈ W`, a projection that keeps only what was visible then. `Eₑ` and `F-ruleₑ` are the union of what is computed from the states just before and just after the event.
@@ -212,7 +213,7 @@ A cycle (the player types, the engine answers) must run many times without the a
 | Told freely | `knows(g)`, a public parameter of `g` in `U` (story.md 3.4) | narration and its check, while `g` is in the focus | never |
 | Held back | topics (propositions revealed by `reveal`) and `believes(g, p)` | the rules; a topic's text reaches prompts once the player believes it | only through `R` |
 
-`knows` is everyday knowledge a person tells anyone who asks: where their father went, how long the lamp has been dark. No rule reads it, so telling it changes nothing, and since it is public it must not name anything hidden (story.md V4). Knowledge that should cost something (trust, a roll) is a topic. A person's own `believes` stays private: it grounds exposure (3.1) and is never handed to narration, since a false belief told aloud would read as fact.
+`knows` is everyday knowledge a person tells anyone who asks: where their father went, how long the lamp has been dark. No rule reads it, so telling it changes nothing, and since it is public it must not name anything hidden (story.md V4). Knowledge that should cost something (trust, a roll) is a topic. A person's own `believes` stays private: it grounds exposure (3.1) and the conditions of their own topics, complications and fears, and is never handed to narration, since a false belief told aloud would read as fact. Only a `forget` is told, as a belief the person gave up.
 
 **What was said** `said` is the quoted lines a person spoke in accepted narration, kept per turn in the presentation layer (engine.md 6) with the player's sentence that drew them. It is model output, so it is never a fact and never an argument of `R` (Bounded model influence, section 7). It binds only the narration: when that person speaks again, their earlier lines are handed over so they neither contradict nor repeat themselves. It reaches the check only through the repetition rule, never as context, so a line once accepted cannot vouch for a new one.
 
@@ -228,6 +229,8 @@ The only code that changes the world is the operations in `change.py`. Each oper
 | `set_(pred, key, v)` | sets a `regards`, `fill`, `stat` or `flag` value. If `v` is `"+n"` or `"-n"`, it is added to the current value, and the result is clamped to its range in 1.3. Does nothing if the value is unchanged |
 | `drop_stat(g, s)` | removes `g`'s `stat` entry `s` (a trait given up in growth) |
 | `reveal(g, p)` | adds `believes(g, p)` |
+| `forget(g, p)` | removes `believes(g, p)` |
+| `consume(x)` | removes `at[x]`: the thing leaves the world |
 | `tag(x, kind, life)` | uses the lowest-numbered empty slot. If all are full, it overwrites the lowest `snag` slot, or for an `edge` the lowest `edge` slot when no snag is left; a `scar` is never overwritten and a `snag` never overwrites an `edge`. Otherwise it does nothing. An overwrite records `tag_replaced` |
 | `untag(x, slot)` | clears that slot |
 | `link(p, q)`, `unlink(p, q)` | adds or removes a `link` |
@@ -269,6 +272,7 @@ Entities, propositions and triggers that the engine creates use ids containing `
 | engine complications | `engine.snag`, `engine.beat`, `engine.wound`, `engine.end` |
 | wired triggers | threat or fork appearance `appear.<id>`, chapter goal `goal.<k>`, ending `end.<id>` |
 | a trigger's fired flag | `fired_<trigger id>` (for both story triggers and wired triggers) |
+| a thing's uses left | flag `uses.<thing id>`, from `uses` down to 0 |
 
 ### 5.2 Initial state
 

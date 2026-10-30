@@ -64,9 +64,11 @@ An effect is a sequence of operations, composed in order, each one reading the s
 |---|---|---|
 | `{move: [x, y]}` | `move(x, y)` | `x`: a thing, a character, or `player` (then `y` is a place) |
 | `{set: [fill, o, v]}` | `set_(fill, o, v)` | Obstacle, threat, fork |
-| `{set: [regards, g, h, axis, v]}` | `set_(regards, …)` | Character |
+| `{set: [regards, g, h, axis, v]}` | `set_(regards, …)` | Character; `h` is `player`, since no rule reads a regard between people |
 | `{set: [flag, name, v]}` | `set_(flag, …)` | A flag declared in `flags`, with a value among the declared ones |
 | `{reveal: [g, p]}` | `reveal(g, p)` | Proposition |
+| `{forget: [g, p]}` | `forget(g, p)` | A character's belief, never the player's: a claim can land by a trigger on its pattern, and someone can be convinced |
+| `{consume: [x]}` | `consume(x)` | Thing: it leaves the world |
 | `{tag: [x, tag, lifetime, default name]}` | `tag(x, tag, lifetime)` | The lifetime is `scene` or `chapter`. The default name is used until narration names the tag. A snag's name says what goes wrong and an edge's what helps: a snag named "흔들리는 불꽃" read as the lamp catching (goal-6-odd 50) |
 | `{link: [p, q]}`, `{unlink: [p, q]}` | `link`, `unlink` | Places |
 | `{retire: o}` | `retire(o)` | Obstacle, threat, fork |
@@ -96,7 +98,7 @@ A story has no separate propositions section. A proposition comes into being as 
 |---|---|
 | `id`, `version`, `title`, `premise` | Story id (independent of the folder name, unique across stories), version (an integer recorded in saves; compatibility uses the file digest, ontology.md 6), title, public premise |
 | `beats`, `wound_boxes` | Scene length `B ≥ 2`, number of wound boxes `≥ 1` |
-| `flags` | Story flags `{name: [value, …]}`. The first value is the starting value; the values are a contiguous integer range or strings |
+| `flags` | Story flags `{name: [value, …]}`, or `{name: {value: text, …}}` to give values a line. The first value is the starting value; the values are a contiguous integer range or strings. A flag with texts is public: while it holds a value with a text, that text is a fact line in every context and its change is a step line, so weather, light and the state of a place are state the narration cannot run ahead of. Its texts are public text (V4) and its value may be read by a visible condition (V3) |
 | `style` | The writing style, passed verbatim to the narration model (multi-line) |
 | `impossible` | Phrases for things that do not exist in this world (engine.md 3.1) |
 | `player` | 3.2 |
@@ -144,7 +146,7 @@ Starting possessions are the `things` with `at: player`. Beats, wounds and growt
 | `voice` | One line on how they talk. End it with one line of dialogue typical of the character, written as `예: "…"` (`예` = "e.g."), and the narration model matches their speech to that example. Never put hidden facts in the sample line | |
 | `persona` | Personality type: one of the 16 MBTI types the engine defines (`ISTJ` … `ENTJ`). That type's personality description goes into the narration context with it. Required | |
 | `at` | Starting place. A character who starts offstage is brought in by a latent (3.10) | |
-| `avoids` | Places they will not enter even while traveling with the player (rule.md 5.1, companions). Matching these to their `fear` brings the character to life. When absent, they follow anywhere. The story never puts them in such a place, at the start or by a `move` (V3): 윤슬, brought to the lamp room she avoided, was shown agreeing to come along "but not into the lamp room" while she stood in it (goal-4-talker 46, goal-5-odd 37, goal-5-explorer 43) | |
+| `avoids` | Places they will not enter even while traveling with the player (rule.md 5.1, companions). An entry is a place, or `{place, until}` whose `until` (visible, about this character) ends the avoiding: a fear can be talked, shown or walked past. Matching these to their `fear` brings the character to life. When absent, they follow anywhere. The story never puts them in such a place at the start, nor by a `move` unless the entry has an `until` (V3): 윤슬, brought to the lamp room she avoided, was shown agreeing to come along "but not into the lamp room" while she stood in it (goal-4-talker 46, goal-5-odd 37, goal-5-explorer 43) | |
 | `regards` | Starting values toward the player, `{trust, fear}`, `−3…3`. 0 when absent | |
 | `beliefs` | `{id: sentence}` or `{id: {title, text}}`. Propositions they believe from the start. Private: they ground exposure and are never told. A belief the player can come to share should have a `title`, the short name chips and the journal use; without one its sentence served as a label ("…꺼져 있다.에 기대어", goal-6-bold 16) | |
 | `knows` | Up to 4 sentences of everyday knowledge they tell anyone who asks (ontology.md 3.4). Public, so never a hidden fact, and it names no other person, since the narrator moves anyone its context names (V4); knowledge that should cost trust or a roll is a topic. Without it a person asked about their own life made it up | |
@@ -157,7 +159,7 @@ Both the roll decision and the screen evaluate `free_when` on visible state (V3 
 
 ### 3.5 Things
 
-`{name, aliases, look, at, clue, hidden}`. `at` is a place, a character or `player`.
+`{name, aliases, look, at, uses, clue, hidden}`. `at` is a place, a character or `player`. `uses: n` makes the thing last `n` reliances instead of one per chapter; the last one consumes it (rule.md 2).
 
 ### 3.6 Obstacles, solutions, complications
 
@@ -267,7 +269,7 @@ At startup the server runs these on every story in this order, and does not star
 |---|---|---|
 | V1 | Format | Schema (fields, value types, value ranges); id uniqueness and references; `brings` scope; two or more solutions, each with a different approach; `clock` and `deadline` in every chapter; the last chapter has no goal and its deadline has an `ending`; every ending without `when` (except `collapse`) is pointed to by some deadline; a `collapse` ending exists; flag values are among the declared ones; at most 58 story complications per weight (`u` has 60 values and the engine adds two, rule.md 3.3) |
 | V2 | Start state | Build `S₀`; `S₀ ⊨ C`; `player` is in exactly one place |
-| V3 | Placement | No trigger condition is true in `S₀` (engine triggers included). Visibly evaluated conditions (the `when` of solutions and latents, the `when` of complications being chosen, a topic's `free_when`) use only atoms that are always in `F` when they are evaluated: the player's own atoms (`at: [player, place]`, `at: [thing, player]`, `believes: [player, p]`, `mark: [player, tag]`, and `regards` and `owes` that involve `player`), `did`, and the atoms of the entity the condition is attached to (`at: [that entity, ·]`, `mark: [that entity, ·]`, `fill: [that obstacle, ·]`). The `at` of a thing a character holds, entities elsewhere, and `flag` are not allowed. A blocking obstacle sits in the same place as the thing, character or obstacle it blocks; if it blocks a place, it sits in every place that has an `exits` entry or a `link` effect leading there; no character starts in, or is moved by a story effect into, a place it avoids |
+| V3 | Placement | No trigger condition is true in `S₀` (engine triggers included). Visibly evaluated conditions (the `when` of solutions and latents, the `when` of complications being chosen, a topic's `free_when`) use only atoms that are always in `F` when they are evaluated: the player's own atoms (`at: [player, place]`, `at: [thing, player]`, `believes: [player, p]`, `mark: [player, tag]`, and `regards` and `owes` that involve `player`), `did`, a flag with texts, and the atoms of the entity the condition is attached to (`at: [that entity, ·]`, `mark: [that entity, ·]`, `fill: [that obstacle, ·]`, and for a character `believes: [that character, ·]`). An `avoids` entry's `until` is attached to its character. The `at` of a thing a character holds, entities elsewhere, and other flags are not allowed. A blocking obstacle sits in the same place as the thing, character or obstacle it blocks; if it blocks a place, it sits in every place that has an `exits` entry or a `link` effect leading there; no character starts in, or is moved by a story effect into, a place it avoids |
 | V4 | Names | The names and aliases of hidden entities (those with `hidden` or inside `brings`) do not appear in the public parameters of 2.1; aliases do not overlap; a character's `knows` names no other character; no `impossible` phrase is a substring of a name, an alias or a solution `label` (because layer 0 matches by substring, engine.md 3.1) |
 | V5 | Witnesses | The replay in section 5 |
 | V6 | Fuzzing | Random action sequences (picked from `K`, with random dice) run to an ending; at every step, `S ⊨ C` and `K ≠ ∅`; at every step with a roll, the preview's risk, modifier chip list and total equal the values from execution (rule.md 10, preview = execution) |

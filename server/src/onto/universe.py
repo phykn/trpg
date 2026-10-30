@@ -88,6 +88,7 @@ class Agent:
     complications: tuple[Complication, ...]
     avoids: tuple[str, ...] = ()   # places it will not follow the player into
     knows: tuple[str, ...] = ()    # told to anyone who asks; ontology.md 3.4
+    until: dict = field(default_factory=dict)   # avoided place → the condition that ends the avoiding
 
 
 @dataclass(frozen=True)
@@ -97,6 +98,7 @@ class Thing:
     aliases: tuple[str, ...]
     look: str
     at: str | None
+    uses: int | None = None   # each reliance uses one; at zero the thing is consumed
 
 
 @dataclass(frozen=True)
@@ -187,6 +189,7 @@ class Universe:
     triggers: list[Trigger] = field(default_factory=list)
     patterns: list[Pattern] = field(default_factory=list)
     flags: dict[str, tuple] = field(default_factory=dict)
+    texts: dict[str, dict] = field(default_factory=dict)              # flag → value → the public line it reads as
     engine_complications: dict[str, Complication] = field(default_factory=dict)
     shows: dict[str, tuple[str, ...]] = field(default_factory=dict)   # entity → props that show it
     favor_patterns: dict[str, int] = field(default_factory=dict)       # agent → pattern index

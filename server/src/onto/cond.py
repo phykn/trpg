@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from typing import Protocol
 
-from .atoms import AXES, KINDS, State
+from .atoms import AXES, KINDS, PLAYER, State
 from .log import RESULTS
 
 Cond = tuple
@@ -58,6 +58,8 @@ def compile_cond(raw, ctx: Context, where: str) -> Cond:
     if key == "regards":
         if args[2] not in AXES:
             ctx.fail(f"{where}: unknown axis {args[2]}")
+        if args[1] != PLAYER:
+            ctx.fail(f"{where}: regards are toward the player; no rule reads them between people")
         return ("regards", ctx.ref(args[0], agent, where), ctx.ref(args[1], agent, where), args[2],
                 _op(ctx, args[3], where), _int(ctx, args[4], where))
     if key == "mark":

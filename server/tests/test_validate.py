@@ -28,6 +28,10 @@ BROKEN = [
     ("V1", lambda r: r["chapters"][1]["clock"]["crisis"].__setitem__(
         1, {"set": ["regards", "yunseul", "player", "trust", "warm"]})),
     ("V1", lambda r: r["characters"]["dohae"].__setitem__("knows", ["하나.", "둘.", "셋.", "넷.", "다섯."])),
+    ("V1", lambda r: r["chapters"][1]["clock"]["crisis"].__setitem__(
+        1, {"set": ["regards", "yunseul", "dohae", "trust", 1]})),                 # no rule reads it
+    ("V1", lambda r: r["chapters"][1]["clock"]["crisis"].__setitem__(1, {"forget": ["player", "b_beacon"]})),
+    ("V1", lambda r: r["chapters"][1]["clock"]["crisis"].__setitem__(1, {"consume": ["dohae"]})),
     ("V2", lambda r: r["witnesses"]["creation"]["approaches"].__setitem__("charm", 3)),
     ("V3", lambda r: r["triggers"].__setitem__("tr_x", {"when": {"at": ["player", "dock"]}})),
     ("V3", lambda r: r["obstacles"]["door"]["solutions"]["s_shoulder"].__setitem__("when", {"flag": ["gale", 1]})),
@@ -35,11 +39,14 @@ BROKEN = [
     ("V3", lambda r: r["obstacles"]["door"]["solutions"]["s_shoulder"].__setitem__(
         "when", {"believes": ["dohae", "b_no_keeper"]})),
     ("V3", lambda r: r["obstacles"]["hound"].__setitem__("at", "dock")),
+    ("V3", lambda r: r["characters"]["yunseul"]["topics"]["t_wall"].__setitem__(
+        "free_when", {"believes": ["dohae", "b_no_keeper"]})),                            # not her mind
     ("V3", lambda r: r["characters"]["yunseul"].__setitem__("avoids", ["lamp_room"])),   # a trigger brings her there
     ("V3", lambda r: r["characters"]["dohae"].__setitem__("avoids", ["village"])),        # he starts there
     ("V3", lambda r: r["obstacles"]["door"].__setitem__("at", "village")),
     ("V4", lambda r: r.__setitem__("style", r["style"] + "- 누렁이가 짖습니다.\n")),
     ("V4", lambda r: r["obstacles"]["bridge"].__setitem__("aliases", ["문"])),
+    ("V4", lambda r: r["flags"].__setitem__("gale", {0: "", 1: "누렁이가 짖습니다."})),
     ("V4", lambda r: r["impossible"].append("열쇠")),
     ("V4", lambda r: r["characters"]["yunseul"]["knows"].append("도해 할아버지는 마을에 삽니다.")),
     ("V4", lambda r: r["characters"]["dohae"]["knows"].append("오두막 앞에 누렁이를 묶어 두었습니다.")),
@@ -137,3 +144,24 @@ def test_server_text_takes_particles_from_the_value_before_them():
 
 def test_a_short_chapter_cap_warns_without_failing(u):
     assert V.warnings(u) == [f"chapter {k}: beats × deadline boxes = 18, below the 20 steps of F10" for k in (1, 2)]
+
+
+GOOD = [
+    lambda r: r["characters"]["dohae"]["topics"]["t_oil"].__setitem__("free_when", {"not": {"believes": ["dohae", "b_no_keeper"]}}),
+    lambda r: r["characters"]["dohae"].__setitem__(
+        "avoids", [{"place": "lamp_room", "until": {"owes": ["dohae", "player", "kindness"]}}]),
+    lambda r: r["flags"].__setitem__("gale", {0: "", 1: "돌풍이 붑니다."}),
+    lambda r: r["obstacles"]["door"]["solutions"]["s_shoulder"].__setitem__("when", {"flag": ["gale", 0]}),
+    lambda r: r["things"]["oil"].__setitem__("uses", 2),
+]
+
+
+@pytest.mark.parametrize("edit", GOOD)
+def test_ontology_additions_pass(tmp_path, edit):
+    raw = skeleton_raw()
+    raw["flags"]["gale"] = {0: "", 1: "돌풍이 붑니다."}
+    edit(raw)
+    path = tmp_path / "good" / "story.yaml"
+    path.parent.mkdir()
+    path.write_text(yaml.safe_dump(raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    V.load(path)

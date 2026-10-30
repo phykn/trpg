@@ -306,9 +306,15 @@ def changes(u, p: dict, seen: Seen, a: Action, ending: str | None) -> list[dict]
                         "text": u.props[pid].text})
         elif at[0] == "link":
             out.append({"kind": "link", "from": at[1], "to": at[2], "name": u.name(at[2]), "open": True})
+        elif at[0] == "flag" and (text := u.texts.get(at[1], {}).get(at[2])):
+            out.append({"kind": "flag", "id": at[1], "value": at[2], "text": text})
     for at in sorted(rem, key=str):
         if at[0] == "link":
             out.append({"kind": "link", "from": at[1], "to": at[2], "name": u.name(at[2]), "open": False})
+        elif at[0] == "at" and u.kind(at[1]) == "thing" and value(add, "at", at[1]) is None:
+            out.append({"kind": "consume", "id": at[1], "name": u.name(at[1])})
+        elif at[0] == "believes" and at[1] != PLAYER:
+            out.append({"kind": "forget", "id": at[1], "name": u.name(at[1]), "text": u.props[at[2]].text})
     for at in sorted(add, key=str):
         if at[0] == "regards" and at[2] == PLAYER:
             before = value(rem, "regards", at[1], PLAYER, at[3])

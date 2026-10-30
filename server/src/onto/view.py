@@ -47,14 +47,18 @@ def seen_by(u, s: State, o: str) -> frozenset:
     return frozenset(out)
 
 
-def fact_rule(o: str, seen: frozenset, atom: Atom) -> bool:
-    """The table in ontology.md 3.2."""
+def fact_rule(o: str, seen: frozenset, atom: Atom, public: frozenset = frozenset()) -> bool:
+    """The table in ontology.md 3.2; public is the flags with texts, which everyone can see."""
     p = atom[0]
     if p == "at" or p == "link":
         return atom[1] in seen and atom[2] in seen
     if p in ("mark", "fill"):
         return atom[1] in seen
-    if p in ("stat", "believes", "due", "spent"):
+    if p == "believes":
+        return atom[1] == o or atom[1] in seen
+    if p == "flag":
+        return atom[1] in public
+    if p in ("stat", "due", "spent"):
         return atom[1] == o
     if p in ("regards", "owes", "follows"):
         return atom[1] == o or atom[2] == o
@@ -62,13 +66,13 @@ def fact_rule(o: str, seen: frozenset, atom: Atom) -> bool:
 
 
 def facts_of(u, s: State, o: str) -> State:
-    seen = seen_by(u, s, o)
-    return s.filter(lambda a: fact_rule(o, seen, a))
+    seen, public = seen_by(u, s, o), frozenset(u.texts)
+    return s.filter(lambda a: fact_rule(o, seen, a, public))
 
 
 def observe(u, s: State, log: Log, o: str = PLAYER) -> Obs:
-    seen = seen_by(u, s, o)
-    facts = s.filter(lambda a: fact_rule(o, seen, a))
+    seen, public = seen_by(u, s, o), frozenset(u.texts)
+    facts = s.filter(lambda a: fact_rule(o, seen, a, public))
     order = {p: i for i, p in enumerate(u.props)}
     believed = [p for (g, p) in s.rows("believes") if g == o]
     believed.sort(key=lambda p: (log.believed.get((o, p), -1), order.get(p, 0)))
@@ -76,10 +80,10 @@ def observe(u, s: State, log: Log, o: str = PLAYER) -> Obs:
 
 
 def project(u, before: State, after: State, e: Event, o: str) -> Seen:
-    seen = seen_by(u, before, o) | seen_by(u, after, o)
+    seen, public = seen_by(u, before, o) | seen_by(u, after, o), frozenset(u.texts)
 
     def rule(a):
-        return fact_rule(o, seen, a)
+        return fact_rule(o, seen, a, public)
 
     return Seen(e.t, e.action, e.roll, e.result, tuple(w for w in e.witnesses if w in seen),
                 Delta(frozenset(filter(rule, e.delta.add)), frozenset(filter(rule, e.delta.remove))),

@@ -750,3 +750,59 @@ def test_forcing_is_offered_where_it_buys_a_box(u, play):
     assert forced["dc"] == plain["dc"] + 1 and card["selected"] == "try:lens:force"
     fits = roll_card(u, play.obs, {"tags": []}, parse("try:lens:finesse"), [], [], {}, "c2")["public"]
     assert not any(o["forced"] for o in fits["options"])               # the fit already takes both boxes
+
+
+def built(edit):
+    raw = skeleton_raw()
+    edit(raw)
+    return build(raw, "test")
+
+
+def test_a_thing_with_uses_is_relied_on_that_many_times_then_gone(creation):
+    u = built(lambda r: r["things"]["letter"].__setitem__("uses", 2))
+    play = Play(u, creation)
+    play.do("go:village")
+    play.do("go:yard")
+    play.do("try:door:finesse;rely=thing:letter", (1, 1, 0))
+    assert play.s.where("letter") == PLAYER and not play.s.has("spent", PLAYER, "letter")
+    play.do("try:door:finesse;rely=thing:letter", (1, 1, 0))
+    seen = play.log.seen[PLAYER][-1]
+    assert play.s.where("letter") is None
+    assert {"kind": "consume", "id": "letter", "name": "아들의 편지"} in changes(u, {"tags": []}, seen, parse(seen.action), None)
+
+
+def test_a_person_s_mind_is_seen_where_they_are_and_can_change(u, play):
+    assert not play.obs.facts.has("believes", "dohae", "b_no_keeper")
+    play.do("go:village")
+    assert play.obs.facts.has("believes", "dohae", "b_no_keeper")
+    w = Work(u, play.s)
+    w.apply_effect(("forget", "dohae", "b_no_keeper"))
+    after = w.state()
+    seen = Seen(0, "cut:pass", None, "none", (), Delta(frozenset(), frozenset({("believes", "dohae", "b_no_keeper")})), ())
+    assert not after.has("believes", "dohae", "b_no_keeper")
+    assert changes(u, {"tags": []}, seen, parse("cut:pass"), None) == [
+        {"kind": "forget", "id": "dohae", "name": "도해", "text": "이 섬에 새 등대지기는 오지 않는다."}]
+
+
+def test_an_avoids_ends_when_its_until_holds(creation):
+    from src.rules.candidates import avoided
+    u = built(lambda r: r["characters"]["dohae"].__setitem__(
+        "avoids", [{"place": "lamp_room", "until": {"owes": ["dohae", "player", "kindness"]}}]))
+    play = Play(u, creation)
+    play.do("go:village")
+    assert avoided(u, play.obs.facts, play.obs.hist, "dohae") == ("lamp_room",)
+    play.do("give:letter:dohae")
+    assert avoided(u, play.obs.facts, play.obs.hist, "dohae") == ()
+
+
+def test_a_flag_with_texts_is_a_public_line(creation):
+    from src.lang.context import context
+    u = built(lambda r: r["flags"].__setitem__("gale", {0: "", 1: "돌풍이 붑니다."}))
+    assert u.flags["gale"] == (0, 1) and u.texts == {"gale": {1: "돌풍이 붑니다."}}
+    w = Work(u, initial(u, creation))
+    w.set_("flag", ("gale",), 1)
+    lines = context(u, observe(u, w.state(), Log()), {PLAYER}, {"tags": []})
+    assert ("fact", "돌풍이 붑니다.") in [(x.section, x.text) for x in lines]
+    seen = Seen(0, "cut:pass", None, "none", (), Delta(frozenset({("flag", "gale", 1)}), frozenset({("flag", "gale", 0)})), ())
+    assert changes(u, {"tags": []}, seen, parse("cut:pass"), None) == [
+        {"kind": "flag", "id": "gale", "value": 1, "text": "돌풍이 붑니다."}]

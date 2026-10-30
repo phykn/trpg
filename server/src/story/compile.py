@@ -162,9 +162,11 @@ class _Builder:
                 return ("set", "fill", (o,), self.number(a[2], where))
             if what == "regards" and len(a) == 5:
                 g, h = self.ref(a[1], ("agent",), where), self.ref(a[2], ("agent",), where)
+                if h != PLAYER:
+                    self.fail(f"{where}: regards are toward the player; no rule reads them between people")
                 return ("set", "regards", (g, h, self.choice(a[3], AXES, where)), self.number(a[4], where))
             if what == "flag" and len(a) == 3:
-                if a[1] not in self.u.flags or a[1] == "chapter" or a[1].startswith("fired_"):
+                if a[1] not in self.u.flags or a[1] == "chapter" or a[1].startswith(("fired_", "uses.")):
                     self.fail(f"{where}: flag {a[1]} cannot be set by a story")
                 v, dom = self.value(a[2], where), self.u.flags[a[1]]
                 # A step (+1) must land on numbers; anything else must already be a value of the flag.
@@ -173,10 +175,17 @@ class _Builder:
                     self.fail(f"{where}: {v!r} is not a value of flag {a[1]}")
                 return ("set", "flag", (a[1],), v)
             self.fail(f"{where}: set takes [fill, o, v], [regards, g, h, axis, v] or [flag, name, v]")
-        if key == "reveal":
+        if key in ("reveal", "forget"):
             if len(a) != 2:
-                self.fail(f"{where}: reveal takes [g, p]")
-            return ("reveal", self.ref(a[0], ("agent",), where), self.ref(a[1], ("prop",), where))
+                self.fail(f"{where}: {key} takes [g, p]")
+            g = self.ref(a[0], ("agent",), where)
+            if key == "forget" and g == PLAYER:
+                self.fail(f"{where}: the player's beliefs are what they found; forget takes a person")
+            return (key, g, self.ref(a[1], ("prop",), where))
+        if key == "consume":
+            if len(a) != 1:
+                self.fail(f"{where}: consume takes [x]")
+            return ("consume", self.ref(a[0], ("thing",), where))
         if key == "tag":
             if len(a) != 4:
                 self.fail(f"{where}: tag takes [x, kind, life, name]")
@@ -287,6 +296,14 @@ class _Builder:
         u.flags["ending"] = tuple(sections["endings"])
         for name, vals in self.map(r.get("flags"), "flags").items():
             self.new_id(name, "flags", None, f"flags.{name}")
+            if isinstance(vals, dict):
+                # value → the line the narrator reads while the flag holds it ("" for none)
+                # map keys load as text, so a numeric flag's values come back as numbers
+                vals = {int(v) if re.fullmatch(r"-?\d+", str(v)) else v: t for v, t in vals.items()}
+                texts = {v: self.text(t, f"flags.{name}.{v}") for v, t in vals.items() if t not in ("", None)}
+                vals = list(vals)
+                if texts:
+                    u.texts[name] = texts
             vals = self.list(vals, f"flags.{name}")
             if not vals or len(set(map(str, vals))) != len(vals):
                 self.fail(f"flags.{name}: needs distinct values")
@@ -334,9 +351,13 @@ class _Builder:
                 bool(pv.get("rest")), ())
         for tid, tv in sections["things"].items():
             w = f"things.{tid}"
-            tv = self.map(tv, w, {"name", "aliases", "look", "at", "clue", "hidden"}, ("name", "look", "at"))
+            tv = self.map(tv, w, {"name", "aliases", "look", "at", "uses", "clue", "hidden"}, ("name", "look", "at"))
+            uses = None if tv.get("uses") is None else self.int(tv["uses"], f"{w}.uses", 1)
             u.things[tid] = Thing(tid, self.text(tv["name"], w), self.texts(tv.get("aliases"), w),
-                                  self.text(tv["look"], w), self.ref(tv["at"], ("place", "agent"), f"{w}.at"))
+                                  self.text(tv["look"], w), self.ref(tv["at"], ("place", "agent"), f"{w}.at"), uses)
+            if uses:
+                # what is left, counted down from the first value a flag starts at
+                u.flags[f"uses.{tid}"] = tuple(range(uses, -1, -1))
         # Complications and favors come later, after all ids exist.
         for cid, cv in sections["characters"].items():
             u.agents[cid] = self.agent(cid, cv, f"characters.{cid}", None)
@@ -524,7 +545,8 @@ class _Builder:
                      self.ref(cv["at"], ("place",), f"{w}.at") if latent is None else None,
                      {ax: self.int(reg.get(ax, 0), f"{w}.regards.{ax}", -3, 3) for ax in AXES},
                      tuple(self.map(cv.get("beliefs"), f"{w}.beliefs")), (), (), None, (),
-                     tuple(self.ref(q, ("place",), f"{w}.avoids") for q in self.list(cv.get("avoids"), f"{w}.avoids")),
+                     tuple(self.ref(q["place"] if isinstance(q, dict) else q, ("place",), f"{w}.avoids")
+                           for q in self.list(cv.get("avoids"), f"{w}.avoids")),
                      knows)
 
     def agent_parts(self, ag: Agent, cv, w) -> Agent:
@@ -552,7 +574,12 @@ class _Builder:
                           self.text(pr["name"], fw), self.cond(pr["keep"], f"{fw}.promise.keep"),
                           self.opt_cond(pr.get("break"), f"{fw}.promise.break"))
         comps = self.complications(cv.get("complications"), w, ag.id)
-        return _replace(ag, wants=wants, topics=tuple(topics), favor=favor, complications=comps)
+        until = {}
+        for i, q in enumerate(self.list(cv.get("avoids"), f"{w}.avoids")):
+            if isinstance(q, dict):
+                q = self.map(q, f"{w}.avoids[{i}]", {"place", "until"}, ("place", "until"))
+                until[q["place"]] = self.cond(q["until"], f"{w}.avoids[{i}].until")
+        return _replace(ag, wants=wants, topics=tuple(topics), favor=favor, complications=comps, until=until)
 
     def obstacle(self, oid, ov) -> Obstacle:
         w = f"obstacles.{oid}"

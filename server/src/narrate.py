@@ -15,6 +15,7 @@ from .locale import ko
 from .models.decision import ModelUnavailable, choice, probs_of
 from .onto.atoms import PLAYER
 from .onto.view import Obs
+from .rules.candidates import avoided
 from .view import name
 
 ATTEMPTS = 3                 # one draft and two rewrites
@@ -142,6 +143,12 @@ def change_line(u, c: dict) -> str | None:
         return ko.fill(ko.CHANGE[k], name=c["name"])
     if k in ("scene_end", "fall"):
         return ko.CHANGE[k]
+    if k == "flag":
+        return c["text"]
+    if k == "consume":
+        return ko.fill(ko.CHANGE["consume"], name=c["name"])
+    if k == "forget":
+        return ko.fill(ko.CHANGE["forget"], name=c["name"], text=c["text"])
     if k == "tag_add" and c.get("replaced"):
         return ko.fill(ko.CHANGE["tag_replace"], owner=name(u, c["owner"]), old=c["replaced"], name=c["name"])
     if k in ("tag_add", "tag_remove"):
@@ -162,7 +169,9 @@ def change_line(u, c: dict) -> str | None:
     if k == "follow":
         # Agreeing to come while still avoiding a place read as a broken promise at the next move card
         # (play-3-talker 27, 32; play-3-explorer 21).
-        avoids = c["state"] == "start" and u.agents[c["id"]].avoids
+        # The record has no state to read an until against, so only the avoids that never end are told here;
+        # the steering line reads the rest.
+        avoids = c["state"] == "start" and tuple(q for q in u.agents[c["id"]].avoids if q not in u.agents[c["id"]].until)
         if avoids:
             return ko.fill(ko.CHANGE["follow_start_bounded"], name=c["name"], places=", ".join(map(u.name, avoids)))
         return ko.fill(ko.CHANGE[f"follow_{c['state']}"], name=c["name"])
@@ -331,7 +340,7 @@ def steering(job: Job, lines) -> list[str]:
     for x, q in job.left.items():
         out.append(ko.fill(ko.NOW["left"], name=u.name(x), place=u.name(q), fear=u.agents[x].fear.rstrip(".")))
     for x in job.joined:
-        if avoids := u.agents[x].avoids:
+        if avoids := avoided(u, job.o.facts, job.o.hist, x):
             out.append(ko.fill(ko.NOW["bounded"], name=u.name(x), places=", ".join(map(u.name, avoids)),
                                fear=u.agents[x].fear.rstrip(".")))
     if job.grown:

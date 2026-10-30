@@ -56,6 +56,8 @@ def fact_line(u, p: dict, atom: Atom) -> str | None:
             return ko.fill(ko.FRAME["kindness"], g=u.name(g))
     if k == "follows":
         return ko.fill(ko.FRAME["follows"], h=u.name(atom[1]))
+    if k == "flag":
+        return u.texts.get(atom[1], {}).get(atom[2])
     return None
 
 
@@ -76,6 +78,11 @@ def context(u, o: Obs, focus, p: dict) -> list[Line]:
     out: list[Line] = []
     for atom in sorted(o.facts.atoms(), key=lambda a: (a[0], str(a[1:]))):
         if atom[0] in ("due", "spent", "believes"):
+            continue
+        if atom[0] == "flag":
+            # weather, light, the state of a place: true everywhere, so the narration stops running ahead of it
+            if text := fact_line(u, p, atom):
+                out.append(Line("fact", text, atom))
             continue
         slots = [a for a in atom[1:] if isinstance(a, str) and u.kind(a) is not None or a == PLAYER]
         if not any(a in x for a in slots) or not set(slots) <= o.seen:

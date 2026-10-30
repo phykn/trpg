@@ -346,6 +346,8 @@ CHANGE = {
     "follow_stop": "{name}{은} 이제 당신을 따라다니지 않습니다",
     "reveal": "당신은 새로 알게 되었습니다: {text}",
     "reveal_hidden": "{name}{이} 드러났습니다",
+    "consume": "{name}{을} 다 썼습니다",
+    "forget": "{name}{은} 더는 이렇게 믿지 않습니다: {text}",
     "link_open": "{name}{으로} 가는 길이 열렸습니다",
     "link_close": "{name}{으로} 가는 길이 끊겼습니다",
     "between_open": "{a}{와} {b} 사이의 길이 열렸습니다",

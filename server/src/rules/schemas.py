@@ -10,6 +10,7 @@ from .candidates import (
     FREE,
     SPENDS,
     active_threats,
+    avoided,
     blockers,
     held_clock,
     talk_rolls,
@@ -81,7 +82,14 @@ def pay_costs(ctx: Ctx, target: str) -> None:
         x, _, slot = rely[4:].rpartition(":")
         ctx.work.untag(x, int(slot))
     elif rely and rely.startswith(SPENDS):
-        ctx.work.insert(("spent", PLAYER, rely.partition(":")[2]))
+        x = rely.partition(":")[2]
+        if rely.startswith("thing:") and ctx.u.things[x].uses:
+            # counted instead of spent for the chapter: the oil can be poured half, then all
+            ctx.work.set_("flag", (f"uses.{x}",), "-1")
+            if ctx.work.flag[f"uses.{x}"] == 0:
+                ctx.work.consume(x)
+        else:
+            ctx.work.insert(("spent", PLAYER, x))
     guarded = bool(rely) and not rely.startswith(FREE)
     comp = settle(ctx.u, ctx.work, ctx.result, ctx.risk, ctx.r[2], target, ctx.h, guarded)
     if comp is not None:
@@ -113,8 +121,9 @@ def _go(ctx, q):
     if hidden_block(ctx, q):
         ctx.result = "blocked"
         return
+    f = facts_of(ctx.u, ctx.s, PLAYER)
     for h, g in ctx.s.rows("follows"):
-        if g == PLAYER and q in ctx.u.agents[h].avoids:
+        if g == PLAYER and q in avoided(ctx.u, f, ctx.h, h):
             ctx.work.retract(("follows", h, PLAYER))
     ctx.work.move(PLAYER, q)
 

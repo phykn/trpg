@@ -135,6 +135,8 @@ def _visible_conditions(u: Universe):
         for t in a.topics:
             if t.free_when is not None:
                 yield f"characters.{a.id}.topics.{t.id}.free_when", t.free_when, a.id
+        for q, c in a.until.items():
+            yield f"characters.{a.id}.avoids.{q}.until", c, a.id
 
 
 def _visible_leaf(u: Universe, leaf, host) -> bool:
@@ -145,7 +147,10 @@ def _visible_leaf(u: Universe, leaf, host) -> bool:
         x, y = leaf[1], leaf[2]
         return (x == PLAYER and u.kind(y) == "place") or (y == PLAYER and x in u.things) or x == host
     if k == "believes":
-        return leaf[1] == PLAYER
+        # a person's mind is read only where the person is: their topics, their complications, their fears
+        return leaf[1] in (PLAYER, host)
+    if k == "flag":
+        return leaf[1] in u.texts
     if k == "mark":
         return leaf[1] in (PLAYER, host)
     if k in ("regards", "owes"):
@@ -194,7 +199,8 @@ def _avoided(u: Universe) -> None:
     moved = {(e[1], e[2]) for e in _all_effects(u) if e[0] == "move"}
     for a in u.agents.values():
         for q in a.avoids:
-            if a.at == q or (a.id, q) in moved:
+            # a story may bring someone past a fear that ends
+            if a.at == q or ((a.id, q) in moved and q not in a.until):
                 fail("V3", f"characters.{a.id}.avoids", f"the story puts {a.id} in {q}")
 
 
@@ -262,6 +268,9 @@ def _public(u: Universe):
         yield lid, f"latents.{lid}.name", lat.name
     for cid in u.claims:
         yield None, f"claims.{cid}.text", u.props[cid].text
+    for name, texts in u.texts.items():
+        for v, text in texts.items():
+            yield None, f"flags.{name}.{v}", text
     for c in u.chapters:
         yield None, f"chapters[{c.k}].title", c.title
     for e in u.endings.values():
