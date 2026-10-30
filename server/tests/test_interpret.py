@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from conftest import REPO
-from src.interpret import Interpreter, mentions, rules, squeeze, title_words
+from src.interpret import Interpreter, lack, mentions, rules, squeeze, title_words
 from src.locale import ko
 from src.models.decision import ModelUnavailable
 from src.onto.log import Log
@@ -196,7 +196,7 @@ async def test_unsure_first_step_is_the_narration_models(tmp_path):
         svc, gid, view = await game(tmp_path / str(i), decision, FakeLLM(reply))
         out = await say(svc, gid, view, "음")
         assert out["kind"] == kind and len(decision.asked) == 1
-    assert out["reason"] == "지금은 할 수 없는 행동입니다." and out["view"]["revision"] == view["revision"]
+    assert out["reason"] == "지금은 고를 갈림길이 없습니다." and out["view"]["revision"] == view["revision"]   # "9" is choose
 
 
 async def test_every_schema_is_offered_and_an_impossible_one_needs_both_readings(tmp_path):
@@ -209,11 +209,21 @@ async def test_every_schema_is_offered_and_an_impossible_one_needs_both_readings
     assert sorted(say_opts) == sorted(("go", "look", "take", "give", "talk", "try", "declare", "cut", "choose"))
     assert say_opts.index("take") > say_opts.index("cut")      # what can happen here comes first
     assert len(llm.prompts) == 1                               # Kev sure of an impossible step is not enough
-    assert out["kind"] == "refused" and out["reason"] == "지금은 할 수 없는 행동입니다."
+    assert out["kind"] == "refused" and out["reason"] == "여기에는 집을 수 있는 것이 없습니다."
     decision = FakeDecision({"s1": {"take": 0.8}, "n": {"1": 0.9}})
     svc, gid, view = await game(tmp_path / "b", decision, FakeLLM("2"))
     out = await say(svc, gid, view, "바닥을 살핀다")
     assert out["steps"][0]["action"].startswith("look:")       # the reading names a step that can happen
+
+
+async def test_a_give_with_no_one_here_says_so_and_one_with_empty_hands_says_that(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeDecision(), moves=("go:yard",))
+    u, g = await svc.load(gid)
+    assert lack(u, observe(u, g.state, g.log), "give") == "여기에는 무언가를 건넬 사람이 없습니다."
+    svc, gid, _ = await game(tmp_path / "b", FakeDecision(), moves=("give:letter:yunseul",))
+    u, g = await svc.load(gid)
+    assert g.state.where("letter") == "yunseul"
+    assert lack(u, observe(u, g.state, g.log), "give") == "건넬 수 있는 것을 지니고 있지 않습니다."
 
 
 async def test_going_where_the_player_is_moves_nowhere(tmp_path):
@@ -230,7 +240,7 @@ async def test_going_where_the_player_is_moves_nowhere(tmp_path):
     decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}, "intent": {"dock": 0.9}})
     svc, gid, view = await game(tmp_path / "about", decision, FakeLLM("3"))
     out = await say(svc, gid, view, "창고 뒤쪽으로 돌아가 본다")
-    assert out["kind"] == "refused" and out["reason"] == "선착장 안에서 따로 갈 곳은 없습니다. 갈 수 있는 곳은 바닷가 마을, 등대 앞입니다."
+    assert out["kind"] == "refused" and out["reason"] == "여기서 갈 수 있는 곳은 바닷가 마을, 등대 앞입니다."
     decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}})
     svc, gid, view = await game(tmp_path / "exit", decision)
     out = await say(svc, gid, view, "선착장에서 마을로 간다")

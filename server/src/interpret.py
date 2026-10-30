@@ -119,6 +119,14 @@ def unreachable(u, o, text: str, schema: str) -> str | None:
     return blocked_why(u, *g) if g else None
 
 
+def lack(u, o, schema: str) -> str:
+    """What the schema has nothing to act on here (engine.md 3.2). A give lacks someone here or a thing in hand: told it
+    had nothing to give, a player holding the letter with no one around could not tell why (play-8-odd 16)."""
+    if schema == "give" and any(x in u.agents for x in o.seen):
+        return ko.LACK["give_held"]
+    return ko.LACK.get(schema, ko.REFUSED["candidate"])
+
+
 def title_words(title: str) -> list[str]:
     """The words a sentence names a topic by: its title's words without a final particle, two syllables or more, and
     its last word, the head noun, whatever its length ("폐허", "길" for "폐허로 가는 길")."""
@@ -329,7 +337,7 @@ class Interpreter:
             g = guarded(u, o, text, st["schema"])
             if g and why == blocked_why(u, *g) and (ask := self.detour(u, o, text, *g)):
                 return {"clarify": ask}
-            return {"refused": why or ko.REFUSED["candidate"]}
+            return {"refused": why or lack(u, o, st["schema"])}
         if st["schema"] == "try":
             return await self.fill_try(u, o, p, st, slots, text, fixed)
         here = (o.facts.where(PLAYER),)
@@ -387,8 +395,7 @@ class Interpreter:
             # Walking about the place ("오두막 뒤쪽으로 돌아가 본다") was told only where the player already was
             # (play-3-explorer 9); the ways out answer what was asked.
             if here[0] not in names and slots:
-                return {"already": ko.fill(ko.NO_FARTHER, place=u.name(here[0]),
-                                           ways=", ".join(u.name(s.intent[0]) for s in slots))}
+                return {"already": ko.fill(ko.NO_FARTHER, ways=", ".join(u.name(s.intent[0]) for s in slots))}
             return already
         slot = slot_of[intent]
         judge_args = {}

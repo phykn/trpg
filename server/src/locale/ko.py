@@ -102,6 +102,15 @@ WHY = {
     "away": "{x}{은} 여기 없습니다.",
     "not_held": "{x}{을} 지니고 있지 않습니다.",
 }
+# What a schema lacks here, when nothing the sentence names is out of reach (engine.md 3.2).
+LACK = {
+    "take": "여기에는 집을 수 있는 것이 없습니다.",
+    "give": "여기에는 무언가를 건넬 사람이 없습니다.",
+    "give_held": "건넬 수 있는 것을 지니고 있지 않습니다.",
+    "talk": "여기에는 말을 걸 사람이 없습니다.",
+    "declare": "지금 밝힐 수 있는 과거나 인연이 없습니다.",
+    "choose": "지금은 고를 갈림길이 없습니다.",
+}
 ERRORS = {
     "missing": "저장된 게임을 찾을 수 없습니다.",
     "invalid": "받아들일 수 없는 요청입니다.",
@@ -272,7 +281,7 @@ APPROACH_DESC = {"force": "힘으로 밀어붙이거나 부수거나 버팀", "f
 NOT_IN_WORLD = "이 이야기에는 그런 것이 없습니다."
 NOT_POSSIBLE = "이 장면에서는 할 수 없는 일입니다."
 ALREADY_HERE = "이미 {place}에 있습니다."
-NO_FARTHER = "{place} 안에서 따로 갈 곳은 없습니다. 갈 수 있는 곳은 {ways}입니다."
+NO_FARTHER = "여기서 갈 수 있는 곳은 {ways}입니다."
 META_REPLY = "이야기 속에서 당신이 하는 일을 적어 주세요. 저장은 저절로 됩니다."
 GROWTH_WORD, GROWTH_REPLY = "성장", "성장은 주인공 화면의 '성장'에서 고릅니다."
 # Whole phrases, so a storehouse (저장고) or "처음부터 차근차근" stays in the story.
