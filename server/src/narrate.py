@@ -36,7 +36,8 @@ PAREN = re.compile(r"[()（）]")
 # Markdown emphasis reached the screen as "\*컥\*" (qa_test/runs/play-4-talker 24); a bullet's "* " stays for the list check.
 EMPHASIS = re.compile(r"\\(?=[*_`])|\*+(?=\S)|(?<=\S)\*+|`+")
 LIST_LINE = re.compile(r"^\s*(?:[-•*]|\d+[.)]|[①-⑩])\s")
-HAN = re.compile(r"[㐀-鿿Ѐ-ӿ]|[A-Za-z]{2,}")
+# U+FFFD: a token the LLM server could not decode reaches the player as a broken glyph (play-10-ui 13)
+HAN = re.compile(r"[㐀-鿿Ѐ-ӿ\ufffd]|[A-Za-z]{2,}")
 DIGIT = re.compile(r"[0-9０-９]")
 SECOND = re.compile(r"(?<![가-힣])(너|너의|너는|너를|너에게|네가|그대|자네|플레이어)(?![가-힣])")
 # A quoted line stays inside its sentence, so dialogue counts, checks and drops as one sentence.

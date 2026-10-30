@@ -97,4 +97,13 @@ Then whoever collects the round:
 2. Adds to [../findings.md](../findings.md), with evidence (`play-<round>-<persona>` turn N), whatever showed up in two or more games or blocked a game.
 3. Writes the scores and metrics per game to `qa_test/runs/play-<round>-summary.md`, to compare with the next round.
 
+## A person's round
+
+F12 and the question of whether the plateau is the testers or the game (fun.md 4) need a person. Once per round, someone who has not read the story plays one game to an ending on a phone (or the browser at 412×915), on the same code as the AI round:
+
+1. Start the server and web (`app/build.sh && open TRPG.app`, or `cd client && npm run serve`) and open the address it shows.
+2. Play in your own words. Note each awkward moment as `- turn N [category] what and why`, using the categories above; turn N is the Nth thing you sent or tapped.
+3. At the ending, answer the score block from "After the game" and add the one line.
+4. Put the notes in `qa_test/runs/play-<round>-human/notes.md`. Whoever collects the round copies that game's save from `saves/engine/` into the same folder, runs `cd server && ../.venv/bin/python -m src.fun ../qa_test/runs/play-<round>-human`, and sets the scores beside the AI testers' in `play-<round>-summary.md`.
+
 An AI tester's scores do not stand in for a person's feelings. Use them to find awkwardness; F12 itself is judged from scores a person gives after playing.

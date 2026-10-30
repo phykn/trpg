@@ -258,6 +258,13 @@ async def test_a_change_naming_someone_elsewhere_does_not_bring_them_here(tmp_pa
     assert list(per) == [0]
 
 
+async def test_a_broken_glyph_is_rewritten_like_a_foreign_one(tmp_path):
+    svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))
+    job = turn_job(*svc.games[gid], 1)
+    per, _ = svc.narrator.rules(job, ["불꽃이 사방으로 \ufffd튑니다.", "불꽃이 사방으로 튑니다."])
+    assert per == {0: [ko.FEEDBACK["foreign"]]}
+
+
 async def test_a_companion_left_behind_appears_only_parting(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeLLM(GOOD))     # the village; 윤슬 is at the dock
     u, g = svc.games[gid]
