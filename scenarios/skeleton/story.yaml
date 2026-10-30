@@ -266,6 +266,11 @@ triggers:
     when: {fill: [bridge, "=", full]}
     effects:
       - {retire: t_bridge_fall}
+  # 등대 안으로 들어가면 다리는 뒤에 남습니다.
+  tr_bridge_behind:
+    when: {flag: [chapter, 2]}
+    effects:
+      - {retire: t_bridge_fall}
   tr_spray:
     when: {at: [player, yard]}
     effects:

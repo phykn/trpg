@@ -204,6 +204,8 @@ What the engine builds:
 | `choices` | - | `{id: {name, effects}}`, two or more | |
 | `default` | - | `{name, effects}`: what happens if the boxes fill before a choice; it cannot be chosen | |
 
+A threat that belongs to a place the next chapter leaves behind is retired by a trigger on that chapter's flag (`when: {flag: [chapter, k]}`, `effects: [{retire: <id>}]`). One that followed the player indoors kept filling with nothing to do there and fell off screen, and it took a row the next chapter needed (goal-1-odd 11, goal-1-bold 25, goal-1-talker 43; at 320×568 chapter 2's rows took 37% of the screen, goal-1-ui 8, goal-2-ui 9).
+
 Threats and forks have no `at` and `fill` 0 in `S₀`. The engine wires `appears_when` into a one-shot trigger `appear.<id>` (effects `[move(<id>, player)]`); to tie one to a chapter, include `{flag: [chapter, k]}` in it. A threat is driven off by a `retire` in some other effect, and a `set` that lowers its `fill` delays its arrival. `retire` also sets the appearance trigger's fired flag, so a threat or fork retired before it appears never appears. Once in, it stays across chapter changes: its boxes fill at every scene end (rule.md 4.1), and when they are full `τ_arrive` applies `arrival` or `default` and retires it (rule.md 8).
 
 ### 3.9 Claims
