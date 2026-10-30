@@ -303,7 +303,7 @@ class GameService:
                     break
                 if st.get("clarify"):
                     p["card_seq"] += 1
-                    p["card"] = clarify_card(rest, labels, echo, f"c{p['card_seq']}", st["clarify"])
+                    p["card"] = clarify_card(u, o, rest, labels, echo, f"c{p['card_seq']}", st["clarify"])
                     self._opened(p, origin)
                     break
                 if "action" not in st:

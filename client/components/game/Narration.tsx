@@ -11,6 +11,7 @@ import { told } from '@/logic/reveal';
 import type { Narration as N } from '@/logic/useGame';
 import type { Entry, Roll } from '@/logic/useLog';
 import { Face } from './Dice';
+import { Pill } from './Row';
 
 const STORY = { fontSize: 16, lineHeight: 26 };
 
@@ -89,9 +90,10 @@ function TopFade() {
   );
 }
 
-export function Chat({ entries, live, roll, waiting, narration, hold, failed, onTyped, onRetry }: {
+export function Chat({ entries, live, roll, waiting, narration, hold, failed, onTyped, onRetry, starters = [], onDraft }: {
   entries: Entry[]; live: boolean; roll: Roll | null; waiting: boolean;
   narration: N; hold: boolean; failed: boolean; onTyped: () => void; onRetry: () => void;
+  starters?: string[]; onDraft?: (text: string) => void;
 }) {
   const scroll = useRef<ScrollView>(null);
   const full = live ? told(narration) : '';
@@ -126,6 +128,14 @@ export function Chat({ entries, live, roll, waiting, narration, hold, failed, on
         contentContainerStyle={{ gap: 14, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}
         onLayout={() => end(false)} onContentSizeChange={() => end(true)}>
         {entries.map((e) => <Line key={e.id} entry={e} />)}
+        {starters.length ? (
+          // Before the first turn, what a sentence can be: a tap puts one in the input to send or change.
+          <Rise>
+            <View className="flex-row flex-wrap gap-1.5">
+              {starters.map((t) => <Pill key={t} label={t} icon="play" color={colors.fg.muted} onPress={onDraft ? () => onDraft(t) : undefined} />)}
+            </View>
+          </Rise>
+        ) : null}
         {live && roll && !hold ? <Rise><RollLine roll={roll} /></Rise> : null}
         {live && full && !hold ? (
           <Pressable accessibilityRole="text" accessibilityHint={ko.skip} onPress={() => setTyped((x) => ({ ...x, shown: full.length }))}>

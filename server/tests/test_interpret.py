@@ -432,6 +432,9 @@ async def test_a_guarded_target_offers_the_ways_around_the_guard(tmp_path):
     assert card["question"] == "사나운 누렁이가 도해를 막고 있습니다. 어떻게 할까요?"
     # the bait needs the dried fish in hand, so only the soothing holds
     assert [o["label"] for o in card["options"]] == ["낮은 목소리로 달래며 다가간다"]
+    # with its odds, so ways round can be compared on one card (rule.md 3.2)
+    from src.rules.roll import DC
+    assert (card["options"][0]["dc"], card["options"][0]["risk"]) == (DC["low"], "low")
     out = await svc.command(gid, {"request_id": "pick", "revision": out["view"]["revision"], "card": card["id"],
                                   "pick": card["options"][0]["id"]})
     assert out["view"]["card"]["kind"] == "roll" and out["view"]["card"]["selected"] == "try:hound:charm"

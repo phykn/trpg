@@ -263,12 +263,47 @@ def afar(job: Job, x: str, sentence: str) -> bool:
             and any(x in a[1:3] for a in legacy(job.u, job.o)))
 
 
+def ledger(u, p: dict) -> list[dict]:
+    """Per chapter, what passed between the player and people: things handed over either way, promises,
+    companions, and each regard that ended the chapter elsewhere than it began. The recap and the ending read it,
+    since from prose alone the scenery won and the ending forgot who waited (qa_test/runs/goal-6-bold 9,
+    goal-6-talker 48)."""
+    out: list[dict] = []
+    k, rows, regard = 1, [], {}
+
+    def close():
+        for h, (a, b) in regard.items():
+            if a != b:
+                rows.append({"kind": "regards", "text": ko.fill(ko.CHANGE["regards_up" if b > a else "regards_down"],
+                                                                 name=u.name(h))})
+        if rows:
+            out.append({"chapter": k, "lines": list(rows)})
+
+    for turn in p["turns"]:
+        for r in turn["steps"]:
+            for c in r["changes"]:
+                kind = c["kind"]
+                if kind == "chapter":
+                    close()
+                    k, rows, regard = c["to"], [], {}
+                elif kind == "move" and c["id"] in u.things and (c["to"] in u.agents or c["from"] in u.agents):
+                    rows.append({"kind": "give", "text": change_line(u, c)})
+                elif kind in ("promise", "follow"):
+                    rows.append({"kind": kind, "state": c["state"], "text": change_line(u, c)})
+                elif kind == "regards" and c["axis"] == "trust":
+                    regard.setdefault(c["id"], [c["from"], c["to"]])[1] = c["to"]
+    close()
+    return out
+
+
 def legacy_lines(job: Job) -> list[str]:
     """Each person the legacy names away from here also gets where they are: told only what they hold or feel,
-    the narrator set them beside the player and every attempt failed (qa_test/runs/narr-3/refactor-after 16)."""
+    the narrator set them beside the player and every attempt failed (qa_test/runs/narr-3/refactor-after 16).
+    A promise kept or broken and a companion who stayed behind have no atom left, so they come from the ledger."""
     u, o = job.u, job.o
     kept = legacy(u, o)
     out = [x for a in kept if (x := fact_line(u, job.p, a))]
+    out += [x["text"] for ch in ledger(u, job.p) for x in ch["lines"] if x.get("state") in ("kept", "broken", "stop")]
     gone = absent(job)
     for x in dict.fromkeys(y for a in kept for y in a[1:3] if y in gone):
         place = o.facts.where(x)

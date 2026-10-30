@@ -432,6 +432,7 @@ SAID_ALONE = "{x}: {lines}"
 SHARED_LINE = "{x}{와} 함께: {line}"
 NAMING = "이번에 생긴 태그마다 서술 뒤에 한 줄씩 '태그: 이름'을 적으십시오. 이름은 12자 이하의 짧은 말입니다. 기본 이름: {names}"
 ENDING_FRAME = "이 서술로 이야기가 끝납니다. 다음 틀로 마무리하고 다음 행동을 묻지 않습니다: {frame}"
+RECAP_CHOICE = "당신이 고른 길: {name}"
 RECAP_TASK = "'{title}' 장이 끝났습니다. 아래 일들을 되짚는 짧은 문단 하나를 쓰십시오. {sentences}문장 이하, {chars}자 이하, 합니다체."
 FEEDBACK = {
     "sentences": "문장이 너무 많습니다. {n}문장 이하로 줄이십시오.",

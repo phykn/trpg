@@ -23,7 +23,7 @@ export type Preview = {
 export type Target = { id: string; name: string; fill?: number; boxes?: number } | null;
 export type CardOption = {
   id: string; label: string; consumed?: boolean; note?: string | null; preview?: Preview; effects?: string[];
-  with?: string; rely?: string | null; forced?: boolean;
+  with?: string; rely?: string | null; forced?: boolean; dc?: number; risk?: Preview['risk'];
 };
 export type Card = {
   id: string; kind: 'roll' | 'clarify' | 'confirm' | 'move';
@@ -67,6 +67,7 @@ export type GameView = {
   last: { turn: number; steps: StepRecord[]; narrated: boolean } | null;
   recaps: number[];
   ending: { id: string; title: string } | null;
+  ledger?: { chapter: number; lines: { kind: 'give' | 'promise' | 'follow' | 'regards'; state?: string; text: string }[] }[];
 };
 
 export type CommandBody =

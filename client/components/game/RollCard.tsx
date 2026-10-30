@@ -76,9 +76,11 @@ function Mods({ mods, shown, decisive = [] }: { mods: Chip[]; shown?: number; de
 
 // `onResend` is given while the roll's answer is lost: the dice rest blank and the resend is the only control.
 // The card covers the input bar, so a notice for a roll that came back with the card still open shows here.
-export function RollCard({ card, onRoll, onCancel, onResend, notice, step, frame, rolling }: {
+export function RollCard({ card, onRoll, onCancel, onResend, notice, step, frame, rolling, explain = {} }: {
   card: Card; onRoll: (pick: string) => void; onCancel: () => void; onResend?: () => void; notice?: string | null;
   step?: StepRecord; frame?: Frame; rolling?: boolean;
+  // What the ring means, said once a game: the first roll card, and the first one whose ring is red.
+  explain?: { target?: boolean; high?: boolean };
 }) {
   const first = card.options.find(plain) ?? card.options[card.options.length - 1];
   const [pick, setPick] = useState(card.selected ?? first.id);
@@ -130,6 +132,11 @@ export function RollCard({ card, onRoll, onCancel, onResend, notice, step, frame
           <View className="w-9">{!locked ? <IconButton icon="close" label={ko.close} onPress={onCancel} /> : null}</View>
         </View>
         <Target dc={p.dc} high={high} result={frame?.settled ?? null} />
+        {!frame && (explain.target || (high && explain.high)) ? (
+          <Text className="-mt-1 text-center font-sans text-chip" style={{ color: high && explain.high ? colors.danger.fg : colors.fg.muted }}>
+            {[explain.target ? ko.atLeast(p.dc) : null, high && explain.high ? ko.irreversible : null].filter(Boolean).join(' · ')}
+          </Text>
+        ) : null}
         <Dice state={frame?.blocked ? 'gone' : step || rolling ? 'rolling' : onResend ? 'stopped' : 'ready'}
           values={frame ? frame.dice : [null, null]} label={ko.hold} cue={ko.roll} onRelease={() => onRoll(pick)} />
         <View className="h-[30px] items-center justify-center">

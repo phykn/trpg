@@ -34,6 +34,17 @@ test('a clarify card asks its question and answers with the chosen option id', a
   expect(onPick).toHaveBeenCalledWith('talk:dohae');
 });
 
+test('a way round that rolls shows its target number, and whether failing costs for good', async () => {
+  const detour = { ...clarify, options: [
+    { id: 'try:hound:charm', label: '달랜다', dc: 7, risk: 'low' },
+    { id: 'try:hound:force', label: '밀친다', dc: 9, risk: 'high' },
+  ] } as unknown as Card;
+  let tree: ReturnType<typeof renderer.create>;
+  await flush(async () => { tree = renderer.create(<ClarifyCard card={detour} onPick={jest.fn()} onCancel={jest.fn()} />); });
+  expect(pressable(tree!, '달랜다, 7 이상')).toHaveLength(1);
+  expect(pressable(tree!, `밀친다, 9 이상 · ${ko.irreversible}`)).toHaveLength(1);
+});
+
 test('a confirm card lists what the choice costs and commits with its option id', async () => {
   const onPick = jest.fn();
   const onCancel = jest.fn();

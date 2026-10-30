@@ -106,6 +106,7 @@ Everything is built from `Obs` and the presentation layer.
 | `last` | The last turn's number, its step records, and whether its narration is cached |
 | `recaps` | Chapter numbers that have a recap |
 | `ending` | Ending id and title, or none |
+| `ledger` | Once the game has ended, per chapter what passed between the player and people: `[{chapter, lines: [{kind, state?, text}]}]`, `kind` being `give` (a thing handed over either way), `promise` (`state` made, kept, broken or closed), `follow` (`state` start or stop) or `regards` (a trust that ended the chapter elsewhere than it began). `text` is the step line, shown verbatim. Empty before the ending |
 
 Cards (engine.md 4):
 
@@ -121,7 +122,7 @@ Cards (engine.md 4):
   "selected": "try:door:finesse;rely=thing:key" }
 ```
 
-A clarification card's `options` are `{id: action id, label}`, and confirm and move cards' `options` are `[{id: action id, label, effects: [name]}]`. A give's confirm card has a second option, the show of the same thing (engine.md 4.3). A move card's option to go with someone asked first has `with` (that person's name) and an id that joins its plan's action ids with `+`; it is accepted like any other `pick`. None of the three has a `preview`. A move card's `selected` is the destination the sentence chose, and it is the first option; when the sentence named that place alone, a card comes only for a companion who stays behind, and that place is its only option (engine.md 4.4). A roll card option's `consumed` says relying on it uses it up, and `note` is the text for that ("1번 남음", 1 use left, for a tag; "이번 장 1번", once this chapter, for a trait, thing or belief); `rely` is its reliance value (null for none), and `forced` whether it is the forced twin of the same reliance: a card where forcing buys a box lists every option twice, the natural ones first (engine.md 4.2). Its `preview` holds the fields from rule.md 3.4.
+A clarification card's `options` are `{id: action id, label}`, plus `dc` and `risk` from the preview when the option is a roll on an obstacle (a way round a guard), and confirm and move cards' `options` are `[{id: action id, label, effects: [name]}]`. A give's confirm card has a second option, the show of the same thing (engine.md 4.3). A move card's option to go with someone asked first has `with` (that person's name) and an id that joins its plan's action ids with `+`; it is accepted like any other `pick`. None of the three has a `preview`. A move card's `selected` is the destination the sentence chose, and it is the first option; when the sentence named that place alone, a card comes only for a companion who stays behind, and that place is its only option (engine.md 4.4). A roll card option's `consumed` says relying on it uses it up, and `note` is the text for that ("1번 남음", 1 use left, for a tag; "이번 장 1번", once this chapter, for a trait, thing or belief); `rely` is its reliance value (null for none), and `forced` whether it is the forced twin of the same reliance: a card where forcing buys a box lists every option twice, the natural ones first (engine.md 4.2). Its `preview` holds the fields from rule.md 3.4.
 
 ```
 { "risk": "normal",

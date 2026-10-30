@@ -11,6 +11,7 @@ from .narrate import (
     SHORT_CHARS,
     Job,
     change_ids,
+    ledger,
     step_lines,
 )
 from .onto.atoms import PLAYER
@@ -26,6 +27,7 @@ PREVIOUS_TURNS = 3
 SAID = 4                # earlier exchanges per speaker handed to narration (engine.md 5.1)
 SHARED = 4              # events lived together per speaker (ontology.md 3.4)
 RECAP_NOTABLE = 5
+RECAP_PEOPLE = 4
 
 
 def observed(u: Universe, g: Game, t1: int):
@@ -129,10 +131,15 @@ def recap_job(u: Universe, g: Game, k: int) -> Job | None:
     if closing is None:
         return None
     o = observed(u, g, closing["t1"])
+    # What passed with people comes first, whether or not a roll marked it; told from the notable steps alone,
+    # the scenery won (qa_test/runs/goal-6-bold 9).
+    people = [x["text"] for ch in ledger(u, p) if ch["chapter"] == k for x in ch["lines"]][:RECAP_PEOPLE]
+    people += [ko.fill(ko.RECAP_CHOICE, name=c["name"]) for c in p.get("choices", []) if c["chapter"] == k]
     # The step that closed the chapter goes last: without it a recap credited the oil, not the punch that lit
     # the lamp, and told the sky darkening at the ending (qa_test/runs/play-3-bold 21, ui-5).
-    steps = [*[r for r in notable if r is not closer][1 - RECAP_NOTABLE:], closer]
-    lines = [x for r in steps for x in step_lines(u, r)[0]]
+    chosen = ("choose:", "pay:")       # told by their choice line above
+    steps = [*[r for r in notable if r is not closer and not r["action"].startswith(chosen)][1 - RECAP_NOTABLE:], closer]
+    lines = [*people, *(x for r in steps for x in step_lines(u, r)[0])]
     task = ko.fill(ko.RECAP_TASK, title=u.chapter_of(k).title, sentences=RECAP_SENTENCES, chars=RECAP_CHARS)
     return Job(u, o, p, lines, lines, {PLAYER, o.facts.where(PLAYER)}, chars=RECAP_CHARS,
                sentences=RECAP_SENTENCES, task=task)

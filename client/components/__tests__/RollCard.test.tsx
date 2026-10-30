@@ -145,3 +145,19 @@ test('a spent reliance reads as a lower stake, not a number', async () => {
   expect(texts(tree!)).not.toContain('±0');
   await flush(async () => { tree!.unmount(); });
 });
+
+test('the ring is explained once a game: the target on the first card, the red ring the first time it is red', async () => {
+  let tree: ReturnType<typeof renderer.create>;
+  await flush(async () => {
+    tree = renderer.create(<RollCard card={card()} explain={{ target: true, high: true }} onRoll={jest.fn()} onCancel={jest.fn()} />);
+  });
+  expect(texts(tree!)).toContain('8 이상');
+  expect(texts(tree!)).not.toContain(ko.irreversible);                 // not red
+  await flush(async () => {
+    tree!.update(<RollCard card={card('high')} explain={{ target: false, high: true }} onRoll={jest.fn()} onCancel={jest.fn()} />);
+  });
+  expect(texts(tree!)).toContain(ko.irreversible);
+  expect(texts(tree!)).not.toContain('이상');
+  await flush(async () => { tree!.update(<RollCard card={card('high')} onRoll={jest.fn()} onCancel={jest.fn()} />); });
+  expect(texts(tree!)).not.toContain(ko.irreversible);
+});

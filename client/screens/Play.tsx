@@ -21,6 +21,8 @@ import type { Game } from '@/logic/useGame';
 import { useLog } from '@/logic/useLog';
 import type { GameView } from '@/services/types';
 
+const STARTERS = 3;
+
 export function Play({ game }: { game: Game }) {
   const view = game.view as GameView;
   const { phase, reveal } = game;
@@ -38,6 +40,7 @@ export function Play({ game }: { game: Game }) {
   const roll = rolled ? {
     d1: rolled.roll.d1, d2: rolled.roll.d2, total: rolled.total ?? rolled.roll.d1 + rolled.roll.d2, result: rolled.result,
     dc: rolled.dc ?? 0, approach: rolled.mods.find((m) => m.kind === 'stat')?.label ?? '',
+    risk: rolled.risk,
   } : null;
   const onTyped = () => {
     // A recap still to come would be lost once the turn is logged, so the turn waits for it to be typed too.
@@ -72,6 +75,11 @@ export function Play({ game }: { game: Game }) {
   const shown = rollOpen ? (revealing ? reveal?.card : view.card) : phase === 'card' ? view.card : null;
   const pick = (id: string) => { if (shown) game.command({ card: shown.id, pick: id }); };
   const cancel = () => { if (shown) game.command({ card: shown.id, cancel: true }); };
+  // A new chapter's title comes before its growth: opened together, the growth card covered the title and a tap
+  // meant for the chat took a trait (qa_test/runs/rules-2-ui).
+  const growing = phase === 'card' && !shown && view.growth.length > 0;
+  const titling = (phase === 'idle' || growing) && !view.ending && rows.chapter.k !== titled;
+  const rolls = log.entries.filter((e) => e.kind === 'roll');
   let card = null;
   let roller = null;
   if (shown?.kind === 'roll') {
@@ -79,16 +87,16 @@ export function Play({ game }: { game: Game }) {
     roller = (
       <RollCard key={shown.id} card={shown} notice={phase === 'card' ? game.notice : undefined} rolling={phase === 'rolling'}
         step={revealing ? step : undefined} frame={revealing ? frame ?? undefined : undefined}
-        onResend={game.lostRoll ? game.resend : undefined} onRoll={pick} onCancel={cancel} />
+        onResend={game.lostRoll ? game.resend : undefined} onRoll={pick} onCancel={cancel}
+        explain={{ target: !rolls.length, high: !rolls.some((r) => r.risk === 'high') }} />
     );
   } else if (shown?.kind === 'clarify') card = <ClarifyCard card={shown} onPick={pick} onCancel={cancel} />;
   else if (shown?.kind === 'confirm') card = <ConfirmCard card={shown} onPick={pick} onCancel={cancel} />;
   else if (shown?.kind === 'move') card = <MoveCard card={shown} onPick={pick} onCancel={cancel} />;
-  else if (phase === 'card' && view.growth.length) {
+  else if (growing && !titling) {
     card = <GrowthCard growth={view.growth} onPick={(action) => game.command({ action })} onLater={game.laterGrowth} />;
   }
 
-  const titling = phase === 'idle' && !view.ending && rows.chapter.k !== titled;
   const mode = commandsOpen ? 'open' : phase === 'sending' ? 'sending' : phase === 'stuck' && !roller ? 'stuck' : 'locked';
 
   return (
@@ -104,7 +112,9 @@ export function Play({ game }: { game: Game }) {
             <Scene scene={rows.scene} onDraft={commandsOpen ? (t) => { setDraft(t); input.current?.focus(); } : undefined} />
             <Chat entries={log.entries} live={live} roll={roll} waiting={phase === 'sending' || phase === 'revealing' || (phase === 'narrating' && live)}
               narration={game.narration} hold={revealing} failed={phase === 'narration_error'}
-              onTyped={onTyped} onRetry={game.retryNarration} />
+              onTyped={onTyped} onRetry={game.retryNarration}
+              starters={!view.last && commandsOpen ? view.buttons.slice(0, STARTERS).map((b) => b.label) : []}
+              onDraft={(t) => { setDraft(t); input.current?.focus(); }} />
             {revealing ? (
               <Pressable accessibilityLabel={ko.skip} className="absolute bottom-0 left-0 right-0 top-0" onPress={game.skip} />
             ) : null}

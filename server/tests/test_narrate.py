@@ -15,6 +15,7 @@ from src.narrate import (
     Narrator,
     change_line,
     change_lines,
+    ledger,
     messages,
     sentences_of,
     split,
@@ -185,7 +186,7 @@ async def test_tag_names_come_from_the_narration_when_they_pass(tmp_path):
 
 async def test_a_finished_chapter_has_a_recap(tmp_path):
     llm = FakeLLM("문이 열리고 당신은 꼭대기에 섭니다. 바람이 거셉니다.")
-    svc, gid, view = await game(tmp_path, llm, moves=("go:village", "go:yard"))
+    svc, gid, view = await game(tmp_path, llm, moves=("give:letter:yunseul", "go:village", "go:yard"))
     for i in range(8):
         out = await svc.command(gid, {"request_id": f"t{i}", "revision": view["revision"], "action": "try:door:finesse"})
         card = out["view"]["card"]
@@ -206,6 +207,10 @@ async def test_a_finished_chapter_has_a_recap(tmp_path):
     notable = llm.calls[-1][1]["content"].split(ko.HEAD["notable"])[1].split(ko.STYLE)[0]
     assert "녹슨 등대 문이 마침내 당신 뜻대로 되었습니다" in notable
     assert notable.rstrip().endswith("- 새 장이 시작됩니다: 불을 켜다") and "'등대에 오르다' 장이 끝났습니다" in notable
+    # what passed with a person is told whether or not a roll marked it (goal-6-bold 9)
+    assert notable.index("윤슬이 아들의 편지를 얻었습니다") < notable.index("녹슨 등대 문")
+    assert ledger(STORIES["lighthouse"], svc.games[gid][1].presentation)[0] == \
+        {"chapter": 1, "lines": [{"kind": "give", "text": "윤슬이 아들의 편지를 얻었습니다"}]}
     assert (await svc.view(gid))["recaps"] == [1]
 
 
@@ -631,3 +636,21 @@ def test_a_refused_request_marks_its_witnesses_and_small_talk_does_not(u):
     assert marks(u, {"action": "talk:dohae:favor", "result": "fail", "changes": [], "roll": roll})
     assert not marks(u, {"action": "talk:dohae:chat", "result": "none", "changes": [], "roll": None})
     assert not marks(u, {"action": "look:letter", "result": "none", "changes": [], "roll": None})
+
+
+def test_the_ledger_keeps_promises_companions_and_net_regard():
+    u = STORIES["lighthouse"]
+    changes = [
+        {"kind": "promise", "id": "dohae", "name": "도해", "owes": "promise", "debtor": "player", "state": "kept",
+         "promise": "열쇠를 돌려준다"},
+        {"kind": "follow", "id": "yunseul", "name": "윤슬", "state": "stop"},
+        {"kind": "regards", "id": "dohae", "name": "도해", "axis": "trust", "from": 0, "to": 1},
+        {"kind": "regards", "id": "dohae", "name": "도해", "axis": "trust", "from": 1, "to": 2},
+        {"kind": "chapter", "from": 1, "to": 2, "name": "불을 켜다"},
+        {"kind": "regards", "id": "yunseul", "name": "윤슬", "axis": "trust", "from": 1, "to": 0},
+        {"kind": "regards", "id": "yunseul", "name": "윤슬", "axis": "trust", "from": 0, "to": 1},
+    ]
+    assert ledger(u, {"turns": [{"steps": [{"changes": changes}]}]}) == [{"chapter": 1, "lines": [
+        {"kind": "promise", "state": "kept", "text": "당신은 도해와의 약속을 지켰습니다"},
+        {"kind": "follow", "state": "stop", "text": "윤슬은 이제 당신을 따라다니지 않습니다"},
+        {"kind": "regards", "text": "도해의 마음이 당신 쪽으로 움직였습니다"}]}]     # 윤슬 ended chapter 2 where she began

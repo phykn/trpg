@@ -393,7 +393,13 @@ def game_view(u, g) -> dict:
             "turn": last["n"], "steps": last["steps"], "narrated": str(last["n"]) in p.get("narration", {})},
         "recaps": sorted(int(x) for x in p.get("recap", {})),
         "ending": {"id": ending, "title": u.endings[ending].title} if ending else None,
+        "ledger": _ledger(u, p) if ending else [],
     }
+
+
+def _ledger(u, p: dict) -> list[dict]:
+    from .narrate import ledger  # narrate reads this module's names
+    return ledger(u, p)
 
 
 def _scene(u, o: Obs, p: dict, here: str) -> dict:

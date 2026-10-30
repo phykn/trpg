@@ -29,7 +29,7 @@ player:
     options:
       mountaineer: {name: 산사람, text: 산길과 눈을 압니다.}
       clerk: {name: 아전 출신, text: 관아의 법도와 문서를 압니다.}
-      apothecary: {name: 약방 심부름꾼, text: 약재와 병을 압니다.}
+      apothecary: {name: 심부름꾼, text: 약방 일로 약재와 병을 압니다.}
       hunter: {name: 사냥꾼, text: 짐승의 버릇을 압니다.}
 
 places:
@@ -568,7 +568,7 @@ witnesses:
     - reach: {goal: 2}
       after: 4
       steps:
-        - give:snowshoes:bangul                        # 설피를 돌려주어 약속을 지킴
+        - give:snowshoes:bangul                        # 빚으로 빌린 설피를 돌려줌
         - go:shrine                                    # 방울은 서낭당을 꺼려 고갯길에 남음
         - {do: "try:gorge:wits;rely=thing:salt", roll: [6, 6, 0]}   # 어울림 → 2칸, 소금을 다 씀
         - {do: "try:gorge:wits", roll: [6, 6, 0]}     # 3칸 → 관문으로 가는 길

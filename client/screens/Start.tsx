@@ -71,7 +71,7 @@ export function Start({ stories, busy, saved, again, notice, onCreate, onResume,
         <Section icon="bolt" label={ko.approaches} used={spent} of={total} />
         {story.approach_names.map((a) => (
           <View key={a.id} className="h-10 flex-row items-center gap-2 rounded-xl bg-canvas-subtle pl-3 pr-1">
-            <Text className="w-[44px] font-sans-semibold text-panel text-fg-default">{a.name}</Text>
+            <Text className="w-[56px] font-sans-semibold text-panel text-fg-default">{a.name}</Text>
             <Text numberOfLines={1} className="min-w-0 flex-1 font-sans text-chip text-fg-muted">{a.hint}</Text>
             <IconButton icon="minus" size={30} label={`${a.name} ${ko.lower}`} onPress={placed[a.id] > 0 ? () => add(a.id, -1) : undefined} />
             <Text className="w-4 text-center font-mono-medium text-body text-gold-fg">{placed[a.id]}</Text>
@@ -89,7 +89,7 @@ export function Start({ stories, busy, saved, again, notice, onCreate, onResume,
               accessibilityState={{ checked: on }} onPress={() => toggle(t.id)}
               style={pressed}
               className={`h-10 flex-row items-center gap-2 rounded-xl px-3 ${on ? 'bg-gold-muted' : 'bg-canvas-subtle'}`}>
-              <Text className="w-[44px] font-sans-semibold text-panel text-fg-default">{t.name}</Text>
+              <Text className="w-[56px] font-sans-semibold text-panel text-fg-default">{t.name}</Text>
               <Text numberOfLines={1} className="min-w-0 flex-1 font-sans text-chip text-fg-muted">{t.text}</Text>
               <View className="h-5 w-5 items-center justify-center rounded-[6px]"
                 style={{ borderWidth: 1.5, borderColor: on ? colors.gold.fg : colors.border.strong, backgroundColor: on ? colors.gold.fg : 'transparent' }}>

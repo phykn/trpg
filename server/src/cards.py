@@ -3,7 +3,7 @@ from __future__ import annotations
 from .locale import ko
 from .onto.atoms import PLAYER
 from .onto.view import Obs
-from .rules.acts import Action, make
+from .rules.acts import Action, make, parse
 from .rules.candidates import admits, avoided, space
 from .rules.roll import gain, preview
 from .view import action_label, chips, effect_names, rely_label, tag_name
@@ -110,6 +110,13 @@ def confirm_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[st
     return {"id": card_id, "kind": "confirm", "options": [x["id"] for x in options], "rest": rest, "public": public}
 
 
+def _action(x: str) -> Action | None:
+    try:
+        return parse(x)
+    except ValueError:
+        return None
+
+
 def ways(u, o: Obs) -> list[str]:
     return [slot.intent[0] for slot in space(u, o) if slot.schema == "go"]
 
@@ -155,8 +162,17 @@ def move_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[str],
             "public": public}
 
 
-def clarify_card(rest: list, rest_labels: list[str], echo: dict, card_id: str, ask: dict) -> dict:
-    options = [{"id": w["id"], "label": w["label"]} for w in ask["options"]]
+def clarify_card(u, o: Obs, rest: list, rest_labels: list[str], echo: dict, card_id: str, ask: dict) -> dict:
+    """An option that is a roll on an obstacle carries its target number and risk: the two ways round the dog were
+    labels without odds, so the fast dangerous way and the slow safe one were never compared."""
+    options = []
+    for w in ask["options"]:
+        opt = {"id": w["id"], "label": w["label"]}
+        a = _action(w["id"])
+        if a is not None and a.schema == "try" and a.intent[0] in u.obstacles:
+            pv = preview(u, o, a)
+            opt |= {"dc": pv.dc, "risk": pv.risk}
+        options.append(opt)
     public = {"id": card_id, "kind": "clarify", "echo": echo, "question": ask["question"],
               "plan": {"step": None, "rest": rest_labels}, "options": options, "selected": None}
     return {"id": card_id, "kind": "clarify", "options": [w["id"] for w in options], "resume": ask["resume"],

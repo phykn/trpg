@@ -219,6 +219,40 @@ test('a new chapter shows its title once commands open, and a tap ends it', asyn
   expect(card()).toHaveLength(0);
 });
 
+test('before the first turn the recommended actions sit under the premise, and a tap puts one in the input', async () => {
+  const buttons = [{ action: 'go:yard', label: '등대 앞으로 간다', rolls: false }];
+  (getGame as jest.Mock).mockResolvedValue({ ...base, buttons });
+  await flush(async () => { tree = renderer.create(<Screen />); });
+  expect(chat()).toContain('등대가 꺼졌습니다.|등대 앞으로 간다');
+  await flush(async () => { (pressable('등대 앞으로 간다').props.onPress as () => void)(); });
+  expect(input().props.value).toBe('등대 앞으로 간다');
+  await flush(async () => { tree!.unmount(); });
+  (getGame as jest.Mock).mockResolvedValue({ ...told, buttons });
+  await flush(async () => { tree = renderer.create(<Screen />); });
+  expect(chat()).not.toContain('등대 앞으로 간다');                     // turn 1 only
+});
+
+test('a new chapter that brings growth shows its title first, and the growth card after it', async () => {
+  const card = () => tree!.root.findAll((n: Node) => n.props.accessibilityLabel === ko.skip && typeof n.props.onPress === 'function');
+  const chapter: StepRecord = { ...walk, changes: [{ kind: 'chapter', from: 1, to: 2 }] };
+  const growth = [{ action: 'grow:force', label: '완력 +1', kind: 'approach' as const, name: '완력' }];
+  const view: GameView = { ...base, revision: 2, chapter: { k: 2, title: 'C2', aim: 'B' }, growth,
+    last: { turn: 2, steps: [chapter], narrated: false } };
+  (getGame as jest.Mock).mockResolvedValue(told);
+  (sendCommand as jest.Mock).mockResolvedValue({ kind: 'turn', turn: 2, steps: [chapter], reason: null, view } as CommandResult);
+  const tick = 1000 / motion.typeRate;
+  await flush(async () => { tree = renderer.create(<Screen />); });
+  await flush(async () => { jest.advanceTimersByTime(tick * (TEXT.length + 2)); });
+  await say('둘러본다');
+  await flush(async () => { game.skip(); });
+  await flush(async () => { jest.advanceTimersByTime(tick * (TEXT.length + 2) * 3); });
+  expect(game.phase).toBe('card');
+  expect(card()).toHaveLength(1);
+  expect(screenText()).not.toContain(ko.growth);
+  await flush(async () => { (card()[0].props.onPress as () => void)(); });
+  expect(screenText()).toContain(ko.growth);
+});
+
 test('the scrim behind a roll card is no disabled control, so the card does not read as disabled', async () => {
   (getGame as jest.Mock).mockResolvedValue({ ...base, card: door });
   await flush(async () => { tree = renderer.create(<Screen />); });
