@@ -36,7 +36,7 @@ places:
     name: 역참 마당
     aliases: [역참, 마당]
     senses: [타닥거리는 화톳불, 처마 끝에 매달린 고드름, 무릎까지 쌓인 눈]
-    exits: [stable, inn]
+    exits: [stable, inn, hill]
   stable:
     name: 마구간
     aliases: [외양간]
@@ -68,7 +68,7 @@ places:
     name: 서낭당
     aliases: [서낭당 고개, 돌무더기]
     senses: [오색 천이 얼어붙은 나뭇가지, 쌓아 올린 돌무더기, 처마 밑의 마른 짚]
-    exits: [hill]
+    exits: [gate]
     rest: true
   gate:
     name: 관문
@@ -254,6 +254,7 @@ obstacles:
     boxes: 3
     risk: normal
     fits: [force]
+    blocks: [hill]
     solutions:
       s_shovel: {label: 넉가래로 눈을 퍼낸다, approach: force, rely: shovel}
       s_salt: {label: 소금을 뿌려 언 눈을 녹인다, approach: wits, rely: salt}
@@ -307,6 +308,7 @@ obstacles:
     boxes: 3
     risk: normal
     fits: [wits]
+    blocks: [gate]
     solutions:
       s_grit: {label: 소금을 뿌려 얼음을 거칠게 만든다, approach: wits, rely: salt}
       s_ledge: {label: 위쪽 바위턱을 디디며 건넌다, approach: finesse, rely: t_ledge}
@@ -444,10 +446,6 @@ triggers:
     when: {fill: [horse, "=", full]}
     effects:
       - {set: [fill, drift, "+1"]}
-  tr_drift_open:
-    when: {fill: [drift, "=", full]}
-    effects:
-      - {link: [station, hill]}
   # 장작을 받은 달래가 아궁이에 불을 지피면 주막이 쉼터가 됩니다.
   tr_fire:
     when: {at: [kindling, dallae]}
@@ -477,10 +475,6 @@ triggers:
     when: {fill: [wolves, "=", full]}
     effects:
       - {reveal: [player, b_mother]}
-  tr_gorge_crossed:
-    when: {fill: [gorge, "=", full]}
-    effects:
-      - {link: [shrine, gate]}
   tr_whiteout:
     when: {flag: [snow, 2]}
     effects:

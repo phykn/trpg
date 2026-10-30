@@ -44,6 +44,7 @@ BROKEN = [
     ("V3", lambda r: r["characters"]["yunseul"].__setitem__("avoids", ["lamp_room"])),   # a trigger brings her there
     ("V3", lambda r: r["characters"]["dohae"].__setitem__("avoids", ["village"])),        # he starts there
     ("V3", lambda r: r["obstacles"]["door"].__setitem__("at", "village")),
+    ("V3", lambda r: r["places"]["yard"].__setitem__("exits", ["village", "dock"])),   # the goal off the map
     ("V4", lambda r: r.__setitem__("style", r["style"] + "- 누렁이가 짖습니다.\n")),
     ("V4", lambda r: r["obstacles"]["bridge"].__setitem__("aliases", ["문"])),
     ("V4", lambda r: r["flags"].__setitem__("gale", {0: "", 1: "누렁이가 짖습니다."})),

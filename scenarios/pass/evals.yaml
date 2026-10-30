@@ -10,6 +10,8 @@
 - {at: {path: 4, step: 0}, text: 고갯길 어귀를 자세히 살펴본다, expect: look:drift}
 - {at: {path: 4, step: 0}, text: 약 꾸러미가 무사한지 확인한다, expect: look:medicine}
 - {at: {path: 4, step: 0}, text: 휴대전화로 구조대를 부른다, expect: refused}
+- {at: {path: 4, step: 0}, text: 눈에 묻힌 고갯길 어귀를 넘는다, expect: clarify}
+- {at: {path: 4, step: 0}, text: 이제 출발한다, expect: clarify}
 
 # 주막: 달래
 - {at: {path: 4, step: 1}, text: 주모에게 관문 쪽문에 대해 묻는다, expect: talk:dallae:t_side}
@@ -34,6 +36,6 @@
 
 # 고갯길: 눈밭
 - {at: {path: 4, step: 12}, text: 설피를 신고 눈밭을 걷는다, expect: "try:snowfield:finesse;rely=thing:snowshoes",
-   known: '1층이 "걷는다"를 이동으로 읽어 갈 곳이 없어 거절됩니다'}
+   known: '1층이 "걷는다"를 이동으로 읽어 눈밭을 어떻게 할지 카드로 묻습니다'}
 - {at: {path: 4, step: 12}, text: 서낭당으로 올라간다, expect: go:shrine}
 - {at: {path: 4, step: 12}, text: 방울에게 설피를 돌려준다, expect: give:snowshoes:bangul}

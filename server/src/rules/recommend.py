@@ -15,7 +15,21 @@ def recommend(u, o: Obs) -> list[Action]:
     return picks
 
 
-def _obstacles_here(u, o: Obs) -> list[str]:
+def ways(u, o: Obs) -> list[Action]:
+    """The next things to try, at most three: the recommendations, the other ways over the obstacles here, then the
+    ways out."""
+    f, here = o.facts, o.facts.where(PLAYER)
+    picks = recommend(u, o)
+    more = [solution_action(x, sol) for x in obstacles_here(u, o) for sol in u.obstacles[x].solutions
+            if solution_holds(u, o, x, sol)]
+    more += [make("go", (q,)) for q in sorted(o.seen, key=u.rank) if u.kind(q) == "place" and f.has("link", here, q)]
+    for a in more:
+        if a not in picks and admits(u, o, a):
+            picks.append(a)
+    return picks[:3]
+
+
+def obstacles_here(u, o: Obs) -> list[str]:
     f = o.facts
     return [x for x in sorted(o.seen, key=u.rank)
             if x in u.obstacles and u.obstacles[x].sub == "plain" and (f.fill(x) or 0) < u.boxes(x)]
@@ -25,7 +39,7 @@ def _tag(u, o: Obs) -> Action | None:
     f = o.facts
     here = f.where(PLAYER)
     edges = [(x, i) for x in (PLAYER, here) for i, kind, _ in f.marks(x) if kind == "edge"]
-    targets = [x for x in _obstacles_here(u, o) if admits(u, o, make("try", (x, APPROACHES[0])))]
+    targets = [x for x in obstacles_here(u, o) if admits(u, o, make("try", (x, APPROACHES[0])))]
     if not edges or not targets:
         return None
     x = targets[0]
@@ -51,7 +65,7 @@ def _forward(u, o: Obs) -> Action | None:
         ob = u.obstacles[g]
         if ob.sub == "fork":
             return make("choose", (g, ob.choices[0][0]))
-    for x in _obstacles_here(u, o):
+    for x in obstacles_here(u, o):
         for sol in u.obstacles[x].solutions:
             a = solution_action(x, sol)
             if solution_holds(u, o, x, sol) and admits(u, o, a):

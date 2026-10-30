@@ -22,6 +22,7 @@ from .rules.candidates import (
     space,
     topic_of,
 )
+from .rules.recommend import obstacles_here, ways
 from .view import action_label, rely_label
 
 THETA = 0.5
@@ -91,6 +92,21 @@ def guarded(u, o, text: str, schema: str) -> tuple[str, str] | None:
         if here_people and len(held) == len(here_people) and not set(named(u, o, text)) & set(u.agents):
             return held[0][0], held[0][1][0]
     return None
+
+
+def blocked_exit(u, o) -> tuple[str, str] | None:
+    """(a way out of here, the visible obstacle blocking it)."""
+    f, here = o.facts, o.facts.where(PLAYER)
+    for q in sorted(o.seen, key=u.rank):
+        if u.kind(q) == "place" and f.has("link", here, q) and (by := [b for b in blockers(u, f, q) if b in o.seen]):
+            return q, by[0]
+    return None
+
+
+def stuck(p: dict) -> bool:
+    """The player's last sentence changed nothing: refused, or an idle muse."""
+    last = next((r for r in reversed(p["requests"]) if r["kind"] in ("text", "refused")), None)
+    return last is not None and (last["kind"] == "refused" or last.get("outcome") in ("idle", "refused"))
 
 
 def blocked_why(u, x: str, ob: str) -> str:
@@ -256,6 +272,15 @@ class Interpreter:
 
     async def plan(self, u, g, text: str) -> dict:
         self.calls = []
+        out = await self.layer1(u, g, text)
+        steps = out.get("plan")
+        # Asked "이제 뭐하지?" right after a refusal, three muses answered with scenery and the player gave up
+        # (qa_test/runs/play-10-human): stuck, the next things to try come as a card.
+        if steps and len(steps) == 1 and steps[0].get("idle") and stuck(g.presentation):
+            return {"plan": [{"ways": steps[0]["action"], "idle": True, "text": text}]}
+        return out
+
+    async def layer1(self, u, g, text: str) -> dict:
         o = observe(u, g.state, g.log)
         p = g.presentation
         out = rules(u, o, p, text)
@@ -323,6 +348,15 @@ class Interpreter:
         """Returning the step without "action" stops the plan; "already" skips it."""
         o = observe(u, g.state, g.log)
         p = g.presentation
+        if "ways" in st:
+            picks = ways(u, o)
+            if not picks:
+                return {"action": st["ways"], "idle": True}
+            return {"clarify": {"slot": "ways", "question": ko.WAYS,
+                                "options": [{"id": str(a), "label": solution_label(u, o, a) or action_label(u, o, p, a)}
+                                            for a in picks],
+                                # a way picked here is the move card's answer already; a roll still gets its card
+                                "resume": {str(a): {"action": str(a), "accepted": a.schema == "go"} for a in picks}}}
         text, fixed = st["text"], dict(st.get("fixed", {}))
         slots = [s for s in space(u, o) if s.schema == st["schema"]]
         if st["schema"] == "talk":
@@ -334,7 +368,10 @@ class Interpreter:
         names = named(u, o, text)
         if not slots or (why and not any(x in s.intent for s in slots for x in names if x != PLAYER)):
             g = guarded(u, o, text, st["schema"])
-            if g and why == blocked_why(u, *g) and (ask := self.detour(u, o, text, *g)):
+            if g and why == blocked_why(u, *g) and (
+                    ask := self.detour(u, o, text, g[1], ko.fill(ko.DETOUR, why=why))):
+                return {"clarify": ask}
+            if st["schema"] == "go" and not why and (ask := self.nowhere(u, o, text, names)):
                 return {"clarify": ask}
             return {"refused": why or lack(u, o, st["schema"])}
         if st["schema"] == "try":
@@ -342,7 +379,8 @@ class Interpreter:
         here = (o.facts.where(PLAYER),)
         already = {"already": ko.fill(ko.ALREADY_HERE, place=u.name(here[0]))}
         if st["schema"] == "go" and fixed.get("intent") == here[0]:
-            return already
+            # staying, picked on a card that asked where: the way round a block, as for a sentence going nowhere
+            return {"clarify": ask} if (ask := self.nowhere(u, o, text, names)) else already
         intents = self.narrow(u, o, text, [s.intent for s in slots], fixed)
         if not intents:
             return st
@@ -395,6 +433,8 @@ class Interpreter:
             # Walking about the place ("오두막 뒤쪽으로 돌아가 본다") was told only where the player already was
             # (play-3-explorer 9); the ways out answer what was asked.
             if here[0] not in names and slots:
+                if ask := self.nowhere(u, o, text, names):
+                    return {"clarify": ask}
                 return {"already": ko.fill(ko.NO_FARTHER, ways=", ".join(u.name(s.intent[0]) for s in slots))}
             return already
         slot = slot_of[intent]
@@ -513,8 +553,18 @@ class Interpreter:
     def done(self, u, o, p, a, text, echo) -> dict:
         return {"action": str(a), "rely": rely_hint(u, o, p, a, text), "slots": echo}
 
+    def nowhere(self, u, o, text: str, names: list[str]) -> dict | None:
+        """A go to no open way: told only the open ways, a player heading for the chapter's blocked way out gave up
+        (qa_test/runs/play-10-human). An obstacle the sentence names here comes first ("설피를 신고 눈밭을 걷는다"),
+        then the first blocked way out."""
+        if ob := next((x for x in names if x in obstacles_here(u, o)), None):
+            return self.detour(u, o, text, ob, ko.fill(ko.DETOUR_AT, ob=u.name(ob)))
+        if b := blocked_exit(u, o):
+            return self.detour(u, o, text, b[1], ko.fill(ko.DETOUR, why=blocked_why(u, *b)))
+        return None
+
     @staticmethod
-    def detour(u, o, text: str, x: str, ob: str) -> dict | None:
+    def detour(u, o, text: str, ob: str, question: str) -> dict | None:
         """The ways around what blocks the target, as a clarify card: the hint instead of a refusal (engine.md 4.1)."""
         sols = [s for s in u.obstacles[ob].solutions if solution_holds(u, o, ob, s)]
         if not sols:
@@ -522,7 +572,7 @@ class Interpreter:
         resume = {str(solution_action(ob, s)): {"schema": "try", "text": text, "rely": s.rely,
                                                 "fixed": {"target": ob, "approach": s.approach, "strain": "natural"}}
                   for s in sols}
-        return {"slot": "detour", "question": ko.fill(ko.DETOUR, why=blocked_why(u, x, ob)),
+        return {"slot": "detour", "question": question,
                 "options": [{"id": str(solution_action(ob, s)), "label": s.label} for s in sols], "resume": resume}
 
     @staticmethod

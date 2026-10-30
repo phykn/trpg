@@ -467,6 +467,34 @@ async def test_a_blocked_way_offers_only_the_ways_around_that_hold(tmp_path):
         assert [o["label"] for o in card["options"]] == ["어깨로 문을 들이받는다"]
 
 
+async def test_a_sentence_going_nowhere_new_meets_the_blocked_way(tmp_path):
+    """Told only the open ways, a player heading for the chapter's blocked way out gave up (qa_test/runs/play-10-human)."""
+    decision = FakeDecision({"s1": {"go": 0.9}, "n": {"1": 0.9}})
+    # the narration model's pick of where: the yard itself, after the village and the dock
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("3"), moves=["go:yard"])
+    card = (await say(svc, gid, view, "이제 출발한다"))["view"]["card"]
+    assert card["question"] == "녹슨 등대 문이 등불실로 가는 길을 막고 있습니다. 어떻게 할까요?"
+    assert [o["label"] for o in card["options"]] == ["어깨로 문을 들이받는다"]
+
+
+async def test_a_stuck_player_is_offered_the_next_things_to_try(tmp_path):
+    """Asked "이제 뭐하지?" after a refusal, three muses answered with scenery (qa_test/runs/play-10-human)."""
+    decision = FakeDecision({"k": {"muse": 0.9}})
+    svc, gid, view = await game(tmp_path, decision, FakeLLM("1"))
+    out = await say(svc, gid, view, "음, 춥다")
+    assert out["kind"] == "turn" and out["view"]["card"] is None         # one muse is only a muse
+    out = await say(svc, gid, out["view"], "이제 뭐하지?", "t2")
+    card = out["view"]["card"]
+    assert card["kind"] == "clarify" and card["question"] == "무엇을 해 볼까요?" and not out["steps"]
+    assert 1 <= len(card["options"]) <= 3
+    assert svc.games[gid][1].presentation["requests"][-1]["outcome"] == "idle"
+    go = next(o for o in card["options"] if o["id"].startswith("go:"))
+    out = await svc.command(gid, {"request_id": "p", "revision": out["view"]["revision"], "card": card["id"],
+                                  "pick": go["id"]})
+    # the way picked on the card is taken, not asked again on a move card
+    assert out["kind"] == "turn" and out["steps"][0]["action"] == go["id"] and out["view"]["card"] is None
+
+
 async def test_giving_what_the_player_does_not_hold_says_so(tmp_path):
     svc, gid, _ = await game(tmp_path, FakeDecision(), moves=["give:letter:yunseul"])
     u, g = svc.games[gid]

@@ -121,6 +121,7 @@ def v3(u: Universe) -> None:
                 fail("V3", where, f"{leaf[0]} {list(leaf[1:3])} is not always visible to the player")
     _blocking(u)
     _avoided(u)
+    _goals_on_map(u)
 
 
 def _visible_conditions(u: Universe):
@@ -193,6 +194,24 @@ def _blocking(u: Universe) -> None:
             start = _start_place(u, x)
             if start is not None and start != o.at:
                 fail("V3", where, f"{x} starts at {start}, not with {o.id} at {o.at}")
+
+
+def _goals_on_map(u: Universe) -> None:
+    """Each chapter's goal place is reached over exits from where the chapter starts. Opened only by a link effect, it
+    is missing from the exits the player sees: told only the other ways, a player who wrote the chapter aim word for
+    word gave up (qa_test/runs/play-10-human)."""
+    start = u.start
+    for c in u.chapters:
+        goal = [leaf[2] for leaf in atoms_of(c.goal) if leaf[0] == "at" and leaf[1] == PLAYER] if c.goal else []
+        if not goal:
+            continue
+        seen, frontier = {start}, [start]
+        while frontier:
+            frontier = [q for p in frontier for q in u.places[p].exits if q not in seen and not seen.add(q)]
+        if goal[0] not in seen:
+            fail("V3", f"chapters[{c.k - 1}].goal", f"{goal[0]} is not reached over exits from {start}; "
+                 "block the way instead of linking it")
+        start = goal[0]
 
 
 def _avoided(u: Universe) -> None:
