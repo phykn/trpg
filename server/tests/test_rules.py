@@ -242,8 +242,8 @@ def test_an_open_promise_outlives_chapters_and_the_ending(u, play):
         play.do(aid, r)
     trust = play.s.regards("dohae", PLAYER, "trust")
     assert play.s.flag("chapter") == 2 and play.s.has("owes", PLAYER, "dohae", "promise")
-    play.do("choose:g_oil:all_in")
     play.do("try:lamp:wits", (6, 6, 0))
+    play.do("choose:g_oil:all_in")
     assert ended(play.s) and play.s.has("owes", PLAYER, "dohae", "promise")
     assert play.s.regards("dohae", PLAYER, "trust") == trust and not play.s.marks(PLAYER)
     assert ("owes", PLAYER, "dohae", "promise") in legacy(u, play.obs)
@@ -371,7 +371,7 @@ def test_chapter_change_opens_growth(u, creation):
         play.do(aid, r)
     s = play.s
     assert s.where("clock.2") == PLAYER and s.where("clock.1") is None and s.stat(PLAYER, "growth") == 1
-    assert s.where("g_oil") == PLAYER
+    assert s.where("g_oil") is None        # the fork waits for 윤슬 (story.md 3.8)
     grows = [format(a) for a in candidates(u, play.obs) if a.schema == "grow"]
     assert "grow:finesse" in grows and "grow:trait:sailor:islander" in grows
     play.do("grow:trait:sailor:islander")
@@ -527,7 +527,7 @@ def test_recommend_heads_for_the_ending_obstacle_in_a_chapter_with_no_goal(u, cr
     for st in path_steps(u, 0):
         aid, r = (st["do"], tuple(st["roll"])) if isinstance(st, dict) else (st, None)
         play.do(aid, r or (1, 1, 0))
-    for aid in ("choose:g_oil:all_in", "go:yard", "go:dock"):
+    for aid in ("go:yard", "go:dock"):
         play.do(aid, (1, 1, 0))
     assert u.chapter_of(2).goal is None
     assert [format(x) for x in recommend(u, play.obs)] == ["talk:yunseul:t_wall", "go:yard"]

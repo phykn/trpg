@@ -225,7 +225,7 @@ async def test_a_roll_card_from_a_sentence_keeps_the_sentence_for_the_narrator(t
 
 
 async def test_a_high_step_waits_for_a_confirm_card(tmp_path):
-    svc = service(tmp_path, {"올라가 고른다": ["go:lamp_room", "choose:g_oil:beacon"]})
+    svc = service(tmp_path, {"올라간다": ["go:lamp_room"], "올라가 고른다": ["go:lamp_room", "choose:g_oil:beacon"]})
     gid, view = await new(svc)
     for i, a in enumerate(["go:village", "go:yard"]):
         _, view = await press(svc, gid, view, a, f"r{i}")
@@ -236,17 +236,23 @@ async def test_a_high_step_waits_for_a_confirm_card(tmp_path):
         view = res["view"]
         if (ob := view["scene"]["obstacles"][0])["fill"] == ob["boxes"]:
             break
-    out = await leave(svc, gid, await cmd(svc, gid, view, "c1", text="올라가 고른다"), "c1.go")
+    out = await leave(svc, gid, await cmd(svc, gid, view, "c1", text="올라간다"), "c1.go")
     assert [s["action"] for s in out["steps"]] == ["go:lamp_room"]
     assert any(c["kind"] == "chapter" for c in out["steps"][0]["changes"])
-    card = out["view"]["card"]
-    assert card["kind"] == "confirm" and card["options"][0]["id"] == "choose:g_oil:beacon"
     assert out["view"]["chapter"]["k"] == 2 and out["view"]["growth"]
     growth = out["view"]["growth"]
     assert {g["kind"] for g in growth} == {"approach", "trait"}
     swap = next(g for g in growth if g["kind"] == "trait")
     assert swap["label"].endswith(swap["name"]) and "→" in swap["name"] and ":" not in swap["name"]
     assert swap["text"] and all(g["text"] == "" for g in growth if g["kind"] == "approach")
+    # The fork comes up with 윤슬 after the first try on the lamp (story.md 3.8).
+    out = await cmd(svc, gid, out["view"], "t9", action="try:lamp:wits")
+    view = (await cmd(svc, gid, out["view"], "p9", card=out["view"]["card"]["id"], pick="try:lamp:wits"))["view"]
+    _, view = await press(svc, gid, view, "go:yard", "r9")
+    out = await leave(svc, gid, await cmd(svc, gid, view, "c9", text="올라가 고른다"), "c9.go")
+    assert [s["action"] for s in out["steps"]] == ["go:lamp_room"]
+    card = out["view"]["card"]
+    assert card["kind"] == "confirm" and card["options"][0]["id"] == "choose:g_oil:beacon"
     done = await cmd(svc, gid, out["view"], "c2", card=card["id"], pick="choose:g_oil:beacon")
     assert done["steps"][0]["action"] == "choose:g_oil:beacon"
     assert done["view"]["journal"]["choices"][-1]["kind"] == "fork"
