@@ -48,7 +48,7 @@ async def cmd(svc, gid, view, rid, **body):
 
 
 async def leave(svc, gid, out, rid):
-    """A sentence that goes somewhere stops at the move card; take the way it chose."""
+    """A sentence that goes somewhere without naming the way alone stops at the move card; take the way it chose."""
     card = out["view"]["card"]
     assert card["kind"] == "move" and not out["steps"]
     return await cmd(svc, gid, out["view"], rid, card=card["id"], pick=card["selected"])
@@ -318,7 +318,7 @@ async def test_http_routes(client):
         assert r.status_code == 422
 
 
-async def test_a_sentence_move_waits_on_a_move_card_naming_who_comes(tmp_path):
+async def test_a_sentence_naming_its_way_alone_leaves_at_once_with_who_comes(tmp_path):
     plans = {"같이 가자": ["talk:yunseul:come"], "마을": ["go:village"]}
     svc = GameService(STORIES, tmp_path, FakeInterpreter(plans), seeds=lambda: 3)
     gid, view = await new(svc)
@@ -327,14 +327,25 @@ async def test_a_sentence_move_waits_on_a_move_card_naming_who_comes(tmp_path):
     out = await cmd(svc, gid, out["view"], "r2", card=card["id"], pick=card["selected"])
     assert out["steps"][0]["result"] == "success"     # seed 3 wins the charm roll
     assert [p["with"] for p in out["view"]["scene"]["people"]] == [True]
+    out = await cmd(svc, gid, out["view"], "r3", text="마을")     # an alias, and no other way
+    assert out["view"]["card"] is None and [s["action"] for s in out["steps"]] == ["go:village"]
+    assert [p["id"] for p in out["view"]["scene"]["people"] if p["with"]] == ["yunseul"]
+
+
+async def test_a_named_way_waits_on_a_move_card_when_a_companion_stays(tmp_path, monkeypatch):
+    u = STORIES["lighthouse"]
+    monkeypatch.setitem(u.agents, "yunseul", replace(u.agents["yunseul"], avoids=("village", "lamp_room")))
+    plans = {"같이 가자": ["talk:yunseul:come"], "마을": ["go:village"]}
+    svc = GameService(STORIES, tmp_path, FakeInterpreter(plans), seeds=lambda: 3)
+    gid, view = await new(svc)
+    out = await cmd(svc, gid, view, "r1", text="같이 가자")
+    card = out["view"]["card"]
+    out = await cmd(svc, gid, out["view"], "r2", card=card["id"], pick=card["selected"])
     out = await cmd(svc, gid, out["view"], "r3", text="마을")
     card = out["view"]["card"]
     assert card["kind"] == "move" and not out["steps"] and card["selected"] == "go:village"
-    # the sentence named the place alone (an alias here), so the card only confirms it
-    assert card["options"] == [{"id": "go:village", "label": "바닷가 마을", "effects": ["윤슬과 함께"]}]
-    out = await cmd(svc, gid, out["view"], "r4", card=card["id"], pick="go:village")
-    assert out["view"]["scene"]["place"]["id"] == "village"
-    assert [p["id"] for p in out["view"]["scene"]["people"] if p["with"]] == ["yunseul"]
+    stays = f"윤슬은 남음: {u.agents['yunseul'].fear}"
+    assert card["options"] == [{"id": "go:village", "label": "바닷가 마을", "effects": [stays]}]
 
 
 async def test_a_companion_who_stays_is_narrated_where_they_stayed(tmp_path, monkeypatch):
@@ -367,17 +378,18 @@ async def test_a_move_card_can_take_another_way_or_be_closed(tmp_path):
     assert [s["action"] for s in out["steps"]] == ["go:dock"]
 
 
-async def test_a_move_card_lists_the_ways_unless_the_sentence_names_one_alone(tmp_path):
+async def test_a_sentence_naming_its_way_alone_leaves_and_any_other_lists_the_ways(tmp_path):
     texts = ["등대앞으로 간다", "등대 마당 쪽", "선착장 말고 등대 앞으로", "저기로"]
     svc = service(tmp_path, {t: ["go:yard"] for t in texts})
-    gid, view = await new(svc)
-    _, view = await press(svc, gid, view, "go:village", "r0")
     shown = []
     for i, t in enumerate(texts):
+        gid, view = await new(svc, f"n{i}")
+        _, view = await press(svc, gid, view, "go:village", f"r{i}")
         out = await cmd(svc, gid, view, f"r{i}a", text=t)
-        shown.append([o["id"] for o in out["view"]["card"]["options"]])
-        view = (await cmd(svc, gid, out["view"], f"r{i}b", card=out["view"]["card"]["id"], cancel=True))["view"]
-    assert shown == [["go:yard"], ["go:yard"], ["go:yard", "go:dock"], ["go:yard", "go:dock"]]
+        card, steps = out["view"]["card"], [s["action"] for s in out["steps"]]
+        shown.append(("card", [o["id"] for o in card["options"]]) if card else ("left", steps))
+    assert shown == [("left", ["go:yard"]), ("left", ["go:yard"]),
+                     ("card", ["go:yard", "go:dock"]), ("card", ["go:yard", "go:dock"])]
 
 
 async def test_a_button_move_needs_no_card(svc):

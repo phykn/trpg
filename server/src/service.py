@@ -7,7 +7,15 @@ import re
 import secrets
 from pathlib import Path
 
-from .cards import clarify_card, confirm_card, move_card, rely_options, roll_card, ways
+from .cards import (
+    clarify_card,
+    confirm_card,
+    left_behind,
+    move_card,
+    rely_options,
+    roll_card,
+    ways,
+)
 from .interpret import names_way, unreachable
 from .jobs import recap_job, turn_job
 from .locale import ko
@@ -320,14 +328,16 @@ class GameService:
                     self._opened(p, origin)
                     unfinished = p["card"]["public"]["plan"]["step"]["label"]
                     break
-                # A sentence picks a way by meaning, so the player sees where and with whom before leaving (engine.md 4.4).
+                # A sentence picks a way by meaning, so the player sees where and with whom before leaving; one that
+                # names its way alone leaves at once unless someone stays behind (engine.md 4.4).
                 if a.schema == "go" and kind == "text":
-                    p["card_seq"] += 1
                     only = names_way(u, a.intent[0], ways(u, o), text)
-                    p["card"] = move_card(u, o, p, a, rest, labels, step_echo, f"c{p['card_seq']}", only)
-                    self._opened(p, origin)
-                    unfinished = p["card"]["public"]["plan"]["step"]["label"]
-                    break
+                    if not only or left_behind(u, o, a.intent[0]):
+                        p["card_seq"] += 1
+                        p["card"] = move_card(u, o, p, a, rest, labels, step_echo, f"c{p['card_seq']}", only)
+                        self._opened(p, origin)
+                        unfinished = p["card"]["public"]["plan"]["step"]["label"]
+                        break
             records.append(self._step(u, g, a))
             s = g.state
             if ended(s) or records[-1]["result"] in ("fail", "blocked"):

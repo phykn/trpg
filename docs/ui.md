@@ -253,7 +253,7 @@ Moving, looking around, picking up, handing over, small talk, free topics, choic
 
 ### 5.2 Clarify, confirm, move
 
-All three are a `Sheet` with no dice, and cancel is close (✕). `MoveCard` has a → head. With one option it asks "{place}으로 갈까요?" ("Go to {place}?") and has one "간다" ("Go") button. With more, under "어디로 갈까요?" ("Where to?"), it has one `Choice` row per exit; the place the sentence chose is the gold (`primary`) row at the top. Small text under a row says whether companions come along or stay ("윤슬과 함께", "with Yunseul"). One tap leaves. `ClarifyCard` shows options (at most three) as rows with a right arrow (`Choice`); `ConfirmCard` puts a bulleted list of the choice's effects under a ⚠ head and has one "고른다" ("Choose") button. Clarify does not repeat the sent sentence (it is already in the chat).
+All three are a `Sheet` with no dice, and cancel is close (✕). `MoveCard` has a → head. With one option (the sentence named the place and a companion stays behind, engine.md 4.4) it asks "{place}으로 갈까요?" ("Go to {place}?") and has one "간다" ("Go") button. With more, under "어디로 갈까요?" ("Where to?"), it has one `Choice` row per exit; the place the sentence chose is the gold (`primary`) row at the top. Small text under a row says whether companions come along or stay ("윤슬과 함께", "with Yunseul"). One tap leaves. `ClarifyCard` shows options (at most three) as rows with a right arrow (`Choice`); `ConfirmCard` puts a bulleted list of the choice's effects under a ⚠ head and has one "고른다" ("Choose") button. Clarify does not repeat the sent sentence (it is already in the chat).
 
 ### 5.3 Growth
 
@@ -311,7 +311,7 @@ With a server running both models, play through the following at 412×915, deskt
 | Chain | A roll card after the reveal and narration of unrolled steps |
 | Blocked | A hidden blocker revealed instead of dice (with a story that has a hidden obstacle) |
 | Crisis and arrival | A clock fills and empties, a threat arrives |
-| Clarify, confirm, move | A confirm card on a fork choice or a give by sentence, a move card at a place reached by sentence (companion note, choosing another place) |
+| Clarify, confirm, move | A confirm card on a fork choice or a give by sentence, a move card at a place a sentence reached without naming it alone (companion note, choosing another place), and none when it named it |
 | Growth, ending | Chapter-change recap, growth card, ending panel |
 | Recovery | Refresh during a roll, resend after a lost response, refresh during narration |
 

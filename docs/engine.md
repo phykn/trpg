@@ -243,11 +243,11 @@ A step that does not roll but has high risk, namely `choose`, and a `give` that 
 
 ### 4.4 Move
 
-A `go(q)` step chosen by a sentence (`origin` is the sentence) stops just before executing and puts up a move card. A sentence chooses its destination by meaning even when it does not name the place exactly (section 3), so the player sees where they are going and who comes along and leaves with one tap. A misread move never runs, and the moment of departure is marked. A move chosen by a button needs no card, since the button is the confirmation.
+A `go(q)` step chosen by a sentence (`origin` is the sentence) stops just before executing and puts up a move card. A sentence chooses its destination by meaning even when it does not name the place exactly (section 3), so the player sees where they are going and who comes along and leaves with one tap, and a misread move never runs. A sentence that names the chosen place (its name or an alias) and no other way leaves at once, as a button does, unless a companion avoids that place: the destination is not in doubt, and a card that only repeated it cost one more tap on every typed or chip-filled move (play-6-ui 7, 15; play-7-explorer 7, 21, 33; play-9-ui 3, 6, 12). A move chosen by a button needs no card, since the button is the confirmation.
 
 | Field | Content |
 |---|---|
-| `options` | `{id: action id, label: place name, effects: [for each companion "{name}과 함께" (with {name}), or for avoids "{name}은 남음: {fear}" ({name} stays, with the character's `fear` as the reason)]}`. When the sentence names the chosen place (its name or an alias) and no other way, only that place, so the card just confirms the move. Otherwise every current `go` candidate, the sentence's choice first, the rest in candidate order |
+| `options` | `{id: action id, label: place name, effects: [for each companion "{name}과 함께" (with {name}), or for avoids "{name}은 남음: {fear}" ({name} stays, with the character's `fear` as the reason)]}`. When the sentence names the chosen place alone, so the card is up only because someone stays, only that place. Otherwise every current `go` candidate, the sentence's choice first, the rest in candidate order |
 | `selected` | The `go(q)` the sentence chose |
 | `plan` | That step and the rest of the plan. Choosing another place goes there, and the rest of the plan fills its slots again from there |
 

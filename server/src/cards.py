@@ -95,6 +95,10 @@ def ways(u, o: Obs) -> list[str]:
     return [slot.intent[0] for slot in space(u, o) if slot.schema == "go"]
 
 
+def left_behind(u, o: Obs, q: str) -> bool:
+    return any(g == PLAYER and q in u.agents[h].avoids for h, g in o.facts.rows("follows"))
+
+
 def move_card(u, o: Obs, p: dict, a: Action, rest: list, rest_labels: list[str], echo: dict, card_id: str,
               only: bool = False) -> dict:
     """The sentence's way first, then the other ways unless the sentence named it alone; each says who comes along
