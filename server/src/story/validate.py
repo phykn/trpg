@@ -119,6 +119,7 @@ def v3(u: Universe) -> None:
             if not _visible_leaf(u, leaf, host):
                 fail("V3", where, f"{leaf[0]} {list(leaf[1:3])} is not always visible to the player")
     _blocking(u)
+    _avoided(u)
 
 
 def _visible_conditions(u: Universe):
@@ -186,6 +187,14 @@ def _blocking(u: Universe) -> None:
             start = _start_place(u, x)
             if start is not None and start != o.at:
                 fail("V3", where, f"{x} starts at {start}, not with {o.id} at {o.at}")
+
+
+def _avoided(u: Universe) -> None:
+    moved = {(e[1], e[2]) for e in _all_effects(u) if e[0] == "move"}
+    for a in u.agents.values():
+        for q in a.avoids:
+            if a.at == q or (a.id, q) in moved:
+                fail("V3", f"characters.{a.id}.avoids", f"the story puts {a.id} in {q}")
 
 
 def _start_place(u: Universe, x: str) -> str | None:

@@ -35,6 +35,8 @@ BROKEN = [
     ("V3", lambda r: r["obstacles"]["door"]["solutions"]["s_shoulder"].__setitem__(
         "when", {"believes": ["dohae", "b_no_keeper"]})),
     ("V3", lambda r: r["obstacles"]["hound"].__setitem__("at", "dock")),
+    ("V3", lambda r: r["characters"]["yunseul"].__setitem__("avoids", ["lamp_room"])),   # a trigger brings her there
+    ("V3", lambda r: r["characters"]["dohae"].__setitem__("avoids", ["village"])),        # he starts there
     ("V3", lambda r: r["obstacles"]["door"].__setitem__("at", "village")),
     ("V4", lambda r: r.__setitem__("style", r["style"] + "- 누렁이가 짖습니다.\n")),
     ("V4", lambda r: r["obstacles"]["bridge"].__setitem__("aliases", ["문"])),
