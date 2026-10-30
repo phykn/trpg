@@ -1,11 +1,3 @@
-"""Typed-line bench: lines as players type them, each run as one turn from its state, with what the narration wrote.
-
-  python typed.py NAME [--repeat 2] [--root DIR]
-
-The lines are the typed section of the story's evals (and EXTRA), so the reply is measured on what interpretation is
-gated on. Each line starts from its eval state in a fresh game; a card that opens is taken with its default, since this
-bench measures the reply, not the choice.
-"""
 import argparse
 import asyncio
 import json
@@ -105,7 +97,13 @@ async def narrated(svc, narrator, gid: str, turn: int) -> dict:
 
 
 async def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="""\
+Typed-line bench: lines as players type them, each run as one turn from its state, with what the narration wrote.
+
+The lines are the typed section of the story's evals (and EXTRA), so the reply is measured on what interpretation is
+gated on. Each line starts from its eval state in a fresh game; a card that opens is taken with its default, since this
+bench measures the reply, not the choice.
+""")
     ap.add_argument("name")
     ap.add_argument("--repeat", type=int, default=2)
     ap.add_argument("--root")

@@ -1,16 +1,3 @@
-"""Play one game turn by turn from the shell, through the same API and on the same screen as the web client.
-
-  python play.py new RUN [--seed N] [--approaches force=1,finesse=2,wits=1,charm=0] [--traits a,b] [--name 이름] [--story ID]
-  python play.py say RUN "문장"        # a sentence, as typed into the game
-  python play.py pick RUN N            # card option N (1 = first)
-  python play.py cancel RUN            # close the card
-  python play.py press RUN gN          # growth N
-  python play.py retry RUN             # resend a command that got no answer, or ask again for narration that failed
-  python play.py look RUN              # the screen again
-  python play.py report RUN            # fun.md metrics for this game
-
-Each run lives in qa_test/runs/RUN/: saves/ (the game), transcript.md (what the player saw), log.jsonl (responses).
-"""
 import argparse
 import asyncio
 import json
@@ -449,7 +436,20 @@ async def new(a):
 
 
 async def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="""\
+Play one game turn by turn from the shell, through the same API and on the same screen as the web client.
+
+  python play.py new RUN [--seed N] [--approaches force=1,finesse=2,wits=1,charm=0] [--traits a,b] [--name 이름] [--story ID]
+  python play.py say RUN "문장"        # a sentence, as typed into the game
+  python play.py pick RUN N            # card option N (1 = first)
+  python play.py cancel RUN            # close the card
+  python play.py press RUN gN          # growth N
+  python play.py retry RUN             # resend a command that got no answer, or ask again for narration that failed
+  python play.py look RUN              # the screen again
+  python play.py report RUN            # fun.md metrics for this game
+
+Each run lives in qa_test/runs/RUN/: saves/ (the game), transcript.md (what the player saw), log.jsonl (responses).
+""")
     sub = ap.add_subparsers(dest="cmd", required=True)
     n = sub.add_parser("new")
     n.add_argument("run")

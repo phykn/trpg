@@ -1,9 +1,4 @@
-"""Interpretation of sentences at chosen states, with every model question and answer.
-
-  python probe.py CASES.yaml [--story ID] [--root CHECKOUT]
-
-A case: {at: {path, step}, then: [action ids run after the path], text, expect}. Like story evals, without cards.
-"""
+import argparse
 import asyncio
 import json
 import sys
@@ -32,7 +27,16 @@ class Logged(Interpreter):
 
 
 async def main():
-    cases = yaml.safe_load(Path(sys.argv[1]).read_text())
+    ap = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="""\
+Interpretation of sentences at chosen states, with every model question and answer.
+
+A case: {at: {path, step}, then: [action ids run after the path], text, expect}. Like story evals, without cards.
+""")
+    ap.add_argument("cases", help="CASES.yaml")
+    # common.py reads these from argv; they are declared so argparse accepts them
+    ap.add_argument("--story")
+    ap.add_argument("--root", help="another checkout's server and stories")
+    cases = yaml.safe_load(Path(ap.parse_args().cases).read_text())
     u = common.story(load_all(common.checkout() / "scenarios"))
     it = Logged(*common.models())
     rows = []

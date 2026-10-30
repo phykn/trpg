@@ -1,15 +1,3 @@
-"""Layer 1 option wording against the engine's own, and the rule for a sure first step.
-
-  python variants.py record bench --run RUN    # the misread bench's items under each experiment (needs bench.py's RUN)
-  python variants.py record casual --run RUN   # casual/items.jsonl: the engine's wording and each experiment, and the
-                                               # talk/go intent of each item
-  python variants.py score --run RUN [-v EXPERIMENT [-cut]]
-
-v0 is the engine's ko.SCHEMA_ASK (on the bench, the misread bench's answers in the same RUN). An experiment replaces
-some options on purpose: v1 says talk covers asking someone to come along or to wait, v2 is v1 with cut said of the
-player's own waiting. casual/items.jsonl was written by a subagent from scene summaries alone, blind to the engine and
-to the misreads.
-"""
 import argparse
 import asyncio
 import importlib.util
@@ -173,7 +161,19 @@ def score(run: Path, verbose: str | None, cut: bool):
 
 
 def main():
-    ap = argparse.ArgumentParser(usage=__doc__)
+    ap = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="""\
+Layer 1 option wording against the engine's own, and the rule for a sure first step.
+
+  python variants.py record bench --run RUN    # the misread bench's items under each experiment (needs bench.py's RUN)
+  python variants.py record casual --run RUN   # casual/items.jsonl: the engine's wording and each experiment, and the
+                                               # talk/go intent of each item
+  python variants.py score --run RUN [-v EXPERIMENT [-cut]]
+
+v0 is the engine's ko.SCHEMA_ASK (on the bench, the misread bench's answers in the same RUN). An experiment replaces
+some options on purpose: v1 says talk covers asking someone to come along or to wait, v2 is v1 with cut said of the
+player's own waiting. casual/items.jsonl was written by a subagent from scene summaries alone, blind to the engine and
+to the misreads.
+""")
     ap.add_argument("cmd", choices=("record", "score"))
     ap.add_argument("which", nargs="?", choices=("bench", "casual"))
     ap.add_argument("--run", required=True)

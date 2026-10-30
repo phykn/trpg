@@ -1,11 +1,3 @@
-"""Loop bench: typed lines run one after another in one game, so each reply carries what the earlier turns left.
-
-  python loop.py NAME [--repeat 2] [--script recall] [--root DIR]
-
-typed.py starts every line in a fresh game and so cannot see what a cycle hands to the next one: a fact a quote made up,
-a worry told twice, a phrase that comes back. Lines that refer back ("아까 어디 있다고 했지?") ask for exactly that.
-Every card that opens is taken with its default, since this bench measures the replies, not the choices.
-"""
 import argparse
 import asyncio
 import json
@@ -80,7 +72,13 @@ async def turn(svc, narrator, gid: str, view: dict, k: int, text: str) -> tuple[
 
 
 async def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="""\
+Loop bench: typed lines run one after another in one game, so each reply carries what the earlier turns left.
+
+typed.py starts every line in a fresh game and so cannot see what a cycle hands to the next one: a fact a quote made up,
+a worry told twice, a phrase that comes back. Lines that refer back ("아까 어디 있다고 했지?") ask for exactly that.
+Every card that opens is taken with its default, since this bench measures the replies, not the choices.
+""")
     ap.add_argument("name")
     ap.add_argument("--repeat", type=int, default=2)
     ap.add_argument("--script", action="append", choices=list(SCRIPTS))

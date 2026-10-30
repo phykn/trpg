@@ -1,14 +1,3 @@
-"""Decision-model bench: the engine's closed questions over story-agnostic genre items.
-
-  python bench.py run MODEL --run RUN [--variants base,EXPERIMENT] [--url URL] [--only fantasy,...] [--prior]
-  python bench.py score --run RUN [--against OTHER_RUN] [--models a,b] [--by]
-  python bench.py validate [--only fantasy,...]
-  python bench.py parity
-
-`base` sends, for each item, what the engine would send (mirror.py builds it with interpret.py and locale/ko.py), and
-`run` first checks that against the engine itself on the story's eval states (parity.py). An experiment replaces
-locale strings on purpose and records only the requests that change. Recordings: qa_test/runs/RUN/results/MODEL/.
-"""
 import argparse
 import asyncio
 import json
@@ -341,7 +330,18 @@ def main():
     shared = argparse.ArgumentParser(add_help=False)
     shared.add_argument("--root", help="another checkout's server and stories")
     shared.add_argument("--story", help="the story whose eval states parity checks against")
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="""\
+Decision-model bench: the engine's closed questions over story-agnostic genre items.
+
+  python bench.py run MODEL --run RUN [--variants base,EXPERIMENT] [--url URL] [--only fantasy,...] [--prior]
+  python bench.py score --run RUN [--against OTHER_RUN] [--models a,b] [--by]
+  python bench.py validate [--only fantasy,...]
+  python bench.py parity
+
+`base` sends, for each item, what the engine would send (mirror.py builds it with interpret.py and locale/ko.py), and
+`run` first checks that against the engine itself on the story's eval states (parity.py). An experiment replaces
+locale strings on purpose and records only the requests that change. Recordings: qa_test/runs/RUN/results/MODEL/.
+""")
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run", parents=[shared])
     r.add_argument("model")

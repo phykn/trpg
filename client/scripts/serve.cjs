@@ -1,5 +1,3 @@
-// Opens the Mac API to the deployed Worker: API, quick tunnel, and the tunnel URL in KV.
-// Keeps both sides current: the client deploys at start, server/story edits restart the API, client edits redeploy the Worker.
 const { spawn, spawnSync } = require('node:child_process');
 const path = require('node:path');
 const { health } = require('./common.cjs');

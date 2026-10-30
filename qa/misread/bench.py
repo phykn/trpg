@@ -1,13 +1,3 @@
-"""Layer 1 and go as the engine asks them, on sentences whose answer the scene may not offer.
-
-  python bench.py record --run RUN                  # both models on every request; resumes RUN/answers.jsonl
-  python bench.py score --run RUN [--against RUN2]  # the engine's plan, and paired with another recording
-
-Items: decision-1's 216 bench sentences and 120 held-out ones, as they are ("normal"), and the same sentences with
-the asked thing made impossible ("cf"): layer 1 with the first step's schema removed from the scene, go with the
-player already standing at the destination. Nothing here is written for this test. The requests come from
-qa/decision/mirror.py, checked against the engine first (parity.py), and plans follow interpret.plan at STEP_THETA.
-"""
 import argparse
 import asyncio
 import json
@@ -212,7 +202,17 @@ def score(path: Path, against: Path | None, theta: float):
 
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="""\
+Layer 1 and go as the engine asks them, on sentences whose answer the scene may not offer.
+
+  python bench.py record --run RUN                  # both models on every request; resumes RUN/answers.jsonl
+  python bench.py score --run RUN [--against RUN2]  # the engine's plan, and paired with another recording
+
+Items: decision-1's 216 bench sentences and 120 held-out ones, as they are ("normal"), and the same sentences with
+the asked thing made impossible ("cf"): layer 1 with the first step's schema removed from the scene, go with the
+player already standing at the destination. Nothing here is written for this test. The requests come from
+qa/decision/mirror.py, checked against the engine first (parity.py), and plans follow interpret.plan at STEP_THETA.
+""")
     ap.add_argument("cmd", choices=("record", "score"))
     ap.add_argument("--run", required=True, help="recording name under qa_test/runs/")
     ap.add_argument("--against", help="another recording to pair with (misread-1 works)")

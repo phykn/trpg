@@ -1,10 +1,3 @@
-"""Narration bench: a fixed script played with the real models, every narration and its checks recorded.
-
-  python run.py NAME [--games 3] [--seed S] [--root DIR]
-
-Each line runs exactly one turn with exactly the scripted action, or the bench stops with the turn named: a script that
-drifts no longer measures the turns it was written for.
-"""
 import argparse
 import asyncio
 import json
@@ -186,7 +179,12 @@ def commit() -> str:
 
 
 async def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="""\
+Narration bench: a fixed script played with the real models, every narration and its checks recorded.
+
+Each line runs exactly one turn with exactly the scripted action, or the bench stops with the turn named: a script that
+drifts no longer measures the turns it was written for.
+""")
     ap.add_argument("name")
     ap.add_argument("--games", type=int, default=3)
     ap.add_argument("--seed", type=int, help="narration seed of game 0 (default: random); game g uses SEED + g")
