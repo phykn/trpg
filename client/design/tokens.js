@@ -1,26 +1,26 @@
 const colors = {
   canvas: {
-    default: '#0b1418',
-    subtle: '#111f25',
-    inset: '#0d191e',
-    floating: '#17272d',
+    default: '#efede6',
+    subtle: '#e5e2d8',
+    inset: '#2b241d',
+    floating: '#f8f7f2',
   },
   fg: {
-    default: '#eee9dc',
-    muted: '#b0bcbf',
-    subtle: '#84989e',
-    'on-emphasis': '#132024',
+    default: '#1f2328',
+    muted: '#474d55',
+    subtle: '#5c6269',
+    'on-emphasis': '#fbfaf6',
   },
-  border: { default: '#2a3c43', strong: '#506369' },
-  danger: { fg: '#f19a8d' },
-  health: { fg: '#9fd69a' },
-  gold: { fg: '#e5bd76', muted: '#302d24' },
+  border: { default: '#d3cfc4', strong: '#8f8a7e' },
+  danger: { fg: '#b3261e' },
+  health: { fg: '#256b2c' },
+  gold: { fg: '#8a5300', muted: '#eadcbf' },
   // Every meaning below owns its hue (ui.md 2.1): kinds, modifiers and health never borrow gold or danger.
-  chip: { stat: '#aaacf2', help: '#bfd884', hinder: '#eb9ccd' },
-  kind: { person: '#80c1e8', thing: '#86d0c4', obstacle: '#d2a9ec' },
+  chip: { stat: '#4a3fc0', help: '#4d6800', hinder: '#a8226f' },
+  kind: { person: '#1a669c', thing: '#0b7166', obstacle: '#87309f' },
   // Full boxes say whose side the fill is on: gold is the player's progress, red is trouble.
-  box: { empty: '#2a3c43', full: '#e5bd76', danger: '#b8574b' },
-  overlay: 'rgba(3,9,12,0.82)',
+  box: { empty: '#b9b4a6', full: '#8a5300', danger: '#b3261e' },
+  overlay: 'rgba(31,35,40,0.5)',
 };
 const spacing = {
   0: 0, 0.5: 2, 1: 4, 1.5: 6, 2: 8, 2.5: 10, 3: 12,
@@ -32,6 +32,7 @@ const fontFamily = {
   sans: ['NanumGothic_400Regular'],
   'sans-semibold': ['NanumGothic_700Bold'],
   serif: ['NanumMyeongjo_800ExtraBold'],
+  'serif-body': ['NanumMyeongjo_400Regular'],
   'mono-medium': ['GeistMono_500Medium'],
 };
 const fontSize = {

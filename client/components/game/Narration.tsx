@@ -69,7 +69,7 @@ function Line({ entry }: { entry: Entry }) {
     );
   }
   if (entry.kind === 'roll') return <Rise><RollLine roll={entry} /></Rise>;
-  return <Rise><Text className="font-sans text-fg-default" style={STORY}>{entry.text}</Text></Rise>;
+  return <Rise><Text className="font-serif-body text-fg-default" style={STORY}>{entry.text}</Text></Rise>;
 }
 
 // Older lines fade into the rows above instead of being cut by a hard edge.
@@ -129,7 +129,7 @@ export function Chat({ entries, live, roll, waiting, narration, hold, failed, on
         {live && roll && !hold ? <Rise><RollLine roll={roll} /></Rise> : null}
         {live && full && !hold ? (
           <Pressable accessibilityRole="text" accessibilityHint={ko.skip} onPress={() => setTyped((x) => ({ ...x, shown: full.length }))}>
-            <Text className="font-sans text-fg-default" style={STORY}>{full.slice(0, shown)}</Text>
+            <Text className="font-serif-body text-fg-default" style={STORY}>{full.slice(0, shown)}</Text>
           </Pressable>
         ) : null}
         {waiting && !failed && !typing && (hold || !full) ? <Typing /> : null}

@@ -35,6 +35,7 @@ client/
 | The UI does not know the rules | Target number, total, result, decisive modifiers, costs and candidates come from the server. The UI draws the values it receives and computes only motion |
 | The server's response is the state | The response's `view` is adopted as is. The only optimistic motion is the dice tumble (4.4), and it decides no value |
 | No illustrations | Dice, boxes and rings are UI elements drawn with shapes and text |
+| A session on paper | The play screen is a character sheet on a table: paper ground and ink, the game master's narration in print (serif) and the player's own lines in plain type, black dice with white pips, boxes like a sheet's checkboxes. On desktop the sheet lies on a dark table. Ornament carries information only (stats, risk, clocks, roll results); nothing is drawn for mood alone. The dark screen read as an app rather than a table game (2026-10-30 goal) |
 | Server sentences verbatim | Korean composed by the server is never edited or truncated. Client sentences live in `locale/ko.ts` |
 | Icons and nudges over text | Things read through icons, color, boxes and dots instead of explanatory copy and labels. What you can do is not taught in sentences; it shows as names that start a sentence when tapped |
 | One set of parts | Buttons, icon buttons, bottom sheets and rows each come from one component in `components/ui` and `Row.tsx`, with the same shape (corner radius, height, pressed state) |
@@ -70,19 +71,19 @@ Height is fixed to the visible window height, and regions stack from top to bott
 - **Box color says whose side it is on.** Obstacle boxes are gold (something I am achieving); boxes and names in the danger row are all red (something bad approaching, whether risk clock, deadline or threat). An obstacle with only one box draws no boxes (one success opens it). An overcome obstacle stays in the scene, shown with ✓ and dimmed, and cannot be tapped. Beats have no row of their own, since two layers of time would not read. Instead, the next empty box of each deadline, threat and fork fills from the bottom by `beats / beats_max` (half opacity), so every step visibly spends time; risk clocks show none. Without it, testers lost a chapter to time they could not see (qa_test/runs/play-1-explorer 28, play-1-talker 23). A blocked exit shows a lock icon and dimming instead of an arrow.
 - **The input bar is plain.** Actions are always typed; the UI does not use the server's `view.buttons`. The empty input bar shows no placeholder. A prompt naming the scene's first target ("녹슨 등대 문을 어떻게 할까요?") taught a scripted "{target}을 …한다" form, and players wrote stage directions instead of what they would say or do (qa_test/runs/play-5-talker 1, 3); the player writes in any form, and interpretation takes it as it comes.
 - **Narration stacks like a chat.** The first line is `story.premise`; sent sentences are right-hand bubbles and narration is left-hand text, running top to bottom. Each rolled step puts a roll line directly above its narration: small dice pips, the approach, the result word (success in gold, failure in the danger color), a dimmed total and the target number in a small ring ("⚂⚅ 완력 성공 10 ⑧", "force success 10 ⑧"). The ring has the same shape as the roll card's target ring, so it does not read as a fraction. New items float up from 8px below (220ms); when new text arrives the log follows to the bottom, and scrolling up shows past history. The top edge of the chat log is not cut off but fades into the background over 20px. While waiting, three dots light up and dim in turn, with no text. Korean lines break only between words across the whole app (`word-break: keep-all` in `global.css`).
-- **One color, one meaning.** The nine meanings below have hues that do not overlap (even the closest two are more than 30° apart on the color wheel), so they can be told apart by color alone without looking at shape. All have a contrast ratio of at least 8:1 on the background (`canvas.default`).
+- **One color, one meaning.** The nine meanings below have hues that do not overlap (even the closest two are more than 30° apart on the color wheel), so they can be told apart by color alone without looking at shape. All are inks with a contrast ratio of at least 4.5:1 on the paper (`canvas.default`) and on cards (`canvas.subtle`).
 
   | Meaning | Token | Color |
   |---|---|---|
-  | Things being achieved (obstacle boxes, success, good tags, chapter number) | `gold` | gold `#e5bd76` |
-  | Bad things approaching (danger row, failure, bad tags, high risk) | `danger` | red `#f19a8d` |
-  | Health (♡ and dots) | `health` | green `#9fd69a` |
-  | People | `kind.person` | sky `#80c1e8` |
-  | Things (in the scene and carried) | `kind.thing` | teal `#86d0c4` |
-  | Obstacles | `kind.obstacle` | purple `#d2a9ec` |
-  | Stat modifier (and stat values in the hero panel) | `chip.stat` | indigo `#aaacf2` |
-  | Help modifier (and the roll card's radios) | `chip.help` | lime `#bfd884` |
-  | Hinder modifier | `chip.hinder` | pink `#eb9ccd` |
+  | Things being achieved (obstacle boxes, success, good tags, chapter number) | `gold` | amber `#8a5300` |
+  | Bad things approaching (danger row, failure, bad tags, high risk) | `danger` | red `#b3261e` |
+  | Health (♡ and dots) | `health` | green `#256b2c` |
+  | People | `kind.person` | blue `#1a669c` |
+  | Things (in the scene and carried) | `kind.thing` | teal `#0b7166` |
+  | Obstacles | `kind.obstacle` | purple `#87309f` |
+  | Stat modifier (and stat values in the hero panel) | `chip.stat` | indigo `#4a3fc0` |
+  | Help modifier (and the roll card's radios) | `chip.help` | olive `#4d6800` |
+  | Hinder modifier | `chip.hinder` | magenta `#a8226f` |
 
 - **Kinds are told apart by color** (the table above). Pills show only names, not attitudes; a person traveling with you (`with`) gets a person icon before the pill.
 - **Always visible versus opened.** What changes every turn or feeds straight into the next sentence (aim, health, danger, scene) is always visible. Health is drawn as dots, not boxes, so it is not confused with danger-clock boxes. Tapping the hero icon (one button with ♡ and the health dots) drops a panel down below the header (covering the rows below rather than pushing them). In order of how often they are used, it holds icon rows for name, health (dots only on the ♡ row), state (tags; no row if none), abilities (⚡), traits (☆), carried items, and journal (promises and beliefs). The panel opens only in `idle`, closes with Escape or a tap outside, and closes when the menu opens. When growth is available, the icon gets a gold dot and the right end of the panel's name row has a gold growth pill (✲ 1).
@@ -90,7 +91,7 @@ Height is fixed to the visible window height, and regions stack from top to bott
 - **Journal** (the last row of the hero panel) shows the parts of `journal` that matter now: every unkept promise and debt, plus beliefs about entities in the current scene. Fork choices are gathered on the ending panel (5.4).
 - **Cards** (clarify, confirm, growth) are a `Sheet`: they rise floating up 24px from the bottom, cover only as much as their content needs, and have an icon and title in the head with close (✕) on the right. The aim and scene above stay visible. Only the roll card is a panel covering the whole play screen (4.2). Inside a card the same principle holds: everything is visible at once.
 - **The menu** opens from the icon (≡) at the right of the header. It can be tapped only while commands are open (`idle`, `card`), and a small dropdown comes down below the icon, leaving the rest of the screen visible. Its only item is to-title, and it closes with Escape or a tap outside. Opened over a card, Escape closes only the menu. Going to the title keeps `trpg.game_id` and the received `view`, so resume on the title returns to the same game's destination. Nothing is sent to the server.
-- On desktop, the same width frame (412px) is centered.
+- On desktop, the same width frame (412px) is centered: the sheet on a dark table (`canvas.inset`).
 
 ### 2.2 Size budget
 
@@ -196,7 +197,7 @@ The roll card draws the same modifier row on the card and in the reveal. A modif
 
 ### 4.4 Dice
 
-- `Dice.tsx` is two dice drawn as rounded squares with pips. `react-native-reanimated` animates tilt, spin and bounce.
+- `Dice.tsx` is two black dice (`fg.default`) drawn as rounded squares with paper-white pips. `react-native-reanimated` animates tilt, spin and bounce.
 - **Waiting**: while a roll is possible, the dice are blank faces with no pips and a gold outline, slowly swelling and shrinking like breath (1.05×, 900ms). Pips would read as a result already rolled, so the faces stay blank. Under them one gold word, "굴리기" ("roll"), names what a tap does, and it goes once they roll. Blank breathing dice alone did not say press: a first-time player took them for decoration and found the roll by trying (play-6-ui 9).
 - **Hold**: while held, they shake slightly, and the longer the hold the bigger the shake (capped at 1.5 seconds). Where supported, a short vibration (`navigator.vibrate(10)`). A short tap also rolls.
 - **Release**: sends the roll request `{card, pick}`, and the dice spin (one turn per 420ms) with faces changing randomly every 70ms. This is the only optimistic motion and it decides no value. After the roll, the card's decision area locks.
@@ -244,6 +245,7 @@ Moving, looking around, picking up, handing over, small talk, free topics, choic
 
 ### 5.1 Narration
 
+- Narration is the game master's voice, set in print: the regular-weight serif (`font-serif-body`). The player's sentences stay in the plain sans in their bubble, so who speaks reads at a glance.
 - The narration request starts as soon as the command's response arrives, and holds the received text until the reveal ends. The model writes while the reveal plays.
 - Until text arrives, only three dots show at the end of the chat. The stream's `stage` and `attempt` are not used.
 - When `text` arrives, characters appear in turn (60 per second; a tap shows it all at once). When all the text is shown and `done` has arrived, `narrating` ends.

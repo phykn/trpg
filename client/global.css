@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: dark; }
+:root { color-scheme: light; }
 html, body, #root { height: 100%; overflow: hidden; overscroll-behavior: none; }
 /* Korean lines break between words, never inside one. */
 body { background: theme('colors.canvas.inset'); word-break: keep-all; overflow-wrap: break-word; }
