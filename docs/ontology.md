@@ -1,297 +1,314 @@
-# Ontology
+# 세계
 
-The world is a finite set of atoms. Only the rules `R` change it, and the player and the models receive only the observation `V`. This document defines the world, its invariants, vocabulary, observation and change operations, their implementation in `server/src/onto/`, and the save format. Actions and rolls are in [rule.md](rule.md), the story format in [story.md](story.md), and the models and protocol in [engine.md](engine.md).
+세계가 무엇으로 이루어지는지, 플레이어에게 무엇이 보이는지, 무엇이 기록되고 저장되는지 정한다. 행동과 주사위는 [rule.md](rule.md), 이야기 형식은 [story.md](story.md), 모델과 턴 진행은 [engine.md](engine.md)에 있다.
 
-```
-server/src/onto/
-  atoms.py    atoms, state State
-  change.py   change Delta, effect operations, working copy Work
-  universe.py universe Universe, initial state S₀, conformance check conforms
-  cond.py     condition evaluation holds — shared by the world (S, h) and the observation (F, hᵥ)
-  view.py     observation observe: E, F, B, M, hᵥ
-  log.py      event Event, log L, patterns, history summary h
-  save.py     snapshot writing, rebuilding from the log
-```
+## 한눈에
 
-This package knows neither the models nor the rules, though the predicates the rules need (`owes`, `spent`, `follows`) and their operations live here.
+1. 세계는 **사실의 목록**이다. 목록에 있으면 참이고, 없으면 거짓이다.
+2. 세계를 바꾸는 것은 규칙뿐이다. 모델의 말, 서술, 화면은 세계를 바꾸지 못한다.
+3. 플레이어와 모델은 세계 전체가 아니라 **지금 보이는 사실**만 받는다.
+4. 바뀐 것은 턴마다 **기록**에 쌓인다. 저장 파일에는 기록만 들어가고, 세계는 기록에서 다시 만든다.
 
-## 1. World
+> 부두 장면을 사실 셋으로 적으면 이렇다.
+> `at(player, dock)` 플레이어는 부두에 있다.
+> `at(key, dohae)` 열쇠는 도해가 갖고 있다.
+> `fill(door, 0)` 문은 아직 넘지 못했다.
 
-### 1.1 Atoms and state
+## 1. 사실
 
-- Entity kinds `𝒯 = {agent, place, thing, obstacle, prop}`. The story fixes the finite set of entities `U`, and it does not change during play.
-- Every value kind in `𝒱` is finite (1.3). The value kind sets the range of each number.
-- Each predicate in `Σ` (1.2) has a kind for each position, and `Atom` is the set of all ground atoms whose positions match their kinds. It is finite.
-- **State** `S ⊆ Atom`. An atom in `S` is true; one not in `S` is false (closed world).
-- **Change** `Δ = (Δ⁺, Δ⁻)`, `Δ⁺ ∩ Δ⁻ = ∅`. `S ⊕ Δ = (S ∖ Δ⁻) ∪ Δ⁺`.
+### 1.1 대상
 
-In code an atom is a tuple with the predicate name first; in JSON it is an array.
+사실은 대상에 대해 말한다. 대상은 다섯 종류다.
 
-```python
-Atom = tuple[str, ...]          # ("at", "key", "dohae"), ("fill", "door", 2)
-```
-
-`State` keeps one index per predicate, and `atoms()` returns the atom set. The two representations correspond one to one, and the indexes enforce most of conformance (1.4) by their structure.
-
-| Predicate | Index | Enforced by structure |
+| 종류 | 코드 | 예 |
 |---|---|---|
-| `at` | `dict[x, y]` | C1 |
-| `link`, `believes`, `owes`, `follows`, `due`, `spent` | `set[tuple]` | |
-| `mark` | `dict[(x, slot), (kind, life)]` | C2 |
-| `regards` | `dict[(g, h, axis), n]` | C2 |
-| `fill` | `dict[o, n]` | C2 |
-| `stat` | `dict[(g, s), n]` | C2 |
-| `flag` | `dict[f, v]` | C2 |
+| 사람 | `agent` | 플레이어, 등장인물 |
+| 장소 | `place` | 부두, 마을 |
+| 물건 | `thing` | 열쇠 |
+| 장애물 | `obstacle` | 문, 위험 시계, 위협, 갈림길, 기한 |
+| 이야기 사실 | `prop` | 사람이 알 수 있는 문장 하나 |
 
-`State` is an immutable value. `apply(S, Δ) = (S ∖ Δ⁻) ∪ Δ⁺` returns a new state, and a step is computed on a copy-on-write working copy `Work(S)` (section 4).
+- 대상은 이야기가 전부 정한다. 게임 중에 생기거나 없어지지 않는다.
+- 장애물은 다시 다섯으로 나뉜다: 보통 장애물, 위험 시계, 기한, 위협, 갈림길.
+- 사람이 여럿인 무리나 장소보다 작은 자리는 없다. 플레이어는 늘 한 장소에 있다.
 
-**Defaults are atoms too.** `fill`, the player's `stat` (the four approaches, `beats`, `growth`) and each person's two `regards` axes toward the player enter `S₀` as atoms with value 0. This keeps a condition such as `{fill: [o, "=", 0]}` from depending on whether the atom exists. There is no `regards` from the player toward people, since nothing writes it.
+### 1.2 사실의 종류
 
-### 1.2 Predicates
-
-| Predicate | Atom | Meaning |
-|---|---|---|
-| `at(x, y)` | `("at", x, y)` | agent, thing or obstacle `x` is in place `y`. If `y` is an agent, `y` carries `x` |
-| `link(p, q)` | `("link", p, q)` | one can go from place `p` to `q` |
-| `mark(x, k, l, i)` | `("mark", x, kind, life, slot)` | one tag on `x`. kind `edge` (advantage) or `snag` (disadvantage), life `scene`, `chapter` or `wound` (until healed; rule.md 6), slot `1…3` |
-| `believes(g, p)` | `("believes", g, p)` | agent `g` believes proposition `p` |
-| `regards(g, h, axis, n)` | `("regards", g, h, axis, n)` | how `g` sees `h`. axis `trust` or `fear`, `n ∈ −3…3` |
-| `fill(o, n)` | `("fill", o, n)` | filled boxes of obstacle `o` |
-| `stat(g, s, n)` | `("stat", g, s, n)` | a sheet entry. `s` is one of the four approaches (`force`, `finesse`, `wits`, `charm`), `beats`, `growth`, or a trait id (value 1) |
-| `flag(f, v)` | `("flag", f, v)` | `chapter`, `ending`, story flags, and fired flags `fired_*` |
-| `owes(g, h, k)` | `("owes", g, h, k)` | what `g` owes `h`. `k` is `promise` (a promise tied to `h`'s favor) or `kindness` (goodwill received) |
-| `follows(h, g)` | `("follows", h, g)` | agent `h` travels with `g` (the player). When `g` moves, `h` moves along |
-| `due(g, c)` | `("due", g, c)` | a cost to choose under an old rule. It stays in the index only so saves from before this rule still load, and nothing creates it |
-| `spent(g, s)` | `("spent", g, s)` | trait, thing or proposition `s`, already leaned on this chapter |
-
-`blocks(o, x)` ("o blocks x") is a derived atom and is never stored. It holds for each `x` in `o`'s story `blocks` list while `at(o, ·)` exists and `fill(o) < boxes`. Condition evaluation and observation compute it over the atom set they receive.
-
-### 1.3 Values and limits
-
-| Value kind | Range |
+| 사실 | 뜻 |
 |---|---|
-| regard `regards` | `−3…3` |
-| boxes `fill` | `0…boxes` (`1…6` per obstacle) |
-| approach value | `0…3` |
-| `beats` | `0…B` (the story's scene length) |
-| `growth` | `0…` |
-| slot | `1…3` |
-| approach | `{force, finesse, wits, charm}` |
-| tag | kind `{edge, snag}`, life `{scene, chapter, wound}` |
-| flag value | a finite set the story declares |
+| `at(x, y)` | 사람·물건·장애물 `x`가 장소 `y`에 있다. `y`가 사람이면 그 사람이 `x`를 갖고 있다 |
+| `link(p, q)` | 장소 `p`에서 `q`로 갈 수 있다 |
+| `mark(x, 종류, 수명, 칸)` | `x`에 붙은 태그 하나. 종류는 `edge`(좋은 태그)나 `snag`(나쁜 태그). 수명은 `scene`(장면이 끝날 때까지), `chapter`(장이 끝날 때까지), `wound`(상처, 나을 때까지). 칸은 1~3 |
+| `believes(g, p)` | 사람 `g`가 이야기 사실 `p`를 믿는다. 플레이어라면 "아는 사실"이다 |
+| `regards(g, h, 축, n)` | `g`가 `h`를 어떻게 보는가. 축은 `trust`(신뢰)나 `fear`(두려움), `n`은 −3~3 |
+| `fill(o, n)` | 장애물 `o`의 찬 칸 수 |
+| `stat(g, s, n)` | `g`의 수치 하나. `s`는 능력치 넷(`force`, `finesse`, `wits`, `charm`), `beats`(이번 장면에 쓴 시간), `growth`(성장), 또는 특성 id(값은 1) |
+| `flag(f, v)` | 깃발. `chapter`(지금 장), `ending`(결말), 이야기가 만든 깃발, 연쇄가 이미 일어났다는 표시 `fired_*` |
+| `owes(g, h, k)` | `g`가 `h`에게 진 것. `k`는 `promise`(부탁을 들어준 `h`에게 한 약속)나 `kindness`(받은 신세) |
+| `follows(h, g)` | 사람 `h`가 `g`(플레이어)와 동행한다. `g`가 움직이면 `h`도 따라간다 |
+| `spent(x, s)` | `x`가 플레이어면: 특성·물건·아는 사실 `s`에 이번 장에 이미 기댔다(써 버림). `x`가 보통 장애물이면: 방법 `s`가 거기서 실패해 닫혔다(닫힌 방법). (rule.md의 기대기, 장애물) |
+| `due(g, c)` | 예전 규칙의 흔적. 옛 저장을 읽으려고 남겨 두었고, 새로 만들지 않는다 |
 
-The `set_` operation clamps its result at both ends of the range (section 4).
+**막힘**은 저장하지 않고 그때그때 계산한다. 장애물 `o`가 어딘가에 있고(`at`) 아직 가득 차지 않았으면, 이야기가 `o`의 `blocks`에 적어 둔 것들을 `o`가 막는다.
 
-### 1.4 Conformance `C`
+### 1.3 값의 범위
 
-- **C1 One place**: each agent, thing and obstacle has at most one `at(x, ·)`.
-- **C2 Functionality**: `regards(g, h, axis, ·)`, `fill(o, ·)`, `stat(g, s, ·)`, `flag(f, ·)` and `mark(x, ·, ·, i)` each have at most one atom.
-- **C3 Limits**: every value lies within its range in 1.3.
-- **C4 Company**: if `follows(h, g)` holds, `at(h, ·)` and `at(g, ·)` name the same place.
-
-Each one says "no such combination of atoms exists", so each also holds on a subset (`F`). "The player is always in exactly one place" is an existence condition, so the initial state (5.2) and the `move` operation enforce it, not `C`. There are no crowds (agents without a place). `conforms(S)` rechecks C1–C4 over the atom set and is used only in fuzzing (story.md V6) and rebuilding (section 6).
-
-## 2. Transitions and the log
-
-- **Action** `a`: a schema with its arguments filled in, one to one with a canonical action id (story.md 3.12). The set of all actions `Act` is finite.
-- **Dice** `rₜ = H(seed, t)`. `H` is a fixed function (rule.md 3.1), and each game has one `seed`.
-- **Rules** `R(S, h, a, r) = (Δ, mods)`. `mods ⊆ Atom` are the atoms that adjusted the roll.
-- **Event** `e = (t, a, r, Δ, W, mods, result, happen)`. The witnesses `W` are the agents in the places where the player was just before and just after the action.
-- **Log** `L`: a sequence of events. `L₀ = ε`.
-- **History summary** `h(L) ⊆ Pat`: the patterns, among the story's `did` patterns and the engine patterns (rule.md 5.1), that some event in `L` matches. Patterns read only an event's action id and result, never `t`, and a pattern never leaves once it is in.
-
-The world moves only under these five invariants.
-
-| Invariant | Statement |
+| 값 | 범위 |
 |---|---|
-| Transition | `(Δₜ, modsₜ) = R(Sₜ, h(Lₜ), aₜ, rₜ)`, `Sₜ₊₁ = Sₜ ⊕ Δₜ`. Narration, model answers and the screen are not arguments of `R`, so they cannot change the world |
-| Log | `Lₜ₊₁ = Lₜ · eₜ`. Append only |
-| Admission | an executed action is a candidate at that moment: `aₜ ∈ K(Vₜ)`. Clarifying questions, refusals and cards are not actions; they do not advance `t` or create events |
-| Non-interference | everything the player and the models receive at turn `t` is a function of `(Vₜ, exogenous input)` (for narration, of `Vₜ₊₁`). Exogenous input is the player's sentence, earlier model output and the models' randomness |
-| Generality | `R`, `V`, `K`, `W`, `h` and `C` know no entity by name. Their results follow any kind-preserving renaming |
+| 신뢰, 두려움 | −3~3 |
+| `fill` | 보통 장애물은 0 또는 1(한 칸). 위험 시계·기한·위협·갈림길은 0부터 이야기가 정한 칸 수까지 |
+| 능력치 | 0~3 |
+| `beats` | 0부터 이야기가 정한 장면 길이까지 |
+| `growth` | 0 이상 |
+| 태그 칸 | 1~3 |
+| 깃발 값 | 이야기가 적어 둔 값들 중 하나 |
 
-Changes and events in code:
+값을 바꿀 때 범위를 넘으면 범위 끝에서 멈춘다.
 
-```python
-@dataclass(frozen=True)
-class Delta:
-    add: frozenset[Atom]
-    remove: frozenset[Atom]      # add ∩ remove = ∅
+### 1.4 0도 사실이다
 
-@dataclass(frozen=True)
-class Event:
-    t: int
-    action: str                  # canonical action id (story.md 3.12)
-    roll: tuple[int, int, int] | None   # (d1, d2, u) only when the step rolled
-    result: str                  # success, fail, none, blocked
-    delta: Delta                 # minimal difference
-    witnesses: tuple[str, ...]   # sorted
-    mods: tuple[Atom, ...]       # atoms that adjusted the roll, in rule order
-    happen: tuple[tuple, ...]    # typed happenings, in order; saved only when not empty
-```
+값이 0이어도 사실로 적어 둔다. "아직 0칸"이라는 조건이 사실이 있고 없음에 흔들리지 않게 하려는 것이다.
 
-**Happenings** are what a step did that `Δ` cannot tell: `("scene_end",)`, `("guard",)` (a spent reliance guarded the roll, rule.md 3.2), and `("tag_replaced", x, slot, kind, life)` (a full ring's slot was overwritten). Step records read them for their change lines (api.md 3): a scene end moved three clocks at once with no cause on screen, and an earned edge vanished under a snag without a line. Saves from before have none, and load unchanged; a `("fall",)` in an old save is ignored.
+- 모든 장애물의 `fill`.
+- 플레이어의 능력치 넷, `beats`, `growth`.
+- 각 사람이 플레이어를 보는 신뢰와 두려움.
 
-A step's `Δ` is the sequential composition of effect operations, but it is stored reduced to the **difference**: `add = S* ∖ S`, `remove = S ∖ S*`. The resulting state is the same, and an atom removed and re-added within one step leaves no trace in the log or the narration. `result` is stored so that `none` (achieved without a roll) and `blocked` (a hidden block came to light) can be told apart without interpreting `Δ`.
+플레이어가 남을 어떻게 보는지는 적지 않는다. 쓰는 곳이 없다.
 
-A pattern compiles to `(leading pieces, judge arguments, set of results)` (no results listed means every result), and `matches(pattern, action, result)` tests one event. `h(L)` is the set of matched pattern indices, updated as each event is appended. No function edits or deletes an event.
+## 2. 언제나 지켜지는 것
 
-## 3. Propositions and observation
+- **한 곳에만 있다.** 사람·물건·장애물의 `at`은 많아야 하나다.
+- **값은 하나다.** 같은 대상의 `fill`, 같은 수치의 `stat`, 같은 깃발의 `flag`, 같은 사이·같은 축의 `regards`, 같은 칸의 `mark`는 많아야 하나다.
+- **범위 안이다.** 모든 값은 1.3의 범위 안에 있다.
+- **동행은 같은 곳에 있다.** `follows(h, g)`이면 둘은 같은 장소에 있다.
+- **플레이어는 정확히 한 장소에 있다.** 처음 상태와 옮기기가 이를 지킨다.
 
-### 3.1 Propositions
+세계를 바꾸는 일(6절) 하나하나가 이 규칙을 지킨다. 그래서 모델이 무엇을 답하든 세계는 깨지지 않는다.
 
-For each proposition `p` the story gives `text(p)` (the sentence handed to the models), `about(p)` and `shows(p) ⊆ U` (what it is about, and what becomes visible to whoever believes it), `against(p)` (the propositions that cannot be believed alongside it), and optionally a meaning `⟦p⟧` (a sentence over `Σ`). A proposition without a meaning is a true or false constant set by the story (story.md 2.5).
+## 3. 기록
 
-- **Truth** `true(p, S) ⟺ S ⊨ ⟦p⟧`. When the world changes, the truth of a proposition changes with it.
-- **Knowledge** `knows(g, p, S) ⟺ believes(g, p) ∈ S ∧ true(p, S)`. Not stored. False beliefs are allowed, and truth is judged against `S`.
-- **Hidden** `hidden(x, o, S)`: some proposition `shows` `x`, and `o` believes none of them.
-- **Exposure**: if the player asserts a story proposition `p` in conversation and the listener believes a proposition in `against(p)`, the player is caught. A claim that matches no story proposition stays in the event only as a sentence and never grounds an exposure.
+### 3.1 한 턴
 
-### 3.2 Observation `V`
+1. 플레이어의 행동은 그 순간 **할 수 있는 행동** 중 하나여야 한다. 아니면 거절한다.
+2. 주사위는 게임의 씨앗과 턴 번호로 정해진다.
+3. 규칙이 지금 세계, 지금까지 한 일, 행동, 주사위를 보고 **바뀔 사실**을 낸다.
+4. 세계에 반영하고, 기록 끝에 사건 하나를 붙인다.
 
-`observe(U, S, L, o) → Obs`. `here(o)` is the place `q` with `at(o, q) ∈ S`.
+- 기록은 뒤에 붙이기만 한다. 고치거나 지우지 않는다.
+- 되묻기, 거절, 카드는 행동이 아니다. 턴이 넘어가지 않고 기록도 남지 않는다.
+- 서술, 모델의 답, 화면은 규칙이 읽지 않는다. 모델이 세계에 닿는 길은 "다음 행동 고르기"뿐이고, 잘못 알아들어도 할 수 있는 행동 밖의 일은 일어나지 않는다.
+- 엔진은 어떤 대상도 이름으로 알지 못한다. 이름을 전부 바꿔도 똑같이 돌아간다.
 
-```python
-@dataclass(frozen=True)
-class Obs:
-    observer: str
-    seen: frozenset[str]          # E
-    facts: State                  # F, a sub-state of S
-    beliefs: tuple[str, ...]      # B, in reveal order
-    memory: tuple[Seen, ...]      # M
-    hist: frozenset[int]          # hᵥ
-```
+### 3.2 사건
 
-1. **`E`** seen entities: `o` itself, what `o` carries (things, clocks, threats), `here(o)`, the unhidden entities there, and each unhidden place `q` with `link(here, q)`. A distant entity known only through a believed proposition is not in `E`. It comes across only as a name inside the proposition's sentence, and it enters `E` once it is in the current place or a linked one.
-2. **`F`** visible facts: the atoms of `S` that satisfy the rules below. `F ⊆ S` holds by construction. The rules are a single function, `fact_rule(o, S, atom)`, and memory projection uses the same function.
+사건 하나에 들어가는 것:
 
-| Predicate | Visible when |
+| 항목 | 뜻 |
 |---|---|
-| `at`, `link`, `mark`, `fill` | every entity position is in `E` |
-| `stat(g, ·)`, `due(g, ·)`, `spent(g, ·)` | `g = o` |
-| `believes(g, ·)` | `g = o` or `g ∈ E`: a person's mind can be read where they are, by their topics and fears |
-| `regards(g, h, ·)`, `owes(g, h, ·)`, `follows(g, h)` | `g = o` or `h = o` |
-| `flag(f, ·)` | `f` has texts (story.md 2.2); other flags never |
+| `t` | 턴 번호 |
+| `action` | 행동 id (story.md의 행동 id) |
+| `roll` | 굴렸을 때만. 주사위 두 눈과 더한 값 |
+| `result` | `success`(성공), `fail`(실패), `none`(굴리지 않고 됨), `blocked`(숨은 것이 막아 드러남) |
+| `delta` | 바뀐 사실. 더해진 것(`add`)과 빠진 것(`remove`) |
+| `witnesses` | 목격자. 행동 직전과 직후에 플레이어가 있던 장소의 사람들 |
+| `mods` | 굴림을 더하거나 뺀 사실들 |
+| `happen` | 바뀐 사실만으로는 알 수 없는 일. 있을 때만 저장한다 |
 
-3. **`B`** beliefs: the `p` of each `believes(o, p)`, in the order they came to be believed (the event that first added it to the log, or story order for beliefs held from the start). Each `text(p)` is handed over, but `⟦p⟧` is never mixed into `F`.
-4. **`M`** memory: for each event with `o ∈ W`, a projection that keeps only what was visible then. `Eₑ` and `F-ruleₑ` are the union of what is computed from the states just before and just after the event.
-5. **`hᵥ`**: the patterns matched by events in `M`. Patterns read only the action id and the result, and since the player is the actor of every event, the projection keeps both intact, so `hᵥ = h`. If patterns ever read `Δ` or witnesses, the two must be separated.
+- `delta`는 **턴 앞뒤의 차이**만 담는다. 한 턴 안에서 빠졌다가 다시 들어온 사실은 남지 않는다.
+- `happen`은 셋이다: `scene_end`(장면이 끝남), `guard`(기댄 것 덕에 덜 다침), `tag_replaced`(칸이 다 차서 태그 하나가 덮어쓰임. 대상, 칸, 덮인 태그의 종류와 수명이 붙는다). 화면의 변화 줄이 이것을 읽는다(api.md의 턴 기록). 옛 저장에 있는 `fall`은 무시한다.
 
-```python
-@dataclass(frozen=True)
-class Seen:
-    t: int
-    action: str
-    roll: tuple[int, int, int] | None
-    result: str
-    witnesses: tuple[str, ...]    # W ∩ E_e
-    delta: Delta                  # Δ ∩ F-rule_e
-    mods: tuple[Atom, ...]        # mods ∩ F-rule_e
-    happen: tuple[tuple, ...]     # happen, without a tag_replaced on an entity not in E_e
-```
+### 3.3 한 적 있는 일
 
-Projections are computed when an event is appended and kept in a cache. Only the player's projection `seen[player]` is built; it feeds the narration input `δ`, step records, recaps and the memory lines of the context. People have no prompts of their own, so there are no per-person projections. Memory is used only in prompts; `R` and conditions read only `h(L)`. The cache is not saved and is rebuilt on load.
+조건은 "이런 일을 한 적이 있다"를 물을 수 있다. 이야기가 적은 `did`와 엔진이 가진 것(rule.md의 연쇄)이 그 목록이다.
 
-Observation reads only `S`, `L` and `U`, never the presentation layer (engine.md 6).
+- 사건의 행동 id와 결과만 본다. 턴 번호는 보지 않는다.
+- 한 번 "한 적 있다"가 되면 끝까지 그렇다.
 
-### 3.3 Conditions and candidates
+## 4. 플레이어가 보는 것
 
-`cond.py` compiles conditions (story.md 2.3) to an AST and evaluates them with `holds(c, facts, hist)`. World evaluation is `holds(c, S, h)` and visible evaluation is `holds(c, F, hᵥ)`. There is one evaluator, so the only difference is the atom set passed in. The derived atom `blocks` and hiddenness are computed over that set.
+플레이어와 모델은 세계 전체를 받지 않는다. 아래 다섯 가지만 받는다. 화면, 할 수 있는 행동, 프롬프트가 전부 여기서 나온다.
 
-Candidates `K(O)` read only `(E, F, B, hᵥ)` and story constants (rule.md 2). Entity arguments come from `E` and proposition arguments from `B`, and conditions are evaluated over `(F, hᵥ)`. The evaluation is deliberately optimistic: with no visible block, it assumes there is none. So `R` must be defined even when the visible condition is true but the real one is false (a hidden block), and the only way to learn what is hidden is to act and run into it. Conditions that reach the screen or a prompt (a topic's free condition, solution names) use the same visible evaluation.
+### 4.1 보이는 대상
 
-### 3.4 What people know and what was said
+- 플레이어 자신.
+- 플레이어가 가진 것(물건, 위험 시계, 기한, 위협).
+- 지금 있는 장소와, 거기 있는 숨지 않은 대상.
+- 지금 장소에서 이어진, 숨지 않은 장소.
 
-A cycle (the player types, the engine answers) must run many times without the answers drifting. The world carries what the rules changed, but small talk changes nothing, so before this section the only thing that carried a conversation was the last three narrations. Inside that window an answer held ("아까 말했잖아요, 마을 안쪽 창고요!"); past it, it was gone. What a person made up ("아버지는 아까 배를 타고 먼바다로 나갔어요", which the story never says) counted as fact for three turns and then vanished (qa_test/runs/loop-1/base-summary.md). So what a person may state and what they have said are defined here, apart from the world.
+멀리 있는 대상은 아는 사실의 문장 속 이름으로만 전해진다. 지금 장소나 이어진 장소에 와야 보이는 대상이 된다.
 
-**What a person may state as fact** comes in three tiers. Nothing else is fact in their mouth, and asked about anything else, they do not know.
+### 4.2 보이는 사실
 
-| Tier | Source | Who reads it | Changes |
+세계의 사실 중 아래에 맞는 것만 보인다. 보이는 사실은 모두 세계에 실제로 있는 사실이다.
+
+| 사실 | 보이는 때 |
+|---|---|
+| `at`, `link`, `mark`, `fill` | 사실에 나오는 대상이 모두 보일 때 |
+| `stat`, `due` | 플레이어 자신의 것 |
+| `spent` | 플레이어 자신의 것, 그리고 보이는 장애물의 것 |
+| `believes` | 플레이어 자신의 것, 그리고 보이는 사람의 것 |
+| `regards`, `owes`, `follows` | 플레이어가 한쪽일 때 |
+| `flag` | 이야기가 그 깃발에 문장을 달아 두었을 때만 |
+
+### 4.3 아는 사실
+
+플레이어가 믿는 이야기 사실이다. 알게 된 순서대로 전한다. 처음부터 알던 것은 이야기에 적힌 순서다.
+
+이야기 사실마다 이야기가 정하는 것:
+
+- **문장**: 모델에게 건네는 글. 반드시 있다.
+- **무엇에 대한 것인지**(`about`).
+- **알면 보이게 되는 대상**(`shows`).
+- **함께 믿을 수 없는 사실**(`against`).
+- **뜻**(선택): 세계의 사실로 쓴 조건. 있으면 세계가 바뀔 때 참·거짓도 따라 바뀐다. 없으면 이야기가 참·거짓을 정해 둔다.
+
+여기서 나오는 것:
+
+- **안다**: 믿고 있고, 그것이 참이다. 따로 저장하지 않는다. 거짓을 믿을 수도 있다.
+- **숨음**: 대상을 보이게 하는 사실이 하나라도 있는데 플레이어가 그중 아무것도 믿지 않으면, 그 대상은 숨어 있다.
+- **들킴**: 플레이어가 속이며 이야기 사실 `p`를 말했는데 상대가 `p`와 함께 믿을 수 없는 사실을 믿고 있으면 들킨다. 이야기에 없는 거짓말은 문장으로만 남고 들킬 근거가 되지 않는다.
+
+아는 사실은 문장으로만 전한다. 뜻을 풀어 보이는 사실에 섞지 않는다.
+
+### 4.4 기억
+
+플레이어가 겪은 사건마다, **그때 보였던 것만** 남긴 사본이다.
+
+- 사건 직전과 직후 중 한 번이라도 보였던 대상과 사실을 남긴다.
+- 목격자, 바뀐 사실, 굴림을 바꾼 사실에서 안 보였던 것은 뺀다. 안 보이던 대상의 `tag_replaced`도 뺀다.
+- 서술, 턴 기록, 지난 줄거리, 프롬프트의 기억 줄이 이것을 쓴다. 규칙과 조건은 쓰지 않는다.
+- 플레이어 것만 만든다. 저장하지 않고 불러올 때 다시 만든다.
+
+### 4.5 한 적 있는 일
+
+3.3과 같다. 모든 사건은 플레이어가 한 일이므로 플레이어는 전부 안다.
+
+### 4.6 조건과 할 수 있는 행동
+
+- 조건(story.md의 조건)을 따지는 방법은 하나다. 세계 전체를 넣으면 실제 답이, 보이는 사실을 넣으면 보이는 답이 나온다. 막힘과 숨음도 넣은 사실만으로 계산한다.
+- 할 수 있는 행동은 **보이는 것만** 보고 만든다. 대상은 보이는 대상에서, 이야기 사실은 아는 사실에서 고른다.
+- 막는 것이 안 보이면 없다고 친다. 그래서 숨은 것은 해 봐야 안다. 규칙은 "보기에는 되는데 실제로는 막힌" 경우도 처리한다(rule.md의 할 수 있는 일).
+- 화면과 프롬프트에 나가는 조건(화제를 그냥 알려 주는 조건, 해법 이름)도 보이는 답을 쓴다.
+
+## 5. 사람이 아는 것과 한 말
+
+사람이 **사실로 말해도 되는 것**은 셋뿐이다. 그 밖의 것은 물어도 모른다고 한다.
+
+| 층 | 어디서 오나 | 누가 읽나 | 바뀌나 |
 |---|---|---|---|
-| Seen | `F`, the player's visible facts | everyone | with the world |
-| Told freely | `knows(g)`, a public parameter of `g` in `U` (story.md 3.4) | narration and its check, while `g` is in the focus | never |
-| Held back | topics (propositions revealed by `reveal`) and `believes(g, p)` | the rules; a topic's text reaches prompts once the player believes it | only through `R` |
+| 본 것 | 플레이어에게 보이는 사실 | 모두 | 세계와 함께 |
+| 그냥 알려 주는 것 | 이야기가 사람마다 적은 `knows` (story.md의 사람) | 서술과 서술 검사. 그 사람이 장면의 중심일 때 | 안 바뀐다 |
+| 아껴 두는 것 | 화제, 그리고 그 사람의 `believes` | 규칙. 화제의 문장은 플레이어가 알게 된 뒤에 프롬프트에 나온다 | 규칙으로만 |
 
-`knows` is everyday knowledge a person tells anyone who asks: where their father went, how long the lamp has been dark. No rule reads it, so telling it changes nothing, and since it is public it must not name anything hidden (story.md V4). Knowledge that should cost something (trust, a roll) is a topic. A person's own `believes` stays private: it grounds exposure (3.1) and the conditions of their own topics, complications and fears, and is never handed to narration, since a false belief told aloud would read as fact. Only a `forget` is told, as a belief the person gave up.
+- `knows`는 누가 물어도 알려 주는 일상 지식이다. 규칙이 읽지 않으므로 말해도 아무것도 바뀌지 않는다. 숨은 것을 이름으로 부르면 안 된다(story.md의 검증).
+- 값을 치러야 하는 지식(신뢰, 굴림)은 화제로 만든다.
+- 사람의 `believes`는 서술에 건네지 않는다. 거짓 믿음을 소리 내어 말하면 사실처럼 읽히기 때문이다. 들킴과, 그 사람의 화제·사고·두려움의 조건에만 쓴다. 믿음을 버렸을 때(`forget`)만 "버린 믿음"으로 전한다.
 
-**What was said** `said` is the quoted lines a person spoke in accepted narration, kept per turn in the presentation layer (engine.md 6) with the player's sentence that drew them. It is model output, so it is never a fact and never an argument of `R` (Bounded model influence, section 7). It binds only the narration: when that person speaks again, their earlier lines are handed over so they neither contradict nor repeat themselves. It reaches the check only through the repetition rule, never as context, so a line once accepted cannot vouch for a new one.
+**한 말**(`said`): 통과된 서술에서 그 사람이 따옴표로 한 말. 그 말을 끌어낸 플레이어의 문장과 함께 턴마다 화면용 기록에 둔다(engine.md의 화면용 기록).
 
-**What happened together** `shared(g)` is the long memory of a person: the events of `M` that `g` witnessed and that marked them, chosen by rule, never by a model. An event marks `g` when it is notable (the recap's rule, engine.md 5.5: an obstacle overcome, a promise, a wound, an arrival, a choice, a declaration, a claim), when it acts on a person and changes something (a thing handed over, a regard, following, a revealed topic) or rolls (a request granted or refused), or when the player is wounded in their sight (a wound is notable too). `M` is a projection of the log, so these are facts, and narration and its check both read them; nothing a model wrote is in them. Without it, a person forgot what they had lived through once it left the last three narrations: asked "누렁이 아까 무서웠죠?" after the dog was calmed in front of him, 도해 answered "…무슨 헛소리를 하는 건가" (qa_test/runs/loop-1, long-base).
+- 모델이 쓴 것이므로 사실이 아니다. 규칙이 읽지 않는다.
+- 그 사람이 다시 말할 때 서술에 건네, 앞말과 어긋나거나 되풀이하지 않게 한다.
+- 서술 검사에는 "되풀이 금지"로만 쓴다. 한 번 통과한 말이 새 말의 근거가 되지는 않는다.
 
-## 4. Effects and operations
+**함께 겪은 일**(`shared`): 그 사람의 긴 기억. 플레이어의 기억(4.4) 중 그 사람이 목격했고 아래에 드는 사건이다. 모델이 아니라 규칙이 고른다. 사실이므로 서술과 서술 검사가 모두 읽는다.
 
-The only code that changes the world is the operations in `change.py`. Each operation has the form `op(work, …)` and reads and edits the working copy `Work(S)`; each one sees the state the previous ones left. Every operation preserves `C`, so their sequential composition does too.
+- 눈에 띄는 일: 장애물을 넘음, 약속, 상처, 닥침, 고르기, 선언, 거짓말(engine.md의 지난 줄거리와 같은 기준).
+- 사람에게 한 행동으로 무언가 바뀐 일: 물건을 건넴, 신뢰·두려움, 동행, 화제를 알게 됨.
+- 사람에게 한 행동으로 굴린 일: 부탁을 들어줌, 거절함.
+- 그 사람이 보는 앞에서 플레이어가 다친 일.
 
-| Operation | What it does |
+## 6. 세계를 바꾸는 일
+
+세계는 아래 일로만 바뀐다. 한 턴은 이 일들을 차례로 한 것이고, 뒤의 일은 앞의 일이 바꾼 세계를 본다. 이야기의 효과(story.md의 효과)는 이 일들로 그대로 옮겨진다.
+
+| 일 | 하는 것 |
 |---|---|
-| `move(x, y)` | `at[x] = y`. If `x = player`, `y` must be a place or the move is refused, and every `h` with `follows(h, player)` moves to `y` too. If `x` is a person following someone, that `follows` is removed. Both keep C4 |
-| `set_(pred, key, v)` | sets a `regards`, `fill`, `stat` or `flag` value. If `v` is `"+n"` or `"-n"`, it is added to the current value, and the result is clamped to its range in 1.3. Does nothing if the value is unchanged |
-| `drop_stat(g, s)` | removes `g`'s `stat` entry `s` (a trait given up in growth) |
-| `reveal(g, p)` | adds `believes(g, p)` |
-| `forget(g, p)` | removes `believes(g, p)` |
-| `consume(x)` | removes `at[x]`: the thing leaves the world |
-| `tag(x, kind, life)` | uses the lowest-numbered empty slot. If all are full, it overwrites the lowest `snag` slot, or for an `edge` the lowest `edge` slot when no snag is left; a `wound` is never overwritten and a `snag` never overwrites an `edge`, except that a `wound` takes an edge's slot when no other snag is left. Otherwise it does nothing. An overwrite records `tag_replaced` |
-| `untag(x, slot)` | clears that slot |
-| `link(p, q)`, `unlink(p, q)` | adds or removes a `link` |
-| `retire(o)` | removes `at[o]`. For a threat or fork, it also clears the fired flag of its appearance trigger |
-| `expire(life)` | removes every `mark` with that life |
-| `insert(atom)`, `retract(atom)` | adds or removes `owes`, `spent` and `follows` atoms |
-| `clear_spent(g)` | removes all of `g`'s `spent` atoms |
+| `move(x, y)` | `x`를 `y`로 옮긴다. 플레이어는 장소로만 갈 수 있고, 동행하는 사람도 함께 옮겨진다. 동행하던 사람을 따로 옮기면 동행이 끊긴다 |
+| `set_(사실, 대상, v)` | `regards`, `fill`, `stat`, `flag`의 값을 정한다. `"+n"`, `"-n"`이면 지금 값에 더하거나 뺀다. 범위를 넘으면 끝에서 멈춘다. 값이 같으면 아무 일도 없다 |
+| `drop_stat(g, s)` | `g`의 수치 `s`를 지운다(성장에서 버리는 특성) |
+| `reveal(g, p)` | `g`가 `p`를 믿게 된다 |
+| `forget(g, p)` | `g`가 `p`를 믿지 않게 된다 |
+| `consume(x)` | `x`의 `at`을 지운다. 물건이 세계에서 사라진다 |
+| `tag(x, 종류, 수명)` | 태그를 붙인다. 아래 참고 |
+| `untag(x, 칸)` | 그 칸을 비운다 |
+| `link(p, q)`, `unlink(p, q)` | 길을 잇거나 끊는다 |
+| `retire(o)` | 장애물 `o`의 `at`을 지운다. 위협이나 갈림길이면 등장 연쇄의 `fired_` 깃발을 1로 해서 다시 나타나지 않게 한다 |
+| `expire(수명)` | 그 수명의 태그를 모두 지운다 |
+| `insert(사실)`, `retract(사실)` | `owes`, `spent`, `follows` 사실을 넣거나 뺀다 |
+| `clear_spent(g)` | `g`의 `spent`를 모두 지운다 |
 
-Story effects (story.md 2.4) translate directly into these operations. `{set: [regards, g, h, axis, v]}` becomes `set_("regards", (g, h, axis), v)`, and `{tag: [x, kind, life, name]}` becomes `tag(x, kind, life)` plus a default name kept in the presentation layer.
+**태그 붙이기**
 
-**Atomicity**: the rules compute a step on `Work(S)` and return a `Delta` (the difference). The service appends the event and writes the log and presentation layer in a single save (section 6, engine.md 7). If an exception occurs midway, only the copy is discarded.
+- 빈 칸이 있으면 번호가 가장 낮은 빈 칸에 붙인다.
+- 세 칸이 다 찼으면 하나를 덮어쓴다. 나쁜 태그를 먼저, 그중 번호가 낮은 칸을 먼저 덮는다.
+  - 상처는 덮어쓰지 않는다.
+  - 새 태그가 좋은 태그나 상처면, 나쁜 태그가 없을 때 좋은 태그를 덮는다.
+  - 새 태그가 보통 나쁜 태그면 좋은 태그는 덮지 않는다.
+- 덮을 칸이 없으면 아무 일도 없다.
+- 덮어쓰면 `tag_replaced`를 남긴다.
+- 태그의 이름은 사실이 아니다. 화면용 기록에 둔다.
 
-**Iteration order**: every iteration that affects output (complication candidates, threat arrivals, triggers) follows the story's declaration order, and every other set is emitted sorted, because the order of a Python `set` can differ between runs.
+**한 턴은 통째로 반영된다.** 규칙은 세계의 사본 위에서 계산하고 차이만 돌려준다. 도중에 오류가 나면 사본만 버린다. 기록과 화면용 기록는 한 번의 저장으로 함께 쓴다.
 
-## 5. Universe and initial state
+**순서는 늘 같다.** 결과에 영향을 주는 순서(사고 후보, 위협이 닥치는 순서, 연쇄)는 이야기에 적힌 순서를 따른다. 그 밖의 목록은 정렬해서 낸다.
 
-`story/compile.py` reads the story, builds a `Universe` (`onto/universe.py`) that never changes during play, and wires the triggers.
+## 7. 처음 상태
 
-| Field | Contents |
+### 7.1 이야기에서 읽어 두는 것
+
+게임을 시작할 때 이야기를 읽어 아래를 만들어 둔다. 게임 중에는 바뀌지 않는다.
+
+| 항목 | 내용 |
 |---|---|
-| `kind` | `id → kind`, and the obstacle subkind (`plain`, `clock`, `deadline`, `threat`, `fork`) |
-| `name`, `aliases` | name tables. Engine entities take their names from the story's `clock.name` and `deadline.name` |
-| `props` | proposition id → `text`, `about`, `shows`, `against`, source (story.md 2.5) |
-| `params` | per-entity story parameters: boxes, base risk, `fits` and `clashes`, `blocks`, solutions, complications, topics, favors, `wants`, sense cues |
-| `chapters` | per chapter: goal condition, clock id, deadline id, crisis effects, goal effects |
-| `triggers` | the list of wired triggers (5.3) |
-| `patterns` | `Pat`: every `did` in the story plus the engine patterns |
-| `flags` | flag name → finite set of values |
-| `limits` | `B`, slot count |
+| 종류 | 대상마다 종류, 장애물이면 다섯 중 무엇인지 |
+| 이름 | 이름과 다른 이름. 위험 시계와 기한의 이름은 이야기의 `clock.name`, `deadline.name` |
+| 이야기 사실 | 문장, `about`, `shows`, `against`, 출처 |
+| 대상별 설정 | 칸 수, 기본 위험, 잘 맞는·안 맞는 방법, `blocks`, 해법, 사고, 화제, 부탁, 바라는 것(`wants`), 감각 단서 |
+| 장 | 장마다 목표 조건, 위험 시계, 기한, 위기 효과, 목표 효과 |
+| 연쇄 | 7.4의 순서로 이어 둔 연쇄 |
+| 한 적 있는 일 | 이야기의 모든 `did`와 엔진이 가진 것 |
+| 깃발 | 깃발마다 가질 수 있는 값 |
+| 한도 | 장면 길이, 태그 칸 수 |
 
-### 5.1 Engine ids
+### 7.2 엔진이 만드는 id
 
-Entities, propositions and triggers that the engine creates use ids containing `.`. Story ids use only `[a-z0-9_]`, so the two never collide.
+이야기의 id는 `a-z`, `0-9`, `_`만 쓴다. 엔진이 만드는 id에는 `.`이 들어가서 겹치지 않는다.
 
-| Item | id |
+| 대상 | id |
 |---|---|
-| chapter `k`'s risk clock and deadline | `clock.k`, `deadline.k` |
-| hidden and clue propositions | `x.hidden`, `x.clue` |
-| engine complications | `engine.snag`, `engine.beat`, `engine.wound`, `engine.end` |
-| wired triggers | threat or fork appearance `appear.<id>`, chapter goal `goal.<k>`, ending `end.<id>` |
-| a trigger's fired flag | `fired_<trigger id>` (for both story triggers and wired triggers) |
-| a thing's uses left | flag `uses.<thing id>`, from `uses` down to 0 |
+| `k`장의 위험 시계, 기한 | `clock.k`, `deadline.k` |
+| 숨음·단서 이야기 사실 | `x.hidden`, `x.clue` |
+| 엔진의 사고 | `engine.snag`, `engine.beat`, `engine.wound`, `engine.end` |
+| 엔진이 이어 둔 연쇄 | 위협·갈림길 등장 `appear.<id>`, 장 목표 `goal.<k>`, 결말 `end.<id>` |
+| 연쇄가 일어났다는 깃발 | `fired_<연쇄 id>` |
+| 물건의 남은 횟수 | 깃발 `uses.<물건 id>`. `uses`에서 0까지 |
 
-### 5.2 Initial state
+### 7.3 처음 세계
 
-`initial(universe, creation) → State`. `creation` is the player's chosen approach allocation, traits and name (story.md 3.2). The name appears only on screen and never enters `S₀`. The same story and `creation` always produce the same `S₀`.
+이야기와 주인공 만들기(능력치 배분, 특성, 이름)로 정해진다. 같은 이야기와 같은 선택이면 처음 세계도 같다. 이름은 화면에만 쓰고 세계에 넣지 않는다.
 
-1. The story's `at`, `exits` (→ `link`), and people's `beliefs` and `regards` become atoms.
-2. `fill 0` for every obstacle (clocks, deadlines, threats and forks included). `at(·, player)` for the first chapter's clock and deadline.
-3. The player's `stat`: the four approaches from the `creation` allocation, 1 for each trait, and 0 for `beats` and `growth`.
-4. Each person's two `regards` axes toward the player (0 if unset). People a latent brings in are included too, without `at` and hidden.
-5. `flag(chapter, 1)` and the initial values of story flags.
+1. 이야기의 `at`, `exits`(→ `link`), 사람들의 `beliefs`, `regards`를 사실로 넣는다.
+2. 모든 장애물에 `fill` 0. 첫 장의 위험 시계와 기한은 플레이어가 갖는다.
+3. 플레이어의 `stat`: 능력치 넷은 배분대로, 고른 특성은 1, `beats`와 `growth`는 0.
+4. 각 사람이 플레이어를 보는 신뢰와 두려움(안 적었으면 0). 숨은 사연으로 나올 사람도 넣는다. 이들은 `at`이 없고 숨어 있다.
+5. `flag(chapter, 1)`과 이야기 깃발의 처음 값.
 
-This is also where `creation` is checked: its approach values must spend the full sum of the story's `approaches` with each at most the largest of them, and it must have exactly `pick` traits.
+주인공 만들기도 여기서 검사한다.
 
-### 5.3 Wiring triggers
+- 능력치는 이야기의 `approaches` 합을 남김없이 쓴다.
+- 각 능력치는 `approaches` 중 가장 큰 값을 넘지 않는다.
+- 특성은 정확히 `pick`개다.
 
-Story triggers are wired as `Trigger(id, when, effects, repeat, kind)` in the order of story.md 3.11 (appearances, `triggers`, chapter goals, endings). Unless a trigger is `repeat`, `not flag(fired_<id>, 1)` is added to its `when` and `set(flag, fired_<id>, 1)` to the end of its effects. Chapter goal and ending effects are the engine macros `chapter_to(k+1)` and `end(e)`, defined in rule.md 4.3.
+### 7.4 연쇄 이어 두기
 
-## 6. Saves
+연쇄는 이 순서로 이어 둔다: 등장, 이야기의 `triggers`, 장 목표, 결말.
 
-Each game is a single file, `saves/engine/g_<id>.json`, and the log is the source of truth. The state and memory are caches rebuilt from the log, so they are not saved.
+- 되풀이(`repeat`)가 아닌 연쇄는 한 번만 일어난다. 조건에 "`fired_<id>`가 아직 1이 아니다"를 더하고, 효과 끝에 "`fired_<id>`를 1로"를 더한다.
+- 장 목표의 효과는 "다음 장으로", 결말의 효과는 "결말"이다(rule.md의 시간).
+
+## 8. 저장
+
+게임 하나가 파일 하나다: `saves/engine/g_<id>.json`. **기록이 원본이다.** 세계와 기억은 기록에서 다시 만들 수 있으므로 저장하지 않는다.
 
 ```json
 {
@@ -299,38 +316,99 @@ Each game is a single file, `saves/engine/g_<id>.json`, and the log is the sourc
   "story": {"id": "lighthouse", "version": 1, "digest": "sha256:…"},
   "seed": 4821930017,
   "creation": {"approaches": {"force": 1, "finesse": 2, "wits": 1, "charm": 0}, "traits": ["sailor", "tinker"]},
-  "log": [{"t": 0, "action": "go:village", "roll": null, "result": "none", "delta": {"add": [["at", "player", "village"], ["stat", "player", "beats", 1]], "remove": [["at", "player", "dock"], ["stat", "player", "beats", 0]]}, "witnesses": ["dohae", "player", "yunseul"], "mods": []}],
+  "log": [{"t": 0, "action": "go:village", "roll": null, "result": "none",
+           "delta": {"add": [["at", "player", "village"], ["stat", "player", "beats", 1]],
+                     "remove": [["at", "player", "dock"], ["stat", "player", "beats", 0]]},
+           "witnesses": ["dohae", "player", "yunseul"], "mods": []}],
   "presentation": {}
 }
 ```
 
-`presentation` is the presentation layer `P` (engine.md 6), and `digest` is a hash of the story file's bytes.
+| 항목 | 뜻 |
+|---|---|
+| `schema_version` | 저장 형식 번호. 지금은 2 |
+| `story` | 이야기 id, 버전, 이야기 파일 바이트의 해시(`digest`) |
+| `seed` | 주사위 씨앗 |
+| `creation` | 주인공 만들기에서 고른 것 |
+| `log` | 사건 목록(3.2). 사실은 이름이 맨 앞인 배열이다. `happen`은 있을 때만 |
+| `presentation` | 화면용 기록(engine.md의 화면용 기록) |
 
-- **Write**: write to a temporary file, `fsync`, then `rename`. A request's log and presentation layer change together in this one write. The server is a single process with one lock per game.
-- **Rebuild** `load(path) → Game`: refuses the save if `schema_version` or the story `digest` differs (if `U` and `S₀` change, the atoms in the log lose their meaning). A change in engine code is not refused, because `R` is not rerun. Starting from `S₀ = initial(U, creation)`, it applies `S ← apply(S, e.delta)` for each event, checks `conforms(S)` at every step and refuses on a violation, and rebuilds `h`, the memory cache and the belief order in the same pass. The cost is linear in the number of events, and a game has a few hundred.
+**쓰기**
 
-## 7. Properties and checks
+- 임시 파일에 쓰고, 디스크에 내려 쓴 뒤(`fsync`), 이름을 바꾼다(`rename`).
+- 한 요청의 기록과 화면용 기록는 이 한 번에 함께 바뀐다.
+- 서버는 프로세스 하나이고, 게임마다 잠금이 하나다.
 
-| Property | Statement and reason | Enforced in | Check |
-|---|---|---|---|
-| Reproducibility | `Sₜ = S₀ ⊕ Δ₀ ⊕ … ⊕ Δₜ₋₁`. The state is rebuilt from the story and the log alone, without `R`, `seed` or the models (by induction on the transition and log invariants). The same `(story, seed, action sequence)` gives the same state and log | `save.py` | state rebuilt after saving = in-memory state; the same input twice → the same result (even with a different `PYTHONHASHSEED`) |
-| Conformance | every `Sₜ ⊨ C`, since `S₀ ⊨ C` and every operation preserves `C`. This holds whatever the models answer | `change.py`, `State` structure | property tests per operation; `conforms` at every step while fuzzing random action sequences |
-| Atomicity | a step's `Δ` is applied entirely or not at all | `Work`, a single save | an exception midway through an operation → state and file unchanged |
-| No creation | `U` and `Σ` are constant, so the models cannot create entities or predicates | `universe.py`, `story/compile.py` | every atom in an event is in `Atom` |
-| Bounded model influence | model output reaches the world only through the next action `aₜ ∈ K(Vₜ)` (it is the only argument of the transition the models can touch). A misinterpretation runs an unwanted candidate, never anything outside the candidates | admission check (rule.md 10) | an id outside the candidates → refused |
-| No leakage | with the same observation and exogenous input, the player and the models receive the same things. A hidden fact can reach them only by changing later observations | `observe` reads only `S`, `L`, `U`; the screen, prompts and rewrite feedback receive only `Obs` | two states that differ only in hidden atoms → the same `Obs`, screen and prompt |
-| Single source | everything the screen, candidates, fact list and prompts assert as fact at one moment lies in `F ⊆ S`, so it is true all together and never violates `C`. Beliefs are shown as beliefs | renderers, `context` | renderers use no atom outside `F` and `B` |
-| Story independence | engine code contains no story id, name or sentence (a syntactic proxy for generality). The properties must hold for every story that passes validation, so each story is fuzzed | all of `server/src/` | a boundary test that searches `src/` for the skeleton story's ids and names |
-| Story conformance | `S₀ ⊨ C`, the player in exactly one place, parameters defined over `Σ` and `U`, and effects limited to the operations in section 4 | `initial`, story.md V1–V2 | validation at startup |
-| Reachability | configurations `(S, h)` are finite and the next one is determined by `(S, h, a, r)`, so "can the goal be reached?" is reachability in a finite graph. Dice expand into both results | story.md V5–V6 | validation at startup |
+**불러오기**
 
-## 8. Decisions
+- `schema_version`이 다르면 거절한다.
+- 이야기 `digest`가 다르면 거절한다. 이야기가 바뀌면 기록 속 사실의 뜻이 달라진다.
+- 엔진 코드가 바뀐 것은 거절하지 않는다. 규칙을 다시 돌리지 않기 때문이다.
+- 처음 세계에서 시작해 사건의 `delta`를 차례로 반영한다. 사건마다 2절의 규칙을 검사하고, 어기면 거절한다.
+- 같은 흐름에서 한 적 있는 일, 기억, 아는 사실의 순서를 다시 만든다.
 
-| Question | Decision | Reason |
+## 9. 보장하는 것
+
+| 보장 | 뜻 | 확인 |
 |---|---|---|
-| Meaning of a proposition | the sentence is required, `⟦p⟧` is optional | a story constant is enough for a proposition without a meaning |
-| Time intervals on facts, variables in conditions | none | the history summary and a finite `U` are enough, and stories stay simple |
-| Autonomous NPC actions | reactions and story effects only | goal-seeking NPCs would need a planner |
-| What people say | `knows` as a public constant, earlier lines in `P`; neither enters `S` | a spoken line is model output, and letting it become fact would let the models change the world (3.4) |
-| Crowds, units smaller than a place | none | `V` stays simple when `here` is a single place |
-| Story flags | as few as possible | the history summary and `fill` cover most of it |
+| 다시 만들 수 있다 | 이야기와 기록만으로 세계가 나온다. 규칙도 씨앗도 모델도 필요 없다. 같은 이야기, 같은 씨앗, 같은 행동이면 세계와 기록이 같다 | 저장 뒤 다시 만든 세계가 메모리의 세계와 같다. 두 번 돌려 결과가 같다 |
+| 세계가 깨지지 않는다 | 2절의 규칙이 늘 지켜진다 | 바꾸는 일마다 검사. 아무 행동이나 이어 하면서 매 턴 검사 |
+| 통째로 반영된다 | 한 턴은 전부 반영되거나 전혀 반영되지 않는다 | 도중에 오류를 내도 세계와 파일이 그대로다 |
+| 새로 생기지 않는다 | 모델은 대상도 사실의 종류도 만들지 못한다 | 사건 속 사실이 모두 정해진 꼴이다 |
+| 모델은 행동만 고른다 | 모델의 출력은 다음 행동으로만 세계에 닿는다 | 할 수 있는 행동 밖의 id는 거절된다 |
+| 새지 않는다 | 숨은 사실은 보이는 것을 바꾸기 전에는 플레이어와 모델에게 닿지 않는다 | 숨은 사실만 다른 두 세계는 보이는 것, 화면, 프롬프트가 같다 |
+| 출처는 하나다 | 화면, 할 수 있는 행동, 프롬프트가 사실이라고 하는 것은 모두 보이는 사실이다. 믿음은 믿음으로 보여 준다 | 화면과 프롬프트가 보이는 사실과 아는 사실 밖의 것을 쓰지 않는다 |
+| 이야기를 모른다 | 엔진 코드에 이야기의 id, 이름, 문장이 없다 | `src/`에서 예시 이야기의 id와 이름을 찾는 테스트 |
+| 이야기가 맞다 | 처음 세계가 2절의 규칙을 지키고, 설정과 효과가 이 문서의 사실과 일만 쓴다 | 시작할 때 검증(story.md의 검증) |
+| 끝에 닿는다 | 세계가 될 수 있는 모습은 유한하다. 그래서 목표에 닿을 수 있는지 미리 따져 볼 수 있다. 주사위는 성공과 실패를 둘 다 본다 | 시작할 때 검증(story.md의 검증) |
+
+**두지 않는 것**
+
+- 사실에 시간 구간을 달지 않는다. 조건에 변수를 쓰지 않는다.
+- 등장인물은 스스로 행동하지 않는다. 반응과 이야기의 효과만 있다.
+- 사람이 한 말은 세계의 사실이 되지 않는다.
+- 이야기 깃발은 되도록 적게 쓴다. 한 적 있는 일과 `fill`로 대부분 된다.
+
+## 10. 코드
+
+```
+server/src/onto/
+  atoms.py    사실, 세계(State)
+  change.py   바뀐 사실(Delta), 세계를 바꾸는 일, 사본(Work)
+  universe.py 이야기에서 읽어 둔 것(Universe), 처음 세계(initial), 규칙 검사(conforms)
+  cond.py     조건 따지기(holds)
+  view.py     보이는 것(observe)
+  log.py      사건(Event), 기록, 한 적 있는 일
+  save.py     저장, 기록에서 다시 만들기(load)
+```
+
+이 폴더는 모델도 규칙도 모른다. 다만 규칙이 쓰는 사실(`owes`, `spent`, `follows`)과 그것을 바꾸는 일은 여기 있다. 이야기를 읽어 `Universe`를 만드는 것은 `story/compile.py`다.
+
+| 우리말 | 코드 |
+|---|---|
+| 사실 | `Atom`: 이름이 맨 앞인 튜플. `("at", "key", "dohae")`, `("fill", "door", 1)`. JSON에서는 배열 |
+| 세계 | `State`: 바뀌지 않는 값. `apply(S, delta)`가 새 세계를 돌려준다 |
+| 막힘 | `blocks(o, x)`: 저장하지 않고 계산한다 |
+| 바뀐 사실 | `Delta(add, remove)`: 둘은 겹치지 않는다 |
+| 사건 | `Event(t, action, roll, result, delta, witnesses, mods, happen)`. `roll`은 `(d1, d2, u)` |
+| 한 적 있는 일 | 패턴. `matches(pattern, action, result)`. 사건을 붙일 때마다 갱신한다 |
+| 보이는 것 | `Obs(observer, seen, facts, beliefs, memory, hist)` = 보이는 대상, 보이는 사실, 아는 사실, 기억, 한 적 있는 일 |
+| 보이는 사실의 규칙 | `fact_rule(o, S, atom)`: 기억을 만들 때도 같은 함수를 쓴다 |
+| 기억 한 줄 | `Seen(t, action, roll, result, witnesses, delta, mods, happen)` |
+| 연쇄 | `Trigger(id, when, effects, repeat, kind)` |
+| 장 넘기기, 결말 | `chapter_to(k+1)`, `end(e)` |
+| 처음 세계 | `initial(universe, creation)` |
+
+`State`는 사실 종류마다 찾아보기 표를 둔다. 표의 모양이 2절의 규칙 대부분을 지켜 준다.
+
+| 사실 | 표 |
+|---|---|
+| `at` | `dict[x, y]` |
+| `link`, `believes`, `owes`, `follows`, `due`, `spent` | `set[tuple]` |
+| `mark` | `dict[(x, 칸), (종류, 수명)]` |
+| `regards` | `dict[(g, h, 축), n]` |
+| `fill` | `dict[o, n]` |
+| `stat` | `dict[(g, s), n]` |
+| `flag` | `dict[f, v]` |
+
+Python `set`의 순서는 실행마다 다를 수 있다. 그래서 밖으로 나가는 목록은 6절의 순서 규칙을 따른다.

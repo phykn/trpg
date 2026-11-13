@@ -1,433 +1,651 @@
-# Engine
+# 엔진
 
-The engine is a round trip: language → ontology → language. The middle (world and rules) is exact, so properties guarantee it; the two ends (interpretation and narration) are approximated by models, so they are measured.
+플레이어가 쓴 문장을 행동으로 바꾸고, 일어난 일을 다시 문장으로 들려준다. 가운데(세계와 규칙)는 정확하고, 양 끝(문장 읽기와 서술)만 모델이 맡는다.
 
-```
-   sentence ─► ρ(Vₜ) ─► [decision model] ─► a ∈ K(Vₜ) ─► R ─► Vₜ₊₁ ─► ρ(Vₜ₊₁), δ ─► [narration model] ─► sentence
-                               ▲                                                            │
-                               └──────────────── checked by κ and [decision model] ◄────────┘
-```
+## 한눈에
 
-**One law**: a model either picks from a finite set the engine built (the decision model `D(c, q, Ω)`: context, question, options → a probability distribution over `Ω`), or writes text the engine will check (the narration model `N(c)`). Only the former touches the world, and only inside `K`. Both models' outputs are exogenous inputs, and the engine assumes nothing about model internals. Anything that yields one element of a finite set — the decision model, rules (name matching), the narration model's reading and picking, the player's buttons and card answers — is a **selector**, and any of them can fill the same place.
+1. 플레이어가 문장을 쓴다.
+2. 엔진이 지금 할 수 있는 행동을 보기로 만들고, **판단 모델**이 그중 하나를 고른다. 확신이 없으면 **서술 모델**이 읽어 주고, 그래도 모르면 아무 일도 일어나지 않는다.
+3. 굴려야 하거나 되돌릴 수 없는 행동이면 **카드**를 띄우고 멈춘다. 플레이어가 받아들이면 규칙이 처리한다.
+4. 서술 모델이 **바뀐 것만** 글로 쓴다.
+5. 엔진과 판단 모델이 그 글을 검사한다. 틀린 문장이 있으면 두 번까지 다시 쓰게 한다.
 
-```
-server/src/
-  onto/  rules/          ontology.md, rule.md
-  story/                 load.py (reads YAML), compile.py (story → Universe, V1 structure),
-                         validate.py (story.md V1–V6), evals.py (interpretation evals)
-  locale/ko.py           frame table 𝔗, action names λ, common text, interpretation vocabulary
-  lang/                  context.py (ρ), claims.py (κ), polite.py (합니다체)
-  models/                decision.py (decision model), llm.py (narration model)
-  interpret.py           question tree and acceptance
-  cards.py               clarify, roll, confirm and move cards
-  narrate.py             narration, checks, rewrites, recaps
-  jobs.py                what one narration or recap reads from a save (5.1)
-  view.py                GameView, step records (api.md)
-  service.py             turn protocol (lock, revision, receipts)
-  api.py                 HTTP boundary (api.md)
-  config.py              settings from the environment
-  fun.py                 offline fun metrics (fun.md 4)
-```
+> "창고로 가서 상자를 연다" → 행동 둘(가기, 시도). 창고로 가는 이동 카드가 뜬다. 받아들이면 창고로 간다. 이제 상자가 보이니 상자에 대한 시도로 읽고, 굴림 카드가 뜬다. 여기까지가 한 턴이고 서술도 하나다.
 
-Models are called only from `interpret.py`, `narrate.py` and the startup check. These two files receive only `Obs` and text built from it, exogenous inputs, and story constants (style).
+**단 하나의 법칙**: 모델은 엔진이 만든 보기에서 고르거나, 엔진이 검사할 글을 쓴다. 세계를 바꾸는 것은 고르기뿐이고, 고를 수 있는 것은 지금 할 수 있는 행동뿐이다. 모델은 아무것도 지어내지 못한다.
 
-## 1. Frame table and names
+## 1. 두 모델
 
-The frame table `𝔗` in `locale/ko.py` gives each predicate a **present frame** (states a fact) and a **change frame** (tells that an atom appeared or disappeared). It is engine vocabulary, independent of any story; the story's `name` and `aliases` fill in the names. The context `ρ`, action names `λ` and claim extraction `κ` all use this one table, so the facts the screen states never drift from the facts the check knows.
-
-| Predicate | Present frame | Change frame (added / removed) |
+| | 판단 모델 (malkuth-2b, `:8081`) | 서술 모델 (`:8082`) |
 |---|---|---|
-| `at(x, place)` | {x}은(는) {y}에 있습니다 | {x}이(가) {y}에 왔습니다 ("당신과 함께", with you, for a companion) / {x}이(가) {y}를 떠났습니다 |
-| `at(x, agent)` | {y}이(가) {x}을(를) 지니고 있습니다 | {y}이(가) {x}을(를) 얻었습니다 / {y}이(가) {x}을(를) 내주었습니다 |
-| `link(p, q)` | {p}에서 {q}(으)로 갈 수 있습니다 | 길이 열렸습니다 / 길이 끊겼습니다 |
-| `mark` | {x}에 {tag name}이(가) 있습니다 ({x}에게 for a person) | {x}에 (or {x}에게) {tag name}이(가) 생겼습니다 / 사라졌습니다 |
-| `fill` | {o}: {n}/{boxes} | {o}이(가) {n}칸이 되었습니다 |
-| `regards` | {g}이(가) 당신을 {trust or fear word}합니다 | 마음이 움직였습니다 (axis and direction) |
-| `stat` | 당신의 {item}: {n} | {item}이(가) {n}이(가) 되었습니다 |
-| `owes` | 당신은 {h}에게 지킬 약속이 있습니다: {promise name} / {g}이(가) 당신에게 신세를 졌습니다 | 약속했습니다: {promise name} / 약속을 지켰습니다 / 어겼습니다 |
-| `follows` | {h}은(는) 당신과 함께 다닙니다 | 함께 다니기로 했습니다 (…했지만 {places}에는 가지 않습니다, for one who avoids places) / 이제 따라다니지 않습니다 |
-| `spent` | Screen only; not put in the context | |
+| 하는 일 | 문장 읽기, 굴림 카드의 기댈 것 거르기, 서술 검사 | 서술, 다시 쓰기, 장 요약. 판단 모델이 확신 못 할 때 문장 읽기와 고르기 |
+| 답하는 방식 | 보기마다 확률을 준다 | 글을 쓴다. 읽기와 고르기에서는 보기 번호를 쓴다(온도 0) |
+| 시간 제한 | 호출마다 10초 | 서술 60초, 읽기와 고르기 10초 |
+| 시간이 넘으면 | 읽을 수 없는 답으로 친다 | 그 시도는 실패. 세 번 다 실패하면 스트림에 `error` |
 
-A fork coming to the player (`at(g, player)` added for a fork `g`) is the one appearance with a change frame: 고를 때입니다: '{choice}' 또는 '{choice}'. Without it a fork was only a red clock named after its default; no tester saw a choice in it, and one narration made it oil seeping from the village ground (goal-4-talker 44, goal-4-explorer 16, 31). A threat's appearance has no line; its clock shows it.
+- 판단 모델에는 문맥 하나와 닫힌 질문 여럿을 한 번에 보낸다. 보기 밖의 답, 읽을 수 없는 답, 늦은 답은 모든 보기의 확률이 0인 답이다.
+- 서술 모델은 언제나 생각 없이 답한다(`enable_thinking: false`). 출력은 500토큰까지다.
+- 보기에서 하나를 고르는 자리는 누가 채워도 된다: 판단 모델, 이름 맞추기 규칙, 서술 모델, 플레이어의 버튼과 카드.
 
-Particles are chosen by the final-consonant (받침) function in `locale/ko.py`. A tag name is the presentation-layer name (section 6), or else the story's default name or the engine's default name ("이점" (advantage), "불리함" (disadvantage); "유리함" was narrated as glass, 유리, play-5-odd 9).
+## 2. 문장 틀과 이름
 
-**Action names** `λ(a)` are one frame per schema: `go` "{q}(으)로 간다", `try` "{x}을 {approach}(으)로 다룬다" ("상대한다" for a person; "말한 대로 해 본다" for the player alone, which changes nothing), the story's `label` for a solution (kept under "무리해서" when forced), `talk` "{h}에게 {topic title}을 묻는다", and so on. Buttons, clarify cards, the decision model's options and step records all use `λ`.
+엔진은 사실마다 **지금 문장**(사실을 말한다)과 **바뀜 문장**(생겼거나 사라졌음을 말한다)을 갖고 있다. 이야기와 무관한 엔진의 말이고, 이름만 이야기의 `name`과 `aliases`로 채운다. 문맥, 행동 이름, 서술 검사가 모두 이 표 하나를 쓴다. 그래서 화면이 말하는 사실과 검사가 아는 사실이 어긋나지 않는다.
 
-## 2. Context `ρ`
+| 사실 | 지금 문장 | 바뀜 문장 (생김 / 사라짐) |
+|---|---|---|
+| 누가 어느 곳에 있다 | {x}은(는) {y}에 있습니다 | {x}이(가) {y}에 왔습니다 (동행이면 "당신과 함께") / {x}이(가) {y}를 떠났습니다 |
+| 누가 물건을 가졌다 | {y}이(가) {x}을(를) 지니고 있습니다 | {y}이(가) {x}을(를) 얻었습니다 / {y}이(가) {x}을(를) 내주었습니다 |
+| 길 | {p}에서 {q}(으)로 갈 수 있습니다 | 길이 열렸습니다 / 길이 끊겼습니다 |
+| 태그 | {x}에 {태그 이름}이(가) 있습니다 (사람이면 {x}에게) | {x}에(또는 {x}에게) {태그 이름}이(가) 생겼습니다 / 사라졌습니다 |
+| 칸(시계, 위협 등) | {o}: {n}/{칸 수} | {o}이(가) {n}칸이 되었습니다 |
+| 신뢰, 두려움 | {g}이(가) 당신을 {신뢰 또는 두려움 낱말}합니다 | 마음이 움직였습니다 (어느 쪽으로 움직였는지) |
+| 능력치 | 당신의 {항목}: {n} | {항목}이(가) {n}이(가) 되었습니다 |
+| 약속, 신세 | 당신은 {h}에게 지킬 약속이 있습니다: {약속 이름} / {g}이(가) 당신에게 신세를 졌습니다 | 약속했습니다: {약속 이름} / 약속을 지켰습니다 / 어겼습니다 |
+| 동행 | {h}은(는) 당신과 함께 다닙니다 | 함께 다니기로 했습니다 (꺼리는 곳이 있으면 "…했지만 {곳}에는 가지 않습니다") / 이제 따라다니지 않습니다 |
+| 써 버린 것 (특성, 물건, 사실) | 화면에만 보인다. 문맥에 넣지 않는다 | |
+| 닫힌 방법 | {o}에는 {방법}이(가) 통하지 않습니다 | {o}에 {방법}은(는) 더 통하지 않습니다 |
 
-`context(U, O, X) → list[Line]` in `lang/context.py` turns an observation into text. `X ⊆ E` is the **focus**: the currently visible entities this question or narration needs. A `Line` carries its section and, for a fact, its atom. In the prompt it goes out as text under a section header, and the check (5.3) finds atoms on the same lines.
+그 밖의 바뀜 문장:
 
-1. **Facts**: one present-frame line for each atom of `F` with an entity slot in `X` and every entity slot in `E`. A flag with texts has no entity slot and is a line wherever it holds a value with a text. The player is in every focus, and `F` holds the player's regard, debts and promises with people anywhere, so without the second condition the decision model read "윤슬은 당신을 덤덤하게 대합니다" in the village while she was at the dock, and the same line for a latent person not yet brought in (963 bench requests, `decision-2/parity-context.txt`).
-2. **Beliefs**: "당신이 믿는 것: {text}" (what you believe) for each proposition in `B` whose `about` overlaps `X`. A proposition with no place (a topic's `text`, a person's belief) goes in when a person who holds that topic is in `X`. Beliefs can be false, so they are marked apart from facts.
-3. **Memory**: recent events in `M` that involve an entity of `X`, in change frames, written as past events.
-4. **Public parameters**: for each entity of `X`, its sensory cues, persona, voice, desires, fears, looks and topic titles. A person's `wants` only when that thing is not hidden from the player. In `scene` (below) a person's `knows` too, as "{name}이 아는 것: …" (what they know), so narration and its check share what that person may state (ontology.md 3.4); interpretation never needs it.
+- 갈림길이 플레이어에게 왔다: "고를 때입니다: '{선택}' 또는 '{선택}'". 위협이 나타난 것은 문장이 없다. 그 칸이 보여 준다.
+- 장면 끝: "장면이 넘어가고, 다가오던 일들이 한 걸음씩 더 다가옵니다". 그 때문에 움직인 칸들보다 앞에 온다.
+- 태그가 밀려남: "{주인}의 {옛 태그}이 밀려나고 {새 태그}이 자리 잡았습니다".
+- 상처가 생김 / 나음: "당신이 다쳤습니다" / "당신의 상처가 조금 나았습니다".
+- 물건을 다 씀: "{이름}을 다 썼습니다".
+- 보이는 사람이 믿음을 버림: "{이름}은 더는 이렇게 믿지 않습니다: {글}". 사람의 믿음이 서술에 닿는 곳은 여기뿐이다.
+- 글이 딸린 깃발(story.md의 깃발)은 값에 글이 있는 동안 어느 문맥에나 사실 한 줄로 들어가고, 바뀌면 작가가 쓴 글 그대로 한 줄이 된다.
+- 길이 양쪽으로 끊기거나 열리면 한 줄로 쓴다: "A와 B 사이의 길이 끊겼습니다".
 
-| Used in | Focus |
+조사는 받침을 보고 고른다. 태그 이름은 서술이 붙인 이름(6.6)을 쓰고, 없으면 이야기의 기본 이름, 그것도 없으면 엔진의 기본 이름("이점", "불리함")을 쓴다.
+
+**행동 이름**은 행동 종류마다 틀이 하나다. 버튼, 되묻기 카드, 판단 모델의 보기, 턴 기록이 모두 이 이름을 쓴다.
+
+| 행동 | 이름 |
 |---|---|
-| Interpretation layer 1 | None: the sentence alone. On the skeleton evals `ρ({player, here})` lowered accuracy from 80% to 71% (`interp-2-ctx`) |
-| Interpretation layer 2 | `{player, here}` plus the entities in that slot's options |
-| Narration | `({player, here} ∪ visible people in here ∪ entities of δ) ∩ E` |
+| 가기 | {q}(으)로 간다 |
+| 시도 | {x}을 {방법}(으)로 다룬다. 사람이면 "상대한다" |
+| 아무것도 바꾸지 않는 시도 | 말한 대로 해 본다 |
+| 해법 | 이야기의 `label`. 무리할 때는 "무리해서"를 붙인다 |
+| 말하기 | {h}에게 {화제 제목}을 묻는다 |
+| 보여 주기 | {h}에게 {x}을 보여 준다 |
 
-A small decision model is more accurate and faster with a shorter context, so the focus trims the context to what the options need. The narration focus is trimmed to `E` so that no fact lines are made about entities not visible now, such as the place just left; those entities appear only in the change lines of `δ`.
+## 3. 문맥
 
-Narration and its check read `scene(U, O, X)`, which is `context` with these changes:
+모델에게 주는 글은 **플레이어가 지금 볼 수 있는 것**으로만 만든다. 숨은 것만 다른 두 상태는 같은 글이 된다.
 
-- Fact lines involving people outside the focus (their regard, debts, promises) are dropped. The narration model tries to move anyone the context mentions, so someone who is not present must not appear even as a line.
-- Ways out are included only from places in the focus.
-- Number lines are dropped. Approach values are for rolls, and narration may not state numbers. A wound is written once, however many there are, as "당신은 다친 몸입니다" (you are wounded). A regard line at 0 says nothing yet reads as an attitude at odds with the persona ("덤덤하게", indifferently), so it is dropped.
-- Obstacle progress is dropped at 0 and otherwise written "{name}: 조금씩 뜻대로 되어 갑니다 · 거의 뜻대로 되었습니다 · 뜻대로 되었습니다" (coming along · nearly done · done): the second when one box is left, the third when full. "풀렸습니다" leaked into the prose as hinges and dogs coming loose.
-- The current chapter's risk clocks and deadlines go in without numbers, as "{name}: 아직 멀었습니다 · 다가오고 있습니다 · 코앞에 닥쳤습니다" (still far · drawing near · upon you). With no box filled it is the first; with one box left or all full, the third. The passage of time that the story's `style` describes (light, waves) follows this line. Their names are events ("배가 암초에 닿는다") that were narrated as happening, so the turn's steering repeats the lines whose word this turn changed and adds that what has not happened is not written as happened. Only the steering says it: in the context lines the check read "아직 일어나지 않았고" against ordinary sentences and called 13 of them contradictions in the narration bench, against 1 before (`narr-2/fix-2`). The turn's steering also lists up to three two-word phrases found in two of the last three narrations, to be said differently this time. Left out are a phrase that is part of a name or of a place's senses, the story's own wording that the context lists and the cue asks for, and one made only of names and 당신, which says who and not how ("윤슬이 당신을"). A phrase that only shares a word with them is the narration's own: when every such phrase was skipped, "젖은 손" (beside "젖은 밧줄 냄새"), "파도 소리가" and "렌즈를 응시합니다" were never named, and "젖은 손" came three turns running (play-5-talker 28–30).
+질문이나 서술마다 **초점**이 있다. 그 일에 필요한, 지금 보이는 대상들이다. 문맥은 초점에 맞춰 줄인다. 작은 모델은 문맥이 짧을수록 정확하고 빠르다.
 
-## 3. Interpretation
+| 쓰는 곳 | 초점 |
+|---|---|
+| 문장 읽기 1단계 | 없음. 문장만 준다 |
+| 문장 읽기 2단계 | 플레이어, 지금 있는 곳, 그 빈칸의 보기에 나오는 대상 |
+| 서술 | 플레이어, 지금 있는 곳, 여기 보이는 사람, 이번에 바뀐 대상. 단 지금 보이는 것만 |
 
-`interpret.py` turns one sentence into a plan (a sequence of steps, `k ≤ 3`), a clarify card, or a refusal. Every question `q = (sentence, Ω)` is closed, and the engine computes `Ω` from `(Vₜ, earlier answers)` **before** calling the model. An answer outside the options, or one that cannot be read, has probability 0.
+방금 떠난 곳처럼 지금 안 보이는 대상은 사실 줄이 없다. 바뀜 문장에만 나온다.
 
-```
-K_σ(O) = { a ∈ K(O) | a's schema is σ }
-Σ_말 = {go, look, take, give, talk, try, declare, cut, choose}     (the 9 schemas a sentence can choose)
-```
+문맥은 네 묶음이고, 묶음 제목 아래 글로 나간다.
 
-| Layer | Asks | Options `Ω` | When |
+1. **사실**: 초점의 대상이 하나라도 끼어 있고, 낀 대상이 모두 지금 보이는 사실마다 지금 문장 한 줄. 다른 곳에 있는 사람의 신뢰나 약속은 들어가지 않는다.
+2. **믿음**: 초점의 대상에 관한 것마다 "당신이 믿는 것: {글}". 장소가 없는 것(화제의 글, 사람의 믿음)은 그 화제를 가진 사람이 초점에 있을 때 넣는다. 믿음은 틀릴 수 있어서 사실과 따로 적는다.
+3. **기억**: 초점의 대상이 낀 최근 일을 바뀜 문장으로, 지난 일로 쓴다.
+4. **공개된 설정**: 초점의 대상마다 감각 묘사, 성격, 말투, 바라는 것, 두려워하는 것, 생김새, 화제 제목. 사람이 바라는 물건은 그 물건이 플레이어에게 숨겨져 있지 않을 때만 넣는다.
+
+### 3.1 서술용 문맥
+
+서술과 서술 검사는 위 문맥을 이렇게 바꿔 읽는다.
+
+- 초점 밖 사람이 낀 사실 줄(신뢰, 신세, 약속)은 뺀다. 서술 모델은 문맥에 나온 사람을 누구든 움직이려 든다.
+- 나가는 길은 초점에 있는 곳의 것만 넣는다.
+- 사람이 아는 것을 넣는다: "{이름}이 아는 것: …". 그 사람이 말해도 되는 것을 서술과 검사가 똑같이 안다.
+- 숫자 줄은 뺀다. 서술은 숫자를 말할 수 없다.
+  - 상처는 몇 개든 한 번만: "당신은 다친 몸입니다".
+  - 신뢰나 두려움이 0인 줄은 뺀다.
+- 넘은 장애물은 "{이름}: 뜻대로 되었습니다"로 넣는다. 아직 서 있는 장애물은 닫힌 방법이 있을 때만 "{이름}에는 {방법}이(가) 통하지 않습니다"로 넣는다.
+- 이번 장의 위험 시계와 기한은 숫자 없이 "{이름}: 아직 멀었습니다 · 다가오고 있습니다 · 코앞에 닥쳤습니다" 중 하나다. 한 칸도 안 찼으면 첫째, 한 칸 남았거나 다 찼으면 셋째다. 이야기의 `style`이 말하는 시간의 흐름(빛, 파도)은 이 줄을 따른다.
+
+## 4. 문장 읽기
+
+문장 하나를 **계획**(행동 셋까지), **되묻기 카드**, **거절** 중 하나로 바꾼다. 모든 질문은 닫혀 있다. 엔진이 보기를 먼저 만들고 나서 모델을 부른다.
+
+| 단계 | 묻는 것 | 보기 | 언제 |
 |---|---|---|---|
-| 0. Rules | Should the sentence be refused; does a name appear verbatim | The story's `impossible` phrases, requests about the game, names from `λ` | Always first. Once settled, that question does not go to a model |
-| 1. Kind and parts | What kind of line it is; how many actions, and which schema the first step is. If unsure or several, the narration model reads the sequence of steps | Kind `{act, say, muse}`; count `{1, 2, 3}`; step 1 from the 9 of `Σ_말` (schemas possible here, `{σ ∣ space(σ) ≠ ∅}`, first). The narration model gets the same 9 | One decision-model call, plus one narration-model call if needed |
-| 2. Slots | The arguments of step `i` | Values of `space(V_{t+i−1})` consistent with earlier slots. For the destination, also the current place | **Just before** executing step `i`. Only when there are two or more values. If empty, stop at that step (refuse the sentence if it is the first step) |
+| 0. 규칙 | 거절할 문장인가, 이름이 그대로 나오는가 | 이야기의 불가능 문구, 게임에 관한 요청, 행동 이름과 대상 이름 | 맨 먼저. 여기서 정해진 것은 모델에게 묻지 않는다 |
+| 1. 종류와 행동 | 어떤 말인가, 행동이 몇 개이고 첫 행동이 무엇인가 | 종류 셋, 개수 1·2·3, 행동 아홉 가지 | 판단 모델 한 번. 필요하면 서술 모델 한 번 |
+| 2. 빈칸 | 그 행동의 대상, 방법 등 | 지금 가능한 값 | 그 행동을 **실행하기 직전에**. 값이 둘 이상일 때만 |
 
-Layer 1 options are a few fixed, story-free choices, which is the kind of question a small model handles best. The one exception: when a fork waits in the scene, the `choose` option's examples are that fork's own choices, since with general examples "pour the oil on the lamp" read as a `try` (qa_test/runs/play-1-*). Arguments for steps 2 and 3 are asked from the observation after the earlier step has run: in "창고로 가서 상자를 연다" (go to the storeroom and open the box), the box becomes visible only after entering the storeroom.
+문장이 고를 수 있는 행동은 아홉 가지다: 가기, 살펴보기, 집기, 건네기, 말하기, 시도, 선언, 넘기기, 고르기. 보여 주기는 버튼, 버튼 이름과 같은 문장, 건네기의 확인 카드로 한다. 성장은 성장 카드로 한다.
 
-### 3.1 Layer 0: rules
+둘째, 셋째 행동의 빈칸은 앞 행동을 실행한 뒤에 묻는다. 상자는 창고에 들어가야 보인다.
 
-Decided without a model.
+### 4.1 0단계: 규칙
 
-| Rule | Result |
+모델 없이 정한다.
+
+| 규칙 | 결과 |
 |---|---|
-| The sentence contains one of the story's `impossible` phrases as a substring | Refuse ("이 이야기에는 그런 것이 없습니다", there is no such thing in this story) |
-| A request about the game (`ko.META`: whole phrases for save, restart, questions about the rules, etc., so "저장고" or "처음부터 차근차근" stays in the story) | Refuse with guidance |
-| "성장" (growth) while the player has growth to spend | Refuse, pointing to the growth card |
-| The sentence equals a candidate's `λ` or a solution's `label` (ignoring spacing and punctuation) | A plan of that one action |
-| An entity's name or alias appears, also as called by name ("윤슬아", "누렁아" for 누렁이) | Fills that layer-2 slot with that entity (when the value is among the candidates) |
-| A name before `…에게` or `…한테` ("to") | The other party of `give` or `talk` |
-| Approach words (`ko.APPROACH_WORDS`: "밀어" (push), "몰래" (sneak), "살펴" (examine), "달래" (soothe), etc.) | The approach of `try` |
-| The name of something to rely on (a held thing, a trait, a tag name, a key word of a believed proposition) | The roll card's `selected` (4.2) |
+| 이야기의 불가능 문구(`impossible`)가 문장에 들어 있다 | 거절: "이 이야기에는 그런 것이 없습니다" |
+| 게임에 관한 요청이다(저장, 다시 시작, 규칙 질문). 문구 전체가 맞아야 한다. "저장고", "처음부터 차근차근"은 이야기 안의 말이다 | 안내와 함께 거절 |
+| 쓸 성장이 있는데 "성장"이라고 썼다 | 거절하고 성장 카드를 가리킨다 |
+| 문장이 어떤 행동 이름이나 해법의 `label`과 같다(띄어쓰기, 문장부호 무시) | 그 행동 하나짜리 계획 |
+| 대상의 이름이나 별명이 나온다. 부르는 꼴도 된다("윤슬아", 누렁이를 "누렁아") | 2단계의 그 빈칸을 채운다(보기에 있을 때) |
+| `…에게`, `…한테` 앞의 이름 | 건네기나 말하기의 상대 |
+| 방법을 가리키는 말("밀어", "몰래", "살펴", "달래" 등) | 시도의 방법 |
+| 기댈 것의 이름(가진 물건, 특성, 태그 이름, 믿는 사실의 핵심어) | 굴림 카드에서 미리 골라 둘 값(5.2) |
 
-### 3.2 Layer 1: kind and parts
+### 4.2 1단계: 종류
 
-**Kind.** Players type anything, in any form: no quotes, no addressee, no polite form, fragments ("하이", "왜 불을 켜야해", "먹을거 어디에 있어?", "누렁아~ 이리온 쭈쭈", in the saved games of real play). Form is no signal, so the same call that asks for the parts also asks what kind of line it is, from the sentence alone, over `ko.KIND`:
+플레이어는 아무 꼴로나 쓴다("하이", "왜 불을 켜야해", "누렁아~ 이리온 쭈쭈"). 꼴로는 알 수 없으니 문장만 보고 종류를 묻는다.
 
-| Kind | What the line does |
+| 종류 | 뜻 |
 |---|---|
-| `act` | Does something in the scene: goes, looks, takes, gives, faces something, or asks someone for something, urges, threatens, deceives, brings someone along |
-| `say` | Speaks to someone without asking anything of them: a greeting, small talk, a passing question, an answer, thanks |
-| `muse` | Neither: talking to oneself, an exclamation, a feeling, a laugh |
+| 행동(`act`) | 장면에서 무언가를 한다: 간다, 본다, 집는다, 건넨다, 맞선다. 누구에게 부탁하고, 조르고, 위협하고, 속이고, 데려가는 것도 행동이다 |
+| 말(`say`) | 바라는 것 없이 누구에게 말한다: 인사, 잡담, 지나가는 질문, 대답, 고맙다는 말 |
+| 혼잣말(`muse`) | 둘 다 아니다: 혼잣말, 감탄, 기분, 웃음 |
 
-Only an action may roll or spend time, so a line that is not clearly one must not become one. Asked only for parts, every line became the nearest action: "먹을거 어디에 있어?" and "왜 불을 켜야해" opened a roll on the one topic there, the wall behind the lighthouse, and "와 바람 개쎄네" spent a beat looking at the yard (qa_test/runs/intent-1-base).
+굴리거나 시간을 쓰는 것은 행동뿐이다. 그래서 분명히 행동이 아닌 문장은 행동이 되지 않는다.
 
-The decision model's kind is taken when `p(ω₁) ≥ θ₁`; below that the narration model picks it from the same options, and with no pick the line goes to the parts. On 35 typed lines the decision model was right on 30 and the narration model on 33, and every miss of the decision model was below 0.7 ("문 발로 차" read as speech at 0.53; qa_test/runs/intent-1-probe).
+판단 모델의 답이 0.7 이상이면 그대로 받는다. 아니면 서술 모델이 같은 보기에서 고른다. 그래도 답이 없으면 종류 없이 행동 나누기(4.3)로 간다.
 
-| Kind | Plan |
+| 종류 | 계획 |
 |---|---|
-| `say` or `muse` naming a thing, an obstacle or a place | The parts below |
-| `say` with a person here | One `talk` step limited to small talk (3.3) |
-| `say` with no person here, or `muse` | `try(player)`: narration only, no roll, no change, no time |
-| Otherwise | The parts below |
+| 말이나 혼잣말인데 물건, 장애물, 곳의 이름이 나온다 | 행동 나누기로 간다. 이름을 부른 것은 그것에 대한 말이다("문이 왜 안 열려?") |
+| 말이고 여기 사람이 있다 | 잡담으로만 하는 말하기 하나(4.4의 잡담) |
+| 말인데 여기 사람이 없다, 또는 혼잣말 | **빈 행동**: 서술만 받는다. 굴림도, 변화도, 시간도 없다 |
+| 그 밖 | 행동 나누기로 간다 |
 
-A line that names something in the scene is about it: words to an animal ("누렁아~ 이리온") are an attempt on it, and "문 발로 차" or "문이 왜 안 열려?", read as speech or musing, became idle (qa_test/runs/intent-1-a).
+### 4.3 1단계: 행동 나누기
 
-**Parts.** The decision model is asked for the number of actions and the first step in the same call. The step options are described by `SCHEMA_ASK` in `locale/ko.py`: schema descriptions with story-free examples attached ("어딘가로 간다 (예: 북쪽 문으로 나간다, 위층으로 올라가자)" …). The options are all nine of `Σ_말`, with the schemas possible here first. The first step is **sure** when its `ω₁` is a schema possible here and `p(ω₁) ≥ θ₁` (0.7). If it is sure and the count's `ω₁` is 1, that one step is the plan.
+같은 호출에서 판단 모델에게 **행동이 몇 개인지**와 **첫 행동이 무엇인지**를 묻는다.
 
-Otherwise the narration model **reads** the sentence. It gets the same descriptions, numbered in the same order, and writes the numbers of the sentence's actions in the order they happen (temperature 0). A schema identical to the one just before it is one action told in two clauses ("무릎을 꿇고 빈다", kneels and begs), so the two merge; up to three are used. If the decision model was sure but the first number is not a schema possible here, the reading counts as absent.
+- 보기는 아홉 가지 행동 전부다. 지금 여기서 가능한 것을 앞에 둔다.
+- 보기마다 이야기와 무관한 설명과 예가 붙는다: "어딘가로 간다 (예: 북쪽 문으로 나간다, 위층으로 올라가자)".
+- 장면에 갈림길이 와 있으면 고르기의 예만 그 갈림길의 선택들로 바꾼다.
 
-The first matching row from the top applies.
+첫 행동이 **확실하다**는 것은, 가장 높은 답이 지금 가능한 행동이고 확률이 0.7 이상이라는 뜻이다.
 
-| Decision model | Narration model's reading | Plan |
+확실하고 개수가 1이면 그 행동 하나가 계획이다. 아니면 서술 모델이 문장을 **읽는다**. 같은 설명을 같은 순서로 번호 붙여 주면, 문장 속 행동의 번호를 일어나는 순서대로 쓴다.
+
+- 바로 앞과 같은 행동은 하나로 합친다("무릎을 꿇고 빈다"는 행동 하나다).
+- 셋까지만 쓴다.
+- 판단 모델이 확실했는데 읽은 첫 번호가 지금 불가능한 행동이면, 읽지 못한 것으로 친다.
+
+위에서부터 처음 맞는 줄을 따른다.
+
+| 판단 모델 | 서술 모델이 읽은 것 | 계획 |
 |---|---|---|
-| Sure, count 1 | Not asked | The decision model's first step |
-| Count 2 or more | Two or more steps | The sequence of steps read |
-| Sure | Anything else | The decision model's first step |
-| Unsure | One or more steps | The first step read |
-| Unsure | None | `try(player)` |
+| 확실, 개수 1 | 묻지 않는다 | 판단 모델의 첫 행동 |
+| 개수 2 이상 | 행동 둘 이상 | 읽은 순서대로 |
+| 확실 | 그 밖 | 판단 모델의 첫 행동 |
+| 확실하지 않음 | 행동 하나 이상 | 읽은 첫 행동 |
+| 확실하지 않음 | 없음 | 빈 행동 |
 
-If layer 0 settled the plan, nothing is asked. Why the split and the thresholds:
+**지금 불가능한 행동**이 첫 행동으로 정해지면 문장을 거절하고, 여기에 무엇이 없는지 말한다. 상태도 `revision`도 그대로다. 행동마다 한 줄이 있다.
 
-- **Reading.** The decision model reads one sure action well, but asked step by step it attached a next step even to one-action sentences and got about one in five multi-action sentences right. The narration model's reading gets most of them right and matches it on one-action sentences. The decision model's count filters first, so the reading is called only for unsure or multi-action sentences (qa_test/runs/decision-1).
-- **`θ₁` = 0.7**, above the `θ` (0.5) of other questions. Between 0.5 and 0.7 the reading was right more often (24 sentences to 4), mostly on short spoken sentences ("같이 가자", let's go together, read as movement). Raising it gave +24/−4 across three benches, at the cost of more reading calls (qa_test/runs/misread-1).
-- **Impossible schemas.** A first step that is not possible here leaves its slot empty at layer 2, and the sentence is refused with what that schema lacks here (state and `revision` unchanged): "여기에는 집을 수 있는 것이 없습니다" (nothing here to pick up) for an empty floor, "여기에는 말을 걸 사람이 없습니다" (no one here to talk to) for a call to someone elsewhere, one line per schema in `ko.LACK` (a give says whether it lacks someone here or a thing in hand). The bare "지금은 할 수 없는 행동입니다" (you cannot do that now) gave no reason, and players met it in 4 of 6 games without telling why (play-6-odd 18, 23; play-7-explorer 3, 38, 45). Offering only the possible schemas made both models land on a wrong action instead, so all nine are offered and a sure but impossible answer counts as unsure. With the asked schema removed from the scene, refusals went from 0 to 155 of 207 sentences and wrong actions from 115 to 50 (qa_test/runs/misread-1).
+> "여기에는 집을 수 있는 것이 없습니다" · "여기에는 말을 걸 사람이 없습니다"
 
-### 3.3 Layer 2: slots
+건네기는 여기 사람이 없는지, 손에 물건이 없는지를 가려 말한다.
 
-Just before executing step `i`, its slots are asked together in one call, using the observation at that moment. Slots with only one value, and slots layer 0 filled, are not asked.
+### 4.4 2단계: 빈칸
 
-| Slot | Kind | How it is asked |
+행동을 실행하기 직전에, 그 순간 보이는 것으로 빈칸을 한 번에 묻는다. 값이 하나뿐인 빈칸과 0단계가 채운 빈칸은 묻지 않는다. 값이 하나도 없으면 그 행동에서 멈춘다. 첫 행동이면 문장을 거절한다.
+
+빈칸은 두 가지다. **뜻 빈칸**은 플레이어가 무엇을 겨누는지, **판정 빈칸**은 그것이 어떻게 풀리는지를 정한다.
+
+| 빈칸 | 갈래 | 묻는 법 |
 |---|---|---|
-| Destination, target, thing, other party, topic, latent, fork option | Intent | The values of `space`, as `λ` or names |
-| Approach | Intent | Four. After the `try` target is settled |
-| Strain | Judgment | `natural`, `forced`, `불가능` (impossible). If `불가능`, refuse the sentence |
-| Tone | Judgment | Three, asked only for an `act` line |
-| Claim | Judgment | Only when the tone is `deceive`. For each claim sentence in the story, a yes/no question "플레이어는 이렇게 말합니까?" (Does the player say this?), asked on the sentence alone with no context. The claim with the highest "yes" at or above `θ` is taken; if none, there is no claim |
-| Reliance | Judgment | **Not chosen.** The roll card shows the target number and modifiers, so the player chooses there; layer 0 name matching sets the default, and the model only filters out what is unrelated to this attempt (4.2) |
+| 갈 곳, 대상, 물건, 상대, 화제, 숨은 사연, 갈림길의 선택 | 뜻 | 지금 가능한 값을 행동 이름이나 대상 이름으로 보여 준다 |
+| 방법 | 뜻 | 넷. 시도의 대상이 정해진 뒤에 묻는다 |
+| 무리 | 판정 | `natural`, `불가능` 둘. `불가능`이면 문장을 거절한다. 무리해서(`forced`)는 묻지 않는다. 그 방법이 그 대상에 닫혀 있으면 상태가 정한다(rule.md의 장애물) |
+| 말투 | 판정 | 공손, 위협, 속임 셋. 종류가 행동인 문장에서만 묻는다 |
+| 거짓말 | 판정 | 말투가 속임일 때만. 이야기에 적힌 거짓말마다 "플레이어는 이렇게 말합니까?"를 예/아니오로, 문맥 없이 문장만 놓고 묻는다. '예'가 0.5 이상인 것 중 가장 높은 것. 없으면 거짓말 없음 |
+| 기대기 | 판정 | **고르지 않는다.** 굴림 카드에서 플레이어가 고른다. 0단계가 기본값을 정하고, 모델은 상관없는 것만 걸러 낸다(5.2) |
 
-**Out of reach.** Before the slots are asked, a sentence whose named target is out of reach is refused with that cause instead of the bare refusal. The causes are:
+**화제는 이름을 불러야 나온다.** 이야기의 화제는 문장이 그 제목의 낱말을 말할 때만 보기에 넣는다. 조사를 뗀 두 글자 이상의 낱말이거나, 제목의 마지막 낱말이면 된다("등대 뒤 담장"은 "담장"이나 "등대"). 잡담, 부탁, 같이 가자, 여기 있어라는 언제나 보기에 있다. 화제는 굴리므로, 지나가는 질문이 굴림이 되면 안 된다.
 
-- an obstacle in sight blocks a person, thing or way the sentence names: "{장애물}이 {대상}을 막고 있습니다", "{장애물}이 {곳}으로 가는 길을 막고 있습니다";
-- a `talk` or `give` names someone the player met who is not here: "{이름}은 여기 없습니다";
-- a `talk` or `give` that names no one, where everyone here is blocked: the first of them, as above ("왜 못하지?" beside a guarded 도해);
-- a `give` names a known thing the player does not hold: "{물건}을 지니고 있지 않습니다".
+**잡담.** 종류가 말인 문장은 화제가 잡담이거나 이름 불린 화제이고, 말투는 공손이다. 위협과 속임은 종류가 행동인 문장에서만 나온다(rule.md의 말하기). 상대를 부르지 않았으면 여기 있는 사람들 중에서 뜻 빈칸으로 묻는다.
 
-This also happens when the schema has values here but none of them is anything the sentence names. Otherwise the slot fell to another target: "도해의 아구창을 날린다", with 도해 behind a guard dog, became a try on the letter. A hidden obstacle is not a cause: it is not in the observation, so the step runs and is blocked, which reveals it. Players met the bare refusal in every playtest and could not tell a guard from a broken game (qa/findings.md).
+**지금 있는 곳으로 가기.** 갈 곳의 보기에는 나가는 길과 함께 지금 있는 곳도 넣는다. 문장이 나가는 길의 이름을 말하면 넣지 않는다("마당에서 마을로 간다"). 판단 모델이 지금 있는 곳을 골라도 서술 모델도 그렇게 골라야 받는다. 지금 있는 곳이 뽑히면 이동은 이미 된 것이다.
 
-**Topics are named.** A story topic is offered only when the sentence names it: a word of its title, without a final particle, of two syllables or more, or its last word, the head noun ("담장" or "등대" for "등대 뒤 담장"; "폐허" or "길" for "폐허로 가는 길"). `chat`, favors, `come` and `stay` are always offered. With every topic offered, the models put any question near the place on its one topic ("먹을거 어디에 있어?" → the wall, qa_test/runs/intent-1-base), and a topic rolls, so a passing question became a roll. By the head noun alone, 5 of the decision bench's 18 topic questions lost their topic ("폐허 가는 길"); by any title word, 1, and no other topic came in (qa_test/runs/intent-1-probe).
+- 뒤에 행동이 더 있으면 그 행동만 건너뛴다.
+- 문장의 유일한 행동이고 여기서 나가는 길이 막혀 있으면 돌아가기(5.1)가 된다.
+- 그것도 아니면 **이곳 안에서 움직이기**다. 빈 행동으로 실행하고 서술만 달라진다(6.2).
 
-**Small talk.** A `say` line is a `talk` whose topic is `chat` or a named topic, and whose tone is `polite`. Threats and lies change how people regard the player (rule.md 5.1), so they come only from an `act` line. A `say` line names its person or, unnamed, goes to the people here as an intent slot.
+### 4.5 닿지 않는 대상
 
-For the destination, the **current place** is offered along with the ways out, unless the sentence names a way out ("마당에서 마을로 간다", go from the yard to the village). Choosing it means the move is already done: that step is skipped, or, if it is the sentence's only step, it meets a blocked way as a detour (4.1) or else runs as a move about the place: `try(player)` with no roll and no change, narrated as a within reply (5.2). Refused with "여기서 갈 수 있는 곳은 …입니다." (from here you can go to …), "아궁이로 가자" in the inn read as if the hearth were out of reach (qa_test/runs/play-10-human); before that, "이미 …에 있습니다" (you are already at …) answered a walk about the place with where the player stood (play-3-explorer 9). "등대 앞 안에서 따로 갈 곳은 없습니다" (nowhere else to go inside the lighthouse front) read as broken Korean for an open place (play-6-odd 8, play-6-talker 26). Offered only the ways out, the decision model picked another way even when the sentence named the current place in other words; but it is also sometimes sure of the current place for sentences that pass through here and go on ("열린 문으로 들어가 꼭대기까지 오른다", go in through the open door and climb to the top). So, as with layer-1 refusals, the current place is accepted only when the narration model picks it too (qa_test/runs/misread-1).
+빈칸을 묻기 전에, 문장이 이름 부른 대상에 닿을 수 없으면 까닭을 말하며 거절한다. 그 행동의 값이 여기 있어도, 문장이 부른 것이 그중에 없으면 마찬가지다.
 
-### 3.4 Acceptance `δ_θ`
+| 까닭 | 말 |
+|---|---|
+| 보이는 장애물이 사람이나 물건을 막는다 | {장애물}이 {대상}을 막고 있습니다 |
+| 보이는 장애물이 길을 막는다 | {장애물}이 {곳}으로 가는 길을 막고 있습니다 |
+| 말하기나 건네기가 만난 적 있지만 여기 없는 사람을 부른다 | {이름}은 여기 없습니다 |
+| 말하기나 건네기가 아무도 부르지 않았는데 여기 사람이 모두 막혀 있다 | 그중 첫 사람으로 위와 같이 |
+| 건네기가 아는 물건인데 갖고 있지 않다 | {물건}을 지니고 있지 않습니다 |
 
-In one question's answer distribution, `ω₁, ω₂, ω₃` are the options in order of probability. `θ` is a setting, initially 0.5 (adjusted by the measurements in section 9). Layer 1 step 1 uses `θ₁` instead (3.2).
+- 보이는 장애물이 막은 경우는 거절 대신 돌아가기 카드(5.1)가 된다. 쓸 수 있는 해법이 하나도 없을 때만 이 말로 거절한다.
+- 숨은 장애물은 까닭이 되지 않는다. 행동은 실행되고, 막히면서 장애물이 드러난다.
 
-| Question | `p(ω₁) ≥ θ` | Otherwise |
+### 4.6 확신의 기준
+
+기준은 0.5다. 첫 행동과 종류만 0.7이다.
+
+| 질문 | 가장 높은 답이 기준 이상 | 아니면 |
 |---|---|---|
-| Layer 1 step 1 | Accept if `p(ω₁) ≥ θ₁` (with a count of 2 or more, the narration model's reading may set the sequence). A schema not possible here goes to the Otherwise column | The narration model's reading (3.2). If the first step read is an impossible schema, refuse the sentence. With no reading, the whole step is `try(player)`: narration only, with no roll and no change. Layer 2 is not asked |
-| Layer 1 count | One step if `ω₁` is 1 | Use `ω₁` (1 if there is no answer) |
-| Layer 2 intent slot | Accept. But for the `try` target and approach the narration model's pick always comes first, and the current place as destination goes to the Otherwise column | The narration model gets the same context, question and options, numbered, and picks one (temperature 0). With no answer, the player picks on a clarify card `{ω₁, ω₂, ω₃}` (all values if there are three or fewer). For the approach alone, the player's highest stat (ties broken by approach order) is used instead of a card: its modifier is then the largest, and the roll card shows the approach |
-| Layer 2 judgment slot | Accept | `ν₀` |
+| 첫 행동 | 받는다. 지금 불가능한 행동이면 오른쪽 칸으로 | 서술 모델이 읽는다(4.3). 읽은 첫 행동이 불가능하면 거절. 읽지 못하면 빈 행동이고 2단계는 묻지 않는다 |
+| 행동 개수 | 가장 높은 답이 1이면 하나 | 가장 높은 답을 쓴다. 답이 없으면 1 |
+| 뜻 빈칸 | 받는다. 단 시도의 대상과 방법은 언제나 서술 모델이 고른 것이 먼저다. 지금 있는 곳으로 가기는 오른쪽 칸으로 | 서술 모델에게 같은 문맥, 질문, 보기를 번호 붙여 주고 하나를 고르게 한다. 답이 없으면 되묻기 카드(5.1) |
+| 판정 빈칸 | 받는다 | 기본값: 평소대로, 공손, 거짓말 없음 |
 
-The narration model answers only at layer 1 and at intent slots, which decide what the player aims at, never how it resolves; so both models erring together cannot produce a gain in a judgment slot. Where the decision model is unsure of an intent slot, the narration model is almost always right, and for the `try` target and approach it is right even where the decision model is sure and wrong, so its pick comes first there (qa_test/runs/decision-1).
+- **방법만은 되묻지 않는다.** 방법을 정하지 못하면, 그 대상에 아직 열려 있는 방법 중 플레이어의 능력치가 가장 높은 것을 쓴다. 열린 방법이 없으면 넷 중에서 고른다. 같으면 방법 순서대로다. 굴림 카드가 방법을 보여 준다.
+- **서술 모델은 무엇을 겨누는지만 답한다.** 1단계와 뜻 빈칸뿐이다. 어떻게 풀리는지는 답하지 않는다. 그래서 두 모델이 함께 틀려도 플레이어가 이득을 얻지 못한다.
+- **모르면 아무것도 바꾸지 않는다.** 실행되는 행동의 모든 부분은 기준 이상의 답, 서술 모델의 읽기나 고르기, 규칙, 플레이어의 선택, 기본값 중 하나로 정해진다. 그렇지 않으면 행동 전체가 빈 행동이다.
 
-**Conservatism.** Every part of an executed action is set by an answer with probability `≥ θ`, the narration model's reading or pick (layer 1 and intent slots only), a rule, the player's choice, or `ν₀`; otherwise the whole action is `try(player)`, which changes nothing. An unsure judgment slot gives neither gain nor added risk.
+판단 모델 호출 한 번에 담는 질문: 1단계는 종류, 개수, 첫 행동. 2단계는 그 행동에서 물을 빈칸들. 거짓말은 따로 한 번(거짓말마다 질문 하나). 굴림 카드의 기댈 것 거르기는 질문 하나.
 
-### 3.5 Decision model calls
+## 5. 카드
 
-`decide(state, questions)` in `models/decision.py` sends one context text and several closed questions at once, and gets back probabilities over the options of each question. An answer outside the options, unreadable, or past the time limit becomes an answer with probability 0 on every option. Latency grows with the number of questions, so one call carries 2 questions at layer 1, the step's asked slots at layer 2 (claims go in a separate call, one question per claim), and 1 for the roll card's relevance.
+카드는 엔진이 멈추고 플레이어에게 묻는 것이다. 아무 일도 일어나지 않고 시간도 가지 않는다. 기다리는 카드는 하나뿐이고, 새 문장이나 버튼이 오면 버린다.
 
-## 4. Cards
+| 카드 | 언제 | 고를 것 |
+|---|---|---|
+| 되묻기 | 뜻 빈칸을 두 모델 모두 정하지 못했다. 또는 길이 막혔다, 플레이어가 막혔다 | 후보 셋까지, "그만두기" |
+| 굴림 | 다음 행동이 굴리는 행동이다 | 기댈 것 하나, 또는 "기대지 않음" |
+| 확인 | 굴리지 않지만 되돌릴 수 없다: 고르기, 문장으로 한 건네기와 넘기기 | "고른다", "그만두기" |
+| 이동 | 문장으로 한 가기 | 갈 곳 |
 
-A card is the engine stopping to ask the player. It creates no event and does not advance `t`, and its content is a function of `(Vₜ, plan)` (a roll card also reads one relevance answer). The presentation layer holds only one pending card, and it is discarded when a new sentence or button arrives.
+카드에 대한 답은 카드 id와 고른 보기 하나다. 엔진은 다음이 모두 맞을 때만 실행한다.
+
+- 요청의 `revision`이 지금과 같다. 낡았으면 409.
+- 카드가 지금 기다리는 그 카드다.
+- 고른 것이 그 카드의 보기다. 아니면 거절.
+- 그 행동을 지금도 할 수 있다.
+
+### 5.1 되묻기 카드
+
+두 모델이 뜻 빈칸을 정하지 못하면 띄운다. 보기는 확률이 높은 셋(값이 셋 이하면 전부)의 행동 이름과 "그만두기"다. 답이 빈칸을 채우고 계획이 이어진다.
+
+**돌아가기.** 문장이 겨눈 사람, 물건, 길을 여기 보이는 장애물이 막고 있으면 거절하지 않고 그 장애물에 대한 되묻기 카드를 띄운다.
+
+- 질문은 무엇이 막는지 말하고 묻는다: "사나운 누렁이가 도해를 막고 있습니다. 어떻게 할까요?"
+- 보기는 그 장애물의 해법 중 지금 조건이 맞는 것들이다. 각각 해법의 `label`로 보이고, 고르면 그 방법과 기댈 것으로 하는 시도가 된다. 닫힌 방법의 해법은 무리해서 하는 것으로, 올라간 목표 숫자와 함께 보인다.
+- 다른 해법에 필요한데 플레이어에게 없는 것도 질문에 넣는다. 숨겨지지 않은 물건이나 아직 안 쓴 화제다: "…막고 있습니다. 넉가래, 굵은 소금 자루가 있으면 다른 방법도 있습니다. 어떻게 할까요?"
+- 고르면 그 시도의 굴림 카드(5.2)로 이어진다. 고르기 전에는 아무것도 실행되지 않는다.
+- 조건이 맞는 해법이 없으면 까닭을 말하며 거절한다(4.5).
+- 열린 길을 부르지 않은 가기("이제 출발한다", "눈더미를 넘는다")도 같다. 여기서 보이는 첫 막힌 길과 그 길을 막는 장애물로 카드를 띄운다.
+
+카드에 나오는 것은 보이는 장애물의 공개된 설정뿐이라 숨은 것이 새지 않는다.
+
+**막혔을 때.** 아무것도 바꾸지 못한 문장(거절 또는 빈 행동) 바로 다음 문장이 또 빈 행동으로 읽히면, "무엇을 해 볼까요?" 카드를 띄운다.
+
+- 보기는 추천(rule.md의 추천)이다. 버튼 이름이나 해법의 `label`로 보인다.
+- 고르면 그 행동을 한다. 굴리는 행동이면 굴림 카드가 뜨고, 가기면 이동 카드 없이 바로 간다.
+- 추천이 하나도 없으면 혼잣말로 답한다(6.2).
+- 이 요청은 여전히 헛도는 요청으로 센다(fun.md).
+
+### 5.2 굴림 카드
+
+계획의 다음 행동이 굴리는 행동이면 실행 직전에 멈추고 띄운다. 굴리는지는 보이는 것만으로 정한다.
+
+- 플레이어 자신이 아닌 대상에 대한 시도는 언제나 굴린다.
+- 말하기는 화제를 아직 모르고 거저 알려 줄 조건도 안 맞을 때, 또는 호의 없이 하는 부탁일 때 굴린다(rule.md의 말하기).
+- 숨은 것이 막고 있을 때만 이 판단이 실제와 다르다. 그때는 카드를 받아들이면 막힌 것이 드러난다.
+
+| 카드에 담긴 것 | 내용 |
+|---|---|
+| 멈춘 행동 | 대상, 방법, 무리, 말투가 정해진 행동과 계획의 나머지. 기대기만 비어 있다 |
+| 보기 | 이 굴림에 상관있는 기댈 것마다 하나, 그리고 "기대지 않음". 보기마다 이름, 쓰고 나면 없어지는지, 무리인지, 그렇게 굴릴 때의 위험·목표 숫자·더하고 빼기 |
+| 보기 순서 | rule.md의 기대기 표 순서. 같은 종류 안에서는 이야기에 적힌 순서(태그는 칸 순서). "기대지 않음"이 마지막 |
+| 미리 고른 것 | 0단계가 문장에서 찾은 기댈 것. 없으면 "기대지 않음" |
+| 되비춤 | 문장이나 버튼 이름, 그리고 읽어 낸 대상·방법·무리·말투의 이름 |
+
+- **닫힌 방법**으로 하는 시도는 모든 보기가 무리해서다. 카드는 이 방법이 이미 실패했다고 말한다. 무리는 플레이어가 고르는 것이 아니다.
+- 카드를 받아들이는 것이 바로 그 행동을 확인하는 것이다. 위험이 높은 굴림에도 확인 카드를 따로 띄우지 않는다.
+- 카드에 보인 위험과 숫자는 실행할 때의 값과 같다(rule.md의 목표 숫자).
+
+**상관있는 것만 남긴다.** 규칙은 기댈 것이 이 시도에 어울리는지 묻지 않는다. 그래서 카드를 띄우기 전에 거른다.
+
+묻지 않고 남기는 것:
+
+- 대상 장애물의 해법에 적힌 기댈 것.
+- 닿는 곳의 좋은 태그 전부.
+- 같이 다니는 사람.
+- 0단계가 문장에서 찾은 것.
+- 같은 시도의 앞선 카드가 내놓았던 것.
+
+나머지는 판단 모델에게 한 번 묻는다.
+
+- 문맥: 행동 이름, 대상의 생김새, 플레이어의 문장.
+- 질문: "이 시도를 실제로 돕는 것은 무엇입니까?"
+- 보기: 남은 값마다의 설명(특성의 글, 물건의 생김새, 아는 사실의 글, 믿는 사람의 이름)과 "아무것도 돕지 않음".
+- 확률이 0.1 이상인 값만 남긴다. 답이 없으면 아무것도 거르지 않는다.
+
+카드가 내놓은 것은 시도(행동 종류와 뜻 빈칸)별로 기억한다. 한 번 내놓은 도움은 쓸 수 있는 동안 계속 나온다. 떨어진 것은 다음 문장에서 다시 묻는다.
+
+### 5.3 확인 카드
+
+굴리지 않지만 되돌릴 수 없는 행동에 띄운다: 고르기, 그리고 문장으로 한 건네기와 넘기기. 버튼으로 한 건네기는 바로 실행한다.
+
+- 보기는 "고른다"와 "그만두기"다.
+- 고른 것의 이름과 결과의 이름을 보여 준다. 건네기는 물건이 그 사람에게 간다는 것, 넘기기는 장면이 끝나고 위협이 다가온다는 것.
+- 건네기 카드에는 보여 주기도 있다: "{h}에게 {x}을 보여 준다". 보여 주려던 플레이어는 다시 쓰지 않고 물건을 지킨다.
+- "보여준다"고 쓴 문장은 0단계에서 보여 주기 버튼 이름과 맞아 바로 실행된다.
+- 받아들임은 그 카드의 `revision`에서만 통한다.
+
+### 5.4 이동 카드
+
+문장으로 한 가기는 실행 직전에 멈추고 이동 카드를 띄운다. 그 문장이 연 카드 뒤의 나머지 계획에 든 가기도 같다. 문장은 곳의 이름을 정확히 부르지 않아도 뜻으로 갈 곳을 고르므로, 플레이어가 어디로 누구와 가는지 보고 한 번 눌러 떠난다.
+
+카드 없이 바로 가는 경우:
+
+- 버튼으로 한 가기.
+- 문장이 고른 곳의 이름이나 별명을 부르고 다른 길은 부르지 않았다. 단 그곳을 꺼리는 동행이 있으면 카드를 띄운다.
+
+| 카드에 담긴 것 | 내용 |
+|---|---|
+| 보기 | 지금 갈 수 있는 곳 전부. 문장이 고른 곳이 맨 앞, 나머지는 후보 순서. 문장이 그곳만 불렀는데 누가 남아서 뜬 카드라면 그곳 하나만 |
+| 보기마다 | 곳 이름, 그리고 동행마다 "{이름}과 함께" 또는 "{이름}은 남음: {그 사람의 두려움}" |
+| 미리 고른 것 | 문장이 고른 곳 |
+| 멈춘 행동 | 그 가기와 계획의 나머지. 다른 곳을 고르면 그리로 가고, 나머지 계획의 빈칸은 거기서 다시 채운다 |
+
+**같이 가자.** 문장이 여기 있는, 같이 가자고 할 수 있는 사람의 이름을 부르면 보기가 하나 더 생긴다("윤슬과 같이 마을로 간다").
+
+- 같은 곳인데 먼저 그 사람에게 같이 가자고 하는 보기다. 계획은 말하기(같이 가자) 다음에 가기이고, 이것이 미리 골라져 있다.
+- 같은 곳의 그냥 가는 보기에는 "{이름}을 두고 감"이 붙는다.
+- 같이 가자는 말은 굴릴 수도, 실패할 수도 있다. 실패하면 턴은 가기 전에 멈춘다.
+
+그만두려면 카드를 닫는다.
+
+## 6. 서술
+
+서술은 턴마다 하나다. 요청이 오면 만들어 저장하고, 저장된 서술은 다시 쓰지 않는다.
+
+서술이 말하는 것은 **플레이어가 본 변화**다. 이번 턴의 행동마다 플레이어가 본 것을 순서대로 이은 것이다. 떠난 뒤 그곳에서 일어난 일은 들어가지 않는다.
+
+### 6.1 서술 모델이 받는 것
+
+이 순서로 준다. 작은 모델은 끝을 가장 잘 따르므로 문체와 이번 서술 지시가 마지막이다.
+
+| 묶음 | 내용 |
+|---|---|
+| 시스템 | 역할, 형식 규칙(6.3) |
+| 문맥 | 턴이 끝난 뒤의 서술용 문맥(3.1) |
+| 일어난 일 | 행동마다 행동 이름, 결과 이름("성공"), 바뀜 문장들 |
+| 새 태그 | 이번 턴에 생긴 태그의 기본 이름. 모델은 자기가 쓴 이름을 마지막 줄 `태그: 이름`으로 적는다 |
+| 이전 서술 | 최근 3턴의 서술 |
+| 전에 한 말 | 말하는 사람마다, 이전 서술보다 오래된 대화 4개까지: 플레이어의 문장과 그 사람의 따옴표 대사. 지시에는 한 말을 지키고 되풀이하지 않는다고 덧붙인다 |
+| 함께 겪은 일 | 말하는 사람마다, 이전 서술보다 오래된 함께 겪은 일 4개까지. 지시에는 이를 기억하고, 이야기가 그쪽으로 가면 자기 말로 꺼낸다고 덧붙인다. 사실이므로 검사의 문맥에도 넣는다 |
+| 플레이어 | 이번 턴의 문장(있으면) |
+| 문체 | 이야기의 `style` |
+| 이번 서술 | 마지막 몇 줄의 지시(아래) |
+
+다시 쓸 때는 고칠 점을 이번 서술 뒤에 붙인다.
+
+**이번 서술 지시**에 들어가는 것:
+
+- **사람**: 이번 행동이 부른 사람, 따라오기 시작했거나 그만둔 사람, 함께 움직인 사람 중 여기 있는 사람마다 성격 요약과 말투.
+- **곳의 감각**: 플레이어가 막 도착한 턴에만. 이곳의 감각 묘사 중 최근 3턴 서술에 아직 안 나온 첫 번째(두 글자씩 끊어 절반 이상 겹치면 나온 것으로 본다). 다른 턴이거나 다 나왔으면, 풍경 대신 사람과 바뀐 것을 그리라고 한다.
+- **시간의 빠르기**: 이번 턴에 낱말이 바뀐 위험 시계와 기한의 줄(3.1)을 다시 적고, 하늘·빛·파도는 그만큼만 바뀐다고 한다. 아직 일어나지 않은 일을 일어난 것처럼 쓰지 말라고 덧붙인다. 바뀐 것도, 닥친 것도, 다 된 것도 없으면 시간이 흐르지 않았다고 적는다. 하늘, 빛, 날씨는 빼게 된다.
+- **닳은 표현**: 최근 세 서술 중 둘에 나온 두 낱말 표현을 셋까지 들고, 이번엔 다르게 말하라고 한다. 이름이나 곳의 감각 묘사의 일부, 문맥에 적힌 이야기 자신의 표현, 이름과 "당신"만으로 된 것("윤슬이 당신을")은 뺀다. 그것들과 낱말 하나만 겹치는 표현은 서술의 것이므로 든다.
+- **맺음**: "바뀐 것을 보이고 인물의 반응이나 눈앞의 것으로 끝냄".
+- 플레이어가 있는 곳에 아무도 없으면 이 줄들에서 사람을 빼고, 여기 다른 사람이 없다고 적는다.
+
+이번 턴에 이런 일이 있으면 지시에 이름을 들어 적는다.
+
+| 이번 턴에 | 지시 |
+|---|---|
+| 장애물을 넘었다 | 눈앞에서 바뀐 것으로 |
+| 방법이 닫혔다 | 그 방법이 왜 더 통하지 않는지 보이게. 장애물은 그대로 서 있다 |
+| 위험 시계나 위협이 닥쳤다, 기한이 다 됐다 | 각각 한 문장으로 보인다 |
+| 숨은 것이 행동을 막았다 | 그 행동은 일어나지 않았다. 아무도 대답하지 않고 아무것도 되지 않는다. 막아선 것을 보인다. 굴림도 기대기도 없었다 |
+| 굴림에 무언가를 기댔다 | 그 시도가 끌어다 쓴 것으로 한 번 보인다 |
+| 문장으로 한 시도를 굴렸다 | 시도의 동작은 문장이 말한 그대로 두고, 결과만 일어난 일을 따른다("걷어찬다"를 "어깨로 민다"로 바꾸지 않는다) |
+| 살펴보기가 무언가를 찾았다 | 살펴본 물건이나 장애물마다 그 살펴본 글을 들어 보이게 한다 |
+| 갈림길이 왔다 | 선택들을 들고, 서술을 그 질문으로 끝낸다. 누가 있으면 그 사람이 묻는다. 평소의 맺음은 뺀다 |
+| 동행을 두고 떠났다 | 헤어지는 모습을 보이고, 까닭은 그 사람의 두려움이다. 그 뒤로 그 사람은 장면에 없다 |
+| 꺼리는 곳이 있는 사람이 따라오기 시작했다 | 아직 꺼리는 곳을 모두 들고, 그 사람의 두려움과 "그 너머는 약속하지 않는다"는 것을 덧붙인다 |
+| 계획이 중간에 멈췄다(카드, 실패, 읽지 못한 행동) | 어느 행동이 아직 일어나지 않았는지, 또는 나머지는 아직이라고 적는다. 서술은 그 앞에서 멈춘다 |
+| 행동이 부르지 않은 사람이 여기 있다 | 그 사람은 말을 듣지 않았다. 문장에 대답하지도, 바라는 것을 주지도 않는다 |
+
+숨은 것에 막힌 행동도 시간 한 칸은 썼다. 그래서 그 한 칸이 부른 장면 끝, 닥침, 장 전환, 결말은 일어난 일에 그대로 들어간다.
+
+### 6.2 길이와 답의 갈래
+
+통과한 글만 플레이어에게 간다. 초안은 흘려보내지 않는다. 서술은 넘기지 않고 한 화면에 들어가야 한다(ui.md).
+
+| 답 | 언제 | 길이 | 지시 |
+|---|---|---|---|
+| 행동 | 아래 어느 것도 아닐 때 | 4문장, 200자 | 6.1의 곳의 감각, 시간의 빠르기, 맺음 |
+| 말 | 모든 행동이 막히지 않은 잡담 | 3문장, 150자 | 그 사람의 대답으로 연다: 몸짓 하나와 대사. 풍경 없음. 아는 것으로 답하고 자기 걱정이나 바람이 비친다. 모르는 것은 모른다고 하거나 자기 관심사로 돌린다 |
+| 혼잣말 | 빈 행동뿐인 턴 | 2문장, 110자 | 당신은 말하거나 생각만 했고 아무것도 하지 않았다. 여기 사람이 있으면 짧게 반응한다. 없으면 주변의 한순간이 그 기분에 답한다. 당신은 움직이지도 행동하지도 않는다. 귀띔으로 끝난다 |
+| 이곳 안에서 | 지금 있는 곳으로 가기(4.4) | 2문장, 110자 | 당신은 문장이 말한 자리로 옮겼고 다른 곳으로 가지 않았다. 거기서 보이고 느껴지는 것을 짧게. 귀띔 없음 |
+| 성장만 한 턴 | | 2문장, 100자 | 변화가 자리 잡는 것으로 말한다. 곳의 감각도, 지난 장면 되풀이도 없다 |
+| 장이 바뀌거나 결말인 턴 | | 160자, 그리고 장 요약 100자(6.6) | |
+
+글자 수는 띄어쓰기를 포함한다.
+
+혼잣말 턴의 일어난 일은 행동 이름 대신 "당신이 말하거나 혼잣말을 했습니다"로 적는다. 여기 있는 사람 모두가 말하는 사람이다.
+
+**혼잣말은 귀띔으로 끝난다.** 플레이어는 뭘 할지 모를 때 혼잣말을 한다.
+
+- 엔진이 고른다. 추천(rule.md의 추천) 중 이전 3턴 서술에서 귀띔하지 않은 첫 번째, 다 했으면 첫 번째.
+- 버튼 이름으로 전한다. 그래서 플레이어가 이미 볼 수 있는 것만 가리킨다.
+- 한 일도 시킨 일도 아닌, 눈에 띈 것으로 쓴다. 사람이 있으면 그 사람의 말이나 몸짓으로, 혼자면 주변의 한순간으로.
+- 서술 기록에 귀띔한 행동을 남겨 다음에 돌려 쓴다.
+
+**일어난 일에만 답한다.** 플레이어의 문장은 통째로 서술 모델에게 가지만, 문장이 한 일은 규칙이 정한다.
+
+- 문장이 일어나지 않은 일을 전제하면(함께 겪은 일에도, 서술에도 없는 일), 말이나 혼잣말의 답은 그런 일이 없었다거나 모른다고 한다. 맞장구치지 않는다.
+
+### 6.3 형식 규칙
+
+- 합니다체와 `당신`. 숫자, 선택지 나열, 플레이어의 감정은 쓰지 않는다.
+- 일어난 일은 기록이다. 그 말투("…생겼습니다", "뜻대로 되어 갑니다")와 태그 이름을 베끼지 않고 눈에 보이는 것으로 쓴다.
+- 성공이나 실패가 있으면 첫 문장에서 분명히 한다. 실패는 일이 틀어지는 모습으로 보인다.
+- 플레이어의 문장은 베끼지 않고 뜻을 읽어 `당신`의 행동과 말로 보인다. 질문에는 문맥의 사실로 답한다. 그 밖의 것은 아직 알 수 없다.
+- 말을 걸었거나 물건을 받은 사람은 제자리에서 바로 답한다. 큰따옴표 대사이고 누구 말인지 밝힌다. 성격과 말투를 지키되 예시 대사를 베끼지 않는다. 당신을 부르는 호칭은 쓰지 않는다.
+- 사람은 문맥과 일어난 일에 적힌 것만 안다. 모르면 모른다고 하거나 말을 돌린다.
+- **글이 게임을 실어 나른다.** 그림이 없으니 문장마다 이 사람, 이곳에서 고른 구체적인 것 하나를 넣는다. 흔한 표현("눈을 반짝이며", "코끝을 스칩니다")은 쓰지 않는다. 사람은 자기답게 말하고 대사에 바람, 두려움, 버릇이 비친다. 마지막 문장은 요약이 아니라 여운이나 긴장을 남긴다. 이야기의 `style`이 어조를 정한다.
+
+### 6.4 검사
+
+세 겹이다.
+
+**1. 규칙 검사** (모델 없이)
+
+- **길이**: 문장 수와 글자 수. 따옴표 대사는 그 문장의 일부다. 대사뿐인 문장은 말한 사람을 밝힌 앞 문장에 붙인다.
+- **형식**: 마크다운 강조(`*`, `\`, 백틱)는 검사 전에 지운다. 해라체 어미는 합니다체로 고친다. `당신` 말고 다른 2인칭, 목록이나 선택지 꼴, 숫자, 괄호는 안 된다. `태그:` 줄은 12자까지다. 숨은 대상의 이름은 안 된다.
+- **사실** (따옴표 밖만 본다): 갖지 않은 물건을 얻는다, 가진 물건을 내준다, 가지 않은 곳에 닿는다. 이름과 그런 뜻의 동사가 함께 나오면 잡는다.
+- **없는 사람**: 플레이어가 있는 곳에 없는 사람은 따옴표 밖에서 주어("윤슬이", "노인은")가 될 수 없다. 변화가 그 사람을 말해도 그렇다. 예외는 둘이다. 이번 턴에 두고 떠난 동행은 헤어짐을 말하는 문장에 나올 수 있다. 결말에서는 남긴 것(6.6)에 나온 사람이 멀리 있다고 말하는 문장에 나올 수 있다.
+- **되풀이**: 띄어쓰기를 뺀 10자 이상이 최근 3턴 서술, 지금 말하는 사람의 예시 대사, 그 사람이 전에 한 말과 똑같으면 안 된다. 문장부호, 이름, `당신`, 그리고 문맥에 적힌 이야기 자신의 표현과 4자 이상 겹치는 부분은 10자에 세지 않는다.
+- **호칭**: 대사에서 나이나 성별을 짐작해 부르는 말("아저씨", "언니").
+
+**2. 주장 뽑기** (모델 없이)
+
+문장마다 이름, 별명, 문장 틀(2)의 동사 꼴로 "무엇이 어떻다"는 주장을 뽑아 턴이 끝난 뒤의 사실과 맞춰 본다.
+
+- "그렇다"는 주장은 사실에 있을 때만 받는다.
+- "아니다"는 주장은 사실에서 따라 나올 때만 받는다. 열쇠가 A에 있으면 "B에는 없다"는 맞다. "여기엔 경비가 없다"는 받지 않는다. 숨은 경비가 있을 수 있다.
+- 장애물이 열렸다, 부서졌다, 비켰다, 넘었다고 쓰면 그 장애물을 넘었다는 주장이다. 실패한 굴림을 상대가 물러난 것처럼 쓰면 걸린다.
+- 틀로 옮길 수 없는 문장(냄새, 날씨, 표정)은 어떤 사실과도 어긋나지 않으므로 자유다.
+
+**3. 판단 모델 검사**
+
+1과 2를 통과한 문장마다 질문 하나를, 서술용 문맥과 함께 한 번의 호출로 묻는다.
+
+- 질문: "이 문장은 문맥과 비교해 어떻습니까?"
+- 보기: "맞다", "사실과 어긋난다", "없는 사람·물건·길을 지어냈다".
+- "맞다"의 확률이 0.5 이하면 그 문장을 물리친다. 두 잘못 중 확률이 높은 쪽이 고칠 점이다.
+- 문장으로 한 시도를 굴린 턴에는 그 문장도 문맥에 넣는다(동작은 말한 대로, 결과는 일어난 대로). 다른 동사로 쓴 시도는 어긋난 것이다.
+
+검사는 턴이 끝난 뒤 플레이어가 볼 수 있는 것만 읽는다. 숨은 상태는 보지 않는다.
+
+### 6.5 다시 쓰기
+
+- 물리친 문장이 있으면 그 문장과 까닭(규칙 검사의 이름, 어긋난 사실 줄)을 주고 다시 쓰게 한다.
+- 다시 쓰기는 **두 번까지**다. 시도마다 씨앗이 다르다.
+- 세 번째도 걸리면, 걸린 문장이 가장 적은 초안에서(같으면 나중 것) 걸린 문장만 지운다.
+- 다 지워지면 바뀜 문장들이 그대로 서술이 된다.
+
+### 6.6 태그 이름, 장 요약, 결말
+
+**태그 이름.** `태그:` 줄의 이름은 그 태그와 생긴 때를 열쇠로 저장한다. 자리가 새 태그로 바뀌면 옛 이름은 따라가지 않는다. 이름은 그 태그가 있는 동안만 보인다. 규칙은 이 이름을 읽지 않는다.
+
+**장 요약.** 장이 바뀌거나 결말이 나는 턴에는 서술 뒤에 끝난 장의 요약을 같은 방식으로 쓴다. 검사도 같다. 받는 것은 이 순서다.
+
+1. 그 장에서 사람들과 오간 것, 4줄까지: 주고받은 물건, 약속과 그 끝, 따라왔거나 남은 동행, 장이 끝날 때 달라져 있던 신뢰.
+2. 고른 길마다 한 줄: "당신이 고른 길: …".
+3. 눈에 띄는 일 5개까지, 바뀜 문장으로: 넘은 장애물, 거짓말, 선언, 상처, 닥친 위협. 마지막은 언제나 장을 닫은 행동이다.
+
+**결말.** 지시에서 곳의 감각, 시간의 빠르기, 평소의 맺음을 빼고 이렇게 청한다: 변화, 그다음 남긴 것 한 줄, 마지막 문장은 이야기의 `frame`. 남긴 것이 없으면 변화와 `frame`.
+
+**남긴 것**은 플레이어가 뒤에 남기는 것이고, 문맥의 사실로 적는다.
+
+- 만난 사람의, 처음과 달라진 신뢰.
+- 플레이어가 진 약속과 받은 신세.
+- 플레이어가 본, 원래 주인이 아닌 사람에게 간 물건.
+- 동행.
+- 지켰거나 어긴 모든 약속, 뒤에 남은 모든 동행.
+
+거기 나온 사람이 여기 없으면 없다는 줄을 더한다(플레이어가 아는 곳이면 그 곳과 함께). 남긴 것과 `frame`은 검사의 문맥에도 넣는다. 여기 없는 사람은 멀리 있는 모습으로만 나오고 새 일을 겪지 않는다. 그런 사람 때문에 다시 쓸 때는 "멀리, 있는 곳에 둔다"고 일러 준다.
+
+## 7. 화면용 기록
+
+게임은 세계 상태와 기록 말고도 화면을 위한 기록을 갖는다. 규칙은 이것을 읽지 않는다. 여기 든 것은 앞선 모델의 출력과 플레이어의 입력뿐이다.
+
+| 기록 | 내용 |
+|---|---|
+| `revision` | 상태나 기다리는 카드를 바꾼 요청마다 1 오른다. 거절과 영수증 재생은 올리지 않는다 |
+| 턴 | 턴마다 요청의 갈래(문장, 버튼, 카드 답), 문장, 실행한 행동의 범위 |
+| 요청 | 아무 행동 없이 끝난 요청(되묻기, 거절, 카드 버림). 문장마다 결과와 읽는 데 걸린 초 |
+| 카드 | 기다리는 카드 하나, 또는 없음 |
+| 서술 | 턴 → 통과한 서술, 시도 횟수, 지운 문장 수, 걸린 초, 사람별 따옴표 대사. 대사는 그 문장이 이름 부른 사람의 것이다. 아무도 안 불렀고 말하는 사람이 하나면 그 사람의 것이다. 그 밖의 대사는 남기지 않는다 |
+| 장 요약 | 장 → 요약, 같은 항목 |
+| 태그 이름 | 태그와 생긴 때 → 이름 |
+| 내놓은 기댈 것 | 시도 → 굴림 카드가 내놓았던 기댈 것(5.2) |
+| 영수증 | 요청 id → 본문 해시와 응답 |
+
+## 8. 턴
+
+**턴**은 행동을 하나 이상 실행한 요청 하나다. 행동 1~3개와 서술 하나로 이루어진다. 카드에서 멈춘 요청은 카드에 답하면 새 턴으로 이어진다.
+
+요청은 게임 id, 요청 id, `revision`, 본문을 갖고 온다. 게임마다 자물쇠를 잡고 이 순서로 처리한다.
+
+1. **영수증**: 같은 요청 id가 있고 본문이 같으면 저장된 응답을 그대로 준다. 본문이 다르면 거절한다(409, 지금 화면과 함께).
+2. **`revision`**: 지금과 다르면 거절한다(409, 지금 화면과 함께).
+3. **계획 만들기**:
+   - 버튼: 지금 할 수 있는지 보고 그 행동 하나.
+   - 카드 답: 답을 그 카드의 계획에 넣는다. 굴림 카드나 확인 카드를 받아들였으면 그 행동에 "받아들임" 표시를 한다.
+   - 그만두기: 카드를 버린다. 아무 일도 없다.
+   - 문장: 0단계, 1단계 → 계획, 되묻기, 거절.
+   - 새 문장이나 버튼은 기다리던 카드를 버린다.
+4. **행동마다**:
+   - 2단계로 빈칸을 채운다. 되묻기면 카드를 띄우고 멈춘다. 값이 없으면 멈춘다. 지금 있는 곳으로 가기면 건너뛴다.
+   - 지금 할 수 없는 행동이면 멈춘다.
+   - 굴리는 행동인데 받아들이지 않았으면 굴림 카드를 띄우고 멈춘다.
+   - 굴리지 않지만 되돌릴 수 없는데 받아들이지 않았으면 확인 카드를 띄우고 멈춘다.
+   - 규칙으로 처리하고, 기록에 붙이고, 상태를 바꾼다.
+   - 결말이 났거나, 실패했거나, 막혔으면 멈춘다.
+5. 행동이 하나라도 실행됐으면 턴을 하나 올리고 기록한다. 행동도 카드도 없으면 거절이다.
+6. 상태나 카드가 바뀌었으면 `revision`을 1 올리고, 영수증을 쓰고, **바로 저장한다**.
+7. 응답한다(api.md).
+
+덧붙여:
+
+- 2단계 질문은 자물쇠 안에서 묻는다. 같은 게임의 요청은 하나씩 줄을 선다. 다른 게임은 막지 않는다.
+- 행동과 행동 사이에 보이는 것을 다시 계산한다. 앞 행동이 드러낸 것이 다음 행동의 빈칸에 나온다.
+- 굴림 카드를 받아들인 요청은 모델을 부르지 않고 그 행동을 실행한다. 남은 행동에 2단계 질문이 있으면 그때 묻는다. 그 시간은 주사위가 구르는 동안 쓴다.
+- 응답 전에 저장한다. 응답이 사라지면 클라이언트는 같은 요청 id와 본문을 다시 보내고, 1에서 같은 결과를 받는다.
+- 서술은 응답 뒤에 따로 요청한다. 서술은 상태를 바꾸지 않으므로 자물쇠 밖에서 만들고, 저장할 때만 자물쇠를 잡는다. 같은 턴의 서술 요청이 겹치면 하나만 만들고 나머지는 그 결과를 기다린다.
+
+## 9. 시작할 때
+
+서버는 시작하면서 모든 이야기를 검사하고(story.md의 검사), 두 모델에 짧은 요청을 보낸다. 하나라도 실패하면 시작하지 않는다. 서버는 모델을 켜거나 끄지 않는다.
+
+## 10. 언제나 지켜지는 것
+
+- **모델을 무엇으로 바꿔도 세계와 규칙은 안전하다.** 모델의 출력은 보기 중 하나이거나 검사받은 글로만 들어온다. 엉터리로 답하는 판단 모델, 모두 물리치는 검사기를 넣어도 그렇다.
+- **모델은 숨은 것을 보지 못한다.** 모델에게 가는 글은 보이는 것, 행동 이름, 플레이어의 입력, 이야기의 상수(문체)로만 만든다.
+- **질문은 닫혀 있다.** 보기는 부르기 전에 정해지고, 보기 밖의 답은 확률 0이다.
+- **모든 문장은 계획, 되묻기, 거절 중 하나로 끝난다.**
+- **모르면 아무것도 바꾸지 않는다.** 판정 빈칸은 기본값이 되고, 뜻 빈칸은 되묻는다. 잘못 읽어도 지금 할 수 있는 행동 하나의 결과를 넘지 못한다.
+- **턴의 비용에는 끝이 있다.** 문장 읽기에 판단 모델은 1단계 한 번과 행동마다 한 번, 서술 모델은 읽기 한 번과 행동마다 고르기 두 번까지. 서술은 시도 세 번과 검사 세 번. 장을 끝낸 턴은 요약 시도 세 번과 검사 세 번이 더 든다. 모든 호출에 시간 제한이 있다.
+- **카드는 거짓말하지 않는다.** 굴림 카드의 위험, 목표 숫자, 더하고 빼기는 실행할 때와 같다. 되돌릴 수 없는 행동은 바로 그 행동을 받아들인 뒤에만 실행된다.
+- **화면은 다시 만들 수 있다.** 어느 때의 화면이든 이야기, 기록, 화면용 기록으로 정해진다. 같은 요청은 영수증으로 같은 결과를 받는다. 저장되기 전에 끊긴 서술은 다시 쓰므로 문장이 달라질 수 있지만, 같은 변화와 같은 검사를 거친다.
+- **문장 틀은 하나다.** 문맥의 사실 한 줄은 사실 하나이고, 그 줄에서 주장을 뽑으면 그 사실이 다시 나온다.
+- 기준(0.5, 0.7)을 올리면 잘못 읽는 일이 줄고, 되묻기 카드와 빈 행동이 는다.
+
+**재 볼 것** (위의 것들은 여기에 기대지 않는다):
+
+- 서술 통과: 첫 시도에 통과한 비율, 문장이 지워진 비율.
+- 읽기 정확도: `scenarios/<folder>/evals.yaml`의 문장으로 단계별, 빈칸별 정확도와 기본값이나 빈 행동으로 떨어진 비율. 읽기 규칙을 바꾸기 전에 새로 모은 문장으로 먼저 재고, 바꾸기 전 숫자와 나란히 적는다.
+- 확률의 믿음직함: 모델이 확률 p를 준 답이 실제로 p만큼 맞는지. 실제 플레이에서 모델까지 간 질문으로 잰다.
+- 변화가 다 나왔는가: 바뀐 것이 모두 서술에 보인 비율.
+- 비용: 턴마다 판단 모델 호출 수와 걸린 시간.
+
+## 11. 코드 이름
+
+코드를 볼 때만 필요하다.
+
+| 우리말 | 코드 |
+|---|---|
+| 판단 모델, 서술 모델 | `models/decision.py`의 `decide(state, questions)`, `models/llm.py` |
+| 문장 틀, 행동 이름 | `locale/ko.py`의 틀 표, 행동 이름 |
+| 문맥, 서술용 문맥 | `lang/context.py`의 `context(U, O, X)`, `scene(U, O, X)` |
+| 초점 | `X` |
+| 종류: 행동, 말, 혼잣말 | `ko.KIND`: `act`, `say`, `muse` |
+| 빈 행동 | `try(player)` |
+| 행동 설명과 예, 없는 것을 말하는 줄 | `ko.SCHEMA_ASK`, `ko.LACK` |
+| 게임에 관한 요청, 방법을 가리키는 말 | `ko.META`, `ko.APPROACH_WORDS` |
+| 불가능 문구, 해법 이름, 문체, 결말의 마지막 문장 | 이야기의 `impossible`, `label`, `style`, `frame` |
+| 무리: 평소대로, 무리해서 | `strain`: `natural`, `forced` |
+| 말투, 거짓말, 기대기 | `tone`, `claim`, `rely` |
+| 같이 가자, 여기 있어라, 잡담 | `come`, `stay`, `chat` |
+| 거저 알려 줄 조건 | `free_when` |
+| 꺼리는 곳, 두려움 | `avoids`, `fear` |
+| 확신의 기준 0.5, 첫 행동과 종류 0.7 | `θ`, `θ₁` |
+| 기댈 것 거르기 0.1, 서술 검사 0.5 | `θ_rely`, `θ_N` |
+| 카드: 되묻기, 굴림, 확인, 이동 | `kind`: `clarify`, `roll`, `confirm`, `move` |
+| 굴림 카드의 미리 보기, 숨은 것에 막힘 | `preview`, `blocked` |
+| 추천 | `next_steps(U, O)` |
+| 주장 뽑기 | `lang/claims.py` |
+| 합니다체 고치기 | `lang/polite.py` |
+| 헤어짐, 멀리, 호칭 낱말 | `ko.PARTING`, `ko.AFAR`, `ko.ADDRESS` |
+| 화면용 기록 | `P`: `revision`, `turns`, `requests`, `card`, `narration`, `recap`, `tag_names`, `relevance`, `receipts` |
+| 서술 기록의 대사, 걸린 초 | `said`, `secs` |
+| 함께 겪은 일 | `shared(g)` |
+| 턴 처리 | `service.py`의 `command(game_id, request_id, revision, body)` |
+
+카드는 이렇게 생겼다.
 
 ```python
 @dataclass(frozen=True)
 class Card:
-    id: str                 # unique per game
+    id: str                 # 게임 안에서 하나뿐
     kind: str               # clarify, roll, confirm, move
-    plan: Plan              # the stopped step (fixed arguments) and the rest
-    echo: str               # the player's sentence or the button label
+    plan: Plan              # 멈춘 행동(정해진 빈칸)과 나머지
+    echo: str               # 플레이어의 문장이나 버튼 이름
     options: tuple[Option, ...]
-    selected: str | None    # default option id (roll card)
+    selected: str | None    # 미리 고른 보기 (굴림 카드, 이동 카드)
 ```
 
-### 4.1 Clarify
-
-When neither the decision model nor the narration model settles a layer-2 intent slot. The options are the `λ` of `{ω₁, ω₂, ω₃}` and "그만두기" (cancel). The answer fills that slot and the plan continues.
-
-**Detour.** When a step would be refused because what the sentence aims at (a person, a thing, a way) is blocked by a visible obstacle `ob` here, the step becomes a clarify card about `ob` instead. The question names the block and asks what to do ("사나운 누렁이가 도해를 막고 있습니다. 어떻게 할까요?"); the options are `ob`'s solutions whose condition holds in the view, each the `try(ob, approach)` with its `rely`, under its `label`. A pick continues the plan as that try, with its roll card (4.2). The card is the hint: the block and the ways around it, all public parameters of a visible obstacle, so nothing hidden leaks and nothing runs until the player picks. With no solution holding, the step is refused with the reason as before. The question also names what the obstacle's other ways need and the player lacks, a thing that is not hidden or a topic, unspent ("…막고 있습니다. 넉가래, 굵은 소금 자루가 있으면 다른 방법도 있습니다. 어떻게 할까요?"): offered only the bare climb, the player never learned that the shovel or the salt would do, nor that they were worth finding (qa_test/runs/play-10-human). Refused with the reason alone, a player kept talking to a guarded person and got five refusals in a row with no reply (qa_test/runs/loop-1, talker 11–15). A `go` that names no open way out, aimed at a way, at nothing or at the place itself ("이제 출발한다", "눈더미를 넘는다"), meets the first visible blocked way out of here the same way, with that way's blocker as `ob`: told only the open ways ("여기서 갈 수 있는 곳은 마구간, 주막입니다."), a player who wrote the chapter aim nearly word for word read the way forward as closed and gave up (qa_test/runs/play-10-human).
-
-**Ways when stuck.** A sentence read as idle (`try(player)`, 3.1) right after a sentence that changed nothing (refused, or idle itself) becomes a clarify card "무엇을 해 볼까요?" with `next_steps(U, O)` (rule.md 9) as options, each under its button or solution label. A pick runs that action: a roll gets its roll card, a way out is taken without a move card, since the card already chose it. With no option, the sentence is the muse below. The request still counts as idle (fun.md F1). One muse is answered with a hint; two in a row are a player asking what to do: after a refusal, "이제 뭐하지?", "어쩌냐" and "벌써 막힘" each got scenery with the same hint, and the round ended there (qa_test/runs/play-10-human).
-
-### 4.2 Roll
-
-If the plan's next step `a` is a rolled action, the engine stops just before executing it and puts up a roll card. Whether it rolls is decided from the observation: `try(x ≠ player)` always; `talk` when the topic is not in `B` and `free_when` is false on what is visible, or when it is a request without goodwill (rule.md 5.1). The visible and world verdicts agree because story.md V3 limits the atoms of `free_when` to visible ones. Only a hidden block makes this decision differ from execution, and then the block is revealed through the card (`blocked`).
-
-| Field | Content |
-|---|---|
-| `plan` | The step with `a`'s intent arguments and its judgment arguments other than `rely` fixed, plus the rest of the plan |
-| `options` | One for each relevant allowed value of `rely` (below), plus one "기대지 않음" (rely on nothing): action id, name, whether using it uses it up, its `rely` value and whether it is forced, `preview(U, O, a_rely)` (rule.md 3.4). Ordered by the rows of the `rely` table in rule.md 2, within one kind by the story's declaration order (tags by slot order), with "rely on nothing" last. For a `try` on something, the same list again with `strain = forced` when forcing buys a box there (rule.md 7) or the sentence forced: forcing is a toggle on the card, not a word the model must catch, and the player sees what it buys and what it costs |
-| `selected` | The `rely` option layer 0 set; otherwise "rely on nothing" |
-| `echo` | The sentence or button name, plus the names of the slots layer 2 read (target, approach, strain, tone) |
-
-**Relevance.** The rules never ask whether a `rely` fits the attempt (rule.md 2), so before the card is placed only what is relevant to this roll is kept. Kept without asking: the `rely` values listed in the target obstacle's solutions, every edge tag in reach (rule.md 3.2), companions, the value layer 0 named, and whatever an earlier card for the same attempt offered. The rest goes to the decision model once. The context is the step's name, the target's appearance and the player's sentence; the single question is "이 시도를 실제로 돕는 것은 무엇입니까?" (What actually helps this attempt?); the options are a description of each remaining value (a trait's text, a thing's appearance, a known proposition's text, a bond name) plus "아무것도 돕지 않음" (nothing helps). Only values whose probability is at least `θ_rely` (initially 0.1) are kept. Asked yes/no value by value, the small decision model gave the same answer for every value in a scene, so the values are laid out in one question to be compared. With no answer, nothing is filtered, so that a model failure does not take a choice away from the player.
-
-What a card offers is kept in `P` per attempt (schema and intent arguments), so a help once offered for an attempt stays while it is allowed; what was dropped is asked again with the next sentence. Asked anew with each sentence, the same help came and went on identical attempts (play-2-explorer 14, 42; play-4-bold 8, 12, 15; play-4-odd 25, 31). Dropping the sentence from the question instead made every verdict fixed but cut exact answers on the decision-1 reliance items from 0.53 to 0.31: the sentence says how the attempt is made. An edge is kept unasked because its name, often the default "이점", is all the model would have to judge it by, and an edge exists to be spent.
-
-Acceptance is `{card, pick}`, where `pick` is one action id from `options`. The service executes only if the request's `revision` matches the current one, `card` is the id of the pending card, `pick` is one of that card's options, and `admits(U, Vₜ, pick)` holds. A stale `revision` gets 409, and a `pick` outside the options at the same `revision` gets `refused` (api.md). This acceptance confirms exactly that action, so a high-risk roll gets no separate confirm card. The risk and modifiers shown on the card equal the values at execution (rule.md 3.4).
-
-### 4.3 Confirm
-
-A step that does not roll but has high risk, namely `choose`, and a `give` or `cut` that a sentence chose. The options are "고른다" (choose) and "그만두기" (cancel), and the card shows the name of the choice and the names of its effects (for a give, the thing going to that person; for a cut, the scene ending and the threats drawing closer). A give's card also offers `show(x, h)` by its name, "{h}에게 {x}을 보여 준다": the player who meant to show keeps the thing without retyping. A sentence that says it shows ("보여준다") matches the show button's name at layer 0 and runs at once. A sentence read as waiting spent the rest of the scene with no card (qa/findings.md). A high-risk step does not run until that exact action is accepted, and the acceptance is valid only at that card's `revision`. A thing given does not come back, and sentences that only showed something were read as giving it: the player's only item was gone with no card (play-2-odd 3, play-3-talker 3, play-4-talker 7). Asking for every give from a sentence keeps that one rule instead of lists of showing and giving words; a button's give runs at once.
-
-### 4.4 Move
-
-A `go(q)` step chosen by a sentence (`origin` is the sentence, also for the rest of its plan after a card it opened) stops just before executing and puts up a move card. A sentence chooses its destination by meaning even when it does not name the place exactly (section 3), so the player sees where they are going and who comes along and leaves with one tap, and a misread move never runs. A sentence that names the chosen place (its name or an alias) and no other way leaves at once, as a button does, unless a companion avoids that place: the destination is not in doubt, and a card that only repeated it cost one more tap on every typed or chip-filled move (play-6-ui 7, 15; play-7-explorer 7, 21, 33; play-9-ui 3, 6, 12). A move chosen by a button needs no card, since the button is the confirmation.
-
-A sentence that names a person here who could be asked to come (`talk(h, come)` is a candidate) also gets the card, with one more option for the sentence's way: the same place with `h` asked first, its plan `[talk(h, come), go(q)]` (`plans` in the card), chosen by default. "윤슬과 같이 마을로 간다" went alone, the second half dropped. The ask may roll and fail like any `come`; then the turn stops before the move.
-
-| Field | Content |
-|---|---|
-| `options` | `{id: action id, label: place name, with: the person asked first (only on the companion option, whose id joins its plan's action ids with `+`), effects: [for each companion "{name}과 함께" (with {name}), or for avoids "{name}은 남음: {fear}" ({name} stays, with the character's `fear` as the reason); beside an option that asks `h` first, the plain option of the same place adds "{name}을 두고 감" (leaving {name})]}`. When the sentence names the chosen place alone, so the card is up only because someone stays, only that place. Otherwise every current `go` candidate, the sentence's choice first, the rest in candidate order |
-| `selected` | The `go(q)` the sentence chose |
-| `plan` | That step and the rest of the plan. Choosing another place goes there, and the rest of the plan fills its slots again from there |
-
-Acceptance is `{card, pick}`, where `pick` is one action id from the options. Cancelling is closing the card.
-
-## 5. Narration
-
-`narrate.py` builds turn `n`'s narration when it is requested and caches it in the presentation layer; a cached narration is not written again. The **visible change** `δ` is the in-order composition of this turn's steps' memory projections `seen[player]` (ontology.md 3.2); the raw `Δ` is not used. Each step is projected over its own before and after, so what happens after you leave is not included.
-
-### 5.1 Input
-
-| Section | Content |
-|---|---|
-| System | Role, format rules (5.2) |
-| Context | `scene(Vₜ₊ₖ, X_N)` (section 2) |
-| What happened | For each step, `λ(aᵢ)`, the outcome name ("성공", success), and lines rendering `δ` in change frames. A way cut or opened in both directions is one line, "A와 B 사이의 길이 끊겼습니다" ("등대 앞으로 가는 길이 끊겼습니다" read oddly while standing there, play-4-talker 40) |
-| New tags | The default names of tags created this turn. The model writes the name it uses for each in the narration as a final line `태그: 이름` (tag: name) |
-| Previous narration | The narration of the last 3 turns (presentation layer) |
-| Said before | For each speaker, up to 4 earlier exchanges older than the previous narration: the player's sentence and that person's quoted lines (`said`, section 6). The steering adds that they keep to what they said and do not say it again. The 3-turn window alone let an answer drift once it fell out (loop-1 base) |
-| Lived together | For each speaker, up to 4 events of `shared(g)` (ontology.md 3.4) older than the previous narration, as step lines. The steering adds that they remember these and bring them up in their own words when the talk turns that way. The check's context gets the same lines, since they are facts |
-| Player | This turn's sentence (if any) |
-| Style | The story's `style` |
-| This narration | The last few lines. For each person present whom this turn's actions named, who started or stopped following, or who moved with you: a persona summary and voice. On a turn the player arrives, the first sensory cue of the current place that has not yet appeared in the last 3 turns of narration (it counts as appeared when at least half of its character bigrams overlap); on any other turn, or when all have appeared, a line says to depict people and what changed instead of scenery. The pace words of the risk clocks and deadlines whose word changed this turn (sky, light and waves change only as much as this pace); when none changed and nothing struck or ran out, a line that time did not move, so sky, light and weather are left out. "바뀐 것을 보이고 인물의 반응이나 눈앞의 것으로 끝냄" (show what changed, and end on a person's reaction or what is in front of you). With no one at the player's place, these lines leave people out and say no one else is here: asked for people where nobody stood, the narrator brought back whoever the last turns told (`narr-3/ending-after` game 0, 12–15) |
-
-Small models follow the end of a prompt best, so style and this narration come last (the same position as SillyTavern's Author's Note or the card spec's `post_history_instructions`). Sensory cues rotate one at a time so the same scenery does not repeat every turn. Scenery and time are shown when they change: with a cue and the pace on every act turn, the sky, wind and waves took one or two of four sentences each turn, and a failed detour roll was told as weather alone, without the dog that stopped the player (3 of 15, qa_test/runs/loop-1/presume-summary.md). Leaving the lines out was not enough, since the story's style still asks for time in the sky; saying that time did not move cut weather sentences from 51% to 34% of act narration (qa_test/runs/loop-1/weather-summary.md). On a rewrite, the points to fix are appended after this narration.
-
-### 5.2 Generation
-
-The narration model is always called in non-thinking mode (`enable_thinking: false`), with an output limit of 500 tokens. Narration must fit on one screen without paging (ui.md 2), so accepted text is at most 4 sentences and 200 characters including spaces; in a turn with a chapter change or an ending, at most 160, plus a recap of at most 100 (5.5); a reply to small talk or musing is shorter (below). Drafts never stream to the player; only text that passes the check goes out.
-
-**Replies follow the kind of line** (3.2). A turn is a **talk reply** when every step is small talk (rule.md 4.1) that nothing blocked, a **muse reply** when it is only `try(player)`, and an **act reply** otherwise.
-
-| Reply | Size | What the steering asks instead of the place cue, pace and close |
-|---|---|---|
-| Talk | 3 sentences, 150 characters | Open on the person's answer: one gesture of theirs and their line, no scenery. They answer from what they know and their own worry or wish shows through; what they do not know they say so or turn to their own concern |
-| Muse | 2 sentences, 110 characters | `당신` only spoke or thought, and did nothing. A person here reacts to it briefly; with no one, one moment of the surroundings answers its feeling. `당신` does not move or act. The reply ends on the hint below |
-| Within | 2 sentences, 110 characters | `당신` moved to the spot the sentence names inside this place and went nowhere else; what is seen and felt there, briefly. No hint |
-| Act | As above | The place cue, pace and close (5.1) |
-
-What happened tells a muse turn as "당신이 말하거나 혼잣말을 했습니다" instead of `λ(try(player))`, and every person here is a speaker. With every reply built like an act, a greeting got four sentences that opened on scenery ("밧줄 냄새" in 19 of 20 small-talk replies, "눈을 반짝이며" in 16), and musing with no one there was ignored or turned into an act: "당신은 말한 대로 행동을 이어갑니다", the idle label leaking (6 of 16; qa_test/runs/typed-1/base-summary.md).
-
-**A muse ends on a hint.** A player talks to themself mostly when they do not know what to do next, so the GM answers with a way forward. The engine picks it: the first of `next_steps(U, O)` (rule.md 9) not hinted in the previous 3 narrations, else the first. It is told by its button label, so it names only what the player can already see, and its targets join the narration's ids. The steering asks for it as something noticed, never as done or ordered: with people here, through a speaker's line or gesture; alone, as the moment of the surroundings that answers. The narration entry keeps the hinted action for the rotation. With no hint, the reply is as above. Without it, every muse alone got the same shape, "목소리가 바람에 흩어집니다" (4 of 4 per game; qa_test/runs/loop-1/after-summary.md), and moved nothing.
-
-**Only what happened is answered.** The player's sentence reaches the narrator whole, but the rules decide what it did, and the reply must not do more:
-
-- In an act reply, a person here whom no step names was not spoken to, so the steering says they do not answer the sentence or give what it asks. A question typed to 도해 behind the dog became a detour roll that failed, and 도해 still answered it ("…기름은 밑에 두게"; 10 of 10 failed detour turns, qa_test/runs/loop-1/detour.json).
-- A talk or muse reply that a sentence presumes an event for, one that is not in what they lived through or the narration, says it did not happen or that they do not know, and never plays along. Asked "할아버지가 열쇠 빌려줄 때 무슨 말 했지?" after the favor was refused, 윤슬 made up the lending (1 of 2, qa_test/runs/loop-1/long-summary.md).
-
-**The prose carries the game.** The screen has no pictures, so the writing must do what art and voice do elsewhere, as a narrator does in Baldur's Gate 3: one sharp concrete detail per sentence, chosen for this person and this place, instead of stock phrases ("눈을 반짝이며", "코끝을 스칩니다"); people who sound like themselves, whose lines answer and also let a want, a fear or a habit show; and a last sentence that leaves an echo or a tension rather than a summary. These are rules of craft and name no story; the story's `style` sets the tone they serve.
-
-Format rules:
-
-- 합니다체 and `당신`; no numbers, no lists of options, never the player's feelings.
-- What happened is a record: its frames ("…생겼습니다", "뜻대로 되어 갑니다") and tag names are told as what is seen, not copied. They reached the screen as written (goal-6-odd 3).
-- When there is a success or failure, the first sentence makes it clear; a failure shows things going wrong.
-- The player's sentence is read for its meaning, not copied, and shown as the actions and words of `당신`. Questions are answered from facts in the context; anything else is not yet knowable.
-- A person spoken to or handed something answers directly, from where they stand, in double-quoted dialogue attributed to them and true to their persona and voice, without copying sample lines and without any form of address for you.
-- People know only what the context and what happened state; otherwise they say they do not know or change the subject.
-- A companion left behind this turn (their `avoids`) is shown parting, with their `fear` as the reason; after that they are not in the scene.
-- Someone who begins to follow the player this turn but avoids places says so: the change line names the places avoided for good ("…함께 다니기로 했지만 …에는 가지 않습니다"; the record has no state to read an `until` against), and the steering, which reads the current state, names every place still avoided and adds their `fear` and that they promise no farther. Agreeing out loud to the very trip they then refused read as a broken promise (play-3-talker 27, 32; play-3-explorer 21).
-- An obstacle this turn moved forward is named in the steering: short of full, as a small visible change that must not read as done; full, as what changed before the player's eyes. The prose said the lamp pushed back the dark at 1/4 and the flame poured out at 3/4 (play-2-bold 6–7, play-4-odd 28).
-- A clock or threat that came to pass this turn, and a deadline that ran out, are named in the steering to be shown in one sentence each. A bridge collapse and a missed sunset went untold behind the turn's other changes (play-4-talker 28, 40; play-4-odd 29; play-4-explorer 29).
-- A step that something hidden blocked is named in the steering as not having happened: no one answers and nothing is done; the narration shows what stood in the way. A blocked talk was answered in full, so testers could not tell what the dog had stopped (play-4-explorer 10, play-4-talker 21). The step still spent its beat, so its lines in what happened carry the scene end, arrival, chapter change or ending that beat brought; with only the reveal, the sunset went from 0 to 1/3 untold (`narr-3` turn 6).
-- What a roll leaned on is named in the steering as the resource the attempt drew on, to be shown once in use; a step something hidden blocked rolled nothing and leaned on nothing. A leaned-on letter never appeared in the prose (play-4-talker 6, play-4-odd 4).
-- A sentence's attempt that rolled is told as the sentence said it: the steering says the attempt's motion stays the sentence's own and only the result follows what happened. The odds never read the verb, so the narrator chose its own, and "kicked" became "shouldered".
-- A scene end and an overwritten tag are change lines of their own, from the step's happenings (ontology.md 3): "장면이 넘어가고, 다가오던 일들이 한 걸음씩 더 다가옵니다" before the clocks it moved, and "{owner}의 {old}이 밀려나고 {new}이 자리 잡았습니다". A wound tag added or removed reads "당신이 다쳤습니다" or "당신의 상처가 조금 나았습니다".
-- A flag with texts (story.md 2.2) is a fact line in every context while its value has a text, and its change is a step line in the author's words. A consumed thing is "{name}을 다 썼습니다", and a person in sight giving up a belief is "{name}은 더는 이렇게 믿지 않습니다: {text}", the one place a person's belief reaches narration.
-- What a look found is named in the steering: each thing or obstacle a look step reached, with its look text, to be shown. A letter was read and none of its words were told, because its look sat among every entity's public parameters (play-5-talker 35).
-- A fork that came this turn is named in the steering with its choices, and the narration ends on that question, asked by someone present if anyone is; the usual close gives way. Told only as a change, it fell behind the lamp's first light and a person's arrival, and no narration asked it (goal-4-check 6, goal-4-talker 44).
-- A turn that only spent growth gets two sentences and 100 characters and is told as the change settling in, without the place cue or a replay of the last scene. Told as a turn, a growth pick replayed taking the oil or listed the scenery again (play-3-talker 24, play-3-explorer 30, play-3-bold 7).
-- A turn that stopped before the rest of the sentence (at a card, after a failure, or at a step that could not be read) says which action has not happened yet, or that the rest has not, so the narration stops short of it. Given the whole sentence, the narration lit the lamp on the look before its roll card (play-3-odd 18, play-3-explorer 41).
-
-### 5.3 Check
-
-1. **Rule check**, without a model:
-   - Length: sentence and character counts. A quoted line counts as part of its sentence, and a sentence that is only a quote attaches to the preceding one that names the speaker.
-   - Form: Markdown emphasis (`*`, `\`, backticks) is removed before the check; it reached the screen as "\*컥\*" (play-4-talker 24). 합니다체 (`lang/polite.py` fixes 해라체 endings), no second person other than `당신`, no list or option shapes, numbers or parentheses (sounds and gestures go in sentences too), a `태그:` line of at most 12 characters, no names of hidden entities.
-   - Facts, read outside quotes only (dialogue is not something happening now): obtaining a thing not held (`at(x, player) ∉ F'`), handing over a thing held, or reaching a place not reached (`at(player, place) ∉ F'`), each found as a name plus a verb of that kind.
-   - Presence: a person who is not at the player's place may not stand as a subject (`윤슬이`, `노인은`) outside quotes, even when a change names them (their regard, a thing they got). Two exceptions: a companion left behind this turn, in a sentence that tells the parting (`ko.PARTING` words or the place they stayed at), and in the ending, anyone the legacy lines name, in a sentence that sets them far off (`ko.AFAR`) (5.5).
-   - Repetition: a phrase of 10 or more characters, spaces excluded, identical to the last 3 turns of narration, to the sample lines of a person speaking now, or to that person's lines in said before (about three words; shorter overlaps are common phrasing). Punctuation, names, `당신` and any stretch of 4+ characters shared with the story's own wording in the context (senses, looks, what people know) do not count toward the 10, as for the worn phrases (5.1): counted, they sent back a third of the rewritten turns for a name between quotes ("윤슬이 고개를 저으며 당신") or a fact retold in the story's words ("새벽에 고깃배를 몰고"; qa_test/runs/loop-1).
-   - Address: a form of address for you in dialogue that guesses age or gender, like 아저씨 (mister) or 언니 (big sister) (`ko.ADDRESS`).
-2. **Claim extraction** `κ` (`lang/claims.py`): from each sentence, `Σ` literals are extracted using names and aliases and the verb forms of the frame table's change and present frames. Taking `F'` as the facts of `Vₜ₊ₖ`, a positive literal `φ` is accepted only if `φ ∈ F'`, and a negative literal `¬φ` only if it follows from `F'` and `C` (e.g. `at(key, A) ∈ F'` gives `¬at(key, B)` by C1). A negative claim such as "여기엔 경비가 없다" (there is no guard here) is not accepted, since there may be a hidden guard. A plain obstacle told as opened, broken or giving way (fleeing, stepping aside, crossed) claims its full `fill`, so a failed roll told as the target yielding is caught like an unopened door told as open. Sentences that cannot be rendered in `Σ` (smells, weather, expressions) contradict no state, so they are free. Growing `Σ` widens what the check covers and narrows narration's freedom.
-3. **Decision model check**: for each sentence that passed 1 and 2, one choice question ("이 문장은 문맥과 비교해 어떻습니까?" (How does this sentence compare with the context?): 맞다 (correct), 사실과 어긋난다 (contradicts the facts), 없는 사람·물건·길을 지어냈다 (invents a person, thing or way that does not exist)) is asked with the context `ρ(Vₜ₊ₖ, X_N)`, all in one call. If the probability of "맞다" is at most `1 − θ_N` (initially 0.5), the sentence is rejected, and the more probable of the two faults is given as the point to fix. Asked yes/no per fault, the model answered "no" to both and missed most bad sentences (qa_test/runs/decision-1). When the turn rolled an attempt a sentence made, the context also holds that sentence as the attempt (its manner as said, its result as happened), so an attempt told with another verb ("걷어찬다" told as "어깨로 들이받는다") is a contradiction; the odds never read the verb.
-
-Acceptance reads only `Vₜ₊ₖ` (non-interference). Classifying a fault as invention or leak requires looking at `S`, so it is done only in offline analysis and never fed back to the model.
-
-### 5.4 Rewrites and fallback
-
-If any sentence is rejected, the narration is rewritten with that sentence and the reason (the rule check's name, the contradicted fact line) as feedback. Feedback reads only `(Vₜ₊ₖ, δ, draft)`. There are at most two rewrites. If the third attempt is still rejected, the rejected sentences are deleted from the draft with the fewest rejected sentences (the later one on a tie), since a rewrite can be worse. If everything is deleted, only the change lines of `δ` remain as the narration. Each attempt gets a different seed. The stream format is in api.md 4.
-
-### 5.5 Tag names and recaps
-
-Names from the `태그:` line are kept in the presentation layer, keyed by `(mark atom, t at creation)`. When a slot is rewritten, an old name does not attach to the new tag, and a name is shown only while its atom is in `F`. `R` and conditions do not read this table.
-
-In a turn where a chapter change or ending happens, a recap of the finished chapter `k` is written after the narration, in the same way. Instead of 5.1, its input is first what passed with people in that chapter (up to 4 lines of the ledger, api.md 3: things handed over either way, promises and how they ended, companions who came or stayed, a trust that ended the chapter moved) and a line per choice made ("당신이 고른 길: …"), whether or not a roll marked them, then up to 5 notable events from that chapter's `M` (improvisations that raised `fill` by 2, obstacles overcome, claims, declarations, wounds, threat arrivals; choices are told by their own line) rendered in change frames, the last always the step that closed the chapter. Told from the notable steps alone, the scenery won (goal-6-bold 9); the check is the same. `GET /games/{id}/chapters/{k}/recap` returns it in the same stream, and it is kept only in `P`. The ending's steering replaces the place cue, pace lines and usual close: it lists the legacy lines and asks for the change, then one legacy line, then the story's `frame` as the last sentence; with no legacy lines, the change and the frame. The legacy lines are what the player leaves behind, rendered as context facts. They are trust that moved from its start for someone the player met (a witness in `M`), debts to or from the player, things the player saw go to an agent that did not start there (from `M`), companions, and from the ledger every promise kept or broken and every companion who stayed behind, which no atom remembers; each person they name who is not here adds a line saying so (with the place when the player sees it). They also go into the check's context with the frame. Anyone not here appears only far off and gets no new event, and the rewrite feedback for such a person says how to keep them: far off, where they are. Before this, the pace line and the usual close outweighed the frame: no ending told whether the boats came home, and none named a person (play-1-talker 46, play-2-talker 48). Re-narrating the round-2 endings gave the frame in 6 of 6 and a legacy line in 6 of 6, with one invented event for an absent person (`qa_test/runs/play-2-reending-3.txt`).
-
-## 6. Presentation layer `P`
-
-A game is `G = (story, seed, S, L, P)`. `R`, `K`, conditions and observations do not read `P`. When the screen and the narration input read `P`, they are reading earlier model outputs and player inputs, that is, exogenous inputs.
-
-| Field | Content |
-|---|---|
-| `revision` | Rises by 1 on each request that changes the state or the pending card. Refusals and receipt replays do not raise it |
-| `turns` | For each turn `n`: the request kind (sentence, button, card answer), the sentence, and the range of executed events `t` |
-| `requests` | Records of requests that ended without events (clarify, refusal, card discard), and each sentence's outcome with the seconds its interpretation took (`secs`) |
-| `card` | One pending card, or none |
-| `narration` | Turn `n` → accepted narration, attempt count, deleted sentence count, the seconds it took (`secs`), and `said`: speaker → their quoted lines. A quote belongs to the speaker its sentence names (name or alias), or to the only speaker when it names no one; any other quote is not kept |
-| `recap` | Chapter `k` → recap, with the same fields |
-| `tag_names` | `(atom, t)` → name |
-| `relevance` | Attempt → the `rely` values its roll cards have offered (4.2) |
-| `receipts` | Request id → (body hash, response) |
-
-## 7. Turn protocol
-
-A player's **turn** `n` is one request that executed at least one step. It consists of ontology steps `t, …, t+k−1` (`1 ≤ k ≤ 3`) and one narration; a request that stopped at a card and continues once the card is answered is a new turn. `command(game_id, request_id, revision, body)` in `service.py`:
+이동 카드의 보기는 `{id, label, with, effects}`다. 같이 가자 보기의 `id`는 계획의 행동 id들을 `+`로 이은 것이고, 그 계획은 카드의 `plans`에 있다.
 
 ```
-lock(game_id)
-  1. If receipts[request_id] exists with the same body hash, return the saved response. If the hash differs, refuse (409, with the current view)
-  2. If revision ≠ P.revision, refuse (409, with the current view)
-  3. Build a plan from the body
-       action   → check admits → plan [a]
-       card     → put the answer into that card's plan (an accepted roll or confirm marks that step "accepted")
-       cancel   → discard the card, no event
-       text     → layer 0, layer 1 → plan, clarify, or refusal
-     A new sentence or button discards the pending card
-  4. For each step
-       set aᵢ through layer 2 (clarify → place a card and stop; empty slot → stop; going to the current place → skip)
-       stop unless admits(U, Vₜ, aᵢ)
-       if the step rolls and is not accepted, place a roll card and stop
-       if it is high risk without a roll and not accepted, place a confirm card and stop
-       step = resolve(U, S, h, aᵢ, roll(seed, t)), append the event and S ← S ⊕ Δ
-       stop on an ending, or a fail or blocked result
-  5. If at least one step ran, advance turn n and record it in turns. With neither a step nor a card, refuse
-  6. If the state or the card changed, revision +1, write the receipt, and save L and P at once (ontology.md 6)
-  7. Respond: CommandResult (api.md 2)
+server/src/
+  onto/  rules/      ontology.md, rule.md
+  story/             load.py (YAML 읽기), compile.py, validate.py (이야기 검사), evals.py (읽기 평가)
+  locale/ko.py       문장 틀, 행동 이름, 공통 문구, 읽기에 쓰는 낱말
+  lang/              context.py (문맥), claims.py (주장 뽑기), polite.py (합니다체)
+  models/            decision.py (판단 모델), llm.py (서술 모델)
+  interpret.py       문장 읽기
+  cards.py           되묻기, 굴림, 확인, 이동 카드
+  narrate.py         서술, 검사, 다시 쓰기, 장 요약
+  jobs.py            서술이나 요약 하나가 저장에서 읽는 것
+  view.py            화면, 턴 기록 (api.md)
+  service.py         턴 처리 (자물쇠, revision, 영수증)
+  api.py             HTTP (api.md)
+  config.py          환경 설정
+  fun.py             재미 지표 (fun.md)
 ```
 
-- Layer-2 questions are asked inside the lock. Requests for the same game queue up one at a time; other games are not blocked.
-- Between the steps of 4, the observation is recomputed each time. What an earlier step revealed appears in the next step's slots.
-- A request that accepts a roll card runs that step without calling a model. If a remaining step has layer-2 questions, they are asked then, and that time is spent while the dice are rolling.
-- The game is saved before responding. If a response is lost, the client resends the same `request_id` and body and gets the same result at 1.
-- Narration is requested separately, after the response. Narration does not change the state, so it is built outside the lock, and the lock is taken only to write the cache into the save. When narration requests for the same turn overlap, only one builds it and the rest wait for its result.
-
-## 8. Models and startup
-
-| | Decision model (malkuth-2b, `:8081`) | Narration model (`:8082`) |
-|---|---|---|
-| Does | Layer 1, layer 2, narration check | Narration, rewrites, recaps, layer-1 action reading, picking layer-2 intent slots |
-| Time limit | 10 s per call | 60 s for narration, 10 s for reading and picking |
-| On timeout | An unreadable answer | That attempt fails; if all three attempts fail, stream `error` |
-
-At startup the server validates every story against story.md V1–V6 and sends a short request to both models. If anything fails, it does not start. It never starts or stops the models.
-
-## 9. Properties and checks
-
-| Property | Statement and reason | Enforced in | Check |
-|---|---|---|---|
-| Model substitution | Replacing either model with any function (rules, randomness, a person, an adversarial model) keeps the properties of the world and rules. Model output enters only as elements of `Ω` (which become an action, clarify, refusal or `ν₀`, with actions inside `K`) and as checked text (kept only in `P`) | Sections 3, 5 | A fake decision model that answers nonsense; a fake checker that always rejects |
-| Context purity | Every model input is built only from `ρ(Vₜ, X)`, `λ`, exogenous inputs and story constants. Narration and rewrite feedback use `Vₜ₊ₖ` and `δ` | `interpret`, `narrate` | Two states differing only in hidden atoms → the same prompt (compare the text a fake model received) |
-| Closed questions | `Ω` is computed before the call, and answers outside it have probability 0 | `decide` | Answers outside the options |
-| Interpretation totality | Every sentence ends as a plan, clarify, or refusal, because the tree's depth `1 + k` is finite, `δ_θ` always yields a value, and the layer-1 step-1 default `try(player)` is always a candidate | Section 3 | Random-sentence fuzzing |
-| Conservatism under uncertainty | 3.4, Conservatism | `δ_θ`, 4.2 | Low confidence on every judgment slot → `ν₀`; low confidence on every intent slot with no narration-model answer → clarify |
-| Bounded misreading | An executed step yields the `R` outcome of one candidate, and its gain stays within rule.md's bounded advantage | Admission check | An id outside the candidates → refusal |
-| Cost bound | A turn finishes within `1 + k` decision-model interpretation calls, one narration-model action reading plus up to 2 picks per step, 3 narration attempts and 3 check calls, and each call has a time limit. A turn that ends a chapter adds 3 recap attempts + 3 checks | 3.5, section 8 | A fake model that never answers |
-| Card honesty | The risk, target number and modifiers shown on a roll card equal those at execution, and a high-risk step runs only after that exact action is accepted | 4.2, 4.3, section 7 | A card's `preview.mods`·`risk` equal its step's `Step` (the step record's `mods` is a projection of it); a high-risk second step in a chain; accepting a stale card; a `pick` outside the card |
-| Display reproducibility | The screen at any point is a function of `(story, L, P)`. Narration is cached per `(game, turn)`, and a repeated request gets the same result through its receipt. Narration cut off before caching is written again, so its sentences may differ, but it goes through the same `δ` and checks | Sections 6, 7 | Concurrent requests, the same request id, the same view and narration after a server restart |
-| One table | `ρ`, `λ` and `κ` use the one `𝔗`, and each fact line corresponds to one atom of `F` | Section 1 | Round trip `κ(ρ_fact(O, X)) = {φ ∈ F ∣ some entity slot of φ is in X, and all are in E}` |
-| Calibration and error rate | If the decision model is calibrated, an answer accepted at `p(ω₁) ≥ θ` is wrong with probability at most `1 − θ`, and with `d` answers accepted in one action, at most `d(1 − θ)`. Raising `θ` lowers errors and increases clarify cards and `try(player)` | 3.4 | The measurements below |
-
-**What to measure** (measurement targets the properties do not depend on):
-
-- Narration acceptance: the share accepted on the first attempt, and the share with deleted sentences.
-- Interpretation accuracy: per-layer and per-slot accuracy on the sentences in `scenarios/<folder>/evals.yaml`, and the share that fell to `ν₀` or `try(player)`. Before changing interpretation rules, measure on a freshly collected eval set first, and report the numbers from before the change alongside.
-- Calibration: whether answers the model gave probability `p` are right at a rate close to `p`. Measured on questions that reached the model in real play, after rule pre-filling.
-- Change coverage: the share of narrations in which every atom of `δ` shows.
-- Cost: decision-model calls and latency per turn.
+모델을 부르는 곳은 `interpret.py`, `narrate.py`, 시작할 때의 확인뿐이다.

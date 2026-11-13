@@ -1,324 +1,524 @@
-# Screens
+# 화면
 
-This doc turns one turn of play, above all **the fun of rolling dice**, into a web UI. The client talks to the server only through [api.md](api.md).
+한 턴을 웹 화면으로 옮긴다. 가장 중요한 것은 **주사위 굴리는 재미**다. 클라이언트는 [api.md](api.md)로만 서버와 말한다.
+
+## 한눈에
+
+1. 화면 하나에 지금 필요한 것이 다 보인다: 장과 목표, 다가오는 것들, 장소와 길, 여기 있는 것들, 대화, 입력창.
+2. 플레이어가 문장을 써서 보낸다. 이름을 누르면 문장 첫머리가 입력창에 들어간다.
+3. 굴려야 하는 행동이면 굴림 카드가 뜬다. 목표 숫자를 보고, 기댈 것을 고르고, 주사위를 눌렀다 놓는다.
+4. 주사위가 멈추고, 값이 하나씩 더해지고, "성공"이나 "실패"가 찍힌다. 바뀐 것이 화면에서 차례로 바뀐다.
+5. 대화에 굴림 한 줄이 남고, 그 아래로 서술이 흘러나온다.
+6. 서술이 끝나면 다시 문장을 쓸 수 있다.
+
+## 1. 원칙
+
+| 원칙 | 뜻 |
+|---|---|
+| 누르지 않아도 다 보인다 | 지금 결정에 필요한 것은 늘 한 화면에 있다. 쪽, 탭, 펼치기, 눌러야 나오는 이름, 가로 스크롤, 겹친 패널이 없다. 위로 올려서 보는 것은 지난 대화뿐이다 |
+| 화면은 규칙을 모른다 | 목표 숫자, 합계, 결과, 결정적 보정, 대가, 할 수 있는 행동은 서버가 준다. 화면은 받은 값을 그리고 움직임만 계산한다 |
+| 서버 응답이 곧 상태다 | 응답의 `view`를 그대로 쓴다. 미리 움직이는 것은 구르는 주사위뿐이고, 그것은 아무 값도 정하지 않는다 |
+| 그림이 없다 | 주사위, 칸, 고리는 도형과 글자로 그린다 |
+| 종이 위의 한 판 | 플레이 화면은 탁자 위의 캐릭터 시트다. 종이 바탕에 잉크, 서술은 명조(세리프), 플레이어의 말은 고딕, 검은 주사위에 흰 눈, 시트의 체크 칸 같은 칸. 데스크톱에서는 어두운 탁자 위에 놓인다. 장식은 정보(능력치, 위험, 시계, 굴림 결과)만 담는다 |
+| 서버 문장은 그대로 | 서버가 만든 한국어는 고치지도 자르지도 않는다. 클라이언트 문장은 `locale/ko.ts`에 둔다 |
+| 글보다 아이콘 | 설명 문구와 딱지 대신 아이콘, 색, 칸, 점으로 읽힌다. 할 수 있는 일은 문장으로 가르치지 않는다. 누르면 문장이 시작되는 이름으로 보여 준다 |
+| 부품은 한 벌 | 버튼, 아이콘 버튼, 바닥 시트, 줄은 `components/ui`와 `Row.tsx`의 한 부품에서 나온다. 모서리, 높이, 눌린 모양이 같다 |
+
+- 누르는 것은 결정뿐이다(명령, 기대기, 굴림). 정보를 보려고 누르는 것은 없다.
+- 움직임을 건너뛰는 탭이 있지만, 누르지 않아도 같은 끝 상태에 닿는다.
+- 주사위의 재미는 둘이다. **굴리는 손맛**: 결과가 정해지는 순간을 플레이어가 직접 일으킨다. **내 결정이 통한다는 느낌**: 내가 쓴 문장, 고른 방법, 아껴 둔 특성이 숫자와 결과를 바꾼 것이 보인다.
+- 주사위 값은 서버가 정한다. 움직임은 값이 미리 정해졌음을 숨기지도 증명하지도 않는다. 공정함은 카드에서 본 숫자가 실제 숫자라는 데서 나온다(rule.md의 "언제나 지켜지는 것").
+
+## 2. 플레이 화면
+
+### 2.1 배치
+
+높이는 보이는 창 높이에 고정한다. 위에서 아래로 쌓는다. 대화만 남은 높이를 다 쓰고, 나머지는 내용만큼만 차지한다.
+
+```
+┌──────────────────────────────┐
+│ 1장 등대에 오르다         ●● 👤 ≡│ 머리줄: 장 번호(금색)와 제목, 건강 점과 주인공, 메뉴
+│ ⚑ 해가 지기 전에 등불실에 오르세요.  │ 목표: chapter.aim
+│ ⚠ 몰려오는 폭풍 ■■□□ 해가 진다 ■□□ │ 위험: 위험 시계, 기한, 위협, 갈림길
+│ ⌖ 등대 앞 (→ 마을) (→ 부두) (🔒 등불실)│ 장소와 길 (막힌 길은 자물쇠, 흐리게)
+│ ◉ (도해) (기름통) (녹슨 문)       │ 주변: 사람, 물건, 장애물, 장면 태그
+│                              │
+│ 도입 / 서술                   │ 대화: 남은 높이 전부.
+│            [내가 쓴 문장]      │   위에서 아래로 쌓인다.
+│ ⚂⚅ 완력 성공 10 ⑧            │   위로 올리면 지난 대화
+│ · · ·                        │
+│ (                         ↑) │ 입력창 (비어 있음, 안내 글 없음)
+└──────────────────────────────┘
+```
+
+데스크톱에서도 같은 폭(412px)의 틀을 가운데에 둔다. 바깥은 어두운 탁자(`canvas.inset`)다.
+
+### 2.2 줄
+
+- **줄마다 아이콘이 있다.** 왼쪽 20px 칸의 아이콘이 그 줄의 종류다: 목표 ⚑, 위험 ⚠, 장소 ⌖, 주변 ◉. 종류는 겹치지 않는다.
+- 글자 딱지는 화면에 없다. 화면 낭독기에만 준다(`accessibilityLabel`).
+- 빈 줄은 그리지 않는다. 줄 사이에 구분선이 없다. 아이콘 칸은 머리줄 아래부터 주인공 패널까지 같은 자리다.
+- **줄은 넘치면 다음 줄로 넘어간다.** 그만큼 대화가 줄어든다. 이름은 줄이거나 자르지 않는다.
+- 한국어는 앱 전체에서 낱말 사이에서만 줄을 바꾼다(`global.css`의 `word-break: keep-all`).
+
+**이름 알약**
+
+길, 사람, 물건, 장애물은 둥근 알약이다. 누르면 문장 첫머리가 입력창에 들어가고 입력창으로 초점이 간다.
+
+| 누른 것 | 입력창에 들어가는 것 | 그다음 |
+|---|---|---|
+| 길 | "등대 앞으로 간다" | 그대로 보낼 수 있다 |
+| 사람 | "도해에게 " | 이어서 쓴다 |
+| 물건, 장애물 | "녹슨 등대 문을 " | 이어서 쓴다 |
+| 막힌 길 | 그 길을 막은 장애물로 시작("녹슨 등대 문을 ") | 이어서 쓴다 |
+
+- 명령이 열려 있을 때만 누를 수 있다.
+- 막는 것이 아직 안 보이면 막힌 길은 누를 수 없다.
+- 막힌 길은 화살표 대신 자물쇠를 달고 흐리다.
+- 알약에는 이름만 있다. 태도는 안 보인다. 동행 중인 사람은 알약 앞에 사람 아이콘이 붙는다.
+- 종류는 색으로 가른다(2.4).
+
+**장애물**
+
+- 장애물은 칸을 그리지 않는다. 한 번 성공하면 넘는다.
+- 닫힌 방법은 이름 옆에 취소선으로 보인다.
+- 넘은 장애물은 장면에 남는다. ✓가 붙고 흐리며 누를 수 없다.
+
+**위험 줄**
+
+- 위험 줄의 칸과 이름은 모두 빨강이다(위험 시계, 기한, 위협, 갈림길).
+- 시간 한 칸은 따로 줄이 없다. 대신 기한, 위협, 갈림길의 다음 빈 칸이 아래부터 `beats / beats_max`만큼 찬다(반투명). 걸음마다 시간이 쓰이는 것이 보인다. 위험 시계에는 이것이 없다.
+
+**입력창**
+
+- 행동은 늘 직접 쓴다. 빈 입력창에 안내 글이 없다. 어떤 꼴로 써도 된다.
+- 첫 턴 전(`view.last`가 null)에만 서버의 `view.buttons`(셋까지)가 도입 아래에 ▷ 붙은 작은 알약으로 나온다. 누르면 그 글이 입력창에 들어간다. 그대로 보내거나 고쳐 보낸다. 첫 턴부터는 사라진다.
+
+### 2.3 늘 보이는 것과 여는 것
+
+매 턴 바뀌거나 다음 문장에 바로 쓰이는 것은 늘 보인다: 목표, 건강, 위험, 주변. 건강은 칸이 아니라 점으로 그린다(위험 시계의 칸과 헷갈리지 않게).
+
+**주인공 패널**
+
+- 주인공 아이콘(♡와 건강 점이 한 버튼)을 누르면 머리줄 아래로 패널이 내려온다. 아래 줄을 밀지 않고 덮는다.
+- 줄 순서: 이름, 상태(태그와 상처, 각각 언제 사라지는지. 없으면 줄 없음), 능력치(⚡), 특성(☆), 가진 물건, 기록.
+- **기록**은 지금 중요한 것만 보인다: 지키지 않은 약속과 빚 전부, 지금 장면에 있는 것에 대해 아는 사실. 갈림길에서 고른 것은 결말 화면에 모은다(7.4).
+- 이번 장에 이미 기댄 특성, 물건, 사실은 흐리다.
+- `idle`에서만 열린다. Escape나 바깥 탭으로 닫힌다. 메뉴가 열리면 닫힌다.
+- 성장할 수 있으면 아이콘에 금색 점이 붙고, 패널 이름 줄 오른쪽 끝에 금색 성장 알약(✲ 1)이 생긴다.
+
+**메뉴**
+
+- 머리줄 오른쪽 아이콘(≡)으로 연다. 명령이 열려 있을 때만(`idle`, `card`) 누를 수 있다.
+- 아이콘 아래로 작은 목록이 내려온다. 나머지 화면은 그대로 보인다.
+- 항목은 "제목으로" 하나다. Escape나 바깥 탭으로 닫힌다. 카드 위에서 열었으면 Escape는 메뉴만 닫는다.
+- 제목으로 가도 `trpg.game_id`와 받은 `view`는 남는다. 제목의 "이어하기"가 같은 게임의 같은 자리로 돌아온다. 서버에는 아무것도 보내지 않는다.
+
+**카드**
+
+- 되묻기, 확인, 이동, 성장 카드는 바닥 시트(`Sheet`)다. 바닥에서 24px 떠오르고, 내용만큼만 덮는다. 머리에 아이콘과 제목, 오른쪽에 닫기(✕)가 있다. 위의 목표와 주변은 그대로 보인다.
+- 굴림 카드만 플레이 화면 전체를 덮는다(4.2).
+- 카드 안에서도 모든 것이 한 번에 보인다.
+- 모든 대화상자는 Escape로 닫히고, 초점을 안에 가두고, 닫히면 연 곳으로 초점을 돌려준다(`useDialog.ts`).
+
+### 2.4 색
+
+한 색은 한 뜻이다. 아래 색들은 색상환에서 서로 30° 넘게 떨어져 있어 모양을 안 봐도 색으로 갈린다. 모두 종이(`canvas.default`)와 카드(`canvas.subtle`) 위에서 명암비 4.5:1 이상인 잉크다.
+
+| 뜻 | 토큰 | 색 |
+|---|---|---|
+| 이루는 것 (성공, 좋은 태그, 장 번호) | `gold` | 호박 `#8a5300` |
+| 다가오는 나쁜 것 (위험 줄, 실패, 나쁜 태그, 높은 위험) | `danger` | 빨강 `#b3261e` |
+| 건강 (♡와 점) | `health` | 초록 `#256b2c` |
+| 사람 | `kind.person` | 파랑 `#1a669c` |
+| 물건 (장면에 있는 것, 가진 것) | `kind.thing` | 청록 `#0b7166` |
+| 장애물 | `kind.obstacle` | 보라 `#87309f` |
+| 능력치 보정 (주인공 패널의 능력치 값도) | `chip.stat` | 남색 `#4a3fc0` |
+| 도움 보정 (굴림 카드의 동그라미도) | `chip.help` | 올리브 `#4d6800` |
+| 실패 대가 줄임 (써 버리는 기대기) | `chip.guard` | 올리브 `#4d6800`. 도움과 같은 색이다. 둘 다 기대기다 |
+| 방해 보정 | `chip.hinder` | 자홍 `#a8226f` |
+
+### 2.5 크기
+
+320×568에서도 한 턴의 서술(200자)이 스크롤 없이 대화에 보여야 한다. 값은 px이고 320×568과 412×915에서 같다.
+
+| 영역 | 높이 |
+|---|---|
+| 머리줄 | 40 |
+| 목표, 위험, 장소, 주변 | 줄마다 한 줄이면 28, 두 줄이면 54 |
+| 입력창 | 62 (알약 44) |
+| 대화 | 나머지, 232 이상 |
+
+- 줄 글자는 12px이고 더 줄이지 않는다.
+- 장면이 이 예산을 넘으면 넘친 서술은 대화 안에서 스크롤해 읽는다.
+
+## 3. 상태
+
+`useGame.ts`가 화면의 서버 상태와 명령의 한살이를 모두 맡는다. 화면은 이 상태만 보고 그린다.
+
+### 3.1 흐름
+
+```
+loading ─► start (game_id 없음) ─► creating ─► 도착지
+creating ─ 오류 ─► start                    (이유를 시작 버튼 위에)
+loading ─► restoring ─► 도착지 | narrating | blocked
+
+idle ─ 명령 ─► sending ─┬─► 도착지            (거절: 이유를 입력창 위에)
+                        ├─► 도착지            (걸음 없음: 카드)
+                        └─► revealing ─► narrating ─► 도착지   (걸음 있음)
+card(굴림) ─ 놓기 ─► rolling ─┬─► revealing ─► narrating ─► 도착지
+                              └─► 도착지      (거절: 주사위가 값 없이 사라지고 이유 표시)
+card ─ 답 / 취소 ─► sending
+sending | rolling ─ 30초 무응답 ─► stuck ─ 같은 명령 다시 ─► sending | rolling
+sending | rolling ─ 409(view 있음) ─► 도착지    409(incompatible) ─► blocked
+sending | rolling ─ 404 ─► start              422 ─► 도착지 (거절과 같다. 클라이언트 버그다)
+sending | rolling ─ 그 밖의 오류 ─► 도착지     (이유를 입력창 위에)
+narrating ─ 스트림 오류 ─► narration_error ─ 다시 ─► narrating
+idle | card ─ 메뉴: 제목으로 ─► start ─ 이어하기 ─► 도착지   (view가 있고 결말이 아닐 때)
+```
+
+**도착지**는 받은 `view`에서 늘 같은 순서로 정한다. 409의 `view`와 다시 열 때도 같다.
+
+1. `ending`이 있으면 `ending`.
+2. `card`가 있으면 `card`.
+3. `growth`가 있으면 `card(growth)`.
+4. 아니면 `idle`.
+
+오류에 이유가 없으면 "서버 오류로 처리하지 못했습니다."를 쓴다.
+
+### 3.2 상태별 화면
+
+| 상태 | 명령 | 화면 |
+|---|---|---|
+| `idle` | 열림 | 기본 |
+| `sending` | 잠김 | 입력창에 보낸 문장, 작은 진행 표시 |
+| `card` | 카드의 답과 취소. 새 문장을 쓰면 카드를 버린다 | 카드 |
+| `rolling` | 잠김 | 구르는 주사위 |
+| `revealing` | 잠김. 탭하면 끝 상태로 건너뛴다 | 공개(4.4) |
+| `narrating` | 잠김 | 점 세 개, 받은 글이 차례로 나온다 |
+| `stuck` | 같은 명령 다시 보내기 버튼만 | 입력창 자리에 "응답을 받지 못했습니다."와 다시 보내기(↻). 굴린 뒤라면 굴림 카드 위에 나오고, 주사위는 값 없이 멈춘다(4.3) |
+| `narration_error` | 다시 버튼만 | "서술을 받지 못했습니다." 공개의 끝 상태는 남는다 |
+| `blocked` | 제목으로만 | 가운데에 "이 판은 더 이어할 수 없습니다."와 제목으로 버튼. 입력창 없음. `trpg.game_id`는 지우지 않는다 |
+| `ending` | 새 게임만 | 결말 화면(7.4) |
+
+### 3.3 명령과 복구
+
+**명령 한 번**
+
+- 명령마다 `request_id` 하나를 붙이고, 본문과 함께 기억한다.
+- 30초 안에 응답이 없으면 `stuck`이다. 다시 보낼 때는 **같은 `request_id`와 같은 본문**으로만 보낸다. 서버가 같은 결과를 돌려주므로 두 번 실행되지 않는다.
+- 다시 보내면 주사위가 다시 구르고 600ms와 30초 타이머가 새로 시작한다. 앞선 요청의 응답이 늦게 와도 같은 응답이다. 먼저 온 것을 쓴다.
+- 게임 만들기도 같다. 시작 버튼 자리에 무응답 문구와 다시 보내기가 나온다.
+
+**카드 앞의 걸음**: 계획의 앞 걸음을 실행하고 카드에서 멈춘 응답에는 `view.card`와 함께 `steps`와 `turn`이 있다. 그 걸음을 공개하고, 서술을 받고, 그다음 카드를 연다.
+
+**revision**
+
+- 응답의 `view.revision`을 다음 명령에 붙인다.
+- 409에 `view`가 있으면 그것을 쓴다. 구르던 주사위는 값 없이 사라지고, 입력창 위에 "게임 상태가 바뀌어 새로 불러왔습니다" 한 줄이 나온다.
+- `view` 없는 `incompatible`이면 `blocked`다.
+
+**저장하는 것**
+
+- 브라우저에는 `trpg.game_id`와 대화 기록만 둔다.
+- `useLog`가 지금 게임의 최근 300개를 `trpg.log.<game_id>`에 둔다. 다른 게임의 기록은 지운다.
+- 항목 id에 턴 번호가 들어 있어, 다시 열어도 겹쳐 쓰지 않는다.
+- 기록이 없는 기기에서는 도입부터 새로 만든다.
+- 다시 열기에 실패해도 아무것도 지우지 않는다. 404일 때만 지우고 시작 화면으로 간다.
+
+**다시 열기**
+
+- `view.last`의 걸음 기록은 움직임 없이 끝 상태로 그린다. 공개는 다시 틀지 않는다.
+- 서술이 캐시에 있으면 받아서 한 번에 보인다. 없으면 `narrating`에서 받는다.
+- 그 턴이 이미 대화 기록에 있으면 다시 쓰지 않고, 도착하자마자 끝낸다.
+- `view.card`가 있으면 카드를 연다.
+
+## 4. 굴림
+
+굴리는 걸음은 장애물에 하는 시도와 굴리는 말하기다.
+
+### 4.1 다섯 순간
+
+| 순간 | 플레이어가 보는 것 | 플레이어가 하는 일 | 재미(fun.md) |
+|---|---|---|---|
+| 1. 걸린 것 | 무엇을 하려는지(행동 이름), 넘어야 할 목표 숫자 | 읽는다 | 긴장 |
+| 2. 결정 | 보정과 그 출처(`솜씨 +2`, `젖은 발 −1`), 기댈 것(`열쇠 +1`) | 기댈 것을 누른다. 다시 누르면 뺀다 | 내 결정 |
+| 3. 굴림 | 손안에서 흔들리는 주사위 둘 | 눌렀다 놓는다 | 긴장 |
+| 4. 공개 | 주사위가 하나씩 멈추고, 보정이 차례로 더해지고, 합계가 목표에 닿거나 못 닿고, "성공"이나 "실패"가 찍히고, 결정적 보정에 딱지가 붙는다 | 본다 | 결과, 내 결정 |
+| 5. 대가 | 넘은 장애물이나 닫힌 방법, 차는 칸, 위기, 실패의 사고 | 본다 | 결과 |
+
+- 모든 값은 카드의 `preview`와 걸음 기록에서 온다.
+- 방법과 대상은 카드에서 바꾸지 않는다. 문장이 정한 것이다. 바꾸려면 카드를 닫고 다시 말한다. 문장에 방법이 없으면 엔진이 가장 높은 능력치를 고른다(engine.md의 해석).
+- 굴림 카드를 받아들이면 위험이 높은 굴림도 확인한 것이다(engine.md의 확인 카드).
+- 서술은 숫자를 되풀이하지 않는다. 숫자가 만든 상황을 쓴다.
+
+### 4.2 굴림 카드
+
+걸린 것은 목표 숫자 하나로 읽힌다. 거기 닿느냐가 긴장의 전부다.
+
+```
+┌──────────────────────────────┐
+│     녹슨 등대 문을 솜씨로 다룬다    ✕ │ 하려는 일: 행동 이름(해법이면 그 이름), 닫기
+│            ( 8 )               │ 고리 안의 목표 숫자. 위험이 높으면 위험 색
+│            ▢  ▢                │ 주사위: 빈 면, 금색 테두리, 숨 쉬듯 커졌다 작아진다
+│            굴리기               │ 굴릴 수 있는 동안만
+│     솜씨 +2  물보라 −1           │ 고정 보정(능력치, 방해). 0은 그리지 않는다. 테두리 없는 글자
+│     ○ 윤슬의 도움 +1              │ 기댈 것: 한 줄에 하나, 하나만 고르는 동그라미
+│     ◉ 등대 열쇠 · 실패 대가 줄임 · 이번 장 1번 │ 눌러 고르고, 고른 것을 다시 눌러 뺀다
+│     실패했던 방법 · 무리해서       │ 무리할 때만. 위험 색
+└──────────────────────────────┘
+```
+
+**모양**
+
+- 플레이 화면 전체를 어둡게 덮고, 가운데에 패널로 놓인다. 커지며 나타난다(0.96 → 1, 220ms).
+- 취소는 글자 버튼이 아니다. 머리의 닫기(✕)와 Escape다. 굴린 뒤에는 사라진다.
+- 카드가 열리면 초점은 패널 자체로 간다(첫 조작부로 보내지 않는다). Tab은 첫 조작부부터 돈다.
+- 뒤의 어두운 막은 공개 중에만 공개를 건너뛰는 데 쓴다. 비활성 조작부로 만들지 않는다.
+- 320×568에서도 패널이 화면에 들어간다. 기댈 것이 많으면 글자가 12px로 줄어든다.
+
+**목표 숫자와 고리**
+
+- 카드의 값은 모두 `card.options`에서 고른 항목의 `preview`에서 온다. 처음 고른 것은 `card.selected`다. 목표 숫자는 `preview.dc`다.
+- 위험이 높으면 고리와 숫자가 위험 색이다. 아니면 고리는 흐린 선이다. "되돌릴 수 없는 대가"는 화면 낭독기에만 준다. 위험 단계 이름은 쓰지 않는다.
+- 결과가 나오면: 성공은 고리가 금색으로 차고 금색 고리 하나가 퍼지며 사라진다(800ms). 실패는 고리가 위험 색이 된다.
+- 고리 아래 작은 글씨 설명은 게임마다 한 번씩만 나온다. 첫 굴림 카드에 "{dc} 이상", 고리가 빨간 첫 카드에 "되돌릴 수 없음"(위험 색). 이미 굴렸는지는 대화 기록의 굴림에서 읽는다.
+
+**보정**
+
+- 보정 하나는 `mods`의 한 항목(이름과 부호 붙은 값)이고, 테두리 없는 글자다. 종류(`stat`, `help`, `guard`, `hinder`)마다 `colors.chip`의 색을 쓴다(2.4).
+- 카드의 `preview.mods`와 걸음 기록의 `mods`는 같은 목록이다. 그래서 카드와 공개가 같은 보정 줄을 그린다.
+
+**기댈 것** (rule.md의 기대기)
+
+- 한 줄에 하나, 작은 동그라미와 이름. 동그라미는 가장 긴 줄에 맞춰 한 세로줄에 선다.
+- 누르면 고른다. 고른 것을 다시 누르면 뺀다. 고른 것은 동그라미 안의 점으로만 표시한다(금색 테두리 없음).
+- 서버의 "기대지 않음"은 그리지 않는다. 아무 동그라미도 안 골랐을 때의 선택이다.
+- 선택이 바뀌면 그 항목의 `preview`로 카드를 다시 그린다.
+- 써 버리는 기대기(특성, 물건, 사실, 태그)는 합계에 더하지 않는다. `+1` 자리에 "실패 대가 줄임"이라고 쓴다. 공개에서도 `±0` 대신 같은 말을 단다.
+- 쓰면 없어지는 것은 항목의 `note`를 글로 붙인다: 태그는 "1번 남음", 특성·물건·사실은 "이번 장 1번".
+
+**무리해서**
+
+- 고르는 것이 아니다. 카드의 항목이 `forced`이면 기댈 것 아래에 위험 색으로 "실패했던 방법 · 무리해서" 한 줄이 나온다. 고리는 이미 올라간 목표 숫자를 보인다.
+
+**그리지 않는 것**
+
+- 확률과 결과 문장(`preview.stakes`, `preview.gain`). "실패 대가 줄임"만 예외다.
+- 보낸 문장. 이미 대화에 있다.
+
+### 4.3 주사위
+
+`Dice.tsx`는 검은 주사위(`fg.default`) 둘이다. 둥근 네모에 종이색 눈. `react-native-reanimated`로 기울고, 돌고, 튄다.
+
+| 때 | 모습 |
+|---|---|
+| 기다림 | 눈 없는 빈 면에 금색 테두리. 숨 쉬듯 커졌다 작아진다(1.05배, 900ms). 아래에 금색 "굴리기" 한 낱말. 굴리면 사라진다 |
+| 누름 | 살짝 흔들린다. 오래 누를수록 크게 흔들린다(1.5초까지). 되는 기기에서는 짧은 진동(`navigator.vibrate(10)`). 짧게 눌러도 굴린다 |
+| 놓음 | 굴림 요청 `{card, pick}`을 보낸다. 주사위가 돈다(한 바퀴 420ms). 면이 70ms마다 아무렇게나 바뀐다. 카드의 결정 부분이 잠긴다 |
+| 멈춤 | 응답이 오고, 놓은 지 600ms가 지나면(둘 중 늦은 쪽) `d1`, `d2`가 차례로 서버 값에 선다(똑바로, 1.12배 → 1배). 값은 `steps[0]`의 `roll`이다 |
+
+**숨은 것이 막았을 때** (`steps[0].result`가 `blocked`)
+
+1. 다섯 순간은 없다. 주사위는 멈추지 않고 300ms 동안 흐려진다.
+2. 그 자리에 드러난 것의 이름이 나온다(`changes`의 `reveal`).
+3. 카드가 사라진다(200ms).
+4. 그 장애물이 주변 줄에 나타난다(150ms).
+5. 대화에 굴림 줄은 남지 않는다. 서술이 이어진다.
+
+**응답이 없을 때**: 주사위가 값 없이 멈춘다(빈 면, 똑바로). 상태는 `stuck`이다. 카드는 굴린 그대로 잠긴 채 남고, 기댈 것 아래에 무응답 문구와 다시 보내기가 나온다. 막 아래 입력창에는 또 나오지 않는다. 같은 굴림을 다시 보내면 같은 결과가 온다.
+
+**알림**: 카드가 열린 채로 굴림이 돌아오면(거절, 오류) 알림은 입력창 위가 아니라 카드의 기댈 것 아래에 나온다.
+
+### 4.4 공개
+
+결과를 한 번에 보이지 않는다. 나눠서, 내 결정이 결과를 어떻게 바꿨는지 보인다.
+
+`logic/reveal.ts`의 `timeline(steps, motion, reduced) → Beat[]`는 걸음 기록을 순서표로 바꾸는 순수 함수다. 화면은 그 순서대로 그린다. 시간 값은 `design/`의 움직임 토큰이다.
+
+| # | 단계 | 보이는 것 | 시간 |
+|---|---|---|---|
+| 0 | | 놓은 뒤 응답까지 구른다 | 600ms 이상 |
+| 1 | `die` | `d1`, `d2`가 차례로 멈춘다 | 각 250ms. `d2`는 `d1`이 시작하고 120ms 뒤에 시작 |
+| 2 | `line` | 고리 아래에 합계가 나온다. `d1 + d2`에서 시작 | 200ms |
+| 3 | `chip` | 보정이 제자리에서 합계로 날아들고, 합계가 그 값만큼 바뀐다. `mods` 순서 | 보정마다 180ms |
+| 4 | `settle` | 합계가 서버의 `total`에 멈춘다. 옆에 "성공"(금색)이나 "실패"(위험 색)가 명조로 도장처럼 찍힌다(1.5배 → 1배, 220ms). 실패면 카드가 한 번 흔들린다(300ms). 그러고 멈춰서 읽을 시간을 준다 | 2200ms |
+| 5 | `decisive` | 결정적 보정이 굵어지고 딱지가 붙는다. `stat`과 `help`는 "덕분에", `hinder`는 "때문에" | 150ms |
+| 6 | `box` | `changes`에서: 넘은 장애물(`fill`)은 ✓, 새로 닫힌 방법(`closed`)은 카드 머리의 대상 이름 옆에 취소선. `clock`·`crisis`·`arrival`은 위험 줄에서. 위기면 시계가 비고 이름 옆에 "위기"가 나온다. 차는 칸은 잠깐 커졌다 돌아온다 | 칸마다 150ms |
+| 7 | `fold` | 카드가 사라지고 대화에 굴림 줄이 남는다 | 200ms |
+| 8 | `change` | 나머지 `changes`(태그, 상처와 치료, 드러남, 이동, 관계, 약속, 장 바뀜, 결말)가 제자리에서 차례로 바뀐다 | 항목마다 150ms |
+
+- 단계는 겹치지 않고 차례로 간다. `d1`과 `d2`만 겹친다.
+- 걸음이 여럿이면 `steps` 순서대로 한다. 굴린 걸음만 1~8을 하고, 안 굴린 걸음은 6과 8만 한다. 고르기 턴도 6과 8만 한다.
+- 응답의 `view`는 오자마자 상태가 된다. 다만 6과 8이 움직일 줄은 그 단계까지 `from` 값을 보인다.
+- 결과 이름은 `locale/ko.ts`의 말이다(성공, 실패).
+- 아무 데나 탭하면 남은 움직임을 건너뛰고 끝 상태(`view` 그대로)로 간다.
+- `prefers-reduced-motion`이면 구르기, 날아들기, 칸 차는 움직임이 없다. 단계마다 끝 상태가 100ms씩 차례로 보인다.
+- 결정적 보정은 서버가 정한다. 화면은 "이게 없었다면"을 계산하지 않는다.
+
+### 4.5 하지 않는 것
+
+가기, 살펴보기, 집기, 건네기, 잡담, 고르기, 넘기기에는 주사위가 없다. 결과가 정해진 행동에 주사위를 보이면 주사위가 뜻을 잃는다.
+
+다시 굴리기와 굴림 사기도 없다. 주사위가 가벼워지고, 실패가 상황을 바꾸지 못하기 때문이다.
+
+## 5. 대화와 서술
+
+**대화**
+
+- 첫 줄은 `story.premise`(도입)다. 보낸 문장은 오른쪽 말풍선, 서술은 왼쪽 글이다. 위에서 아래로 쌓인다.
+- 서술은 명조 보통 굵기(`font-serif-body`)다. 플레이어의 문장은 고딕이다. 누가 말하는지 한눈에 갈린다.
+- 굴린 걸음마다 서술 바로 위에 **굴림 줄**이 붙는다: 작은 주사위 눈, 방법, 결과(성공은 금색, 실패는 위험 색), 흐린 합계, 작은 고리 안의 목표 숫자("⚂⚅ 완력 성공 10 ⑧"). 고리는 굴림 카드의 고리와 같은 모양이다.
+- 새 항목은 8px 아래에서 떠오른다(220ms). 새 글이 오면 맨 아래를 따라간다. 위로 올리면 지난 대화가 보인다.
+- 대화의 위쪽 끝은 잘리지 않고 20px에 걸쳐 바탕으로 흐려진다.
+- 기다리는 동안은 점 세 개가 차례로 밝아졌다 흐려진다. 글은 없다.
+
+**서술 받기**
+
+- 명령의 응답이 오자마자 서술을 요청한다. 받은 글은 공개가 끝날 때까지 쥐고 있는다. 공개가 도는 동안 모델이 쓴다.
+- 글이 오기 전에는 점 세 개만 보인다. 스트림의 `stage`와 `attempt`는 쓰지 않는다.
+- `text`가 오면 글자가 차례로 나온다(초당 60자). 탭하면 한 번에 다 보인다.
+- 글이 다 보이고 `done`이 왔으면 `narrating`이 끝난다.
+- `done`에 든 태그 이름으로 주인공 줄과 보정의 이름을 바꾼다.
+- `error`는 공개가 끝난 뒤에 보인다. 정해진 문구 아래 작은 글씨로 서버의 `message`를 단다. 끊긴 스트림이나 2xx가 아닌 응답은 `message` 없는 `error`다.
+- 클라이언트에는 제한 시간이 없다. 서버가 정한다(engine.md의 서술).
+
+**요약**: 장이 바뀌거나 결말이 나는 턴은 서술 아래에 요약(`/chapters/{k}/recap`, api.md)이 이어진다. 서술의 `done` 뒤에 요청한다(아직 `narrating`). 글자는 끊기지 않고 요약까지 이어서 나온다. 요약까지 다 나와야 `narrating`이 끝난다. 실패하면 서술과 같은 `narration_error`다.
+
+## 6. 다른 카드
+
+되묻기, 확인, 이동 카드는 주사위 없는 `Sheet`다. 취소는 닫기(✕)다.
+
+### 6.1 되묻기 카드
+
+- 선택지(셋까지)를 오른쪽 화살표 붙은 줄(`Choice`)로 보인다.
+- 장애물에 굴리는 선택지(막는 것을 돌아가는 길)는 아래에 "{dc} 이상"을 단다. 실패가 되돌릴 수 없으면 "· 되돌릴 수 없음"이 붙는다. 한 카드에서 돌아가는 길들을 견줄 수 있다.
+- 보낸 문장은 되풀이하지 않는다.
+
+### 6.2 확인 카드
+
+- 머리는 ⚠. 그 아래에 고른 것의 결과를 점 목록으로 보인다.
+- "고른다" 버튼 하나.
+- 다른 선택지가 있으면(건네기의 "…보여 준다") 그 아래 보조 버튼이 되고, 행동 이름을 단다.
+
+### 6.3 이동 카드
+
+머리는 →. 한 번 누르면 떠난다.
+
+| 갈 곳 | 모습 |
+|---|---|
+| 하나 (문장이 장소를 말했고 동행이 남을 때, engine.md의 이동 카드) | "{place}으로 갈까요?"와 "간다" 버튼 하나 |
+| 여럿 | "어디로 갈까요?" 아래 길마다 `Choice` 한 줄. 문장이 고른 곳이 맨 위 금색(`primary`) 줄 |
+
+- 줄 아래 작은 글씨로 동행이 같이 가는지 남는지 쓴다("윤슬과 함께").
+- 먼저 같이 가자고 묻고 가는 선택지는 "{name}과 같이 간다"다. 갈 곳이 하나면 "간다" 옆의 둘째 버튼이고, 문장이 그것을 바랐으면 금색이다. 여럿이면 장소 이름 뒤에 그 말이 붙은 줄이다.
+
+### 6.4 성장 카드
+
+- `view.growth`가 있으면 서술이 끝난 뒤 `GrowthCard`(✲)가 열린다. 새 장의 제목 카드(7.3)와 겹치면 제목 카드 뒤에 열린다.
+- 종류(`kind`)별로 묶고, 주인공 패널과 같은 아이콘을 쓴다. 묶음 제목 글자는 없다.
+  - 능력치 올리기(⚡): 한 줄에 둘씩 타일. "완력 1→2".
+  - 특성 바꾸기(☆), 상처 치료: 한 줄에 하나. "뱃사람 → 토박이".
+- 닫기(✕)는 "나중에"다. 닫아 둔 동안은 주인공 아이콘의 금색 점과 패널의 성장 알약으로 다시 연다.
+- 성장은 결정이라 탭이 필요하다.
+
+## 7. 다른 화면
+
+### 7.1 제목 (`Title.tsx`)
+
+위에서 아래로:
+
+- 주사위 둘(도형), 제목, 금색 선. 떠오르며 나타난다.
+- 이야기 카드 하나(제목과 도입). 여럿이면 ‹ ›로 넘긴다. 저장된 게임의 이야기가 먼저 보인다.
+- 이어하기: 저장된 게임이 이 이야기이고 결말이 아닐 때. 이름, 장, 장소를 보인다. 으뜸 버튼이다.
+- 새로 시작: 만들기 화면으로 간다. 이어하기가 없으면 으뜸 버튼이다.
+- 버전 한 줄.
+
+### 7.2 만들기 (`Start.tsx`)
+
+위에서 아래로. 줄은 모두 높이 40이고, 320×568에서 스크롤 없이 다 들어간다. 도입은 되풀이하지 않는다.
+
+- **머리**: 둥근 뒤로 버튼과 이름 알약(👤, 10자까지, 안내 글 "주인공", 쓰는 동안 금색 테두리).
+- **능력치(⚡)**: 점수를 쓸수록 오른쪽 점이 찬다. 한 줄에 능력치 하나, 이름과 짧은 설명. 0에서 시작해 − 값 +로 정한다. 점수를 다 썼거나 이야기의 최댓값이면 +가 꺼진다.
+- **특성(☆)**: 고를수록 점이 찬다. 한 줄에 하나, 이름과 글. 고르면 줄이 금색으로 물들고 오른쪽 네모 칸에 체크가 된다.
+- **시작**: 점수를 다 쓰고 특성을 `pick`개 골라야 누를 수 있다. `POST /games`를 보내고 플레이 화면을 연다.
+
+### 7.3 장 제목
+
+- 장이 시작할 때와 게임이 시작할 때, 명령이 열리면 제목 카드가 플레이 화면을 덮는다.
+- 내용: 장 번호(금색), 장 제목(명조, 큰 글자), 짧은 금색 선, 목표.
+- 떠오르고(400ms), 1800ms 머물고, 사라진다(400ms). 아무 데나 탭하면 바로 끝난다.
+- 움직임 줄이기 설정이면 같은 시간 동안 가만히 보인다.
+- 게임을 다시 열 때는 보이지 않는다.
+
+### 7.4 결말
+
+`view.ending`이 생기면, 결말 서술과 요약 뒤에 머리줄 아래 전부가 결말 화면이 된다.
+
+- 머리줄은 이야기 제목을 보인다. 목표 줄은 없다.
+- ☆ 아래 결말 제목(명조, 금색)과 금색 선.
+- 장마다 차례로 떠오른다:
+  - 요약(`view.recaps`, 100자까지).
+  - 장부 칸: 그 장에서 고른 것(`journal.choices`. 갈림길은 →, 나머지는 태그 아이콘), 그리고 그 장의 `view.ledger` 줄(건넨 물건은 가방, 약속은 책, 동행은 사람, 장이 끝날 때 달라진 신뢰·두려움은 하트).
+- 맨 아래 "새로 시작" 버튼.
+- 결말 화면은 대화 자리를 쓴다. 장이 많으면 그 안에서 스크롤하고, 버튼은 고정이다.
+- 버튼은 제목을 건너뛰고 같은 이야기의 만들기 화면을 연다. 거기서 만들면 새 게임이 되고 `trpg.game_id`가 바뀐다.
+
+## 8. 확인
+
+### 8.1 자동 테스트
+
+| 대상 | 테스트 |
+|---|---|
+| `useGame` | 상태 바뀜: 카드, 카드 앞의 걸음, 굴림, 409(view 있음, incompatible), 무응답 뒤 같은 `request_id`, 다시 열 때 `trpg.game_id` 유지 |
+| `reveal.ts` | 걸음 기록 → 순서표: 보정 순서, 성공과 실패, 결정적 딱지, 막힘, 안 굴린 걸음, 움직임 줄이기 |
+| `useLog` | 새 게임은 도입으로 시작, 같은 id는 한 번만, 저장된 기록 복원 |
+| `api.ts` | NDJSON 조각이 줄 중간에서 끊겨도 같은 이벤트 |
+| 카드 | 기댈 것을 누르면 고르고 다시 누르면 뺀다, 그 preview를 그린다, `selected`가 처음 선택, 위험이 높으면 목표 숫자가 위험 색 |
+
+화면 테스트는 가짜 `api`로 돌린다. 규칙이 화면에 없으므로, 화면에서 결과나 목표 숫자를 계산하는 테스트는 없다.
+
+### 8.2 실제 화면
+
+두 모델이 돌아가는 서버로, **412×915, 데스크톱 폭, 320×568**에서 아래를 해 본다. 번호 붙인 턴과 화면 사진을 `qa_test/runs/<run>/`에 둔다.
+
+| 흐름 | 볼 것 |
+|---|---|
+| 한 화면 | 어느 턴의 사진에도 대화 밖 스크롤, 잘린 글, 겹침이 없다. 새 글이 오면 대화가 맨 아래를 따라간다. 알약이 가장 많은 장면과 기댈 것이 가장 많은 카드 |
+| 자유 문장 | 굴림 카드의 방법과 대상이 문장과 맞다 |
+| 굴림 | 기댈 것 고르고 빼기, 눌렀다 놓기, 공개 순서, 성공과 실패 표시, 결정적 보정, 대화의 굴림 줄 |
+| 이어짐 | 안 굴린 걸음의 공개와 서술 뒤에 굴림 카드 |
+| 막힘 | 주사위 대신 숨은 것이 드러난다(숨은 장애물이 있는 이야기로) |
+| 위기와 닥침 | 시계가 차고 빈다, 위협이 닥친다 |
+| 되묻기, 확인, 이동 | 갈림길 고르기나 문장으로 건네기에 확인 카드. 문장이 장소만 말하지 않았을 때 이동 카드(동행 안내, 다른 곳 고르기). 장소만 말했으면 카드 없음 |
+| 성장, 결말 | 장 바뀜 요약, 성장 카드, 결말 화면 |
+| 복구 | 굴리는 중 새로 고침, 응답을 잃은 뒤 다시 보내기, 서술 중 새로 고침 |
+
+굴림이 재미있는지는 따로 잰다([fun.md](fun.md)).
+
+## 9. 코드
 
 ```
 client/
-  app/index.tsx              entry; reopens the saved game_id if there is one
-  screens/Title.tsx          title: resume, story shelf
-  screens/Start.tsx          hero creation
-  screens/Play.tsx           play screen layout
-  logic/useGame.ts           server state, command lifecycle, recovery (section 3)
-  logic/reveal.ts            reveal timeline (pure function)
-  logic/useLog.ts            chat history (stored per game on this device)
-  logic/useViewportHeight.ts the visible window height
-  services/api.ts            the only HTTP and NDJSON boundary
-  services/types.ts          response types (api.md)
-  services/storage.ts        the saved trpg.game_id
-  components/ui/             parts shared by every screen
-    Icon.tsx(line icons)  Button.tsx(Button, IconButton)  Sheet.tsx(bottom sheet and Choice)
-    motion.ts(enter motion)  useDialog.ts(Escape, focus trap and return)
+  app/index.tsx              들어오는 곳. 저장된 game_id가 있으면 다시 연다
+  screens/Title.tsx          제목: 이어하기, 이야기 고르기
+  screens/Start.tsx          주인공 만들기
+  screens/Play.tsx           플레이 화면 배치
+  logic/useGame.ts           서버 상태, 명령의 한살이, 복구 (3)
+  logic/reveal.ts            공개 순서표 (순수 함수)
+  logic/useLog.ts            대화 기록 (기기에 게임별로 저장)
+  logic/useViewportHeight.ts 보이는 창 높이
+  services/api.ts            HTTP와 NDJSON이 지나는 유일한 곳
+  services/types.ts          응답 타입 (api.md)
+  services/storage.ts        저장된 trpg.game_id
+  components/ui/             모든 화면이 같이 쓰는 부품
+    Icon.tsx(선 아이콘)  Button.tsx(Button, IconButton)  Sheet.tsx(바닥 시트와 Choice)
+    motion.ts(나타나는 움직임)  useDialog.ts(Escape, 초점 가두기와 돌려주기)
   components/game/
-    Row.tsx(icon row, Item, Pill)  Header.tsx  Clocks.tsx  Self.tsx  Scene.tsx  Boxes.tsx
-    Narration.tsx(chat)  CommandBar.tsx
+    Row.tsx(아이콘 줄, Item, Pill)  Header.tsx  Clocks.tsx  Self.tsx  Scene.tsx  Boxes.tsx
+    Narration.tsx(대화)  CommandBar.tsx
     RollCard.tsx  Dice.tsx
     ClarifyCard.tsx  ConfirmCard.tsx  MoveCard.tsx  GrowthCard.tsx  Menu.tsx  Ending.tsx
-  design/tokens.js           tokens for color, spacing, type and motion timing
-  locale/ko.ts               sentences the client composes
+  design/tokens.js           색, 간격, 글자, 움직임 시간 토큰
+  locale/ko.ts               클라이언트가 만드는 문장
 ```
-
-## 1. Principles
-
-| Principle | Meaning |
-|---|---|
-| Everything visible without a tap | Everything needed for the current decision is always on one screen. No pages, tabs, expanders, tap-to-reveal names, horizontal scrolling or stacked panels. The only thing you scroll up to see is past history in the chat log |
-| The UI does not know the rules | Target number, total, result, decisive modifiers, costs and candidates come from the server. The UI draws the values it receives and computes only motion |
-| The server's response is the state | The response's `view` is adopted as is. The only optimistic motion is the dice tumble (4.4), and it decides no value |
-| No illustrations | Dice, boxes and rings are UI elements drawn with shapes and text |
-| A session on paper | The play screen is a character sheet on a table: paper ground and ink, the game master's narration in print (serif) and the player's own lines in plain type, black dice with white pips, boxes like a sheet's checkboxes. On desktop the sheet lies on a dark table. Ornament carries information only (stats, risk, clocks, roll results); nothing is drawn for mood alone. The dark screen read as an app rather than a table game (2026-10-30 goal) |
-| Server sentences verbatim | Korean composed by the server is never edited or truncated. Client sentences live in `locale/ko.ts` |
-| Icons and nudges over text | Things read through icons, color, boxes and dots instead of explanatory copy and labels. What you can do is not taught in sentences; it shows as names that start a sentence when tapped |
-| One set of parts | Buttons, icon buttons, bottom sheets and rows each come from one component in `components/ui` and `Row.tsx`, with the same shape (corner radius, height, pressed state) |
-
-The only taps are decisions (commands, helps, rolls). Nothing is tapped just to see information. There is a tap that skips the animation (4.5), but without it you reach the same end state.
-
-The fun of dice is twofold. **The feel of rolling**: the player personally triggers the moment the outcome is decided, and tension gathers in that moment. **The feel that my decisions count**: you can see that the sentence you wrote, the approach you chose and the trait you saved changed the numbers and the result on screen. The server sets dice values with `roll(seed, t)`, and the animation neither hides nor proves that the value was fixed in advance. Fairness comes not from the fixed value but from the rules being applied exactly as shown (preview = execution, rule.md 3.4).
-
-## 2. Layout
-
-### 2.1 Play screen
-
-Height is fixed to the visible window height, and regions stack from top to bottom. Only the chat log takes the remaining height; everything else is as tall as its content.
-
-```
-┌──────────────────────────────┐
-│ 1장 등대에 오르다         ●● 👤 ≡│ Header: chapter number (gold) and title, health dots and hero
-│ ⚑ 해가 지기 전에 등불실에 오르세요.  │ Aim: `chapter.aim`
-│ ⚠ 몰려오는 폭풍 ■■□□ 해가 진다 ■□□ │ Danger: risk clocks, deadlines, threats, forks
-│ ⌖ 등대 앞 (→ 마을) (→ 부두) (🔒 등불실)│ Place and exits (blocked ones with a lock, dimmed)
-│ ◉ (도해) (기름통) (녹슨 문) ■□     │ Scene: people, things, obstacles, scene tags (no row if empty)
-│                              │
-│ premise / narration          │ Chat log: all remaining height,
-│            [your sentence]   │   stacks top to bottom; scroll up
-│ ⚂⚅ 완력 성공 10/8            │   to see past history
-│ · · ·                        │
-│ (                         ↑) │ Input bar (empty, no placeholder)
-└──────────────────────────────┘
-```
-
-- **Every row has an icon.** The icon in the 20px left column is the row's category (aim ⚑, danger ⚠, place ⌖, around ◉), and categories never overlap. There are no text labels on screen; they go only to screen readers (`accessibilityLabel`). Empty rows are not drawn. The icon column stays in the same place from below the header down to the hero panel, and rows run on without dividers.
-- **Names start sentences.** Exits, people, things and obstacles are round pills. Tapping one fills the start of a sentence into the input bar and moves focus there: an exit gives "등대 앞으로 간다" ("go to the lighthouse front"), a person "도해에게 " ("to Dohae …"), a thing or obstacle "녹슨 등대 문을 " ("the rusty lighthouse door …" as object). An exit can be sent as is; for the rest the player keeps writing. Pills cannot be tapped unless commands are open. Tapping a blocked exit starts the sentence with the obstacle blocking that way ("녹슨 등대 문을 "), pointing at what must be overcome. If the blocker is not yet visible, the exit cannot be tapped. It is a nudge: without explanation, the player learns by doing that "tapping a name makes a sentence".
-- **Box color says whose side it is on.** Obstacle boxes are gold (something I am achieving); boxes and names in the danger row are all red (something bad approaching, whether risk clock, deadline or threat). An obstacle with only one box draws no boxes (one success opens it). An overcome obstacle stays in the scene, shown with ✓ and dimmed, and cannot be tapped. Beats have no row of their own, since two layers of time would not read. Instead, the next empty box of each deadline, threat and fork fills from the bottom by `beats / beats_max` (half opacity), so every step visibly spends time; risk clocks show none. Without it, testers lost a chapter to time they could not see (qa_test/runs/play-1-explorer 28, play-1-talker 23). A blocked exit shows a lock icon and dimming instead of an arrow.
-- **The input bar is plain.** Actions are always typed. Only before the first turn (`view.last` is null) the server's `view.buttons` (at most three) sit under the premise in the chat as small pills with ▷: one line of what a sentence can be, and a tap puts the label in the input to send or change, as a scene pill does. They are gone from the first turn on. The empty input bar shows no placeholder. A prompt naming the scene's first target ("녹슨 등대 문을 어떻게 할까요?") taught a scripted "{target}을 …한다" form, and players wrote stage directions instead of what they would say or do (qa_test/runs/play-5-talker 1, 3); the player writes in any form, and interpretation takes it as it comes.
-- **Narration stacks like a chat.** The first line is `story.premise`; sent sentences are right-hand bubbles and narration is left-hand text, running top to bottom. Each rolled step puts a roll line directly above its narration: small dice pips, the approach, the result word (success in gold, failure in the danger color), a dimmed total and the target number in a small ring ("⚂⚅ 완력 성공 10 ⑧", "force success 10 ⑧"). The ring has the same shape as the roll card's target ring, so it does not read as a fraction. New items float up from 8px below (220ms); when new text arrives the log follows to the bottom, and scrolling up shows past history. The top edge of the chat log is not cut off but fades into the background over 20px. While waiting, three dots light up and dim in turn, with no text. Korean lines break only between words across the whole app (`word-break: keep-all` in `global.css`).
-- **One color, one meaning.** The nine meanings below have hues that do not overlap (even the closest two are more than 30° apart on the color wheel), so they can be told apart by color alone without looking at shape. All are inks with a contrast ratio of at least 4.5:1 on the paper (`canvas.default`) and on cards (`canvas.subtle`).
-
-  | Meaning | Token | Color |
-  |---|---|---|
-  | Things being achieved (obstacle boxes, success, good tags, chapter number) | `gold` | amber `#8a5300` |
-  | Bad things approaching (danger row, failure, bad tags, high risk) | `danger` | red `#b3261e` |
-  | Health (♡ and dots) | `health` | green `#256b2c` |
-  | People | `kind.person` | blue `#1a669c` |
-  | Things (in the scene and carried) | `kind.thing` | teal `#0b7166` |
-  | Obstacles | `kind.obstacle` | purple `#87309f` |
-  | Stat modifier (and stat values in the hero panel) | `chip.stat` | indigo `#4a3fc0` |
-  | Help modifier (and the roll card's radios) | `chip.help` | olive `#4d6800` |
-  | Guard modifier (a spent reliance) | `chip.guard` | olive `#4d6800`, help's hue: both are reliances |
-  | Hinder modifier | `chip.hinder` | magenta `#a8226f` |
-
-- **Kinds are told apart by color** (the table above). Pills show only names, not attitudes; a person traveling with you (`with`) gets a person icon before the pill.
-- **Always visible versus opened.** What changes every turn or feeds straight into the next sentence (aim, health, danger, scene) is always visible. Health is drawn as dots, not boxes, so it is not confused with danger-clock boxes. Tapping the hero icon (one button with ♡ and the health dots) drops a panel down below the header (covering the rows below rather than pushing them). In order of how often they are used, it holds icon rows for name, state (tags, wounds among them, each with when it goes; no row if none), abilities (⚡), traits (☆), carried items, and journal (promises and beliefs). The panel opens only in `idle`, closes with Escape or a tap outside, and closes when the menu opens. When growth is available, the icon gets a gold dot and the right end of the panel's name row has a gold growth pill (✲ 1).
-- **Rows wrap and grow.** If chips overflow a row they wrap to the next line and the chat log shrinks by that much. Names are never shortened or truncated.
-- **Journal** (the last row of the hero panel) shows the parts of `journal` that matter now: every unkept promise and debt, plus beliefs about entities in the current scene. Fork choices are gathered on the ending panel (5.4).
-- **Cards** (clarify, confirm, growth) are a `Sheet`: they rise floating up 24px from the bottom, cover only as much as their content needs, and have an icon and title in the head with close (✕) on the right. The aim and scene above stay visible. Only the roll card is a panel covering the whole play screen (4.2). Inside a card the same principle holds: everything is visible at once.
-- **The menu** opens from the icon (≡) at the right of the header. It can be tapped only while commands are open (`idle`, `card`), and a small dropdown comes down below the icon, leaving the rest of the screen visible. Its only item is to-title, and it closes with Escape or a tap outside. Opened over a card, Escape closes only the menu. Going to the title keeps `trpg.game_id` and the received `view`, so resume on the title returns to the same game's destination. Nothing is sent to the server.
-- On desktop, the same width frame (412px) is centered: the sheet on a dark table (`canvas.inset`).
-
-### 2.2 Size budget
-
-Even at 320×568, one turn of narration (200 characters) must show in the chat log without scrolling (values in px).
-
-| Region | 320×568 and 412×915 |
-|---|---|
-| Header | 40 |
-| Aim, danger, place, around | per row: 28 for one line, 54 for two |
-| Input bar | 62 (pill 44) |
-| Chat | the rest, at least 232 |
-
-Row text is already 12px and does not shrink. If a story produces a scene over budget, the overflowing narration is read by scrolling inside the chat log. In the skeleton story's busiest scene (three dangers, exits on two lines), the chat log is 296 at 320×568 (qa_test/runs/ui-2). QA checks the skeleton story's scene with the most chips at this size (6.2).
-
-## 3. State machine
-
-`useGame.ts` owns all server state on screen and the lifecycle of commands. Screens draw from this machine's state alone.
-
-```
-loading ─► start (no game_id) ─► creating ─► destination
-creating ─ error status ─► start                      (its reason, or "서버 오류로 처리하지 못했습니다." ("The server could not handle it."), above the start button)
-loading ─► restoring ─► destination | narrating | blocked
-
-idle ─ command ─► sending ─┬─► destination             (refused: show reason above the input bar)
-                           ├─► destination             (no steps: card)
-                           └─► revealing ─► narrating ─► destination   (with steps)
-card(roll) ─ release ─► rolling ─┬─► revealing ─► narrating ─► destination
-                                 └─► destination       (refused: dice vanish with no value, reason shown)
-card ─ answer / cancel ─► sending
-sending | rolling ─ no response (30s) ─► stuck ─ same command again ─► sending | rolling
-sending | rolling ─ 409(view) ─► destination          409(incompatible) ─► blocked
-sending | rolling ─ 404 ─► start                      422 ─► destination (same as refused; a client bug)
-sending | rolling ─ other error status ─► destination (its reason, or the same server-error line, above the input bar)
-narrating ─ stream error ─► narration_error ─ retry ─► narrating
-idle | card ─ menu: to title ─► start ─ resume ─► destination   (when there is a view and it is not an ending)
-```
-
-The **destination** is always decided from the adopted `view` in the same order: `ending` if there is an `ending`, `card` if there is a `card`, `card(growth)` if there is a `growth`, otherwise `idle`. The same holds for a 409's `view` and for reopening.
-
-| State | Commands | Screen |
-|---|---|---|
-| `idle` | open | default |
-| `sending` | locked | the sent sentence in the input bar, a small progress indicator |
-| `card` | the card's answers and cancel, or a new sentence (discards the card) | card |
-| `rolling` | locked | dice tumbling |
-| `revealing` | locked; a tap jumps to the end state | reveal (4.5) |
-| `narrating` | locked | three dots, received text appears in turn |
-| `stuck` | only the resend-same-command button | "응답을 받지 못했습니다." ("No response received.") and resend (↻) in place of the input bar. After a roll they sit on the roll card instead, whose dice stop on the tray with no value (4.4) |
-| `narration_error` | only the retry button | "서술을 받지 못했습니다." ("Narration not received.") The reveal's end state stays |
-| `blocked` | to-title only | centered "이 판은 더 이어할 수 없습니다." ("This game can no longer continue.") and a to-title button. No input bar. `trpg.game_id` is not cleared |
-| `ending` | new game only | ending panel (5.4) |
-
-- **Steps before a card**: a response that ran the plan's earlier steps and stopped at a card has `steps` and `turn` as well as `view.card`. The UI reveals those steps, fetches their narration, then opens the card.
-- **Command lifecycle**: each command gets one `request_id`, remembered together with its body. With no response within 30 seconds the state is `stuck`, and the command is resent only with the same `request_id` and body. The server's receipt returns the same result, so nothing runs twice. On resend the dice tumble again and the 600ms and 30-second timers restart; if the earlier request's response arrives late it is the same response, so whichever comes first is used. Game creation works the same way, with the stuck line and resend in place of the start button.
-- **revision**: the response's `view.revision` goes on the next command. If a 409 carries a `view`, it is adopted, tumbling dice vanish with no value, and one line, "게임 상태가 바뀌어 새로 불러왔습니다" ("The game state changed and was reloaded"), appears above the input bar. `incompatible` without a `view` means `blocked`.
-- **What is stored**: the browser keeps only `trpg.game_id` and chat history. `useLog` keeps the latest 300 items of the current game in `trpg.log.<game_id>` (deleting other games' history), with item ids that include the turn so reopening does not duplicate them; a device without history rebuilds it from the premise. A failed reopen clears nothing; only a 404 clears them and goes to the start screen.
-- **Reopening**: the step records in `view.last` are drawn in their end state without motion; cached narration is fetched and shown at once, otherwise it is fetched in `narrating`. If that turn is already in the chat history, it is not written again and finishes as soon as it arrives. If there is a `view.card`, the card opens. The reveal is not replayed.
-
-## 4. Roll
-
-### 4.1 Five moments
-
-For each step with a roll (`try(x ≠ player)` and a rolled `talk`), the player goes through five moments. Narration then writes this result into the story. Narration does not repeat the numbers; it writes the situation the numbers created.
-
-| Moment | What the player sees | What the player does | Target fun (fun.md) |
-|---|---|---|---|
-| 1. Stakes | What they are attempting (action name `λ`, and the target's boxes if it has two or more), the target number to reach | reads | tension |
-| 2. Decision | Modifiers with their sources (`솜씨 +2` "finesse +2", `젖은 발 −1` "Wet feet −1"), helps (`열쇠 +1` "Key +1") | taps a help, or taps again to remove it | agency |
-| 3. Roll | Two dice shaking in the hand | holds, then releases | tension |
-| 4. Reveal | The dice stop one by one, modifiers add in turn, the total reaches or falls short of the target and "성공" (success) or "실패" (failure) is stamped, and the decisive chip gets a label | watches | outcome, agency |
-| 5. Cost | Obstacles and clocks whose boxes fill, crises, complications on failure | watches | outcome |
-
-Every value comes from the card's `preview` and the step records. The approach and target are not changed on the card. If the sentence names no approach, the engine picks the highest stat without asking (engine.md 3.4). That was decided by the sentence; to change it, close the card and say it again. Accepting the roll card also confirms a high-risk roll (engine.md 4.2).
-
-### 4.2 Roll card
-
-Borrowed from Baldur's Gate 3's check screen. The stakes read as a single target number, and whether the roll reaches it is the whole of the tension.
-
-```
-┌──────────────────────────────┐
-│     녹슨 등대 문을 솜씨로 다룬다    ✕ │ Attempt: action name (its label for a solution), close
-│            ( 8 )               │ Target number in a ring, in the danger color for high risk
-│            ▢  ▢                │ Dice: blank faces, gold outline, swelling and shrinking like breath
-│            굴리기               │ The dice's verb, while they can be rolled
-│     솜씨 +2  물보라 −1           │ Fixed modifiers (stat, hinder; zero chips not drawn). Borderless text
-│     ○ 윤슬의 도움 +1              │ Helps: one per line, single-choice circles
-│     ◉ 등대 열쇠 · 실패 대가 줄임 · 이번 장 1번 │ Tap to choose, tap the chosen one to remove
-│     □ 무리해서 · 성공하면 한 칸 더   │ Forcing: a checkbox, only where it buys a box
-└──────────────────────────────┘
-```
-
-- The card covers the whole play screen with a dimmed scrim and sits as a panel in its center. It appears briefly while growing (0.96 → 1, 220ms). Cancel is not a text button but close (✕) in the head and Escape, and it disappears after the roll.
-- All card values come from the `preview` of the chosen entry in `card.options`. The initial choice is `card.selected`. The target number is `preview.dc`; if risk is high, the ring and number are in the danger color ("되돌릴 수 없는 대가" ("an irreversible cost") goes to screen readers only). Otherwise the ring is a dim line. A ⚠ badge on the ring said nothing a first-time player could read (play-6-ui 9), and red already means danger (2.1). When the result lands, on success the ring fills gold and one gold ring spreads softly and fades (800ms); on failure the ring turns the danger color. Once a game, the ring is explained in small text under it: "{dc} 이상" ("{dc} or more") on the first roll card, and "되돌릴 수 없음" ("cannot be undone", in the danger color) on the first card whose ring is red; both are read from the rolls already in the chat log. The target's boxes are drawn only when it has two or more (one box for a target cleared by a single success is clutter). The risk tier is not written out.
-- Helps sit one per line as a small circle (a radio, since only one can be chosen) and a name (the circles align in one column, sized to the longest line). Tapping one chooses it; tapping the chosen one again removes it. The server's "기대지 않음" (rely on nothing) option is not drawn; it is what is chosen when no circle is. The chosen one shows only as a dot inside the circle, with no gold outline. When the choice changes, the card redraws from that `preview`.
-- The scrim behind the card skips the reveal only while it runs, and it is never a disabled control: as one, it marked every control on the card disabled to screen readers and automation (play-6-ui 9).
-- When the card opens, focus goes to the panel itself. Sending it to the first control would draw a focus ring on that control because of the Enter that sent the sentence. Tab cycles from the first control.
-- A spent reliance (a trait, thing, belief or tag) adds nothing to the total; it lowers a fail's cost (rule.md 3.2), so its row reads "실패 대가 줄임" (lowers the fail's cost) where a help reads its `+1`, and in the reveal its chip carries the same words instead of `±0`.
-- **Forcing** is a square checkbox under the helps, "무리해서" (forcing), with "성공하면 한 칸 더" (a box more on success) when the forced options' `gain.forced` is above 0. Checking it switches to the forced twin of the chosen reliance (api.md 4), so the ring shows the higher target and the danger colour if the risk is now high. The box is drawn in the danger colour when checked. It appears only when the card has forced options.
-- No probability or general outcome line (4.6): `preview.stakes` and `preview.gain` are not drawn, except the two phrases above, which say what a choice on the card trades. No echo of the sentence either; it is already in the chat.
-- Things that are used up carry the option's `note` as text, not a symbol, because they must read without a tap: a tag "1번 남음" ("1 use left"), a trait, thing or belief "이번 장 1번" ("once this chapter"). In the hero panel a trait, thing or belief already leaned on this chapter is dimmed.
-- Even at 320×568 the panel fits on screen. With many helps, text shrinks to 12px.
-
-### 4.3 Chips
-
-The roll card draws the same modifier row on the card and in the reveal. A modifier is borderless text, one `mods` entry (name and signed value), colored per kind (`stat`, `help`, `guard`, `hinder`) from `colors.chip` (the table in 2.1). The card's `preview.mods` and the step record's `mods` are the same list (api.md 3), so each modifier carries over unchanged from the card to the reveal. Name pills in the scene row are `Pill` from `Row.tsx`.
-
-### 4.4 Dice
-
-- `Dice.tsx` is two black dice (`fg.default`) drawn as rounded squares with paper-white pips. `react-native-reanimated` animates tilt, spin and bounce.
-- **Waiting**: while a roll is possible, the dice are blank faces with no pips and a gold outline, slowly swelling and shrinking like breath (1.05×, 900ms). Pips would read as a result already rolled, so the faces stay blank. Under them one gold word, "굴리기" ("roll"), names what a tap does, and it goes once they roll. Blank breathing dice alone did not say press: a first-time player took them for decoration and found the roll by trying (play-6-ui 9).
-- **Hold**: while held, they shake slightly, and the longer the hold the bigger the shake (capped at 1.5 seconds). Where supported, a short vibration (`navigator.vibrate(10)`). A short tap also rolls.
-- **Release**: sends the roll request `{card, pick}`, and the dice spin (one turn per 420ms) with faces changing randomly every 70ms. This is the only optimistic motion and it decides no value. After the roll, the card's decision area locks.
-- **Stop**: once the response has arrived and 600ms have passed since release (whichever is later), `d1` and `d2` settle in turn on the server's values (standing upright, 1.12× to 1×). The values are the `roll` of `steps[0]` (the accepted step).
-- **Blocked**: if `steps[0].result` is `blocked`, moments 1–5 do not happen. The dice do not stop but fade out over 300ms, and the name of what was revealed (the `reveal` in `changes`) appears in their place. Then the card fades out (200ms) and that obstacle appears in the scene row (150ms). No roll line remains in the chat. Narration follows. The player lives the rule that hidden things are found only by trying.
-- **No response**: the dice stop on the tray with no value (blank faces, upright) and the state becomes `stuck`. The card stays as it was rolled, locked, with the stuck line and resend under the helps; the input bar under the scrim shows no second one. Resending the same roll returns the same result.
-- **Notice**: when a roll comes back with the card still open (refused, an error status), its notice shows on the card under the helps, not above the input bar the card covers.
-
-### 4.5 Reveal
-
-The reveal does not show the result all at once; it splits it up so you can see **how your decisions changed the result**. `timeline(steps, motion, reduced) → Beat[]` in `logic/reveal.ts` is a pure function that turns step records into a timeline, and the UI draws the timeline in order. Timing values are the motion tokens in `design/`.
-
-| # | Beat | What is shown | Time |
-|---|---|---|---|
-| 0 | | tumble from release until the response | at least 600ms |
-| 1 | `die` | `d1`, `d2` stop in turn | 250ms each; `d2` starts 120ms after `d1` starts |
-| 2 | `line` | the running total appears below the ring, starting at `d1 + d2` | 200ms |
-| 3 | `chip` | each chip flies from its place into the total and the total changes by its value, in `mods` order | 180ms per chip |
-| 4 | `settle` | the total stops at the server's `total`, and `result` lands beside it like a stamp: "성공" (success, gold) or "실패" (failure, danger color) in the serif, from 1.5× to 1× over 220ms; on failure the card shakes once (300ms). Then it holds, leaving time to read the result. Floating up quietly, the result passed like any other line, and the screen read as a chat rather than a game (2026-10-30 request) | 2200ms |
-| 5 | `decisive` | the `decisive` modifier turns bold and gets a tag: "덕분에" ("thanks to") for `stat` and `help`, "때문에" ("because of") for `hinder` | 150ms |
-| 6 | `box` | from `changes`, `fill` in the target's boxes in the card head, `clock`·`crisis`·`arrival` in the danger row (on a crisis the clock empties and "위기" ("crisis") appears beside the clock's name). Filling boxes briefly grow and settle back | 150ms per box |
-| 7 | `fold` | the card fades out and a roll line (2.1) remains in the chat | 200ms |
-| 8 | `change` | the remaining `changes` (tags, wounds and heals, reveals, moves, relationships, promises, chapter changes, endings) change in place in turn | 150ms per item |
-
-- Beats never overlap; they run in order (only `d1` and `d2` overlap). With several step records, they go in `steps` order; only rolled steps do 1–8, and unrolled steps do only 6 and 8. A `choose` turn also does only 6 and 8.
-- The response's `view` becomes the state as soon as it arrives, but rows that 6 and 8 animate show their `from` values until that beat. Past turns' narration stays in the chat history.
-- Result names are the words in `locale/ko.ts` (성공, 실패).
-- With two modifier chips it takes about 2 seconds. A tap anywhere skips the remaining animation and goes to the end state (the `view` as is).
-- Under `prefers-reduced-motion`, there is no tumble, flight or box-filling motion; each beat's end state shows in turn for 100ms.
-- The server decides the decisive chip, so the UI never computes "what if it had been absent".
-
-### 4.6 What it does not do
-
-Moving, looking around, picking up, handing over, small talk, free topics, choices and moving on from a scene show no dice. Showing dice for an action whose outcome is settled would strip the dice of meaning.
-
-| Not done | Reason |
-|---|---|
-| Rerolls, buying rolls | The dice feel cheap and failure cannot change the situation |
-| Showing probabilities and outcome lines | The target number and modifiers already say everything at stake, and tension gathers at the moment the total reaches that number |
-| Narration stating numbers | The reveal already showed the numbers |
-| Changing approach and target on the card | 4.1 |
-| Devices that prove dice values in advance | Fairness comes from the rules applied as shown (1) |
-
-## 5. Other screens
-
-### 5.1 Narration
-
-- Narration is the game master's voice, set in print: the regular-weight serif (`font-serif-body`). The player's sentences stay in the plain sans in their bubble, so who speaks reads at a glance.
-- The narration request starts as soon as the command's response arrives, and holds the received text until the reveal ends. The model writes while the reveal plays.
-- Until text arrives, only three dots show at the end of the chat. The stream's `stage` and `attempt` are not used.
-- When `text` arrives, characters appear in turn (60 per second; a tap shows it all at once). When all the text is shown and `done` has arrived, `narrating` ends.
-- `error` shows after the reveal ends, with the server's `message` in small type under the fixed copy. A dropped stream or a non-2xx status counts as an `error` without `message`. The client has no timeout (the limit is the server's, engine.md 8).
-- A chapter-change or ending turn continues with a recap (`/chapters/{k}/recap`, `k` from api.md 4) below the narration. It is requested after the narration's `done` (still in `narrating`), and a failure is the same `narration_error` as for narration. The typing carries on into the recap from where it was, and `narrating` ends only once the recap is typed too.
-- Tag names in `done` rename the hero row and the chips.
-
-### 5.2 Clarify, confirm, move
-
-All three are a `Sheet` with no dice, and cancel is close (✕). `MoveCard` has a → head. With one option (the sentence named the place and a companion stays behind, engine.md 4.4) it asks "{place}으로 갈까요?" ("Go to {place}?") and has one "간다" ("Go") button. With more, under "어디로 갈까요?" ("Where to?"), it has one `Choice` row per exit; the place the sentence chose is the gold (`primary`) row at the top. Small text under a row says whether companions come along or stay ("윤슬과 함께", "with Yunseul"). One tap leaves. `ClarifyCard` shows options (at most three) as rows with a right arrow (`Choice`); an option that rolls on an obstacle (a way round a guard) carries "{dc} 이상" under it, with "· 되돌릴 수 없음" when failing costs for good, so the ways round compare on one card; `ConfirmCard` puts a bulleted list of the choice's effects under a ⚠ head and has one "고른다" ("Choose") button; any further option (a give's "…보여 준다", show only) is a secondary button under it, named by the action. A move card's option to go with someone asked first reads "{name}과 같이 간다" ("Go with {name}"): with one place, it is a second button beside "간다", gold when the sentence asked for it; with several, its row carries the words after the place name. Clarify does not repeat the sent sentence (it is already in the chat).
-
-### 5.3 Growth
-
-If there is a `view.growth`, `GrowthCard` (✲ growth) opens after narration ends, and after a new chapter's title card (5.6) when both come together: opened at once, the growth card covered the title and a tap meant for the chat took a trait. Growth is grouped by kind (`kind`) under the same icons as the hero panel: raising a stat (⚡) as tiles two per row like "완력 1→2" ("force 1→2"), and changing a trait (☆) and healing a wound one per row ("뱃사람 → 토박이", "sailor → islander"). There is no group title text. Close (✕) means "later"; while closed, it reopens from the gold dot on the hero icon and the growth pill in the panel. Growth is a decision, so it takes a tap.
-
-### 5.4 Ending
-
-Once `view.ending` is set, after the ending narration and recap, everything below the header becomes the ending panel. It holds the ending's title under ☆ (serif, gold) and a gold rule, and per chapter (floating up in turn) its recap (`view.recaps`, at most 100 characters) and a ledger box: the chapter's choices (`journal.choices`; forks with →, others with the tag icon), then `view.ledger`'s lines for that chapter (things handed over with the bag, promises with the book, companions with the person, a regard that ended the chapter moved with the heart). The ledger does not depend on the narrator remembering who was asked to wait or what was promised, with a "새로 시작" ("start over") button at the bottom. The header then shows the story's title and no aim row: the last chapter and its aim stayed on top of an ending, as if the chapter were still on (play-6-ui 29). The ending panel takes over the chat log's space, so with many chapters you scroll within it (the button stays fixed). The button opens Creation for the same story, skipping the title; creating there makes a new game and replaces `trpg.game_id`.
-
-### 5.5 Start
-
-Starting takes two screens.
-
-**Title** (`Title.tsx`), top to bottom:
-
-- Two dice (shapes), the title and a gold rule, floating up into view.
-- One story card (title and premise; ‹ › flips through several). The saved game's story is shown first.
-- Resume, if the saved game is this story and not at an ending (name, chapter, place; primary button), and start new (primary when there is no resume), which goes to Creation.
-- One line with the version.
-
-**Creation** (`Start.tsx`), top to bottom; every row is 40 high and the whole fits at 320×568 without scrolling. The premise is not repeated.
-
-- Header: a round back button and a name pill (👤, up to 10 characters, placeholder "주인공" ("hero"), gold outline while typing).
-- Stats (⚡): dots on the right fill as points are spent. One approach per row with its name and a short description, starting at 0 and set with − value +; + turns off at the total or the story's maximum.
-- Traits (☆): dots fill as traits are chosen. One per row with name and text; choosing one tints the row gold and checks the square box on the right.
-- Start: available once all points are spent and `pick` traits are chosen. It sends `POST /games` and opens the play screen.
-
-### 5.6 Chapter title
-
-When a chapter begins, and when a game starts, a title card covers the play screen once commands open: the chapter number (gold), the chapter's title (serif, display size) over a short gold rule, and its aim. It rises in (400ms), holds 1800ms and fades (400ms); a tap anywhere ends it early, and under reduced motion it shows still for the same time. Reopening a game does not show it again. Only the header's small title changed with the chapter, and a tester at 320×568 never noticed chapter 2 had begun (play-6-ui 24).
-
-## 6. Checks
-
-### 6.1 Automated tests
-
-| Subject | Tests |
-|---|---|
-| `useGame` | transitions: card, steps before a card, roll, 409 (with view, incompatible), same `request_id` after no response, `trpg.game_id` kept on reopen |
-| `reveal.ts` | step records → timeline: chip order, success and failure, decisive tag, blocked, unrolled steps, reduced motion |
-| `useLog` | a new game starts with the premise, the same id is kept only once, saved history is restored |
-| `api.ts` | the same events even when NDJSON chunks split across line boundaries |
-| Cards | tapping a help chooses it and tapping again removes it, its preview is drawn, `selected` is the initial choice, high risk gives a danger-colored target |
-
-UI tests run against a fake `api`. Since the rules are not in the UI, no test computes results or target numbers in the UI.
-
-### 6.2 Real UI
-
-With a server running both models, play through the following at 412×915, desktop width and 320×568, and keep numbered turns and screenshots in `qa_test/runs/<run>/`.
-
-| Flow | What to check |
-|---|---|
-| One screen | No scrolling outside the chat log, clipped text or overlap in any turn's screenshot. The chat follows to the bottom when new text arrives. The scene with the most chips and the card with the most helps |
-| Free sentence | The roll card's approach and target match the sentence |
-| Roll | Choosing and removing helps, hold and release, reveal order, success and failure marks, decisive chip, the roll line in the chat |
-| Chain | A roll card after the reveal and narration of unrolled steps |
-| Blocked | A hidden blocker revealed instead of dice (with a story that has a hidden obstacle) |
-| Crisis and arrival | A clock fills and empties, a threat arrives |
-| Clarify, confirm, move | A confirm card on a fork choice or a give by sentence, a move card at a place a sentence reached without naming it alone (companion note, choosing another place), and none when it named it |
-| Growth, ending | Chapter-change recap, growth card, ending panel |
-| Recovery | Refresh during a roll, resend after a lost response, refresh during narration |
-
-Whether rolling is fun is measured separately ([fun.md](fun.md)).

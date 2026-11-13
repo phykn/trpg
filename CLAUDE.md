@@ -4,7 +4,7 @@ A story-agnostic Korean web TRPG engine. The player types a Korean sentence; rul
 
 ## Layout
 
-- **Design (source of truth)**: [docs/](docs/) — `ontology.md` (world, invariants, operations, save format), `story.md` (story format and validation), `rule.md` (candidates, rolls, time, people), `engine.md` (interpretation, cards, narration, turn protocol), `api.md`, `ui.md`, `fun.md` (metrics).
+- **Design (source of truth, written in plain Korean; code names sit in each file's last section)**: [docs/](docs/) — `ontology.md` (world, invariants, operations, save format), `story.md` (story format and validation), `rule.md` (candidates, rolls, time, people), `engine.md` (interpretation, cards, narration, turn protocol), `api.md`, `ui.md`, `fun.md` (metrics).
 - **Stories**: [scenarios/skeleton/](scenarios/skeleton/) (id `lighthouse`, the smallest story using every device, with `evals.yaml` for interpretation) and [scenarios/pass/](scenarios/pass/) (id `snowpass`, three chapters written as a game).
 - **Server** (`server/src/`): `onto/` (world, log, saves), `rules/` (pure rules), `story/` (loading, validation, evals), `interpret.py`, `narrate.py`, `jobs.py` (what a narration reads), `cards.py`, `view.py`, `service.py`, `api.py`, `fun.py` (offline metrics).
 - **Client** (`client/`): `logic/useGame.ts` (state machine), `logic/reveal.ts`, `components/ui/` (shared icon, button, sheet, motion, dialog, notice), `components/game/`, `screens/`.

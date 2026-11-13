@@ -1,354 +1,280 @@
-# Rules
+# 규칙
 
-The rules fill in the candidates `K` and the transition `R`. A roll uses two six-sided dice, a target number set by risk, and the costs and complications of failure (section 3). Beats, scenes and threats move time forward (section 4). Conversation leaves relationships and promises behind (section 5). The protagonist has declarations, wounds and growth (section 6). State and operations belong to [ontology.md](ontology.md); story parameters belong to [story.md](story.md).
+플레이어가 무언가를 하면 어떻게 되는지 정한다. 규칙은 모델을 쓰지 않는다. 같은 상황에서 같은 행동을 하면 결과도 같다.
+
+## 한눈에
+
+1. 플레이어가 행동한다.
+2. 될지 안 될지 모르는 행동은 주사위 두 개를 굴린다.
+3. 성공하면 뜻대로 된다. 실패하면 나쁜 일이 생기고, 같은 방법은 다시 쓰기 어렵다.
+4. 행동할수록 시간이 흐른다. 시간이 다 되면 다음 장으로 넘어간다.
+5. 사람들은 플레이어가 한 일을 기억한다.
+
+> 눈더미가 길을 막고 있다. 힘으로 밀어 본다. 8 이상이 나와야 하는데 7이 나왔다. 실패다. 눈보라가 한 칸 가까워지고, 눈더미는 힘으로는 안 된다는 걸 알았다. 이제 다른 방법을 쓰거나, 삽을 찾아오거나, 더 큰 위험을 걸고 한 번 더 민다.
+
+## 1. 할 수 있는 일
+
+| 행동 | 뜻 |
+|---|---|
+| 가기 | 이어진 곳으로 간다 |
+| 살펴보기 | 무언가를 보고 새 사실을 안다 |
+| 집기 | 여기 있는 물건을 갖는다 |
+| 건네기 | 가진 물건을 사람에게 준다 |
+| 보여 주기 | 가진 물건을 보여 주기만 한다 |
+| 말하기 | 묻는다, 부탁한다, 같이 가자고 한다 |
+| 시도 | 장애물을 넘으려 한다 |
+| 선언 | 주인공의 숨은 사연을 꺼낸다 |
+| 넘기기 | 시간을 보낸다. 쉴 수 있는 곳에서는 쉰다 |
+| 고르기 | 갈림길에서 하나를 고른다 |
+| 성장 | 주인공이 강해진다 |
+
+지켜야 할 것은 세 가지다.
+
+- **보이는 것만 할 수 있다.** 여기 없는 사람에게 말할 수 없고, 갖지 않은 물건을 건넬 수 없다.
+- **막힌 것은 못 한다.** 개가 사람 앞을 지키고 있으면 그 사람에게 말할 수 없다. 개부터 해결해야 한다.
+- **숨은 것은 해 봐야 안다.** 숨어 있던 것이 막으면 그제야 드러난다. 이때는 주사위를 굴리지 않는다.
+
+문장을 알아듣지 못하면 아무 일도 일어나지 않는다. 세계는 그대로다.
+
+## 2. 주사위
+
+### 2.1 굴리기
+
+주사위 두 개를 굴려 능력치를 더한다. **목표 숫자 이상이면 성공**이다.
+
+능력치는 넷이고 각각 0~3이다: **완력, 솜씨, 재치, 매력**. 어떤 방법으로 하느냐에 따라 하나가 쓰인다.
+
+> 문을 부순다 → 완력. 자물쇠를 딴다 → 솜씨. 꾀를 낸다 → 재치. 설득한다 → 매력.
+
+굴리는 행동은 둘뿐이다: 시도, 그리고 쉽게 들어주지 않을 말하기.
+
+### 2.2 목표 숫자
+
+| 위험 | 목표 숫자 |
+|---|---|
+| 낮음 | 7 |
+| 보통 | 8 |
+| 높음 | 9 |
+
+- 장애물마다 기본 위험이 있다(낮음 또는 보통).
+- 장애물에 **잘 맞는 방법**이면 한 단계 내려간다.
+- **안 맞는 방법**이면 한 단계 올라간다.
+- **무리하면** 한 단계 올라간다.
+- 사람에게 말할 때는 보통이다. 위협하거나 속이면 높음이다.
+
+> 얼어붙은 문(보통, 8). 솜씨가 잘 맞는 문이라 자물쇠를 따면 7. 완력은 안 맞아서 부수려면 9.
+
+목표 숫자는 굴리기 전에 카드에 나온다. 카드에서 본 숫자가 실제 숫자다.
+
+### 2.3 더하고 빼기
+
+- **도움 +1**: 함께 있는 사람에게 기댈 때.
+- **방해 −1**: 나쁜 태그가 붙어 있을 때(젖은 발, 다친 어깨). 또는 나를 믿지 않는 사람에게 말할 때.
+
+도움도 방해도 한 번에 1까지다. 여러 개가 겹쳐도 1이다.
+
+### 2.4 기대기
+
+굴릴 때 **하나**에 기댈 수 있다.
+
+| 기댈 것 | 효과 | 쓰고 나면 |
+|---|---|---|
+| 같이 다니는 사람 | +1 | 계속 쓸 수 있다 |
+| 깊이 믿는 사람 (신뢰 3) | +1 | 계속 쓸 수 있다 |
+| 특성, 물건, 아는 사실 | 실패해도 덜 다친다 | 이번 장에는 다시 못 쓴다 |
+| 좋은 태그 | 실패해도 덜 다친다 | 태그가 사라진다 |
+
+**실패해도 덜 다친다**: 숫자는 그대로다. 대신 실패했을 때 가장 가벼운 대가만 치른다.
+
+### 2.5 실패하면
+
+| 위험 | 대가 |
+|---|---|
+| 낮음 | 위험 시계 한 칸 |
+| 보통 | 위험 시계 한 칸 + 작은 사고 |
+| 높음 | 위험 시계 두 칸 + 큰 사고 |
+
+- **작은 사고**: 나쁜 태그가 붙거나, 시간을 더 쓴다.
+- **큰 사고**: 다치거나, 장면이 끊긴다.
+- 이야기가 장소, 사람, 장애물에 자기만의 사고를 더 적어 둘 수 있다. 여럿이면 주사위가 하나를 뽑는다.
+
+대가는 엔진이 바로 적용한다. 플레이어가 고르지 않는다.
+
+### 2.6 장애물
+
+- **성공하면 넘는다.** 한 번이면 된다.
+- **실패하면 그 방법이 닫힌다.** 힘으로 실패했으면 그 장애물은 이제 힘으로 안 된다.
+- **닫힌 방법은 무리해야만 다시 쓴다.** 위험이 한 단계 올라간다.
+
+그래서 실패한 뒤에는 셋 중 하나를 고르게 된다.
+
+1. 다른 방법으로 바꾼다.
+2. 기댈 것을 찾으러 간다.
+3. 무리해서 다시 한다.
+
+이야기는 장애물마다 **해법**을 둘 이상 적어 둔다("삽으로 눈을 퍼낸다"). 해법은 이름 붙은 시도일 뿐이고, 직접 같은 시도를 해도 결과는 같다.
+
+## 3. 시간
+
+### 3.1 장면
+
+- 가기와 굴림은 **시간 한 칸**을 쓴다.
+- 살펴보기, 집기, 건네기, 잡담은 시간을 쓰지 않는다.
+- 이야기가 정한 만큼 시간을 쓰면 **장면이 끝난다.**
+
+장면이 끝나면:
+
+- 이번 장면에만 붙는 태그가 사라진다.
+- 다가오던 것들이 한 칸씩 가까워진다.
+
+넘기기는 장면을 바로 끝낸다. 쉬기는 상처 하나를 낫게 하는 대신, 다가오던 것들이 한 칸 더 가까워진다.
+
+### 3.2 다가오는 것들
+
+| 종류 | 언제 차는가 | 가득 차면 |
+|---|---|---|
+| **위험 시계** | 굴림에 실패할 때 | 위기가 터지고 다시 빈다 |
+| **위협** | 장면이 끝날 때 | 닥친다. 그전에 막거나 물리칠 수 있다 |
+| **갈림길** | 장면이 끝날 때 | 고르지 않았으면 정해진 쪽으로 된다 |
+| **기한** | 장면이 끝날 때 | 장이 넘어간다. 마지막 장이면 결말이 난다 |
+
+위험 시계와 기한은 장마다 하나씩 있다.
+
+### 3.3 장이 바뀌면
+
+장은 목표를 이루거나 기한이 다 되면 바뀐다.
+
+- 태그가 사라지고 시간이 처음으로 돌아간다.
+- 써 버린 특성, 물건, 사실을 다시 쓸 수 있다.
+- 새 위험 시계와 새 기한이 온다.
+- 성장할 기회를 한 번 얻는다.
+- 기한이 다 돼서 넘어왔으면 새 기한이 한 칸 찬 채로 시작한다.
+
+닫힌 방법은 장이 바뀌어도 닫혀 있다.
+
+아무것도 안 하고 넘기기만 해도 언젠가 결말에 닿는다. 게임이 멈추는 일은 없다.
+
+## 4. 사람
+
+사람은 플레이어를 얼마나 **믿는지**, 얼마나 **두려워하는지** 기억한다. 각각 −3에서 3까지다.
+
+### 4.1 말하기
+
+**굴리지 않아도 되는 말**
+
+- 잡담, 여기서 기다리라는 말.
+- 이미 아는 것, 누구에게나 알려 주는 것.
+- 나에게 신세 진 사람에게 하는 부탁.
+- 나를 믿는 사람(신뢰 1 이상)에게 같이 가자는 말.
+
+나머지는 굴린다.
+
+**성공하면**
+
+- 물은 것을 알게 된다.
+- 부탁을 들어준다. 대신 약속을 하나 하게 된다.
+- 같이 가 준다.
+- 신뢰 +1.
+
+**실패하면** 대가를 치른다. 대신 그 사람이 무엇을 바라는지 알게 된다. 다음에는 그걸 들고 올 수 있다.
+
+**위협하면** 완력으로 굴린다. 성공하든 실패하든 두려움 +1, 신뢰 −1.
+
+**속이면** 재치로 굴린다. 상대가 진실을 알고 있으면 들킨다: 신뢰 −2, 이번 장 동안 "의심" 태그.
+
+위협이나 속임으로 얻은 것에는 약속도 신뢰도 따라오지 않는다.
+
+### 4.2 약속
+
+부탁을 들어준 사람에게는 약속을 지켜야 한다.
+
+- **지키면** 신뢰 +1.
+- **어기면** 신뢰 −2, 이번 장 동안 "약속을 어김" 태그.
+- 끝까지 지키지도 어기지도 않았으면 결말에 빚으로 남는다.
+
+부탁은 사람마다 한 번만 할 수 있다.
+
+### 4.3 물건과 동행
+
+- **건네기**: 그 사람이 바라던 물건이면 신뢰 +1, 그리고 그 사람이 나에게 신세를 진다.
+- **보여 주기**: 그 사람이 바라던 물건이면 처음 한 번 신뢰 +1. 물건은 내가 그대로 갖는다.
+- **동행**: 같이 다니는 사람은 나를 따라오고 내 굴림을 돕는다(+1). 꺼리는 곳에는 따라오지 않는다.
+
+## 5. 주인공
+
+- **태그**: 주인공에게 붙는 좋은 것(이점)과 나쁜 것(불리함). 세 개까지 붙는다. 장면이나 장이 끝나면 사라진다.
+- **상처**: 나을 때까지 사라지지 않는 나쁜 태그. 세 개가 되면 쓰러지고 게임이 끝난다. 쉬거나 성장하면 하나 낫는다.
+- **선언**: 주인공의 숨은 사연을 꺼낸다("옛 친구가 이 마을에 산다"). 이야기가 미리 준비해 둔 것만 꺼낼 수 있다. 위험 시계가 한 칸 찬다.
+- **성장**: 셋 중 하나를 고른다. 능력치 +1, 특성 바꾸기, 상처 하나 치료.
+
+장애물이 아닌 것에 시도해서 성공하면 나쁜 태그 하나를 뗀다. 뗄 것이 없으면 이번 장면 동안 좋은 태그를 얻는다.
+
+## 6. 연쇄
+
+행동의 결과로 다른 일이 이어서 일어날 수 있다. 이야기가 "이렇게 되면 저렇게 된다"를 적어 두고, 엔진도 다섯 가지를 갖고 있다. 이 순서로 본다.
+
+1. 이야기가 적어 둔 것.
+2. 위험 시계가 가득 찼다 → 위기.
+3. 상처가 셋이다 → 쓰러짐.
+4. 장면의 시간이 다 됐다 → 장면 끝.
+5. 위협, 갈림길, 기한이 가득 찼다 → 닥침.
+6. 약속의 조건이 맞았다 → 지킴 또는 어김.
+
+하나가 일어나면 처음부터 다시 본다. 더 일어날 것이 없으면 끝난다.
+
+## 7. 추천
+
+엔진은 다음에 해 볼 만한 일을 셋까지 골라 준다. 게임을 시작할 때와 플레이어가 막혔을 때 보여 준다.
+
+1. 좋은 태그가 있으면 그것을 쓰는 시도.
+2. 여기 있는 사람에게 아직 모르는 것 묻기.
+3. 갈림길이 있으면 고르기. 없으면 쓸 수 있는 해법. 그것도 없으면 목표 쪽으로 가기.
+4. 자리가 남으면 다른 해법과 열린 길.
+
+## 8. 언제나 지켜지는 것
+
+- 카드에서 본 숫자가 실제 숫자다.
+- 굴리면 반드시 무언가 바뀐다.
+- 같은 장애물에 같은 굴림을 두 번 하지 않는다.
+- 말을 아무리 잘 써도 +1을 넘지 못한다. 상황을 읽는 것이 이긴다.
+- 시간은 반드시 흐르고, 게임은 반드시 끝난다.
+
+## 9. 코드 이름
+
+코드를 볼 때만 필요하다.
+
+| 우리말 | 코드 |
+|---|---|
+| 가기, 살펴보기, 집기, 건네기, 보여 주기 | `go`, `look`, `take`, `give`, `show` |
+| 말하기, 시도, 선언, 넘기기, 고르기, 성장 | `talk`, `try`, `declare`, `cut`, `choose`, `grow` |
+| 알아듣지 못한 문장 | `try(player)` |
+| 완력, 솜씨, 재치, 매력 | `force`, `finesse`, `wits`, `charm` |
+| 말투: 공손, 위협, 속임 | `tone`: `polite`, `threaten`, `deceive` |
+| 속일 때 하는 거짓말 | `claim` |
+| 평소대로, 무리해서 | `strain`: `natural`, `forced` |
+| 잘 맞는 방법, 안 맞는 방법 | `fits`, `clashes` |
+| 기대기 | `rely`: `with`, `bond`, `trait`, `thing`, `prop`, `tag` |
+| 써 버림, 닫힌 방법 | `spent(player, ·)`, `spent(장애물, 방법)` |
+| 좋은 태그, 나쁜 태그, 상처 | `edge`, `snag`, `wound` |
+| 시간 한 칸, 장면 길이 | `beats`, `B` |
+| 위험 시계, 위협, 갈림길, 기한 | `clock`, `threat`, `fork`, `deadline` |
+| 신뢰, 두려움 | `regards`의 `trust`, `fear` |
+| 약속, 신세 | `owes`의 `promise`, `kindness` |
+| 같이 가자, 여기 있어라, 잡담, 부탁 | `come`, `stay`, `chat`, `favor` |
+| 사고: 작은 것, 큰 것 | `light`, `heavy` (`engine.snag`, `engine.beat`, `engine.wound`, `engine.end`) |
+| 연쇄 | 트리거: `τ_risk`, `τ_collapse`, `τ_scene`, `τ_arrive`, `τ_promise` |
+| 쓰러지는 결말 | `collapse` |
 
 ```
 server/src/rules/
-  acts.py        action ids: parse, format, SCHEMAS
-  candidates.py  K: candidates, space, admits
-  roll.py        roll(H), risk, DC, modifiers, outcome, chance, preview
-  costs.py       cost table, pool, settle
-  schemas.py     Δ₀ per schema, scene_end
-  triggers.py    scan, engine triggers, chapter_to, end
-  resolve.py     R = Δ₀ → triggers → Step
-  recommend.py   recommended buttons
+  acts.py        행동 id 읽고 쓰기 (예: try:door:finesse;rely=thing:key)
+  candidates.py  지금 할 수 있는 행동
+  roll.py        주사위, 목표 숫자, 카드에 보일 값
+  costs.py       실패의 대가
+  schemas.py     행동별 결과
+  triggers.py    연쇄, 장 전환, 결말
+  resolve.py     행동 하나를 끝까지 처리
+  recommend.py   추천
 ```
 
-`rules/` holds only pure functions. They never read the clock time, random numbers, files, models or the presentation layer.
-
-## 1. Actions
-
-Actions travel as the ids of story.md 3.12. Inside the server they are `Action`.
-
-```python
-@dataclass(frozen=True)
-class Action:
-    schema: str                     # go, look, take, give, show, talk, try, declare, cut, choose, grow
-    intent: tuple[str, ...]         # intent arguments in schema order
-    judge: tuple[tuple[str, str], ...]  # non-neutral judgment arguments, sorted by key
-```
-
-**Canonical form**: judgment arguments are written in key order, and those at their default `ν₀` are left out. `parse(format(a)) = a`, and `format(parse(s))` is canonical. Receipts, logs, patterns and buttons all use only the canonical form.
-
-| Schema | What it does | Intent arguments | Judgment arguments (`ν₀`) |
-|---|---|---|---|
-| `go` | Moves to a connected place | destination | - |
-| `look` | Examines something to learn propositions | target | - |
-| `take` | Picks up a thing in the place | thing | - |
-| `give` | Hands over a carried thing | thing, recipient | - |
-| `show` | Shows a carried thing and keeps it (5.1) | thing, person | - |
-| `talk` | Conversation (section 5) | other party, topic | `tone`(`polite`), `claim`(none), `rely`(none) |
-| `try` | Improvised attempt (section 3) | target, approach | `strain`(`natural`), `rely`(none). `try(player, ·)` takes only `ν₀` |
-| `declare` | Declares a latent (section 6) | latent | - |
-| `cut` | Skips ahead past the scene (section 4) | `pass` or `rest` | - |
-| `choose` | Picks one option at a fork (section 4) | fork, option | - |
-| `grow` | Growth (section 6) | `grow:<approach>`, `grow:trait:<drop>:<gain>`, `grow:wound:<slot>` | - |
-
-The old schema `pay` survives only in the action-id grammar (`acts.py`) so that saves from before this rule still load. It has no candidates and no `Δ₀`.
-
-**Intent arguments** say what the player means to do; **judgment arguments** say how the action is carried out. `ν₀` creates no help, no added risk and no `spent`. Every argument ranges over a finite kind, so the set of actions is finite. The schema table `SCHEMAS` holds, for each schema, the kinds of its intent arguments, the keys of its judgment arguments, the function that decides whether it rolls, and the key of its action-name template.
-
-## 2. Candidates `K`
-
-`candidates(U, O) → list[Action]` reads only the observation `O = (E, F, B, hᵥ)` and story constants. Candidates come in schema-table order, and within a schema in the story's declaration order.
-
-**Visible blocks**: `x` is visibly blocked when an obstacle `o ∈ E` lists `x` in its story `blocks`, `F` has `at(o, ·)`, and `fill(o) < boxes(o)`. `go`, `take`, `give`, `talk` and `try` that take a visibly blocked `x` as an argument are not candidates: a guard that keeps you from talking to someone also keeps you from handing them things (play: `refuse-1-play`). Hidden blocks do not shrink the candidates.
-
-| Schema | Candidates |
-|---|---|
-| `go(q)` | `link(here, q) ∈ F`, `q ∈ E` |
-| `look(x)` | `x ∈ E`, `x ≠ player` |
-| `take(x)` | `x` is a thing and `at(x, here) ∈ F` |
-| `give(x, h)` | a thing `x` with `at(x, player) ∈ F`, and a character `h` with `at(h, here) ∈ F` |
-| `show(x, h)` | as `give` |
-| `talk(h, topic)` | a character `h` with `at(h, here) ∈ F`. Topics are `h`'s topics, `favor` (`h` has a favor, `favor:h ∉ hᵥ`, and there is no `owes(player, h, ·)`), `come` (`follows(h, player) ∉ F`), `stay` (`follows(h, player) ∈ F`), and `chat` |
-| `try(x, approach)` | `x = player` (all judgment arguments `ν₀`); or a `plain` obstacle `x ∈ E` with `fill < boxes` (clocks, deadlines, threats and forks are not targets); or any other `x ∈ E` with an empty tag slot or a `snag` |
-| `declare(ℓ)` | `believes(player, ℓ) ∉ F` and `ℓ.when` is true in the view |
-| `cut(pass)` | always |
-| `cut(rest)` | `here` is a resting place |
-| `choose(g, c)` | an option `c` of a fork `g` with `at(g, player) ∈ F` |
-| `grow(item)` | `growth ≥ 1`. Approaches below 3; for a trait, one trait the player has now paired with one other trait candidate from the story; for a wound, its slot |
-
-Judgment arguments multiply onto the actions above.
-
-| Judgment argument | Applies to | Values |
-|---|---|---|
-| `tone` | `talk` | `polite`, `threaten`, `deceive`. Friendliness and pleading are polite; the narration reads them from the sentence |
-| `claim` | `talk`, only when `tone = deceive` | The story's claims. A claim is a false proposition, so it cannot be made in an honest tone |
-| `strain` | `try(x ≠ player)` | `natural`, `forced` |
-| `rely` | a rolling `talk`, `try(x ≠ player)` | See the table below. The rules never ask whether it is relevant: a free value helps and a spent one guards (3.2). The roll card shows only the ones relevant to this roll (engine.md 4.2) |
-
-| `rely` value | Condition | Help atom | Consumed |
-|---|---|---|---|
-| `tag:<x>:<slot>` | `x` is in reach (3.2), and `mark(x, edge, ·, slot) ∈ F` | that `mark` | `untag` after the roll |
-| `trait:<id>` | a trait the player has, with `spent(player, id) ∉ F` | `stat(player, id, 1)` | `insert(spent(player, id))` after the roll, whatever the result |
-| `thing:<id>` | `at(id, player) ∈ F`, with `spent(player, id) ∉ F` | that `at` | `insert(spent(player, id))` after the roll, whatever the result |
-| `prop:<id>` | `id ∈ B`, with `spent(player, id) ∉ F` | `believes(player, id)` | `insert(spent(player, id))` after the roll, whatever the result |
-| `bond:<h>` | `regards(h, player, trust, 3) ∈ F` (a bond) | that `regards` | nothing (free) |
-| `with:<h>` | `follows(h, player) ∈ F` (a companion), and `h` is not the target | that `follows` | nothing (free) |
-
-What the player has (a trait, a thing, a belief) is spent until the chapter changes once leaned on, except a thing with `uses`, which counts down instead and is consumed at zero (story.md 3.5); who stands with the player (a bond, a companion) is not, and an edge tag is removed instead. Things and beliefs used to cost nothing: one letter gave +1 to any roll, the relying share (fun.md F13) was 0.67–1.0, and four games leaned on the letter 13 times, the oil 5 and a trait never, because a trait used up for the chapter lost to a free letter every time (play-5-bold 9, play-5-odd 25).
-
-**Free help, spent guard.** A free value (`bond`, `with`) adds help 1 to the roll. A spent one (`tag`, `trait`, `thing`, `prop`) adds nothing; it **guards**: a fail costs what a `low` fail costs (3.3). When both added 1, the companion was free and dominated every spent reliance, and "lean on the letter" and "bring 윤슬" were one decision under two names.
-
-**Once an ending is set**, the candidates are empty and the game is over. `try(player, ·)` is always a candidate, so `K ≠ ∅` before the ending (progress).
-
-Because judgment arguments multiply, `K` gets large, so the engine never expands it in full. `space(U, O)` returns, per schema, a list with only the intent arguments expanded, plus the allowed values of each judgment argument. `admits(U, O, a)` decides `a ∈ K(O)`. Both use the same condition functions. Interpretation questions and the roll card (engine.md 3–4) use `space`; the admission check right before execution uses `admits`.
-
-**Solutions** add no candidates. A solution is a single action id, `try(o, approach)` with `rely` filled in, plus a `label` and a condition `when`. When `when` (and the conditions `rely` implicitly adds) is true in the view, that action is named `label`. The same action id goes through the same `R` whether or not a solution exists.
-
-## 3. Rolls
-
-### 3.1 Dice
-
-```python
-def roll(seed: int, t: int) -> tuple[int, int, int]:
-    b = hashlib.sha256(f"{seed}:{t}".encode()).digest()
-    n = lambda i: int.from_bytes(b[i:i + 8], "big")
-    return n(0) % 6 + 1, n(8) % 6 + 1, n(16) % 60
-```
-
-`r = (d₁, d₂, u)`. `seed` is set with `secrets.randbits(63)` when the game is created. The modulo bias is on the order of `10⁻¹⁷` and is ignored. `R` takes `r` as an argument, so witnesses and tests supply the dice directly.
-
-```
-total = d₁ + d₂ + stat(player, approach) + help − hinder        talk's approach: force to threaten, wits to deceive, else charm
-result = success (total ≥ DC(risk)) | fail (total < DC(risk))
-```
-
-### 3.2 Risk, modifiers and results
-
-```python
-DC = {low: 7, normal: 8, high: 9}       # the total to reach, by risk
-def risk(U, a) -> Risk                   # reads only U and a
-def modifiers(U, facts, a) -> Mods       # stat, help, hinder and the atoms behind them
-def band(total, dc) -> Result            # success if total >= dc, else fail
-def outcome(r, mods, risk) -> Result     # band(d1 + d2 + z, DC[risk])
-def chance(z, dc) -> float               # P(2d6 + z >= dc)
-```
-
-**Risk** reads only story parameters and the arguments of `a`. So it is the same in two states that differ only in hidden atoms, and the same for every `rely` option. Hidden parts of `S`, such as a hidden guard, never enter the risk; the player runs into them by acting. Judgment arguments can only raise risk.
-
-```
-risk(try(player, ·))            = low
-risk(try(o, approach, strain))  = min(high, base(o) + [approach ∈ clashes(o)] + [strain = forced])
-risk(talk(h, ·, tone))          = min(high, normal + [tone ∈ {threaten, deceive}])
-risk(choose(·))                 = high          (irreversible; it does not roll, so this only puts up the confirm card, engine.md 4.3)
-risk(anything else)             = low
-```
-
-`base(o)` is the obstacle's `risk` (`low` or `normal`), or `normal` when the target is not an obstacle.
-
-The atoms of the **modifiers** become the event's `mods`, in this order.
-
-| Modifier | Value | Atoms |
-|---|---|---|
-| `stat` | the value of `stat(player, approach)` | that `stat` atom |
-| help | 1 with a free `rely` (`bond`, `with`), otherwise 0 | one atom from the table in section 2 |
-| guard | 0; a fail costs the `low` row (3.3) | the atom of a spent `rely`. The event also records the happening `("guard",)`, since saves from before this rule counted the same atom as help |
-| hinder | 1 if any atom below exists, otherwise 0 | every `snag` `mark` in reach. In `talk`, a `regards` in which the other party's relevant axis toward the player (`fear` for `threaten`, otherwise `trust`) is negative |
-
-With charm alone for every talk, the creation screen decided how every person could be met; a threat pressed with force and a lie told with wits give each build a social lever, priced in regard (5.1).
-
-Help and hinder are each 0 or 1 however many atoms there are, so a roll's `help − hinder` is −1, 0 or +1 (bounded advantage). The client shows them as chips (api.md 3).
-
-Tags count when they are **in reach**: on the target, `here`, the player, or a thing the player carries. A carried thing used to be out of reach, so an edge won by readying the oil helped only a roll on the oil itself and expired unused through three rolls on the lamp (play-5-explorer 34, 38, 40).
-
-`modifiers` reads only the atoms passed in `facts`. `R` passes `S`; the preview passes `F`. Every atom the modifiers read is either a `mark`, `stat` or `regards` about an entity in `E` (the target, `here`, the player, a carried thing, the other party present) or an atom of `F` or `B` that `rely` points to. So for a rolling action `a ∈ K(O)`, `modifiers(U, S, a) = modifiers(U, F, a)`.
-
-`outcome`, `chance` and the step record's `dc` (api.md 3) all come from the one `DC`.
-
-### 3.3 Costs and complications
-
-A **complication** is `(condition, effect, weight)`. The story declares them on places, characters and obstacles (story.md 3.6), and the engine keeps two unconditional ones per weight.
-
-| Weight | Engine complication | Name (`locale/ko.py`) | Effect |
-|---|---|---|---|
-| `light` | `engine.snag` | 꼬임 (snag) | `snag` scene tag on the player |
-| | `engine.beat` | 지체 (delay) | `beats +1` |
-| `heavy` | `engine.wound` | 다침 (injury) | a wound (section 6) |
-| | `engine.end` | 끊긴 장면 (scene cut short) | scene end (4.1) |
-
-A story complication's effect is its `effects`, plus `n` wounds when it has `wound: n`. **Costs apply only on `fail`**. Risk sets them, and the engine applies them at once. The player does not choose.
-
-| Risk | Cost of `fail` |
-|---|---|
-| `low` | clock +1 |
-| `normal` | clock +1, light |
-| `high` | clock +2, heavy |
-
-A **guarded** roll (3.2) that fails pays the `low` row whatever its risk: clock +1 and no complication.
-
-**The pool** `pool(weight, target)`: the two engine complications (in the order of the table above), then the story's, in this order: the place (`here`), characters (those at `here`, in story order), the obstacle (the roll's target). Story complications must pass the implicit condition of what they are attached to and their `when`. The engine's have no condition, so the pool always holds at least two.
-
-**Applying**: when there is a weight, evaluate `when` in the world `(S, h)` and put the effect of entry `u mod count` of the resulting list into `Δ₀`. A complication is discovered by suffering it, so hidden ones may be picked; that is why the preview states only the weight.
-
-`settle(U, work, result, risk, u, target, h)` on `fail` puts one row of the cost table (the increase on the held clock) into `work` and returns the chosen complication, whose effect the caller applies. On `success` it does nothing.
-
-### 3.4 Preview
-
-```python
-def preview(U, O, a) -> Preview
-```
-
-For a rolling action `a ∈ K(O)`, this computes from the observation alone what the player sees before rolling. The roll card (engine.md 4.2) uses it.
-
-| Field | Value |
-|---|---|
-| `risk` | `risk(U, a)` |
-| `mods` | `modifiers(U, O.facts, a)` as the chip list of api.md 3 (`kind`, `label`, `value`). Same shape and order as the step record's `mods` |
-| `z` | `stat + help − hinder` |
-| `dc` | `DC[risk]` |
-| `stakes` | The cost of failure: `clock` is the boxes the held clock would fill (`min(n, remaining boxes)`, 0 with no clock); `weight` is the complication weight (null if none). A guarded roll states the `low` row |
-| `clock` | the held risk clock's id, name, box count and `fill` |
-| `gain` | What happens to the target on success: for an obstacle, `min(1 + [approach ∈ fits] + [strain = forced], remaining boxes)` boxes, and how many of them the fit and the forcing buy; for any other `try`, removing the lowest-slot `snag` (its name) or an `edge` scene tag; for `talk`, the topic's reveal or the favor's effects (names) |
-
-**The preview matches execution.** Risk is a function of the story and `a`, and the modifiers are the same on `S` and `F` (end of 3.2), so when the roll happens, its `z`, `mods` and risk equal the preview's. Only two things differ: a hidden block stops the roll (`blocked`, and nothing relied on is consumed), and the failure complication may be a hidden one (3.3).
-
-## 4. Time
-
-### 4.1 Beats and scenes
-
-**Beats** `stat(player, beats, n)`, `0 ≤ n ≤ B`. A beat is a move or a roll: `go`, a `try(x ≠ player)`, a `talk` that rolls, and any step a hidden block stopped add `beats +1` in `Δ₀`, before the step's effects, so a scene the step ends starts at zero. Looking, taking, giving, showing, declaring, choosing, small talk, `try(player, ·)`, `grow` and `cut` cost none, and `B` reads as "B attempts a scene". When looking and taking cost a beat, a player who walked the map and looked at each thing once had spent 10 of the chapter's 18 before a roll. **Small talk** is `talk(h, chat)` whose tone is neither `threaten` nor `deceive`: it changes nothing in the world, and when every greeting cost a beat, players stopped speaking to people (play-5-talker 1–2). Growth is picked on a card, not done in the scene; when it spent a beat, levelling up read as a penalty for pressing the button (play-5-bold 7).
-
-**Scene end** `scene_end`: `expire(scene)`, `beats = 0`, and `fill +1` on each active threat (a threat, fork or deadline with `at(w, player)`). Risk clocks are not included. `go` does not expire scene tags.
-
-`cut(pass)` ends the scene at once ("밤이 될 때까지 기다린다", "I wait until nightfall"). `cut(rest)` is a candidate only when `here` is a resting place; on top of the scene end it heals the wound in the lowest slot and does one more `fill +1` on active threats.
-
-### 4.2 Risk clocks and threats
-
-In each chapter the player holds one risk clock `clock.k`. Only roll costs and declarations raise a clock's `fill`; only `τ_risk` lowers it; only a chapter change moves it.
-
-A **threat** is an obstacle with an arrival effect. When the player holds it (`at(w, player)`) it is **active**: it is visible and draws closer at every scene end. An appearance trigger's `move(w, player)` brings it in, and story effects can lower its `fill` or `retire` it. A **fork** is a threat with options and a default option. `choose(g, c)` applies `c`'s effects and retires `g`; holding out without choosing lets it arrive, and the default option happens. Ending conditions read which choice was made through history patterns.
-
-A **deadline** `deadline.k` is a threat, one per chapter, whose arrival effect unconditionally brings a chapter change or an ending. The first chapter's deadline is active from the start; later ones become active at a chapter change.
-
-### 4.3 Chapter changes and endings
-
-`chapter_to(k)` is a single sequence of operations.
-
-1. `set(flag, chapter, k)`, `expire(chapter)`, `expire(scene)`, `beats = 0`: a new chapter starts a new scene, without a scene end's threat ticks
-2. `clear_spent(player)`
-3. `retire(clock.k−1)`, `retire(deadline.k−1)`, `move(clock.k, player)`, `move(deadline.k, player)`
-4. `growth +1`, and when the change comes from reaching the goal, the story's `goal_effects`
-
-A chapter used to begin inside the scene that ended the last one: the spray of the yard, shown as lasting "이번 장면", followed the player into the lamp room and the next chapter and still hindered a roll there, and the new chapter's clocks began with half a box spent (play-5-bold 6, 8).
-
-When the change comes from the deadline's arrival instead (the goal was missed), step 3 also does `fill +1` on `deadline.k` if it has more than one box: being late costs time in the next chapter, and that is its one cost. A missed goal once opened the same growth as a reached one with a cost nothing named (play-2-explorer 33, play-2-talker 27, play-2-odd 33; play-4-explorer 29, 41); withholding growth as well then punished a losing player twice, and a lost chapter is where a protagonist learns.
-
-`end(e)` does `set(flag, ending, e)` and stops that step's trigger scan. Neither a chapter change nor an ending settles promises (5.2). When the chapter goal becomes true in `Δ₀`, story triggers are scanned before engine triggers, so even if the previous clock filled up in the same step, that clock retires without `τ_risk`.
-
-## 5. People
-
-### 5.1 Talking and giving
-
-The axes of `regards(g, h, axis, n)` are `trust` and `fear`. The **relationship** in a talk roll is the other party's value toward the player: `fear` for `threaten`, `trust` otherwise. It counts as hinder only when negative; a positive one is relied on as a bond (`trust` 3).
-
-`Δ₀` of `talk(h, topic, tone, claim, rely)` is built in this order.
-
-1. **Hidden block**: if a hidden obstacle blocks `h`, reveal it and stop.
-2. **Whether to roll** (judged on the view; inside `R`, `fact_rule` builds `F` from `S` and makes the same judgment): no roll if the topic is a proposition the player already believes, `free_when` is true, the topic is `chat` or `stay`, it is a favor with `owes(h, player, kindness)`, or it is `come` with `regards(h, player, trust) ≥ 1`. Other topics, favors and `come` roll.
-3. **Result**: an unrolled topic is revealed (`x.hidden` for `reveals: x`, otherwise the topic id); a favor granted out of kindness applies the favor's effects and `retract(owes(h, player, kindness))`. When rolled, `success` reveals the topic, or applies the favor's effects and, unless the tone was `threaten` or `deceive`, `insert(owes(player, h, promise))`: fear pays instead of trust, and a lie owes nothing. `come` does `insert(follows(h, player))` when unrolled or on `success`; `stay` does `retract(follows(h, player))`. Costs follow 3.3. A rolled talk that fails also reveals what would move `h`: `reveal(player, h.desire)`, the engine proposition "{name}은 {desire}" from the story's `desire`, so the next attempt is informed instead of repeated.
-4. **Trust and tone**: a rolled talk that succeeds gives `regards(h, player, trust) +1`, unless its tone is `threaten` or its lie is caught. `threaten` gives `regards(h, player, fear) +1` and `trust −1` whatever the result. With `deceive`, if `h` believes the `claim`'s `against`, the lie is caught: `trust −2`, and a `snag` chapter tag on the player (default name "의심", "suspicion"). A claim that matches no story proposition remains only as text. Before, only gifts, kept promises and forks moved trust, so a person the player had won over in a roll stayed as they were: in four games no one's regard moved and no ending named a person (play-6, F8 = 0 in 4 of 4; play-6-explorer 5, 17).
-5. **Favor count**: for each character the engine adds a pattern `favor:h` (action `talk:h:favor`, results `success` or `none`) to `Pat`. A step that grants the favor matches this pattern, and candidates offer no favor once `favor:h ∈ hᵥ`. Candidates read only `F` and `hᵥ`, so they use visible history instead of a story flag.
-
-**Companions**: a character with `follows(h, player)` moves along when the player moves (ontology.md 4, `move`). They do not follow into places in the story's `avoids` (story.md 3.4) while the entry's `until` does not hold; it is read at the move, so a fear can be talked, shown or walked past without a new rule. If the player does `go` there, `h` stays behind and `follows` is removed. The player can bring someone along without a favor, but someone who does not yet trust the player has to be won over with charm. A companion helps every roll not aimed at them (`with:<h>`, section 2). Before, a companion only walked along: pushing the door together gave the same odds as alone, and testers who had talked someone into coming found it changed nothing (play-4-talker 17, 33; play-2-talker 29–36).
-
-`give(x, h)` is `move(x, h)`; if `x ∈ wants(h)`, it also does `regards(h, player, trust) +1` and `insert(owes(h, player, kindness))`.
-
-`show(x, h)` moves nothing and never rolls. A hidden block on `h` is revealed first. If `x ∈ wants(h)` and the engine pattern `show:x:h` is not in `h` (it is shown once), `regards(h, player, trust) +1`. Players who only wanted to show the letter gave it away, and the confirm card asked again in every round (play-3-talker 3, play-4-talker 7).
-
-### 5.2 Promises
-
-`owes(g, h, k)`: `g` owes `h` a `k`. `k` is `promise` (a promise tied to `h`'s favor, whose `keep` and `break` conditions are read from `h`'s `favor.promise`) or `kindness` (a good turn). Each character has one favor, so `owes(player, h, promise)` pins down the promise. The player makes promises only through favors.
-
-- **Kept**: `retract(owes)`, `regards(h, player, trust) +1`.
-- **Broken**: `retract(owes)`, `trust −2`, and a `snag` chapter tag on the player (default name "약속을 어김", "broke a promise"). A promise broken in a step that also changes the chapter is settled after the change, so its tag carries into the next chapter.
-
-`τ_promise` (section 8) settles a promise when its `keep` or `break` becomes true, and nothing else does. An open promise carries across chapter changes; at the ending it is still owed and becomes a legacy line (engine.md 5.5). A story that wants a promise due by some point writes that point into the promise's `name` and `break`, where the player can see it.
-
-Earlier, every chapter change and the ending settled open promises by `keep`. The due was on no screen, and the step that reached the goal was the one that changed the chapter, so a promise was broken in the very step the player succeeded: the key borrowed to light the lamp was "broken" when the lamp lit, after the bridge had cut the way back (play-4-talker 31, 40, 47). The player had promised to return it after the lamp was lit.
-
-## 6. The protagonist
-
-- **Declaration** `declare(ℓ)`: `reveal(player, ℓ)`, `ℓ.effects`, held clock `+1`. When the player says "옛 친구가 이 마을에 산다" ("an old friend lives in this town"), it looks as if a fact is added to the world, but all that happens is that a latent the story placed from the start comes to light (the scope rule of story.md 3.10).
-- **Wound**: `tag(player, snag, wound, @wound)`. It hinders like any snag and lasts until healed: `cut(rest)` or growth removes one. A wound overwrites any slot that is not a wound when the ring is full, a snag before an edge, so every wound lands, and other tags never overwrite it. `τ_collapse` ends the game (`end(collapse)`) once all three slots are wounds. The story supplies the name and narration template of `collapse`. Wounds were a counter that reset into a permanent scar on a fall; the reset read as a heal, and in games of 5 to 13 rolls the fall almost never came.
-- **Growth** `grow(item)`: a candidate only when `growth ≥ 1`, and does `growth −1`. The item is one of: `+1` to one approach, a trait swap (remove one `stat` atom and add another), or `untag` of one wound. Reaching a chapter's goal opens growth (4.3).
-
-## 7. Schema results `Δ₀`
-
-`schemas.py` produces `Δ₀` for each schema as a sequence of operations on the working copy. A rolling step decides its result first, then applies the effects.
-
-| Schema | `Δ₀` |
-|---|---|
-| (all) | a move or a roll, and any step a hidden block stopped (4.1), does `beats +1` |
-| `go(q)` | If a hidden obstacle blocks `q`, `reveal(player, o.hidden)` (`blocked`). Otherwise `retract(follows(h, player))` for each companion `h` with `q ∈ avoids(h)`, then `move(player, q)` (the remaining companions move along) |
-| `look(x)` | `reveal` each story proposition `p` with `x ∈ about(p)`, in story order |
-| `take(x)` | A hidden block is revealed. Otherwise `move(x, player)` |
-| `give(x, h)` | 5.1 |
-| `show(x, h)` | 5.1 |
-| `talk(h, topic)` | 5.1 |
-| `try(player, ·)` | Nothing. Triggers are not scanned either |
-| `try(o, approach)` | A hidden block is revealed (no roll). Otherwise roll. On `success`, an obstacle gets `fill +(1 + [approach ∈ fits(o)] + [strain = forced])`, capped by what is left: forcing keeps its risk step and heavy fail, so it must buy something; any other target has its lowest-slot `snag` `untag`ged, or, if there is none, gets `tag(o, edge, scene)`. Costs follow 3.3 |
-| `declare(ℓ)` | section 6 |
-| `cut(pass)` | scene end |
-| `cut(rest)` | scene end, the lowest-slot wound removed, active threats `fill +1` |
-| `choose(g, c)` | `c.effects`, `retire(g)` |
-| `grow(item)` | section 6 |
-
-After the roll, **what was relied on is consumed** as in the table in section 2. A rolling step always raises `beats`, `success` changes the target and `fail` changes the clock, so no roll ever ends in "아무 일도 없었습니다" ("nothing happened").
-
-## 8. Triggers and `R`
-
-A trigger is an ordered `(condition, effect)`. Story triggers (in the order of ontology.md 5.3) are **edge-fired**: each fires at most once per step and, unless it is `repeat`, once per game through its fired flag. After them come five engine triggers, in this order, which are **level-fired**.
-
-| Trigger | Condition | Effect |
-|---|---|---|
-| `τ_risk` | the held clock is full | that chapter's `crisis`, clock `fill = 0` |
-| `τ_collapse` | all three of the player's slots are wounds and no ending yet | `end(collapse)` (section 6) |
-| `τ_scene` | `beats = B` | scene end |
-| `τ_arrive` | some active threat is full | for each such threat, in story order, its arrival effect (`arrival` for a threat, `default` for a fork, `chapter_to` or `end` for a deadline), then `retire` |
-| `τ_promise` | some `owes(player, ·, promise)` has `keep` or `break` true | settled as in 5.2. If both are true, the promise is kept |
-
-```python
-def resolve(U, S, h, a, r) -> Step:
-    # Step(delta, mods, rolled, result, risk); never mutates S
-```
-
-1. `work = Work(S)`. For each story trigger, `start_true[i] = holds(τᵢ.when, S, h)`.
-2. Apply the schema's `Δ₀` to `work` (section 7). This decides the roll's `result`.
-3. `h* = h ∪ { π | matches(π, a, result) }`. `a` and `result` do not change within a step, so this is computed once.
-4. **Scan** `scan`: walk the list in order, apply the effect of the first trigger that fires to `work`, and go back to the top of the list. Stop when nothing fires, and stop at once when `flag ending` is set. A story trigger `τᵢ` fires when it has not fired this step, `start_true[i]` is false and `holds(τᵢ.when, work, h*)` is true. An engine trigger fires when its condition is true in `work`.
-5. `delta = diff(S, work)`. `mods` are the atoms of 3.2.
-
-The scan ends after at most `m + 3 + w + q` firings and is deterministic: `m` story triggers, one firing each of `τ_risk`, `τ_collapse` and `τ_scene`, `w` arrivals (threats, forks, deadlines) and `q` promise settlements. Effects after `Δ₀` raise no clock or beats and add no wound, arrivals retire their threats, and settling a promise removes its `owes`, so none fires twice. The code raises an exception past that bound; it is a bug that fuzzing (story.md V6) should catch. At the end every engine trigger condition is false, so every step starts with no clock full.
-
-`Step.result` is one of `success`, `fail` (rolled), `none` (done without a roll) or `blocked` (a hidden block was revealed), and it is stored in the event. `risk` is recomputed from `a`, so it is not stored.
-
-## 9. Recommended buttons
-
-`recommend(U, O) → list[Action]`, at most three. It picks them one at a time, in this order.
-
-- **Tag**: a `try` that relies on an `edge` tag on the player or `here`, if there is one. The target is the first active obstacle in story order; the approach is the solution's approach if there is a solution, otherwise the player's highest approach
-- **Talk**: the first topic, in story order, of the character present that the player does not yet believe
-- **Forward**: if a fork is active, `choose` its first option. Otherwise the first solution whose `when` is true in the view, or failing that, the first `go` toward a place named in the chapter goal's condition. A chapter with no goal ends in an ending, so its places are those of the obstacles the endings' conditions fill
-
-`next_steps(U, O) → list[Action]`, at most three, fills `recommend(U, O)` up with the other solutions of the plain obstacles here whose condition and `rely` hold, then the open ways out. It feeds the buttons (`view.buttons`), the hint a muse reply ends on (engine.md 5.2) and the card for a stuck player (engine.md 4.1). With `recommend` alone, the snowy pass yard had one button and one hint, so three muses in a row got the same hint (qa_test/runs/play-10-human).
-
-Every judgment argument on a button is `ν₀`, except the `rely` that defines the button (the solution's `rely`, or the tag). Anyone can pick what to rely on in the roll card (engine.md 4.2), so a typed sentence differs from a button only in freely setting the approach, target, tone and claim (fun.md H2 measures this).
-
-## 10. Properties and checks
-
-| Property | What and why | Enforced by | Check |
-|---|---|---|---|
-| Admission check | `a ∈ K(Vₜ)` before it touches the state. Includes buttons, cards and the API | the service runs `admits` then `resolve` on every step (engine.md 7) | ids outside the candidates, ids from stale cards → rejected |
-| Progress | `try(player, ·)` is always a candidate before the ending | `candidates` | `space` is non-empty at every fuzzed step (before the ending) |
-| Neutral value | `ν₀` creates no help, added risk or `spent`, and `try(player)` has `Δ = ∅` | sections 1 and 7 | results of actions with every judgment argument at `ν₀` |
-| Bounded advantage | help and hinder rest on atoms of `F` or `B` and are each 0 or 1. A `try` success changes only `fill` and `mark`; things, propositions and paths move only through story effects and `take`, `give`, `look` and `talk` | `modifiers`, section 7 | a target with several tags → hinder 1 |
-| Risk independence | `risk` reads only `(U, a)` | the signature of `risk` | two states that differ only in hidden atoms → same risk |
-| Preview = execution | 3.4 | `preview`, `modifiers` | at every rolled step under fuzzing, `preview`'s `z`, `mods`, `risk` = the `Step`'s, and `result = band(total, dc)`; `chance(z, dc)` matches the enumerated 2d6 distribution (boundary unit tests per risk) |
-| Argument kinds | the arguments of `take`, `give` and `rely=thing:` are things. Clocks are never arguments | `candidates` | ids that give or rely on a clock → rejected |
-| Trigger termination | the bound in section 8 | `scan` | no exception under fuzzing |
-| Rolls move forward | a rolled step changes something visible, and `fail` changes the clock (section 7) | `schemas.py` | at every rolled step under fuzzing, the player's visible atoms change |
-| Time moves forward | a scene ends within `B` steps other than `try(player)`, and an active threat with `n` boxes arrives or retires within `n·B` such steps unless an effect lowers its `fill` | section 4 | fuzzing |
-| Guaranteed ending | in any configuration, `cut(pass)` alone reaches an ending within `1 + Σₖ nₖ` steps (the box counts of the remaining chapters' deadlines). No dice involved | the structure of story.md (a deadline in every chapter, and the last one leads to an ending) | startup validation checks only the structure |
-| Story properties | the grammar of clocks and triggers, isolation of latents, witnesses | story.md 4 | startup validation |
+주사위는 게임을 만들 때 정한 씨앗과 턴 번호에서 나온다. 그래서 같은 게임을 다시 돌리면 같은 눈이 나온다.
