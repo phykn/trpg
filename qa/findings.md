@@ -14,10 +14,6 @@ Each with its evidence (`qa_test/runs/<run>`, turn numbers).
 
 `qa_test/runs/ui-t14-1`: at 412, turn 27, the passage says "당신이 짚은 사람이 끌려가고" and gemma4 wrote "당신이 지목한 남자가" for 넬, a woman. At desktop, turn 11, the truth says the neck mark came from the cart rope; the ending calls it "범행의 흔적일 뿐". In `qa_test/runs/play-t15-1`, turn 9, it called 고드릭 "탐욕스러운 영주"; he is the village head. The ending is checked like a scene, so none was caught. Try naming the accused in the ending job, and a check against the truth text.
 
-## A newcomer cannot tell what the notebook count means
-
-`qa_test/runs/newbie-1` (a fresh agent playing the prologue from the shell): the top bar's count went 3 → 0 → 1 → 2 → 0 and stayed 0 at turn 11 although a heard line was new. It counts only unread seen things and items (game/07 2절); heard lines are left out because the chat already shows them. Decide whether to count every new line or to keep it.
-
 ## An answer can drop half of its line
 
 `qa_test/runs/newbie-1`, turn 2: 최두식 said only "벨트는 6시까지 케이스에 있었다", while the notebook wrote the whole line with "강태오가 제일 수상하다" and added 강태오. Kanana's meaning check passed it. Same family as the first finding.

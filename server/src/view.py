@@ -77,7 +77,7 @@ class ViewMaker:
             "time": self.make_time(),
             "people": self.make_people(),
             "notebook": self.make_notebook(),
-            "badge": len([a for a in book if self.story.lines[a].kind == "볼 것" and a not in self.state["read"]]),
+            "badge": len([a for a in book if a not in self.state["read"]]),
             "conclude": {"who": [self.ids[a] for a in book if self.story.lines[a].kind == "사람"], "clues": clues}
             if self.stage in ("play", "closing") else None,
             "ending": self.make_ending() if self.stage == "over" else None,

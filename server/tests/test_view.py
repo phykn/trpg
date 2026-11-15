@@ -22,3 +22,9 @@ def test_the_first_turn_tells_what_was_written_before_it():
     ids = {a: i for i, a in enumerate(result["state"]["notebook"], 1)}
     notes = [f for f in make_feed(DAWN, {"action": action, **result}, ids, opening) if f["kind"] == "note"]
     assert opening and notes[0]["lines"] == [ids[a] for a in opening]
+
+
+def test_the_badge_counts_every_unread_line():
+    lines = ["곳 숲길", "말 넬.해 질 녘.참말", "볼 것 목 자국"]
+    state = {**start_state(DAWN, 0), "notebook": dict.fromkeys(lines, 1), "read": ["곳 숲길"]}
+    assert make_view(DAWN, state)[0]["badge"] == 2
