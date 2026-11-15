@@ -35,7 +35,7 @@ def test_each_text_slot_gets_one_job_and_no_job_says_which_line_is_a_lie():
     opening, answer, first, back, again = (make_jobs(DAWN, *t)[0] for t in turns[:5])
     assert opening["intro"] and opening["desc"] and opening["time"] == "밤 8시" and answer["says"] == [DAWN.lines["말 고드릭.징수관.거짓말"].text]
     assert first["desc"] and "입술이 검푸르게" in " ".join(first["written"]) and first["people"] == ["토빈"]
-    assert back["desc"] is None and again["desc"] is None
+    assert back["again"] and again["again"] and not first["again"]
     assert len([j for j in every if j.get("happening")]) >= 2
     assert "목소리다" in make_messages(answer)[0]["content"] and "서술자다" in make_messages(first)[0]["content"]
     ending = make_jobs(DAWN, *turns[-1])[0]

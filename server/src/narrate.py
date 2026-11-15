@@ -28,7 +28,7 @@ def make_jobs(story, before, after, turn):
     for happened in turn["happened"]:
         event = story.events[happened["omen"] if "omen" in happened else happened["event"]]
         text = event.omen if "omen" in happened else getattr(event, happened["result"])
-        jobs.append({"kind": "scene", "happening": [text]})
+        jobs.append({"kind": "scene", "happening": [text], "far": "omen" not in happened})
     if turn.get("guide"):
         jobs.append(make_dm(story, after, turn["guide"]))
     return jobs
@@ -67,11 +67,14 @@ def make_answer(story, after, turn, person):
         kind, value = next(iter(item.items()))
         if kind == "say":
             quiet = False
-            says.append(("이 말을 짧게 되풀이한다: " if repeat else "") + story.lines[value].text)
+            lead = ("이 말을 짧게 되풀이한다: " if repeat else
+                    "거짓말이 들통나 앞의 말을 거두고 털어놓는다: " if value.endswith(".깨진 뒤") else "")
+            says.append(lead + story.lines[value].text)
         elif kind == "withhold":
-            says.append("이 화제는 말해 주지 않는다")
+            says.append("이 화제는 얼버무리며 말해 주지 않는다. 말하지 않는 까닭은 지어내지 않는다")
         elif kind == "pass":
-            says.append("답할 것이 없다")
+            says.append("내민 것이 자기와 무슨 상관이냐는 듯 받아넘긴다" if turn["action"]["do"] == "present"
+                        else "답할 것이 없다")
         elif kind == "lead":
             says.append(f'"{value.split(".", 1)[1]}"에 관해서라면 할 말이 있다는 듯 운을 뗀다')
         elif kind == "done":
@@ -107,11 +110,13 @@ def make_scene(story, before, after, turn):
         kind, value = next(iter(item.items()))
         if kind in ("open", "shut"):
             thing = show_line(story, f"볼 것 {story.blocks[value].name}")
-            happening.append(f"{thing}이(가) 열린다" if kind == "open" else f"{thing}이(가) 열리지 않는다")
+            used = turn["action"].get("line")
+            by = f"{ko.ro(show_line(story, used))} " if used else ""
+            happening.append(f"당신이 {by}{ko.eul(thing)} 연다" if kind == "open" else f"{by}{ko.eul(thing)} 열려 했지만 열리지 않는다")
     clock = story.head.clock
     return {"kind": "scene", "intro": story.head.intro if turn["action"]["do"] == "stats" else None,
             "time": ko.clock(clock.start + after["spent"] * clock.step) if clock else None,
-            "place": show_name(story, "곳", place), "desc": story.places[place].desc if first else None,
+            "place": show_name(story, "곳", place), "desc": story.places[place].desc, "again": not first,
             "written": written, "happening": happening,
             "people": [show_name(story, "사람", p) for p in list_people_here(story, after)]}
 
@@ -132,7 +137,8 @@ def list_given(job):
     if job.get("place"):
         given.append(f"곳: {job['place']}" + (f". 모습: {job['desc']}" if job.get("desc") else ""))
     given += [f"이번에 적힌 것: {', '.join(job['written'])}"] if job.get("written") else []
-    given += [f"일어난 일: {' '.join(job['happening'])}"] if job.get("happening") else []
+    if job.get("happening"):
+        given.append(f"{'당신이 없는 곳에서 그 사이 벌어진 일' if job.get('far') else '일어난 일'}: {' '.join(job['happening'])}")
     given += [f"이곳의 사람: {', '.join(job['people'])}"] if job.get("people") else []
     return given
 
@@ -160,7 +166,12 @@ def make_messages(job):
         rules = ["플레이어를 \"당신\"이라 부르고 합니다체로 쓴다.",
                  "받은 대목과 진실 풀이를 모두 담되 여덟 문장을 넘지 않는다." if job["kind"] == "ending"
                  else "두세 문장으로 쓴다.",
-                 "지어내는 것은 날씨, 소리, 빛 같은 분위기뿐이다. 받은 것에 없는 사람, 물건, 흔적은 그리지 않는다."]
+                 "지어내는 것은 날씨, 소리, 빛 같은 분위기뿐이다. 받은 것에 없는 사람, 물건, 흔적은 그리지 않는다.",
+                 "분위기는 곳의 모습과 어긋나지 않게 쓴다. '적막', '정적', '어둠' 같은 말을 버릇처럼 넣지 않는다."]
+        if job.get("far"):
+            rules.append("진행자가 \"그 사이\"로 시작해 다른 곳의 소식을 전하듯 쓴다. 당신은 그 자리에 없으므로 보고 듣는 것처럼 쓰지 않는다.")
+        if job.get("again"):
+            rules.append("이미 와 본 곳이다. 모습은 그리지 않거나 한마디로 줄이되, 모습과 어긋나게 쓰지 않는다.")
         if job.get("people"):
             rules.append("마지막 문장에서 이곳에 있는 사람을 이름으로 알린다.")
         head = "당신은 추리 게임의 서술자다."

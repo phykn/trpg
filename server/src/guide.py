@@ -22,8 +22,8 @@ def make_guide(story, before, after, turn, last):
     if held and not before["withheld"] and not any(b.startswith("꺼림 ") for b in before["opened"]):
         return {"key": "held", "name": held[0]}
     here = list_people_here(story, after)
-    heard = {story.lines[a].name for a in after["notebook"] if story.lines[a].kind == "말"}
-    new = [p for p in here if p not in heard]
+    talked = {p for p, talk in before["talks"].items() if talk["topics"] or talk["passes"]}
+    new = [p for p in here if p not in talked]
     if new and any(c["op"] == "move" for c in changes):
         return {"key": "meet", "name": new[0]}
     idle = after["turn"] - max(after["notebook"].values())

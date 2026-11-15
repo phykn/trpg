@@ -163,16 +163,16 @@ class ViewMaker:
                                              label=ko.use_item(show_name(self.story, "볼 것", self.story.lines[other].name))))
             acts += self.list_bets(lock.addr, LOCK_METHODS)
         if line.kind == "말" and line.name in self.here and addr not in state["struck"] and addr not in state["judged"]:
-            acts += self.list_bets(addr, TALK_METHODS)
+            acts += self.list_bets(addr, TALK_METHODS, person=show_name(self.story, "사람", line.name))
         if line.kind == "사람" and line.name in self.here:
             held = [b for b in self.story.blocks.values() if b.name == line.name and b.addr in state["withheld"]]
             for block in held:
                 acts += self.list_bets(block.addr, TALK_METHODS, block.topic if len(held) > 1 else None)
         return acts
 
-    def list_bets(self, target, methods, topic=None):
+    def list_bets(self, target, methods, topic=None, person=None):
         return [self.add_act({"do": "bet", "target": target, "method": m}, label=ko.bet(
-            m, find_chance(find_bet_bonus(self.story, self.state, target, m)), topic))
+            m, find_chance(find_bet_bonus(self.story, self.state, target, m)), topic, person))
             for m in methods if [target, m] not in self.state["closed"]]
 
     def make_ending(self):

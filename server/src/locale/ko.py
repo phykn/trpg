@@ -19,8 +19,13 @@ def eun(word):
     return f"{word}{'은' if has_batchim(word) else '는'}"
 
 
+def ro(word):
+    code = ord(word[-1]) - 0xAC00
+    return f"{word}{'으로' if has_batchim(word) and code % 28 != 8 else '로'}"
+
+
 def withheld(topic):
-    return f"{eun(topic)} 말을 아낀다"
+    return f"{topic} 이야기에는 말을 아낀다"
 
 
 def hint(text):
@@ -39,8 +44,9 @@ def use_on(lock):
     return f"{lock}에 쓴다 · 틀리면 1턴"
 
 
-def bet(method, chance, topic=None):
-    return f"{topic + ' · ' if topic else ''}{METHODS[method]} · {chance}% · 1턴"
+def bet(method, chance, topic=None, person=None):
+    act = f"{eul(person)} {METHODS[method]}" if person else METHODS[method]
+    return f"{topic + ' · ' if topic else ''}{act} · {chance}% · 1턴"
 
 
 def said(person, text):
@@ -62,7 +68,9 @@ def divider(place, cells):
 
 
 def roll(method, eyes, total):
-    return f"{METHODS[method]} · {eyes[0]}, {eyes[1]} · {total}"
+    bonus = total - sum(eyes)
+    more = f" {'+' if bonus > 0 else '-'} {abs(bonus)}" if bonus else ""
+    return f"{METHODS[method]} · {eyes[0]} + {eyes[1]}{more} = {total}"
 
 
 def note(text):
