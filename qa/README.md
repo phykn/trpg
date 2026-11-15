@@ -23,6 +23,17 @@ After a screen change, play the affected flows of [docs/game/07-screen.md](../do
 
 Passing tests do not show the game is fun. Fun is judged by a person who did not write the story playing a game.
 
+## AI testers
+
+Game QA by agents that do not know the answer. [tester/PROMPT.md](tester/PROMPT.md) holds the personas, the charters and the prompt; each tester plays through the shell player against a QA server of its own, so the app's server and `saves/game` stay untouched:
+
+```bash
+qa/tester/api.sh                                                  # the QA server on 127.0.0.1:8001, saves in qa_test/saves
+PLAY_API=http://127.0.0.1:8001 .venv/bin/python qa/play/play.py look <run>
+```
+
+Each tester writes `qa_test/runs/<run>/report.md`. The lead checks every reported bug against the transcript before fixing it, and moves what is not fixed into [findings.md](findings.md).
+
 ## Shell game
 
 `qa/play/play.py` plays a game through the API of a running `.venv/bin/python server/run_api.py --local`, the way the web client does, and prints what the screen shows. Everything goes to `qa_test/runs/<run>/`: `transcript.md` (each command and its output) and `play.json` (the game id, the view, a command or text still owed).

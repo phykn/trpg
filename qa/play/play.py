@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -23,8 +24,8 @@ class Run:
         self.path = self.dir / "play.json"
         self.state = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
         cfg = local_settings()
-        self.http = httpx.Client(base_url=f"http://{cfg.host}:{cfg.port}", timeout=300,
-                                 auth=(cfg.basic_auth_user, cfg.basic_auth_pass))
+        base = os.environ.get("PLAY_API", f"http://{cfg.host}:{cfg.port}")   # the QA server (qa/tester/api.sh)
+        self.http = httpx.Client(base_url=base, timeout=300, auth=(cfg.basic_auth_user, cfg.basic_auth_pass))
         self.out = []
 
     def show(self, text=""):
