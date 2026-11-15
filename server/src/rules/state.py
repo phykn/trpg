@@ -22,6 +22,25 @@ def start_state(story, seed):
     return {**state, "partner": here[0] if len(here) == 1 else None}
 
 
+def judge_ending(story, state):
+    end, truth = state["conclusion"], story.head.truth
+    answers = {"who": None if end["who"] is None else end["who"] == truth.who}
+    for key, fact in (("how", truth.how), ("why", truth.why)):
+        answers[key] = None if end[key] is None else story.lines[end[key]].shows == fact
+    if end["who"] is None:
+        verdict = "unsolved"
+    elif not answers["who"]:
+        verdict = "wrong"
+    else:
+        verdict = "solved" if answers["how"] and answers["why"] else "who_only"
+    events = []
+    for i, event in enumerate(story.events):
+        result = state["events"].get(str(i)) or ("prevented" if event.guard in state["opened"] else None)
+        if result:
+            events.append([i, result])
+    return {"verdict": verdict, "answers": answers, "events": events}
+
+
 def is_shown(story, state, addr):
     line = story.lines[addr]
     if line.cond and line.cond not in state["notebook"]:

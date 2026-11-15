@@ -16,7 +16,9 @@ LOCK_METHODS = ("sneak", "force")
 
 
 class Refused(ValueError):
-    pass
+    def __init__(self, message, code="not_allowed"):
+        super().__init__(message)
+        self.code = code
 
 
 def roll_dice(seed, turn):
@@ -304,8 +306,10 @@ class Turn:
             raise Refused("nothing to bet on that way")
         if [target, method] in self.state["closed"]:
             raise Refused("that way is closed")
-        self.dice = roll_dice(self.state["seed"], self.number)
-        won = sum(self.dice) + find_bet_bonus(self.story, self.state, target, method) >= 8
+        eyes = roll_dice(self.state["seed"], self.number)
+        total = sum(eyes) + find_bet_bonus(self.story, self.state, target, method)
+        won = total >= 8
+        self.dice = {"method": method, "eyes": eyes, "total": total, "won": won}
         if won and line:
             self.change("judge", line=target, verdict="lying" if line.branch == "거짓말" else "true")
             self.talk.append({"say": target})

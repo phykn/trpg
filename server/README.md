@@ -1,6 +1,6 @@
 # Server
 
-FastAPI + Pydantic v2. The design is in [docs/engine/](../docs/engine/): [02-api.md](../docs/engine/02-api.md) defines the HTTP boundary. For now the app answers only `GET /health`, without auth.
+FastAPI + Pydantic v2. The design is in [docs/engine/](../docs/engine/): [02-api.md](../docs/engine/02-api.md) defines the HTTP boundary. Every route but `GET /health` needs Basic Auth. Typed questions answer 503 and no narration is written until the models are connected.
 
 ## Run
 
@@ -45,6 +45,6 @@ cd server && ../.venv/bin/python -m src.story ../scenarios/<folder>   # check a 
 ```
 server/
   run_api.py   app construction, --local defaults
-  src/         config.py, story/ (reading, references, compiling, checks), rules/ (game state and changes), save.py, service.py
+  src/         config.py, story/ (reading, references, compiling, checks), rules/ (game state and changes), save.py, service.py, view.py, api.py, locale/ko.py, models/
   tests/
 ```

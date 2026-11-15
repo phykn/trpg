@@ -5,15 +5,20 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from src.api import add_error_handlers, router
 from src.config import Settings, load_server_env, settings
+from src.service import GameService
 from src.story.check import load_stories
 from src.story.load import StoryError
 
 SERVER_DIR = Path(__file__).resolve().parent
 
 
-def build_app(cfg):
+def build_app(cfg, service):
     app = FastAPI(title="TRPG")
+    app.state.service = service
+    app.state.basic_auth_user = cfg.basic_auth_user
+    app.state.basic_auth_pass = cfg.basic_auth_pass
     app.add_middleware(CORSMiddleware, allow_origins=cfg.cors_origins, allow_methods=["GET", "POST", "OPTIONS"],
                        allow_headers=["Authorization", "Content-Type", "Accept"])
 
@@ -21,6 +26,8 @@ def build_app(cfg):
     async def health():
         return {"ok": True}
 
+    app.include_router(router)
+    add_error_handlers(app)
     return app
 
 
@@ -46,10 +53,10 @@ def main():
         load_server_env(SERVER_DIR)
         cfg = settings(SERVER_DIR)
     try:
-        load_stories(cfg.scenario_dir)
+        stories = load_stories(cfg.scenario_dir)
     except StoryError as exc:
         raise SystemExit(f"invalid story: {exc}") from None
-    uvicorn.run(build_app(cfg), host=cfg.host, port=cfg.port)
+    uvicorn.run(build_app(cfg, GameService(stories, cfg.save_dir, None)), host=cfg.host, port=cfg.port)
 
 
 if __name__ == "__main__":

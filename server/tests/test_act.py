@@ -87,7 +87,8 @@ def test_a_lock_takes_only_an_item():
 def test_betting_on_a_line_marks_it_or_costs_trust(win):
     seed = find_seed(3, 1, win)
     state, rs = play(seed, [STATS, ask("밤"), bet(CREW, "soothe")])
-    assert rs[2]["dice"] == roll_dice(seed, 3) and state["spent"] == 1
+    assert rs[2]["dice"] == {"method": "soothe", "eyes": roll_dice(seed, 3), "total": sum(roll_dice(seed, 3)) + 1,
+                           "won": win} and state["spent"] == 1
     assert state["judged"] == ({CREW: "true"} if win else {})
     assert state["closed"] == ([] if win else [[CREW, "soothe"]]) and state["hints"] == []
     assert state["attitudes"]["오토"]["trust"] == (1 if win else -1)

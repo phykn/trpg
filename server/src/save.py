@@ -10,7 +10,9 @@ FORMAT = 1
 
 
 class SaveError(ValueError):
-    pass
+    def __init__(self, message, reason="broken"):
+        super().__init__(message)
+        self.reason = reason
 
 
 def make_save(game, story, seed, made):
@@ -36,13 +38,15 @@ def read_save(path):
         data = json.loads(path.read_text(encoding="utf-8"))
         head = data["head"]
         if head["format"] != FORMAT:
-            raise SaveError(f"format {head['format']} has no way to open")
+            raise SaveError(f"{path.name}: format {head['format']} has no way to open", "incompatible")
         story = Story(StoryFile.model_validate(data["story"]))
         if story.mark != head["mark"]:
             raise SaveError("the story copy does not match its mark")
         state = start_state(story, head["seed"])
         for turn in data["turns"]:
             state = apply_turn(story, state, turn["changes"])
+    except SaveError:
+        raise
     except (OSError, ValueError, KeyError, TypeError) as exc:
         raise SaveError(f"{path.name}: {exc}") from None
     return data, story, state
