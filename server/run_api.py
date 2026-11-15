@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import os
 from pathlib import Path
 
@@ -7,6 +8,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.api import add_error_handlers, router
 from src.config import Settings, load_server_env, settings
+from src.models import ModelUnavailable
+from src.models.decision import DecisionClient
+from src.models.llm import LLMClient
 from src.service import GameService
 from src.story.check import load_stories
 from src.story.load import StoryError
@@ -29,6 +33,13 @@ def build_app(cfg, service):
     app.include_router(router)
     add_error_handlers(app)
     return app
+
+
+async def check_models(cfg):
+    decision = DecisionClient(cfg.decision_base_url, cfg.decision_model)
+    llm = LLMClient(cfg.llm_base_url, cfg.llm_model)
+    await decision.check()
+    await llm.check()
 
 
 def local_settings():
@@ -56,6 +67,10 @@ def main():
         stories = load_stories(cfg.scenario_dir)
     except StoryError as exc:
         raise SystemExit(f"invalid story: {exc}") from None
+    try:
+        asyncio.run(check_models(cfg))
+    except (ValueError, ModelUnavailable) as exc:
+        raise SystemExit(f"models: {exc}") from None
     uvicorn.run(build_app(cfg, GameService(stories, cfg.save_dir, None)), host=cfg.host, port=cfg.port)
 
 

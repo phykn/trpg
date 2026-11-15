@@ -7,7 +7,7 @@ from src.models.decision import DECISION_MODELS
 from src.models.llm import LLM_MODELS
 cfg = run_api.local_settings()
 print(json.dumps({
-    "decision": {"url": cfg.decision_base_url + "/v1/models", "models": {k: [v.run] for k, v in DECISION_MODELS.items()}},
+    "decision": {"url": cfg.decision_base_url + "/v1/info", "models": {k: [v] for k, v in DECISION_MODELS.items()}},
     "llm": {"url": cfg.llm_base_url + "/models", "models": {k: list(v.ids) for k, v in LLM_MODELS.items()}},
 }))
 """
@@ -19,7 +19,7 @@ private struct Config: Decodable {
 }
 
 // Shows which engine model each model server has loaded, and hands those names to the API at start, so it runs
-// with whatever LOCAL-MODELS loaded. The API still checks them itself (DecisionClient.check, LLMClient.resolve_model).
+// with whatever LOCAL-MODELS loaded. The API still checks them itself (DecisionClient.check, LLMClient.check).
 final class ModelBar: NSView {
     private enum State { case unknown, off, empty, other([String]), on(String) }
 
@@ -46,7 +46,7 @@ final class ModelBar: NSView {
 
     private let roles = [
         Role(env: "DECISION_MODEL", title: "Decision") { obj in
-            (obj["models"] as? [[String: Any]] ?? []).compactMap { $0["run"] as? String }
+            (obj["run"] as? String).map { [$0] } ?? []
         },
         Role(env: "LLM_MODEL", title: "Narration") { obj in
             let ms = obj["data"] as? [[String: Any]] ?? []

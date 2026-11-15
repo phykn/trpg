@@ -1,6 +1,6 @@
 # Server
 
-FastAPI + Pydantic v2. The design is in [docs/engine/](../docs/engine/): [02-api.md](../docs/engine/02-api.md) defines the HTTP boundary. Every route but `GET /health` needs Basic Auth. Typed questions answer 503 and no narration is written until the models are connected.
+FastAPI + Pydantic v2. The design is in [docs/engine/](../docs/engine/): [02-api.md](../docs/engine/02-api.md) defines the HTTP boundary. Every route but `GET /health` needs Basic Auth. Startup checks both models ([01-ai.md](../docs/engine/01-ai.md)) and warms them, which can take a minute; a typed question still answers 503 and no narration is written.
 
 ## Run
 

@@ -20,3 +20,11 @@ def test_a_broken_story_stops_startup(tmp_path, monkeypatch):
     monkeypatch.setattr(run_api.uvicorn, "run", lambda *a, **k: pytest.fail("the server started"))
     with pytest.raises(SystemExit, match="invalid story"):
         run_api.main()
+
+
+def test_an_unknown_model_stops_startup(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["run_api.py", "--local"])
+    monkeypatch.setenv("DECISION_MODEL", "malkuth")
+    monkeypatch.setattr(run_api.uvicorn, "run", lambda *a, **k: pytest.fail("the server started"))
+    with pytest.raises(SystemExit, match="malkuth"):
+        run_api.main()
