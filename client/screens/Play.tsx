@@ -22,8 +22,8 @@ type Open =
   | { kind: 'pick'; question: Question }
   | null;
 
-export function Play({ view, log, phase, send, onResend, onRetryText }: {
-  view: GameView; log: Entry[]; phase: Phase; send: (body: CommandBody) => void; onResend: () => void;
+export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }: {
+  view: GameView; log: Entry[]; outgoing: string | null; phase: Phase; send: (body: CommandBody) => void; onResend: () => void;
   onRetryText: () => void;
 }) {
   const [open, setOpen] = useState<Open>(null);
@@ -68,7 +68,8 @@ export function Play({ view, log, phase, send, onResend, onRetryText }: {
     <View className="min-h-0 flex-1">
       <TopBar view={view} onPlace={playing && view.place.moves.length ? () => setOpen({ kind: 'moves' }) : undefined}
         onNotebook={() => setOpen({ kind: 'notebook', group: 'places' })} />
-      <ChatLog log={log} people={met} onNote={openNote} />
+      <ChatLog log={log} people={met} outgoing={outgoing} onNote={openNote}
+        waiting={phase === 'sending' || phase === 'streaming' ? phase : null} />
       <View className="border-t border-border-default">
         <PeopleRow people={view.people} met={met} locked={locked} onFace={(id) => send({ do: id })} />
         {phase === 'stuck' || phase === 'text_error' ? (

@@ -12,7 +12,6 @@ export const ko = {
   send: '보내기',
   notebook: '수첩',
   people: '이곳의 사람',
-  dm: 'DM',
   moves: '갈 곳',
   unvisited: '안 가 봄',
   cells: (n: number) => `${n}턴`,

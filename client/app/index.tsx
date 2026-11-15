@@ -36,7 +36,7 @@ export default function Index() {
   }
   return (
     <Frame title={view.story.title}>
-      <Play view={view} log={g.log} phase={phase} send={g.send} onResend={g.resend} onRetryText={g.retryText} />
+      <Play view={view} log={g.log} outgoing={g.outgoing} phase={phase} send={g.send} onResend={g.resend} onRetryText={g.retryText} />
     </Frame>
   );
 }

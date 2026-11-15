@@ -157,5 +157,9 @@ export function useGame() {
     setPhase('title');
   }
 
-  return { phase, stories, saved, view, log, start, resume, send, resend, retryText, leave };
+  // What the player just typed shows at once, before the server answers with the turn that holds it.
+  const p = pending.current;
+  const outgoing = phase === 'sending' && p?.kind === 'command' && 'text' in p.body && p.body.text ? p.body.text : null;
+
+  return { phase, stories, saved, view, log, outgoing, start, resume, send, resend, retryText, leave };
 }
