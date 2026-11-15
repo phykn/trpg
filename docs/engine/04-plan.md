@@ -15,7 +15,7 @@
 |---|---|---|
 | **서버** | `config.py`, `run_api.py`, `models/`(카나나와 gemma4에 맞게 고친다), `api.py`의 인증과 틀, `onto/save.py`의 한꺼번에 쓰기 | `onto/`의 나머지, `rules/`, `story/`, `lang/`, `interpret.py`, `narrate.py`, `cards.py`, `jobs.py`, `view.py`, `service.py`, `fun.py`, `locale/ko.py`의 옛 글, 옛 시험 |
 | **화면** | `components/ui/`(단추, 아이콘, 시트, 알림, 움직임, 대화 상자), `design/`, `logic/useViewportHeight.ts`, `services/storage.ts`, Expo와 NativeWind 설정 | `components/game/`, `screens/`, `logic/useGame.ts`, `logic/reveal.ts`, `logic/useLog.ts`, `services/api.ts`와 `types.ts`, `locale/ko.ts`의 옛 글, 옛 시험 |
-| **그 밖** | `app/`(Mac 앱), `qa/`의 틀(`common.py`, `decision/bench.py`, `play/`) | `scenarios/skeleton`, `scenarios/pass`, `qa/`의 옛 결과와 옛 엔진에만 맞는 것 |
+| **그 밖** | `app/`(Mac 앱), `qa/README.md`와 `qa/findings.md`의 틀 | `scenarios/skeleton`, `scenarios/pass`, `qa/`의 옛 도구와 결과. 알아듣기 벤치는 알아듣기 시험(`src.story.evals`)이 맡고, `qa/play/`는 새 API로 새로 쓴다 |
 
 - 남기는 것도 새 문서에 맞지 않는 곳은 고친다.
 - `saves/`의 옛 판은 읽지 않는다(data/05 4절). 지우지는 않고 둔다.
@@ -33,7 +33,7 @@
 2026-11-15에 문장 14개로 먼저 보았다. 묻는 법을 정했고 13개를 맞혔다(engine/01 6절). 남은 것은 문장을 늘려 문턱과 화제 둘의 셈을 정하는 일이다.
 
 - 첫 이야기([game/10](../game/10-first-story.md))의 사람과 화제로 알아듣기 물음(engine/01 1절)을 만든다. 시험 문장 50개 안팎에 기대하는 보기를 단다.
-- `qa/decision/bench.py`로 카나나에 돌린다. 맞힘, 되묻기, 틀림의 몫을 본다.
+- 알아듣기 시험(`python -m src.story.evals`)으로 카나나에 돌린다. 맞힘, 되묻기, 틀림의 몫을 본다.
 - 카나나의 판과 서버 이름, `/v1/systemone`으로 묻는지를 여기서 확인한다(engine/01 6절).
 - 끝: 결과를 `qa_test/runs/<run>/`에 남긴다. 틀림이 많으면 2단계에 앞서 묻는 법을 고친다. 묻는 말을 늘리거나, 물음을 쪼개거나, 문턱을 바꾼다.
 
@@ -80,7 +80,7 @@
 
 - 쓴 사람이 아닌 사람이 첫 이야기를 한 판 한다(game/08 7절).
 - 재미를 보는 지표를 `game/11-fun.md`로 쓴다. 막힘을 연 차례, 헛걸음, 주사위를 건 몫, 결론의 맞음 같은 것이다.
-- `qa/play/`를 새 API에 맞춘다.
+- `qa/play/play.py`로 셸에서 새 API를 거쳐 한 판을 할 수 있게 한다.
 - 끝: 찾은 것을 `qa/findings.md`에 적고, 숫자(칸 수, 성공률, 문턱)를 고칠지 정한다.
 
 ## 3. 단계마다 지키는 것

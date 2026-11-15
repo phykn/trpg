@@ -5,7 +5,7 @@ A Korean mystery TRPG for the web. The player questions people in Korean and pre
 - The **decision model** (Kanana, `:8081`) answers closed questions the engine builds, such as which topic a sentence asks about. It never invents anything.
 - The **narration model** (gemma4, `:8082`, always non-thinking) voices only what the rules decided. The decision model checks the text against the facts, with up to two rewrites.
 
-The game is being rebuilt. The old engine is gone; the server plays a story through the routes of [docs/engine/02-api.md](docs/engine/02-api.md), reads typed questions with Kanana and streams gemma4's answers and scenes. The client plays a story from the title to the ending.
+The server plays a story through the routes of [docs/engine/02-api.md](docs/engine/02-api.md), reads typed questions with Kanana and streams gemma4's answers and scenes. The client plays a story from the title to the ending.
 
 ## Design docs
 
