@@ -45,6 +45,6 @@ cd server && ../.venv/bin/python -m src.story ../scenarios/<folder>   # check a 
 ```
 server/
   run_api.py   app construction, --local defaults
-  src/         config.py, story/ (reading, references, compiling, checks), rules/ (game state and changes)
+  src/         config.py, story/ (reading, references, compiling, checks), rules/ (game state and changes), save.py, service.py
   tests/
 ```

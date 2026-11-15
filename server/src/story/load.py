@@ -9,6 +9,7 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
+    PlainSerializer,
     ValidationError,
     model_validator,
 )
@@ -37,6 +38,9 @@ def to_minutes(value):
         hours, _, mins = value.partition(":")
         return int(hours) * 60 + int(mins)
     return value
+
+
+YesNo = Annotated[bool, BeforeValidator(to_bool), PlainSerializer(lambda value: "예" if value else "아니오")]
 
 
 class Shape(BaseModel):
@@ -97,7 +101,7 @@ class Person(Shape):
 
 class Lock(Shape):
     weak: str = Field(alias="약점")
-    hard: Annotated[bool, BeforeValidator(to_bool)] = Field(False, alias="단단한가")
+    hard: YesNo = Field(False, alias="단단한가")
     owner: str | None = Field(None, alias="주인")
     hint: str = Field(alias="실마리")
     contents: list[str] = Field(alias="안에 든 것", min_length=1)
@@ -106,7 +110,7 @@ class Lock(Shape):
 class Thing(Shape):
     place: str | None = Field(None, alias="곳")
     text: str | None = Field(None, alias="줄")
-    item: Annotated[bool, BeforeValidator(to_bool)] = Field(False, alias="물건인가")
+    item: YesNo = Field(False, alias="물건인가")
     props: list[str] = Field([], alias="성질")
     shows: str | None = Field(None, alias="보여 주는 사실")
     tells: list[str] = Field([], alias="알리는 것")
@@ -390,7 +394,8 @@ class Block(Record):
 class Story:
     def __init__(self, raw):
         self.raw = raw
-        self.mark = hashlib.sha256(json.dumps(raw.model_dump(by_alias=True), ensure_ascii=False).encode()).hexdigest()
+        self.copy = raw.model_dump(by_alias=True, exclude_unset=True)
+        self.mark = hashlib.sha256(json.dumps(self.copy, ensure_ascii=False).encode()).hexdigest()
         self.head, self.facts, self.props = raw.head, raw.facts, raw.props
         self.places, self.things, self.people = raw.places, raw.things, raw.people
         self.events, self.endings = raw.events, raw.endings
