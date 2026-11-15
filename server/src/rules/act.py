@@ -60,6 +60,19 @@ def find_path(story, state, place):
     return paths.get(place)
 
 
+def list_blocks_here(story, state):
+    here = list_people_here(story, state)
+    blocks = []
+    for block in story.blocks.values():
+        if block.addr in state["opened"] or not is_block_shown(story, state, block.addr):
+            continue
+        thing = f"볼 것 {block.name}"
+        if block.name in here if block.kind != "잠김" else (
+                thing in state["notebook"] and story.lines[thing].place == state["place"]):
+            blocks.append(block)
+    return blocks
+
+
 def does_fit(story, addr, block):
     line = story.lines[addr]
     if line.branch == "거짓말" or block.kind == "꺼림" and line.kind == "말" and line.name == block.name:
@@ -96,6 +109,7 @@ class Turn:
         self.state = state
         self.number = state["turn"] + 1
         self.changes = []
+        self.forced = ()
         self.fresh = []
         self.dice = None
         self.happened = []
@@ -132,7 +146,7 @@ class Turn:
         self.write_up()
 
     def settle(self, i, event):
-        if event.guard in self.state["opened"]:
+        if event.guard in self.state["opened"] and i not in self.forced:
             self.change("settle", event=i, result="prevented")
             self.happened.append({"event": i, "result": "prevented"})
             return
@@ -226,16 +240,16 @@ class Turn:
         line, target = action["line"], action["target"]
         if line not in self.state["notebook"] or self.story.lines[line].kind not in ("볼 것", "말"):
             raise Refused("present a clue from the notebook")
+        blocks = list_blocks_here(self.story, self.state)
         if target in list_people_here(self.story, self.state):
-            blocks = [b for b in self.story.blocks.values() if b.name == target and b.kind != "잠김"]
-        elif target in self.reachable_locks():
+            blocks = [b for b in blocks if b.name == target and b.kind != "잠김"]
+        elif target in [b.addr for b in blocks if b.kind == "잠김"]:
             if not self.story.lines[line].props:
                 raise Refused("only an item opens a lock")
             blocks = [self.story.blocks[target]]
         else:
             raise Refused("present to someone or something here")
-        fits = [b for b in blocks if b.addr not in self.state["opened"] and is_block_shown(self.story, self.state, b.addr)
-                and does_fit(self.story, line, b)]
+        fits = [b for b in blocks if does_fit(self.story, line, b)]
         for block in sorted(fits, key=lambda b: ("거짓말", "꺼림", "잠김").index(b.kind)):
             self.open_block(block)
             if block.kind == "꺼림":
@@ -252,11 +266,6 @@ class Turn:
         else:
             self.talk.append({"shut": target})
         self.spend()
-
-    def reachable_locks(self):
-        return [b.addr for b in self.story.blocks.values() if b.kind == "잠김" and b.addr not in self.state["opened"]
-                and f"볼 것 {b.name}" in self.state["notebook"] and self.story.lines[f"볼 것 {b.name}"].place ==
-                self.state["place"] and is_block_shown(self.story, self.state, b.addr)]
 
     def open_block(self, block):
         if block.kind == "거짓말":
@@ -288,7 +297,8 @@ class Turn:
         elif block and block.kind == "꺼림" and target in self.state["withheld"] and block.name in here and \
                 method in TALK_METHODS:
             person = block.name
-        elif target in self.reachable_locks() and method in LOCK_METHODS:
+        elif block and block.kind == "잠김" and block in list_blocks_here(self.story, self.state) and \
+                method in LOCK_METHODS:
             person = block.owner
         else:
             raise Refused("nothing to bet on that way")

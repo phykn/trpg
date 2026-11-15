@@ -6,6 +6,8 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.config import Settings, load_server_env, settings
+from src.story.check import load_stories
+from src.story.load import StoryError
 
 SERVER_DIR = Path(__file__).resolve().parent
 
@@ -43,6 +45,10 @@ def main():
     else:
         load_server_env(SERVER_DIR)
         cfg = settings(SERVER_DIR)
+    try:
+        load_stories(cfg.scenario_dir)
+    except StoryError as exc:
+        raise SystemExit(f"invalid story: {exc}") from None
     uvicorn.run(build_app(cfg), host=cfg.host, port=cfg.port)
 
 
