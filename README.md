@@ -10,13 +10,13 @@ A web TRPG engine. The player types any action as a Korean sentence, the rules d
 
 | Doc | Defines |
 |---|---|
-| [ontology.md](docs/ontology.md) | World state, observation, change operations, saves |
-| [story.md](docs/story.md) | Story file format and validation |
-| [rule.md](docs/rule.md) | Candidate actions, rolls, time, people |
-| [engine.md](docs/engine.md) | Interpretation, cards, narration, turn protocol |
-| [api.md](docs/api.md) | HTTP routes and response shapes |
-| [ui.md](docs/ui.md) | Screens, the roll, client state |
-| [fun.md](docs/fun.md) | Fun metrics and hypotheses |
+| [ontology.md](docs/old/ontology.md) | World state, observation, change operations, saves |
+| [story.md](docs/old/story.md) | Story file format and validation |
+| [rule.md](docs/old/rule.md) | Candidate actions, rolls, time, people |
+| [engine.md](docs/old/engine.md) | Interpretation, cards, narration, turn protocol |
+| [api.md](docs/old/api.md) | HTTP routes and response shapes |
+| [ui.md](docs/old/ui.md) | Screens, the roll, client state |
+| [fun.md](docs/old/fun.md) | Fun metrics and hypotheses |
 
 ## Setup
 
@@ -57,7 +57,7 @@ Each turn is saved before its narration is written. The browser keeps only the g
 
 ## Write a story
 
-Write `scenarios/<folder>/story.yaml` in the format of [docs/story.md](docs/story.md), starting from [scenarios/skeleton/story.yaml](scenarios/skeleton/story.yaml). No code changes are needed. The server validates every story at startup and refuses to start if one fails; to validate earlier, use the command in [server/README.md](server/README.md#commands).
+Write `scenarios/<folder>/story.yaml` in the format of [docs/old/story.md](docs/old/story.md), starting from [scenarios/skeleton/story.yaml](scenarios/skeleton/story.yaml). No code changes are needed. The server validates every story at startup and refuses to start if one fails; to validate earlier, use the command in [server/README.md](server/README.md#commands).
 
 ## Where to change things
 

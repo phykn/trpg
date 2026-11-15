@@ -35,7 +35,7 @@ The run exits 1 on any survivor or stale mutant. When you fix a bug, add a mutan
 
 ## Interpretation evals
 
-The evals are a gate. A case in `evals.yaml` that fails without a `known: "<why>"` mark is a **regression**. A case where a model gave no answer (an error, or a call past `--timeout`, 60 s by default) is **unanswered**. Either one exits 1. A `known` case that passes is printed as a **fix**: remove its mark in the same change. **Fragile** lines name cases whose deciding probability lies within 0.05 of its threshold, so a flip there may be noise; check them before calling a change a regression or an improvement. Mark a regression `known` only when the change accepts that miss, and say so in the report. Format: [docs/story.md](../docs/story.md) section 6.
+The evals are a gate. A case in `evals.yaml` that fails without a `known: "<why>"` mark is a **regression**. A case where a model gave no answer (an error, or a call past `--timeout`, 60 s by default) is **unanswered**. Either one exits 1. A `known` case that passes is printed as a **fix**: remove its mark in the same change. **Fragile** lines name cases whose deciding probability lies within 0.05 of its threshold, so a flip there may be noise; check them before calling a change a regression or an improvement. Mark a regression `known` only when the change accepts that miss, and say so in the report. Format: [docs/old/story.md](../docs/old/story.md) section 6.
 
 ## Narration bench
 
@@ -105,6 +105,6 @@ cd server && ../.venv/bin/python -m src.story.evals ../scenarios/skeleton --out 
 
 ## Real UI check
 
-After a screen change, play the flows in [docs/ui.md](../docs/ui.md) 6.2 at 320×568, 412×915 and desktop width, and record numbered turns and screenshots in `qa_test/runs/<run>/turns.md`. A change to `useGame.ts`, `services/` or a dialog also plays the Recovery flows. End `turns.md` with the 6.2 flows the run did not cover, so the next run knows what is still unchecked.
+After a screen change, play the flows in [docs/old/ui.md](../docs/old/ui.md) 6.2 at 320×568, 412×915 and desktop width, and record numbered turns and screenshots in `qa_test/runs/<run>/turns.md`. A change to `useGame.ts`, `services/` or a dialog also plays the Recovery flows. End `turns.md` with the 6.2 flows the run did not cover, so the next run knows what is still unchecked.
 
-Passing tests and bench scores do not show the game is fun. Fun is judged by the metrics in [docs/fun.md](../docs/fun.md), by playtests, and finally by a person playing a game.
+Passing tests and bench scores do not show the game is fun. Fun is judged by the metrics in [docs/old/fun.md](../docs/old/fun.md), by playtests, and finally by a person playing a game.

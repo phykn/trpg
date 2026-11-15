@@ -12,7 +12,7 @@ Does the world feel natural, and does it feel like a game? A tester plays one ga
 .venv/bin/python qa/play/play.py press play-3-explorer g1            # growth, when it is offered
 .venv/bin/python qa/play/play.py retry play-3-explorer               # after "응답을 받지 못했습니다" or "서술을 받지 못했습니다"
 .venv/bin/python qa/play/play.py look play-3-explorer                # the screen again
-.venv/bin/python qa/play/play.py report play-3-explorer              # docs/fun.md metrics, at the end
+.venv/bin/python qa/play/play.py report play-3-explorer              # docs/old/fun.md metrics, at the end
 ```
 
 - Every `say`, `pick`, `cancel` and `press` is one command, numbered in the transcript; turn N in notes means command N. A sentence that opens a card and the pick that answers it are two commands. `retry` finishes the command before it and keeps its number.

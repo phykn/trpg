@@ -1,6 +1,6 @@
 # Client
 
-The mobile web client (Expo, React Native Web, NativeWind). Its screens, state machine and module map are in [docs/ui.md](../docs/ui.md); it talks to the server only through [docs/api.md](../docs/api.md).
+The mobile web client (Expo, React Native Web, NativeWind). Its screens, state machine and module map are in [docs/old/ui.md](../docs/old/ui.md); it talks to the server only through [docs/old/api.md](../docs/old/api.md).
 
 ## Commands
 

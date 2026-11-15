@@ -472,7 +472,7 @@ Each run lives in qa_test/runs/RUN/: saves/ (the game), transcript.md (what the 
         raise SystemExit(f"no game in {run.dir}; start one with `new`")
     if a.cmd == "report":
         m = measure(sorted((run.dir / "saves").glob("*.json")), load_all(common.checkout() / "scenarios"), time.time())
-        return run.out("## 지표 (docs/fun.md 4)\n" + table(m))
+        return run.out("## 지표 (docs/old/fun.md 4)\n" + table(m))
     async with connect(run) as api:
         if a.cmd == "look":
             text = await panel(api, run, await adopt(api, run), before=False)

@@ -15,7 +15,7 @@ scenarios/<폴더>/   폴더 이름은 자유. 이야기 id는 story.yaml 안의
   evals.yaml    해석 평가 문장 (시험 자료. 이야기의 일부가 아니다)
 ```
 
-본보기는 둘이다. [scenarios/skeleton/story.yaml](../scenarios/skeleton/story.yaml)은 가장 작은 이야기다. [scenarios/pass/story.yaml](../scenarios/pass/story.yaml)은 세 장짜리이고, skeleton에 없는 것(`uses`, `consume`, `forget`, `until`이 붙은 `avoids`, 글이 붙은 깃발)을 쓴다.
+본보기는 둘이다. [scenarios/skeleton/story.yaml](../../scenarios/skeleton/story.yaml)은 가장 작은 이야기다. [scenarios/pass/story.yaml](../../scenarios/pass/story.yaml)은 세 장짜리이고, skeleton에 없는 것(`uses`, `consume`, `forget`, `until`이 붙은 `avoids`, 글이 붙은 깃발)을 쓴다.
 
 ## 1. 파일 쓰는 법
 
