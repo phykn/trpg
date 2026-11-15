@@ -15,7 +15,7 @@ export const ko = {
   dm: 'DM',
   moves: '갈 곳',
   unvisited: '안 가 봄',
-  cells: (n: number) => `${n}칸`,
+  cells: (n: number) => `${n}턴`,
   groups: { places: '곳', people: '사람', items: '물건', seen: '본 것', heard: '들은 말' },
   conclude: '결론 내기',
   conclusion: '결론',

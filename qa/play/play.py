@@ -127,17 +127,17 @@ class Run:
                 self.show(f"{label}: {' / '.join(e['missed'][key]) or '-'}")
             return
         self.show(f"\n[{v['place']['name']}] {v['time']['text']} · 수첩 {v['badge']}"
-                 + (" · 마지막 칸들" if v["time"]["last"] else ""))
+                 + (" · 마지막 턴들" if v["time"]["last"] else ""))
         if v["people"]:
             self.show("사람: " + "  ".join(f"{p['act'] or '-'} {p['name']}{'*' if p['partner'] else ''}"
                                          for p in v["people"]))
         if v["stage"] == "play" and v["place"]["moves"]:
-            self.show("갈 곳: " + "  ".join(f"{m['id']} {m['name']} {m['cells']}칸{' 안 가 봄' if m['unvisited'] else ''}"
+            self.show("갈 곳: " + "  ".join(f"{m['id']} {m['name']} {m['cells']}턴{' 안 가 봄' if m['unvisited'] else ''}"
                                           for m in v["place"]["moves"]))
         new = {g: len([line for line in lines if line["new"]]) for g, lines in v["notebook"].items()}
         self.show("새 줄: " + ", ".join(f"{GROUPS[g]} {n}" for g, n in new.items() if n) if any(new.values()) else "새 줄: -")
         if v["stage"] == "closing":
-            self.show(f"칸이 다 됐다. 결론: 누가 {v['conclude']['who']}, 단서 {v['conclude']['clues']}")
+            self.show(f"턴이 다 됐다. 결론: 누가 {v['conclude']['who']}, 단서 {v['conclude']['clues']}")
 
     def pick_lines(self, which):
         lines = [(g, line) for g, group in self.state["view"]["notebook"].items() for line in group]

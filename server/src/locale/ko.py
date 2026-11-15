@@ -32,19 +32,19 @@ def hint(text):
 
 
 def present_to(person):
-    return f"{person}에게 내민다 · 틀리면 1칸"
+    return f"{person}에게 내민다 · 틀리면 1턴"
 
 
 def use_item(item):
-    return f"{eul(item)} 쓴다 · 틀리면 1칸"
+    return f"{eul(item)} 쓴다 · 틀리면 1턴"
 
 
 def use_on(lock):
-    return f"{lock}에 쓴다 · 틀리면 1칸"
+    return f"{lock}에 쓴다 · 틀리면 1턴"
 
 
 def bet(method, chance, topic=None):
-    return f"{topic + ' · ' if topic else ''}{METHODS[method]} · {chance}% · 1칸"
+    return f"{topic + ' · ' if topic else ''}{METHODS[method]} · {chance}% · 1턴"
 
 
 def said(person, text):
@@ -58,11 +58,11 @@ def clock(minutes):
 
 
 def time_bar(clock_text, left):
-    return f"{clock_text} · {left}칸" if clock_text else f"{left}칸"
+    return f"{clock_text} · {left}턴" if clock_text else f"{left}턴"
 
 
 def divider(place, cells):
-    return f"── {place} · {cells}칸 ──"
+    return f"── {place} · {cells}턴 ──"
 
 
 def roll(method, eyes, total):
@@ -106,15 +106,15 @@ def missed_topic(person, topic):
 
 
 GUIDE = {
-    "talk": "곁에 {name} 있습니다. 아래 칸에 묻고 싶은 것을 써서 말을 걸어 보세요.",
+    "talk": "곁에 {name} 있습니다. 아래 입력란에 묻고 싶은 것을 써서 말을 걸어 보세요.",
     "move": "위 띠의 곳 이름을 누르면 다른 곳으로 옮겨 갈 수 있습니다.",
-    "notebook": "들은 말과 본 것은 수첩에 적힙니다. 위 띠의 곳 이름을 누르면 다른 곳으로 옮겨 갈 수 있고, 옮길 때마다 칸이 갑니다.",
+    "notebook": "들은 말과 본 것은 수첩에 적힙니다. 위 띠의 곳 이름을 누르면 다른 곳으로 옮겨 갈 수 있고, 옮길 때마다 턴이 지납니다.",
     "present": "말이 서로 어긋난다 싶으면, 수첩 알림이나 수첩의 줄을 눌러 그 줄을 상대에게 내밀어 보세요.",
     "held": "{name} 말을 아낍니다. 그 마음을 움직일 만한 줄을 수첩에서 골라 내밀어 보세요.",
     "broke": "거짓말을 깼습니다. 앞의 말에 줄이 그어지고, 새로 들은 말이 다음 길을 엽니다.",
     "lock": "잠긴 것이 있습니다. 수첩에서 그 줄을 누르면 가진 물건을 쓰거나 손을 써서 열어 볼 수 있습니다.",
-    "omen": "무언가 벌어지려 합니다. 칸이 더 가기 전에 막을 길이 있을지도 모릅니다.",
-    "conclude": "칸이 다 됐습니다. 수첩에서 누가, 어떻게, 왜를 골라 결론을 내세요.",
+    "omen": "무언가 벌어지려 합니다. 턴이 더 지나기 전에 막을 길이 있을지도 모릅니다.",
+    "conclude": "턴이 다 됐습니다. 수첩에서 누가, 어떻게, 왜를 골라 결론을 내세요.",
     "unvisited": "아직 {name}에는 가 보지 않았습니다.",
     "ask": "{name}에게 다른 것을 물어보세요. 수첩의 줄을 내밀어 봐도 좋습니다.",
     "look": "수첩을 다시 훑어보세요. 서로 어긋나는 줄이 있을지 모릅니다.",
