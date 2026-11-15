@@ -114,11 +114,18 @@ class ViewMaker:
 
     def make_notebook(self):
         book = {group: [] for group in GROUPS.values()}
+        speakers = []
         for addr in self.state["notebook"]:
-            book[GROUPS[find_group(self.story, addr)]].append({
+            group = GROUPS[find_group(self.story, addr)]
+            book[group].append({
                 "id": self.ids[addr], "text": show_line(self.story, addr), "marks": self.list_marks(addr),
                 "struck": addr in self.state["struck"], "new": addr not in self.state["read"],
                 "acts": self.list_acts(addr) if self.stage == "play" else []})
+            if group == "heard":
+                speakers.append(self.story.lines[addr].name)
+        order = list(dict.fromkeys(speakers))
+        book["heard"] = [line for _, line in sorted(zip(speakers, book["heard"], strict=True),
+                                                    key=lambda pair: order.index(pair[0]))]
         return book
 
     def list_marks(self, addr):

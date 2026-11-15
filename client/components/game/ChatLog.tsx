@@ -1,9 +1,10 @@
 import { useRef } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { pressed } from '@/components/ui/Button';
 import type { Entry } from '@/logic/useGame';
 
-function Item({ entry }: { entry: Entry }) {
+function Item({ entry, onNote }: { entry: Entry; onNote: (lines: number[]) => void }) {
   switch (entry.kind) {
     case 'said':
       return (
@@ -18,7 +19,11 @@ function Item({ entry }: { entry: Entry }) {
         <Text className={`font-mono-medium text-panel ${entry.won ? 'text-health-fg' : 'text-danger-fg'}`}>{entry.text}</Text>
       );
     case 'note':
-      return <Text className="font-sans text-chip italic text-gold-fg">{entry.text}</Text>;
+      return (
+        <Pressable accessibilityRole="button" onPress={() => onNote(entry.lines)} style={pressed} className="self-start">
+          <Text className="font-sans text-chip italic text-gold-fg">{entry.text}</Text>
+        </Pressable>
+      );
     case 'omen':
     case 'event':
       return entry.text ? (
@@ -37,12 +42,12 @@ function Item({ entry }: { entry: Entry }) {
   }
 }
 
-export function ChatLog({ log }: { log: Entry[] }) {
+export function ChatLog({ log, onNote }: { log: Entry[]; onNote: (lines: number[]) => void }) {
   const ref = useRef<ScrollView>(null);
   return (
     <ScrollView ref={ref} className="min-h-0 flex-1" contentContainerClassName="gap-3 px-4 py-4"
       onContentSizeChange={() => ref.current?.scrollToEnd({ animated: false })}>
-      {log.map((entry) => <Item key={entry.key} entry={entry} />)}
+      {log.map((entry) => <Item key={entry.key} entry={entry} onNote={onNote} />)}
     </ScrollView>
   );
 }

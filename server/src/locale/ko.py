@@ -40,7 +40,7 @@ def use_on(lock):
 
 
 def bet(method, chance, topic=None):
-    return f"{topic + ' · ' if topic else ''}{METHODS[method]} · {chance}%"
+    return f"{topic + ' · ' if topic else ''}{METHODS[method]} · {chance}% · 1칸"
 
 
 def said(person, text):

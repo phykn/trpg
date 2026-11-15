@@ -12,4 +12,8 @@ export const ko = {
   send: '보내기',
   notebook: '수첩',
   people: '이곳의 사람',
+  moves: '갈 곳',
+  unvisited: '안 가 봄',
+  cells: (n: number) => `${n}칸`,
+  groups: { places: '곳', people: '사람', items: '물건', seen: '본 것', heard: '들은 말' },
 };

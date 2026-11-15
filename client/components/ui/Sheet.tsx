@@ -9,19 +9,21 @@ import { Icon, type IconName } from './Icon';
 import { useEnter } from './motion';
 import { useDialog } from './useDialog';
 
-// A card that rises from the bottom and covers only its own height, so the scene above stays readable.
-export function Sheet({ title, icon, tone, onClose, children }: {
-  title?: string; icon?: IconName; tone?: string; onClose?: () => void; children: ReactNode;
+// A card that rises from the bottom and covers only its own height, so the scene above stays readable; `full` fills its parent.
+export function Sheet({ title, icon, tone, full, onClose, children }: {
+  title?: string; icon?: IconName; tone?: string; full?: boolean; onClose?: () => void; children: ReactNode;
 }) {
   const ref = useDialog(onClose);
   const enter = useEnter(24);
   return (
-    <Animated.View style={enter}>
+    <Animated.View style={[enter, full ? { flex: 1, minHeight: 0 } : null]}>
       <View ref={ref} accessibilityRole={'dialog' as never} aria-modal
-        className="gap-3 rounded-t-2xl border-x border-t border-border-strong bg-canvas-floating px-4 pb-4 pt-3">
+        className={`gap-3 rounded-t-2xl border-x border-t border-border-strong bg-canvas-floating px-4 pb-4 pt-3 ${full ? 'min-h-0 flex-1' : ''}`}>
         <View className="min-h-[36px] flex-row items-center gap-2">
           {icon ? <Icon name={icon} size={18} color={tone ?? colors.gold.fg} /> : null}
-          <Text accessibilityRole="header" className="min-w-0 flex-1 font-sans-semibold text-title text-fg-default">{title}</Text>
+          {title ? (
+            <Text accessibilityRole="header" className="min-w-0 flex-1 font-sans-semibold text-title text-fg-default">{title}</Text>
+          ) : <View className="flex-1" />}
           {onClose ? <IconButton icon="close" label={ko.close} onPress={onClose} /> : null}
         </View>
         {children}

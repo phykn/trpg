@@ -28,8 +28,7 @@ export default function Index() {
   }
   return (
     <Frame title={view.story.title}>
-      <Play view={view} log={g.log} phase={phase} onSend={(text) => g.send({ text })} onAct={(act) => g.send({ do: act })}
-        onResend={g.resend} onRetryText={g.retryText} />
+      <Play view={view} log={g.log} phase={phase} send={g.send} onResend={g.resend} onRetryText={g.retryText} />
     </Frame>
   );
 }
