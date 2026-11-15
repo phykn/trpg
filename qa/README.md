@@ -11,6 +11,7 @@ Cheapest first. Run every row your change touches, and when you report a result,
 | You changed | Run | Models | Time |
 |---|---|---|---|
 | Any server code | `.venv/bin/python -m pytest -q` · `.venv/bin/python -m ruff check server/` | no | 1 s |
+| A story in `scenarios/` | `cd server && ../.venv/bin/python -m src.story ../scenarios/<folder>` | no | 1 s |
 | Screens in `client/` | `cd client && npm test -- --runInBand && npx tsc --noEmit && npm run lint` · the real UI check below | no | 20 s · by hand |
 
 ## Real UI check

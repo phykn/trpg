@@ -6,8 +6,8 @@ A story-agnostic Korean mystery TRPG. The player asks people questions in Korean
 
 - **Design (source of truth, written in plain Korean)**: [docs/game/](docs/game/) (concept, loop, notebook, talk, blocks, time, screen, story format, authoring, first story), [docs/data/](docs/data/) (ontology, story data, game state, changes, invariants and saves) and [docs/engine/](docs/engine/) (models, API, story checks, implementation order). When they disagree, game wins over data, and data over engine. [docs/old/](docs/old/) documents the removed engine; read it, and its code at commit `834ea7db`, for reference only.
 - **Build plan**: [docs/groove/PLAN.md](docs/groove/PLAN.md) (git-ignored). A session continuing the build uses groove to do the first unchecked task.
-- **Stories**: `scenarios/<folder>/story.yaml` ([docs/data/02-story.md](docs/data/02-story.md)). Only `skeleton/` and `dawn/` are tracked.
-- **Server** (`server/`): `run_api.py` (the app and the `--local` defaults; for now it answers only `GET /health`), `src/config.py` (settings from the environment).
+- **Stories**: `scenarios/<folder>/story.yaml` ([docs/data/02-story.md](docs/data/02-story.md)). [scenarios/skeleton/](scenarios/skeleton/) is the smallest story using every device; only it and `dawn/` are tracked.
+- **Server** (`server/`): `run_api.py` (the app and the `--local` defaults; for now it answers only `GET /health`), `src/config.py` (settings from the environment), `src/story/` (`load.py` reads, checks references, compiles and marks a story; `check.py` runs the story checks behind `python -m src.story`).
 - **Client** (`client/`): `app/` (routes; for now an empty title screen), `components/ui/` (shared icon, button, sheet, motion, dialog, notice), `design/` (tokens), `logic/useViewportHeight.ts`, `services/storage.ts` (the saved game pointer).
 - **Mac app** (`app/`): `build.sh` builds `TRPG.app`, which starts and stops `npm run serve` and shows the phone address, passing the loaded models as `DECISION_MODEL` and `LLM_MODEL`. Its model bar still reads the removed `server/src/models/` until plan task T9.
 - QA: [qa/README.md](qa/README.md) maps each kind of change to the checks to run, and [qa/findings.md](qa/findings.md) holds the open findings. Recordings, playtests and real-UI runs go to ignored `qa_test/runs/<run>/`.
@@ -25,7 +25,7 @@ Both models are required and run outside this repo. Never start or stop them (no
 - Rules are pure functions. Dice derive from the seed and turn, and a step never mutates its input.
 - The client adopts server responses as state and never duplicates game rules.
 - Keep the public `/games/*` routes, snapshot `schema_version`, request receipts and `trpg.game_id` compatible unless a migration is requested. The new game keeps these names but does not read the old engine's saves ([docs/data/05-save.md](docs/data/05-save.md)).
-- Player-facing Korean uses `당신`, polite `합니다체`, and the words defined in [docs/game/03-notebook.md](docs/game/03-notebook.md). Server-composed strings render verbatim in the client. Client strings go in `client/locale/ko.ts`, server common text in `server/src/locale/ko.py`. Comments and validation errors are English.
+- Player-facing Korean uses `당신`, polite `합니다체`, and the words defined in [docs/game/03-notebook.md](docs/game/03-notebook.md). Server-composed strings render verbatim in the client. Client strings go in `client/locale/ko.ts`, server common text in `server/src/locale/ko.py`. Comments and code errors are English; story errors and check reports name the story's Korean keys and names ([docs/engine/03-check.md](docs/engine/03-check.md) 6).
 - Client UI: a fixed viewport-height mobile frame with no illustrations and no scrolling outside the chat log (the same narrow frame on desktop), using NativeWind classes and the tokens in `client/design/`. Commands stay locked while narration streams. A missing response freezes commands until the identical command is retried. Never clear the saved pointer on a failed restore. Dialogs close with Escape, trap focus and return it to the opener.
 - Preserve personal env files (`server/.env.*`, `client/.env.*`).
 
@@ -38,6 +38,7 @@ app/build.sh && open TRPG.app                        # Mac app: one-button npm r
 
 .venv/bin/python -m pytest -q
 .venv/bin/python -m ruff check server/
+cd server && ../.venv/bin/python -m src.story ../scenarios/<folder>   # check a story
 
 cd client && npm test -- --runInBand                 # single: npx jest path/to/file.test.ts
 cd client && npx tsc --noEmit && npm run lint

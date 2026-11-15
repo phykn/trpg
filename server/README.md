@@ -32,11 +32,12 @@ The server never starts, stops or switches models.
 
 ## Commands
 
-From the repository root:
+From the repository root unless the line starts with `cd server`:
 
 ```bash
 .venv/bin/python -m pytest -q
 .venv/bin/python -m ruff check server/
+cd server && ../.venv/bin/python -m src.story ../scenarios/<folder>   # check a story (docs/engine/03-check.md)
 ```
 
 ## Layout
@@ -44,6 +45,6 @@ From the repository root:
 ```
 server/
   run_api.py   app construction, --local defaults
-  src/         config.py
+  src/         config.py, story/ (reading, references, compiling, checks)
   tests/
 ```
