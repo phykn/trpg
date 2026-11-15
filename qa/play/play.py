@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "server"))
 
 from run_api import local_settings
 
+MAX_TEXT = 200   # client/components/game/InputBar.tsx maxLength
 GROUPS = {"places": "곳", "people": "사람", "items": "물건", "seen": "본 것", "heard": "들은 말"}
 VERDICTS = {"solved": "다 밝혔다", "who_only": "누구인지는 밝혔다", "wrong": "엉뚱한 사람을 짚었다", "unsolved": "밝히지 못했다"}
 ANSWERS = {"hit": "맞힘", "miss": "틀림", "blank": "비움"}
@@ -143,6 +144,8 @@ class Run:
     def pick_lines(self, which):
         lines = [(g, line) for g, group in self.state["view"]["notebook"].items() for line in group]
         picked = [(g, line) for g, line in lines if (str(line["id"]) == which or GROUPS.get(g) == which)]
+        if not picked and which in GROUPS.values():
+            raise SystemExit(f"수첩에 아직 {which} 줄이 없습니다")
         if not picked:
             raise SystemExit(f"{which}: a line id or one of {', '.join(GROUPS.values())}")
         return picked
@@ -193,9 +196,9 @@ def main():
         run.show_view()
         run.send({"do": act["id"]})
     elif args.cmd == "say":
-        run.send({"text": args.text})
+        run.send({"text": args.text[:MAX_TEXT]})   # the input box takes no more
     elif args.cmd == "do":
-        run.send({"do": args.act, **({"text": args.text} if args.text else {})})
+        run.send({"do": args.act, **({"text": args.text[:MAX_TEXT]} if args.text else {})})
     elif args.cmd == "read":   # read first: the act ids belong to the view after it
         new = [line["id"] for _, line in run.pick_lines(args.which) if line["new"]]
         if new and run.state["view"]["stage"] in ("play", "closing"):

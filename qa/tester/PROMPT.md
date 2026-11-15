@@ -40,7 +40,7 @@ Ids change every turn: take them from the latest output. The real game is a phon
 
 Log as you go. When something is wrong, write it down at once with its turn number ([턴 N]) and the exact text, then carry on. Retry a suspected bug once to see whether it repeats; say whether it did.
 
-Report. Write it in Korean to qa_test/runs/{run}/report.md, then return the same text:
+Report. Return it as your final message, in Korean (you cannot write files; the lead saves it to qa_test/runs/{run}/report.md):
 1. 요약: 결말, 맞힌 물음, 쓴 턴, 한 줄 소감.
 2. 버그: one entry per problem, most severe first. Each entry has
    - 제목 (한 줄)

@@ -178,8 +178,8 @@ class GameService:
         turn = {"turn": result["state"]["turn"], "receipt": body["request_id"], "request": request, "action": action,
                 "heard": heard, "dice": result["dice"], "changes": result["changes"], "happened": result["happened"],
                 "talk": result["talk"], "text": None}
-        last = max((t["turn"] for t in data["turns"] if t.get("guide")), default=0)
-        turn["guide"] = make_guide(story, state, result["state"], turn, last)
+        past = [{**t["guide"], "turn": t["turn"]} for t in data["turns"] if t.get("guide")]
+        turn["guide"] = make_guide(story, state, result["state"], turn, past)
         data = {**data, "turns": data["turns"] + [turn], "state": result["state"]}
         write_save(self.save_dir / f"{game}.json", data)
         self.games[game] = (data, story, result["state"])

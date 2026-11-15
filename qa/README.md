@@ -32,7 +32,7 @@ qa/tester/api.sh                                                  # the QA serve
 PLAY_API=http://127.0.0.1:8001 .venv/bin/python qa/play/play.py look <run>
 ```
 
-Each tester writes `qa_test/runs/<run>/report.md`. The lead checks every reported bug against the transcript before fixing it, and moves what is not fixed into [findings.md](findings.md).
+Each tester returns its report and the lead saves it to `qa_test/runs/<run>/report.md`, then checks every reported bug against the transcript before fixing it, and moves what is not fixed into [findings.md](findings.md).
 
 ## Shell game
 

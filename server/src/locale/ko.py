@@ -55,6 +55,8 @@ def said(person, text):
 
 def clock(minutes):
     hour, minute = divmod(minutes % (24 * 60), 60)
+    if (hour, minute) == (0, 0):
+        return "자정"
     part = "새벽" if 1 <= hour < 5 else "오전" if 5 <= hour < 12 else "오후" if 12 <= hour < 18 else "밤"
     return f"{part} {hour % 12 or 12}시" + (f" {minute}분" if minute else "")
 
@@ -67,10 +69,10 @@ def divider(place, cells):
     return f"── {place} · {cells}턴 ──"
 
 
-def roll(method, eyes, total):
+def roll(method, eyes, total, need):
     bonus = total - sum(eyes)
     more = f" {'+' if bonus > 0 else '-'} {abs(bonus)}" if bonus else ""
-    return f"{METHODS[method]} · {eyes[0]} + {eyes[1]}{more} = {total}"
+    return f"{METHODS[method]} · {eyes[0]} + {eyes[1]}{more} = {total} · {need} 이상"
 
 
 def note(text):

@@ -20,18 +20,26 @@ def make_jobs(story, before, after, turn):
         ending = judge_ending(story, after)
         events = [getattr(story.events[i], result) for i, result in ending["events"]]
         clock, cells = story.head.clock, story.head.cells
+        marks = {True: "맞혔다", False: "틀렸다", None: "비워 두었다"}
         jobs.append({"kind": "ending", "time": ko.clock(clock.start + cells * clock.step) if clock else None,
+                     "answers": ", ".join(f"{q} {marks[ending['answers'][k]]}" for k, q in
+                                          (("who", "누가"), ("how", "어떻게"), ("why", "왜"))),
                      "happening": [getattr(story.endings, ending["verdict"]), *events, story.endings.explain]})
     elif action["do"] not in ("face", "read"):
         speaker = next((find_speaker(story, t) for t in turn["talk"] if find_speaker(story, t)), None)
         jobs.append(make_answer(story, after, turn, speaker) if speaker else make_scene(story, before, after, turn))
-    for happened in turn["happened"]:
+    for happened in list_shown_happenings(turn):
         event = story.events[happened["omen"] if "omen" in happened else happened["event"]]
         text = event.omen if "omen" in happened else getattr(event, happened["result"])
         jobs.append({"kind": "scene", "happening": [text], "far": "omen" not in happened})
     if turn.get("guide"):
         jobs.append(make_dm(story, after, turn["guide"]))
     return jobs
+
+
+def list_shown_happenings(turn):
+    """A prevented event passes quietly; the ending tells it (game/06 2절)."""
+    return [h for h in turn["happened"] if h.get("result") != "prevented"]
 
 
 DM = {
@@ -68,7 +76,8 @@ def make_answer(story, after, turn, person):
         if kind == "say":
             quiet = False
             lead = ("이 말을 짧게 되풀이한다: " if repeat else
-                    "거짓말이 들통나 앞의 말을 거두고 털어놓는다: " if value.endswith(".깨진 뒤") else "")
+                    "거짓말이 들통나 앞의 말을 거두고 털어놓는다: " if value.endswith(".깨진 뒤") else
+                    "마음이 풀려 숨기던 것을 털어놓는다: " if value.endswith(".풀린 뒤") else "")
             says.append(lead + story.lines[value].text)
         elif kind == "withhold":
             says.append("이 화제는 얼버무리며 말해 주지 않는다. 말하지 않는 까닭은 지어내지 않는다")
@@ -113,6 +122,9 @@ def make_scene(story, before, after, turn):
             used = turn["action"].get("line")
             by = f"{ko.ro(show_line(story, used))} " if used else ""
             happening.append(f"당신이 {by}{ko.eul(thing)} 연다" if kind == "open" else f"{by}{ko.eul(thing)} 열려 했지만 열리지 않는다")
+            inside = story.things[story.blocks[value].name].lock.contents
+            if kind == "open" and all(name in after["lost"] for name in inside):
+                happening.append("그런데 안은 텅 비어 있다")
     clock = story.head.clock
     return {"kind": "scene", "intro": story.head.intro if turn["action"]["do"] == "stats" else None,
             "time": ko.clock(clock.start + after["spent"] * clock.step) if clock else None,
@@ -140,6 +152,7 @@ def list_given(job):
     if job.get("happening"):
         given.append(f"{'당신이 없는 곳에서 그 사이 벌어진 일' if job.get('far') else '일어난 일'}: {' '.join(job['happening'])}")
     given += [f"이곳의 사람: {', '.join(job['people'])}"] if job.get("people") else []
+    given += [f"플레이어의 결론: {job['answers']}"] if job.get("answers") else []
     return given
 
 
@@ -151,11 +164,13 @@ def make_messages(job):
                  "인물의 인상은 신상과 태도에서만 짐작한다. 사건의 진실, 단서, 누가 거짓말하는지는 말하지 않는다.",
                  "화면, 단추, 누르는 법은 말하지 않는다. 받은 것에 없는 사람, 물건, 때, 곳을 더하지 않는다.",
                  "권할 일은 진행자인 당신이 플레이어에게 직접 건네는 말로 쓴다. 인물이 권하는 것처럼 쓰지 않는다.",
+                 "신상이 플레이어를 이름으로 가리켜도 플레이어는 \"당신\"이라 부른다.",
                  "한 문단으로 쓴다."]
         head = "당신은 추리 TRPG 판을 이끄는 진행자(DM)다."
     elif job["kind"] == "answer":
-        rules = [f"{job['person']}의 대사만 한두 문장으로 쓴다. 이름, 따옴표, 설명은 붙이지 않는다.",
+        rules = [f"{job['person']}의 대사만 쓴다. 할 말 하나에 한두 문장이다. 이름, 따옴표, 설명은 붙이지 않는다.",
                  "신상의 말투를 따르되 문법에 맞는 한국어로 쓰고, 태도에 맞게 플레이어의 말을 받아친다.",
+                 "플레이어는 지금 마주 보고 말을 건 사람이다. 플레이어에게 직접 말하고, '저 사람', '얘'처럼 남을 가리키듯 부르지 않는다.",
                  "할 말이 있으면 그 내용을 빠짐없이 말한다. 태도는 말투에만 드러내고, 모른다고 하거나 피하지 않는다.",
                  "할 말의 뜻을 바꾸지 않는다. 할 말에 없는 사람, 물건, 때, 곳을 더하지 않는다.",
                  "할 말이 없으면 신상에 기대어 짧게 받아친다. 사건에 관한 것은 지어내지 않는다."]
@@ -170,6 +185,8 @@ def make_messages(job):
                  "분위기는 곳의 모습과 어긋나지 않게 쓴다. '적막', '정적', '어둠' 같은 말을 버릇처럼 넣지 않는다."]
         if job.get("far"):
             rules.append("진행자가 \"그 사이\"로 시작해 다른 곳의 소식을 전하듯 쓴다. 당신은 그 자리에 없으므로 보고 듣는 것처럼 쓰지 않는다.")
+        if job["kind"] == "ending":
+            rules.append("플레이어의 결론에서 맞힌 것과 틀리거나 비운 것을 바꿔 말하지 않는다. 플레이어를 이름으로 부르지 않는다.")
         if job.get("again"):
             rules.append("이미 와 본 곳이다. 모습은 그리지 않거나 한마디로 줄이되, 모습과 어긋나게 쓰지 않는다.")
         if job.get("people"):
@@ -206,13 +223,20 @@ def judge(job, answers, text):
     probs = {key: answers[key]["noul"] for key in make_checks(job)}
     failed = [key for key, p in probs.items() if (1 - p if key == "added" else p) < {
         "added": ADDED, "meaning": MEANING, "quiet": QUIET}[key]]
-    if count_sentences(text) > MAX_SENTENCES[job["kind"]]:
+    if count_sentences(text) > MAX_SENTENCES[job["kind"]] + 2 * max(0, len(job.get("says", [])) - 1):
         failed.append("length")
+    if any(word in text for word in PROMPT_WORDS):
+        failed.append("prompt")
     return failed, probs
 
 
+# Words of the prompt itself; a text that names them is talking about its instructions, not to the player.
+PROMPT_WORDS = ("할 말", "받은 것", "지침", "지킬 것", "질문자", "신상", "권할 일")
+
+
 REASONS = {"added": "받은 것에 없는 사람, 물건, 때, 곳을 더했다", "meaning": "할 말의 뜻이 빠졌거나 바뀌었다",
-           "quiet": "말하지 않아야 할 내용을 말했다", "length": "너무 길다"}
+           "quiet": "말하지 않아야 할 내용을 말했다", "length": "너무 길다",
+           "prompt": "지시문을 두고 말했다. 인물이나 진행자의 말만 쓴다"}
 
 
 class Narrator:

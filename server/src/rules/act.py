@@ -10,6 +10,7 @@ from .state import (
     write_up,
 )
 
+NEED = 8   # 2d6 + bonus must reach this (game/05 4절)
 METHOD_STATS = {"soothe": "charm", "press": "might", "trick": "wit", "sneak": "skill", "force": "might"}
 TALK_METHODS = ("soothe", "press", "trick")
 LOCK_METHODS = ("sneak", "force")
@@ -243,9 +244,8 @@ class Turn:
         path = find_path(self.story, self.state, action["place"])
         if not path:
             raise Refused("a place that cannot be reached")
-        for place in path:
+        for place in path:   # the way takes the cell, so what happens meanwhile is settled before arriving
             self.change("move", place=place)
-            self.write_up()
             self.spend()
             if self.state["spent"] >= self.story.head.cells:
                 break
@@ -321,7 +321,7 @@ class Turn:
             self.talk_to(person)
         eyes = roll_dice(self.state["seed"], self.number)
         total = sum(eyes) + find_bet_bonus(self.story, self.state, target, method)
-        won = total >= 8
+        won = total >= NEED
         self.dice = {"method": method, "eyes": eyes, "total": total, "won": won}
         if won and line:
             self.change("judge", line=target, verdict="lying" if line.branch == "거짓말" else "true")

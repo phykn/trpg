@@ -5,14 +5,14 @@ from tests.test_act import CREW, PASS, STATS, STORY, ask, go, present
 
 
 def guides(steps):
-    state, said, last = start_state(STORY, 1), [], 0
+    state, said, past = start_state(STORY, 1), [], []
     for step in steps:
         action, heard = step if isinstance(step, tuple) else (step, None)
         result = act(STORY, state, action, heard)
         turn = {"action": action, "changes": result["changes"], "happened": result["happened"]}
-        guide = make_guide(STORY, state, result["state"], turn, last)
+        guide = make_guide(STORY, state, result["state"], turn, past)
         said.append(guide and guide["key"] + (f" {guide['name']}" if guide.get("name") else ""))
-        last = result["state"]["turn"] if guide else last
+        past += [{**guide, "turn": result["state"]["turn"]}] if guide else []
         state = result["state"]
     return said
 
@@ -28,7 +28,7 @@ def test_the_dm_remarks_on_someone_not_yet_talked_to_on_arrival():
 
 def test_the_dm_nudges_after_a_while_without_a_new_line():
     assert guides([STATS, ask("밤"), PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS]) == [
-        "open 오토", None, None, None, None, "unvisited 곡물 창고", None, None, None, "unvisited 곡물 창고", None]
+        "open 오토", None, None, None, None, "unvisited 곡물 창고", None, None, None, "unvisited 방앗간", None]
 
 
 def test_the_first_held_topic_gets_a_remark():

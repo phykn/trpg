@@ -141,3 +141,8 @@ def test_when_the_cells_run_out_only_reading_and_concluding_remain():
 def test_the_same_actions_make_the_same_game():
     steps = [STATS, ask("밤"), go("곡물 창고"), bet(LOCK, "force"), present(CREW, "한스"), go("방앗간")]
     assert play(5, steps) == play(5, steps)
+
+
+def test_arriving_as_an_event_takes_a_thing_away_writes_only_what_is_left():
+    state, _ = play(1, [STATS, ask("밤"), go("곡물 창고"), go("광장"), go("곡물 창고"), go("광장"), go("방앗간")])
+    assert state["spent"] == 5 and "빚 문서" in state["lost"] and "볼 것 빚 문서" not in state["notebook"]

@@ -1,6 +1,7 @@
 from .locale import ko
 from .rules.act import (
     LOCK_METHODS,
+    NEED,
     TALK_METHODS,
     find_bet_bonus,
     find_path,
@@ -207,7 +208,7 @@ def make_feed(story, turn, ids, opening=()):
         feed.append({"kind": "move", "text": ko.divider(show_name(story, "곳", moves[-1]), len(moves))})
     if turn["dice"]:
         dice = turn["dice"]
-        feed.append({"kind": "roll", "text": ko.roll(dice["method"], dice["eyes"], dice["total"]), "won": dice["won"]})
+        feed.append({"kind": "roll", "text": ko.roll(dice["method"], dice["eyes"], dice["total"], NEED), "won": dice["won"]})
     if action["do"] == "conclude":
         add_text("ending", None)
     elif action["do"] not in ("face", "read"):
@@ -215,7 +216,8 @@ def make_feed(story, turn, ids, opening=()):
         add_text("text", speaker and show_name(story, "사람", speaker))
     feed += make_notes(story, changes, ids)
     for happened in turn["happened"]:
-        add_text("omen" if "omen" in happened else "event", None)
+        if happened.get("result") != "prevented":   # it passes quietly; the ending tells it
+            add_text("omen" if "omen" in happened else "event", None)
     if turn.get("guide"):
         add_text("guide", None)
     return feed
