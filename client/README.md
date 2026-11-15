@@ -1,6 +1,6 @@
 # Client
 
-The mobile web client (Expo, React Native Web, NativeWind). Its screens are in [docs/game/07-screen.md](../docs/game/07-screen.md); it talks to the server only through [docs/engine/02-api.md](../docs/engine/02-api.md). For now it shows an empty title screen.
+The mobile web client (Expo, React Native Web, NativeWind). Its screens are in [docs/game/07-screen.md](../docs/game/07-screen.md); it talks to the server only through [docs/engine/02-api.md](../docs/engine/02-api.md). For now it has the title, start and play screens; the notebook, conclusion and ending are still to come.
 
 ## Commands
 

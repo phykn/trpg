@@ -3,4 +3,13 @@ export const ko = {
   close: '닫기',
   stuck: '응답을 받지 못했습니다.',
   resend: '다시 보내기',
+  resume: '이어 하기',
+  plus2: '+2',
+  plus1: '+1',
+  begin: '시작',
+  askTo: (name: string) => `${name}에게 묻기…`,
+  say: '말하기…',
+  send: '보내기',
+  notebook: '수첩',
+  people: '이곳의 사람',
 };

@@ -1,17 +1,35 @@
-import Head from 'expo-router/head';
-import { Text, View } from 'react-native';
-
-import { ko } from '@/locale/ko';
-import { useViewportHeight } from '@/logic/useViewportHeight';
+import { Frame } from '@/components/game/Frame';
+import { Resend } from '@/components/ui/Notice';
+import { useGame } from '@/logic/useGame';
+import { Play } from '@/screens/Play';
+import { Start } from '@/screens/Start';
+import { Title } from '@/screens/Title';
+import { View } from 'react-native';
 
 export default function Index() {
-  const height = useViewportHeight();
+  const g = useGame();
+  const { view, phase } = g;
+  if (phase === 'loading') return <Frame>{null}</Frame>;
+  if (!view || phase === 'title') {
+    return (
+      <Frame>
+        <Title stories={g.stories} saved={g.saved} onStart={g.start} onResume={g.resume} />
+        {phase === 'stuck' ? <View className="px-4 pb-4"><Resend onResend={g.resend} /></View> : null}
+      </Frame>
+    );
+  }
+  if (view.stage === 'start') {
+    return (
+      <Frame title={view.story.title}>
+        <Start view={view} locked={phase !== 'ready'} onStart={(act) => g.send({ do: act })} />
+        {phase === 'stuck' ? <View className="px-4 pb-4"><Resend onResend={g.resend} /></View> : null}
+      </Frame>
+    );
+  }
   return (
-    <View className="items-center bg-canvas-inset" style={{ height }}>
-      <Head><title>{ko.brand}</title></Head>
-      <View className="mobile-frame min-h-0 w-full max-w-mobile flex-1 items-center justify-center border-x border-border-default bg-canvas-default">
-        <Text accessibilityRole="header" className="font-serif text-display tracking-[2px] text-fg-default">{ko.brand}</Text>
-      </View>
-    </View>
+    <Frame title={view.story.title}>
+      <Play view={view} log={g.log} phase={phase} onSend={(text) => g.send({ text })} onAct={(act) => g.send({ do: act })}
+        onResend={g.resend} onRetryText={g.retryText} />
+    </Frame>
   );
 }
