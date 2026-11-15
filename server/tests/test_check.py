@@ -56,7 +56,7 @@ def test_alerts_name_long_lines_and_necks():
 
 
 def test_loading_stops_at_a_broken_story(tmp_path):
-    assert sorted(load_stories(SCENARIOS)) == ["dawn", "skeleton"]
+    assert sorted(load_stories(SCENARIOS)) == ["arena", "dawn", "skeleton"]
     data = story_data("skeleton")
     data["곳"]["외딴 집"] = {"모습": "x"}
     (tmp_path / "bad").mkdir()
