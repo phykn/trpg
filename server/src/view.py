@@ -192,9 +192,12 @@ class ViewMaker:
         return {"verdict": ending["verdict"], "answers": answers, "turn": self.state["turn"], "missed": missed}
 
 
-def make_feed(story, turn, ids):
+def make_feed(story, turn, ids, opening=()):
+    """`opening` holds the lines written before the first turn; the first turn tells them as its own notes."""
     feed = []
     action, changes = turn["action"], turn["changes"]
+    if action["do"] == "stats":
+        changes = [{"op": "write", "line": a} for a in opening] + changes
 
     def add_text(kind, who):
         feed.append({"kind": kind, "who": who, "slot": len([f for f in feed if "slot" in f])})

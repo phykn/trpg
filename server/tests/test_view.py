@@ -1,8 +1,9 @@
 from pathlib import Path
 
+from src.rules.act import act
 from src.rules.state import start_state
 from src.story.load import load_story
-from src.view import make_view
+from src.view import make_feed, make_view
 
 DAWN = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
 
@@ -12,3 +13,12 @@ def test_heard_lines_are_grouped_by_speaker_in_order_of_first_appearance():
     state = {**start_state(DAWN, 0), "notebook": dict.fromkeys(lines, 1)}
     heard = make_view(DAWN, state)[0]["notebook"]["heard"]
     assert [line["id"] for line in heard] == [1, 3, 2]
+
+
+def test_the_first_turn_tells_what_was_written_before_it():
+    action = {"do": "stats", "plus2": "wit", "plus1": "charm"}
+    result = act(DAWN, start_state(DAWN, 0), action, None)
+    opening = [a for a, t in result["state"]["notebook"].items() if t == 0]
+    ids = {a: i for i, a in enumerate(result["state"]["notebook"], 1)}
+    notes = [f for f in make_feed(DAWN, {"action": action, **result}, ids, opening) if f["kind"] == "note"]
+    assert opening and notes[0]["lines"] == [ids[a] for a in opening]

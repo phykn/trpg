@@ -98,8 +98,10 @@ def find_said(story, turn):
 def make_scene(story, before, after, turn):
     place = after["place"]
     first = turn["action"]["do"] == "stats" or place not in before["visited"]
-    written = [show_line(story, c["line"]) for c in turn["changes"]
-               if c["op"] == "write" and story.lines[c["line"]].kind == "볼 것"]
+    writes = [c["line"] for c in turn["changes"] if c["op"] == "write"]
+    if turn["action"]["do"] == "stats":   # the start place was looked over before the first turn
+        writes = [a for a, t in before["notebook"].items() if t == 0] + writes
+    written = [show_line(story, a) for a in writes if story.lines[a].kind == "볼 것"]
     happening = []
     for item in turn["talk"]:
         kind, value = next(iter(item.items()))

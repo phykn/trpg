@@ -215,7 +215,7 @@ class GameService:
 
     def make_result(self, story, state, turn, with_view=True):
         ids = {addr: i for i, addr in enumerate(state["notebook"], 1)}
-        feed = make_feed(story, turn, ids)
+        feed = make_feed(story, turn, ids, [a for a, t in state["notebook"].items() if t == 0])
         result = {"kind": "turn", "turn": turn["turn"], "said": turn["action"].get("text"), "feed": feed,
                   "text": any("slot" in f for f in feed)}
         return {**result, "view": make_view(story, state)[0]} if with_view else result
