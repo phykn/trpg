@@ -58,7 +58,16 @@ def test_asking_writes_once_then_leads_and_passes_lead_to_done():
     assert ops(rs[2]) == ["count", "count"]
     state, rs = play(1, [STATS, ask("밤", "씨앗"), PASS, PASS, PASS])
     assert rs[4]["talk"] == [{"pass": "오토"}, {"done": "오토"}]
-    assert state["talks"]["오토"] == {"topics": {"밤": 1, "씨앗": 1}, "passes": 3}
+    assert state["talks"]["오토"] == {"topics": {"밤": 1, "씨앗": 1}, "passes": 3, "done": True}
+
+
+def test_a_held_topic_that_appears_after_done_is_marked_the_next_time_you_talk():
+    chat = ({"do": "ask"}, {"kind": "chat"})
+    _, rs = play(1, [STATS, ask("밤"), go("방앗간"), PASS, PASS, PASS, go("곡물 창고"),
+                         present("볼 것 꺼진 등잔", "한스"), go("방앗간"), chat])
+    assert rs[5]["talk"] == [{"pass": "리사"}, {"done": "리사"}] and ops(rs[5]) == ["count", "done"]
+    assert "꺼림 리사.새벽" not in rs[8]["state"]["withheld"]   # the topic appeared after she was done
+    assert rs[9]["changes"] == [{"op": "withhold", "block": "꺼림 리사.새벽"}] and rs[9]["talk"] == [{"chat": "리사"}]
 
 
 def test_a_held_back_topic_is_withheld_then_opened_by_what_it_wants():

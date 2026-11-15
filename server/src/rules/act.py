@@ -178,6 +178,7 @@ class Turn:
         if person is None:
             self.talk.append({"look": self.state["place"]})
             return None
+        self.talk_to(person)
         if kind == "topics":
             shown = list_topics(self.story, self.state, person)
             if not heard["topics"] or any(t not in shown for t in heard["topics"]):
@@ -220,6 +221,16 @@ class Turn:
                 self.talk.append({"lead": f"{person}.{topic}"})
                 return
         self.talk.append({"done": person})
+        if not self.state["talks"][person]["done"]:
+            self.change("done", person=person)
+        self.mark_held(person)
+
+    def talk_to(self, person):
+        """Held topics that appeared after the person said they were done are marked the next time you talk."""
+        if self.state["talks"][person]["done"]:
+            self.mark_held(person)
+
+    def mark_held(self, person):
         for topic in list_topics(self.story, self.state, person):
             block = f"꺼림 {person}.{topic}"
             if find_stance(self.story, self.state, person, topic) == "꺼린다" and block not in self.state["withheld"]:
@@ -244,6 +255,7 @@ class Turn:
             raise Refused("present a clue from the notebook")
         blocks = list_blocks_here(self.story, self.state)
         if target in list_people_here(self.story, self.state):
+            self.talk_to(target)
             blocks = [b for b in blocks if b.name == target and b.kind != "잠김"]
         elif target in [b.addr for b in blocks if b.kind == "잠김"]:
             if not self.story.lines[line].props:
@@ -306,6 +318,8 @@ class Turn:
             raise Refused("nothing to bet on that way")
         if [target, method] in self.state["closed"]:
             raise Refused("that way is closed")
+        if not block or block.kind != "잠김":
+            self.talk_to(person)
         eyes = roll_dice(self.state["seed"], self.number)
         total = sum(eyes) + find_bet_bonus(self.story, self.state, target, method)
         won = total >= 8

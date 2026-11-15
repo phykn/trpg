@@ -12,7 +12,7 @@ def start_state(story, seed):
         "notebook": {}, "struck": [], "withheld": [], "hints": [], "judged": {}, "read": [],
         "opened": [], "closed": [], "partner": None,
         "attitudes": {name: {"trust": p.attitude.trust, "fear": p.attitude.fear} for name, p in story.people.items()},
-        "talks": {name: {"topics": {}, "passes": 0} for name in story.people},
+        "talks": {name: {"topics": {}, "passes": 0, "done": False} for name in story.people},
         "spent": 0, "place": start, "visited": [start],
         "events": {}, "where": {name: p.place for name, p in story.people.items()}, "gone": [], "lost": [],
         "conclusion": None,
@@ -138,6 +138,8 @@ def apply_change(story, state, change, turn):
         talk = ({**old, "passes": change["value"]} if change["topic"] is None
                 else {**old, "topics": {**old["topics"], change["topic"]: change["value"]}})
         new["talks"] = {**state["talks"], change["person"]: talk}
+    elif op == "done":
+        new["talks"] = {**state["talks"], change["person"]: {**state["talks"][change["person"]], "done": True}}
     elif op == "face":
         new["partner"] = change["person"]
     elif op == "read":
