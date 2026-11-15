@@ -7,6 +7,7 @@ export const colors: {
   gold: { fg: string; muted: string };
   chip: { stat: string; help: string; guard: string; hinder: string };
   kind: { person: string; thing: string; obstacle: string };
+  speaker: Record<1 | 2 | 3 | 4 | 5 | 6, string>;
   box: { empty: string; full: string; danger: string };
   overlay: string;
 };

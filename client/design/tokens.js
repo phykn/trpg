@@ -19,6 +19,8 @@ const colors = {
   // A guard is a reliance too, so it shares help's hue; it lowers a fail's cost instead of adding.
   chip: { stat: '#4a3fc0', help: '#4d6800', guard: '#4d6800', hinder: '#a8226f' },
   kind: { person: '#1a669c', thing: '#0b7166', obstacle: '#87309f' },
+  // One per person met, in notebook order, so each speaker keeps a hue through the game.
+  speaker: { 1: '#0f5f8c', 2: '#a1401a', 3: '#3d6b12', 4: '#6e3aa6', 5: '#0b6e63', 6: '#a0255a' },
   // Full boxes say whose side the fill is on: gold is the player's progress, red is trouble.
   box: { empty: '#b9b4a6', full: '#8a5300', danger: '#b3261e' },
   overlay: 'rgba(31,35,40,0.5)',

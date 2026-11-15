@@ -213,6 +213,10 @@ def make_feed(story, turn, ids):
     feed += make_notes(story, changes, ids)
     for happened in turn["happened"]:
         add_text("omen" if "omen" in happened else "event", None)
+    if turn.get("guide"):
+        guide = turn["guide"]
+        kind = {"talk": "사람", "held": "사람", "ask": "사람", "unvisited": "곳"}.get(guide["key"])
+        feed.append({"kind": "guide", "text": ko.guide(guide["key"], kind and show_name(story, kind, guide["name"]))})
     return feed
 
 

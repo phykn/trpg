@@ -4,6 +4,7 @@ import re
 from datetime import UTC, datetime
 from pathlib import Path
 
+from .guide import make_guide
 from .models import ModelUnavailable
 from .narrate import make_jobs
 from .rules.act import Refused, act
@@ -177,6 +178,7 @@ class GameService:
         turn = {"turn": result["state"]["turn"], "receipt": body["request_id"], "request": request, "action": action,
                 "heard": heard, "dice": result["dice"], "changes": result["changes"], "happened": result["happened"],
                 "talk": result["talk"], "text": None}
+        turn["guide"] = make_guide(story, state, result["state"], turn)
         data = {**data, "turns": data["turns"] + [turn], "state": result["state"]}
         write_save(self.save_dir / f"{game}.json", data)
         self.games[game] = (data, story, result["state"])

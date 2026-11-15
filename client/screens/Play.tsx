@@ -33,6 +33,7 @@ export function Play({ view, log, phase, send, onResend, onRetryText }: {
   const closing = view.stage === 'closing';
   const locked = phase !== 'ready' || !playing;
   const partner = view.people.find((p) => p.partner)?.name ?? null;
+  const met = view.notebook.people.map((l) => l.text);
   const found = open?.kind === 'line' ? findLine(view, open.id) : null;
   const concluding = open?.kind === 'conclude' || open?.kind === 'pick' || (closing && !open && phase === 'ready');
 
@@ -67,9 +68,9 @@ export function Play({ view, log, phase, send, onResend, onRetryText }: {
     <View className="min-h-0 flex-1">
       <TopBar view={view} onPlace={playing && view.place.moves.length ? () => setOpen({ kind: 'moves' }) : undefined}
         onNotebook={() => setOpen({ kind: 'notebook', group: 'places' })} />
-      <ChatLog log={log} onNote={openNote} />
+      <ChatLog log={log} people={met} onNote={openNote} />
       <View className="border-t border-border-default">
-        <PeopleRow people={view.people} locked={locked} onFace={(id) => send({ do: id })} />
+        <PeopleRow people={view.people} met={met} locked={locked} onFace={(id) => send({ do: id })} />
         {phase === 'stuck' || phase === 'text_error' ? (
           <View className="px-3 py-2"><Resend onResend={phase === 'stuck' ? onResend : onRetryText} /></View>
         ) : (

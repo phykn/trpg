@@ -12,6 +12,7 @@ export type Entry =
   | { key: string; kind: 'move'; text: string }
   | { key: string; kind: 'roll'; text: string; won: boolean }
   | { key: string; kind: 'note'; text: string; lines: number[] }
+  | { key: string; kind: 'guide'; text: string }
   | { key: string; kind: 'text' | 'ending' | 'omen' | 'event'; who: string | null; text: string };
 
 type Pending =
