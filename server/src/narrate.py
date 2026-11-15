@@ -75,7 +75,9 @@ def make_scene(story, before, after, turn):
         if kind in ("open", "shut"):
             thing = show_line(story, f"볼 것 {story.blocks[value].name}")
             happening.append(f"{thing}이(가) 열린다" if kind == "open" else f"{thing}이(가) 열리지 않는다")
+    clock = story.head.clock
     return {"kind": "scene", "intro": story.head.intro if turn["action"]["do"] == "stats" else None,
+            "time": ko.clock(clock.start + after["spent"] * clock.step) if clock else None,
             "place": show_name(story, "곳", place), "desc": story.places[place].desc if first else None,
             "written": written, "happening": happening,
             "people": [show_name(story, "사람", p) for p in list_people_here(story, after)]}
@@ -86,6 +88,7 @@ def list_given(job):
         return [f"신상: {job['bio']}", f"태도: {job['attitude']}", f"할 말: {' / '.join(job['says']) or '없다'}",
                 f"플레이어의 말: {job['said'] or '없다'}"]
     given = [f"도입: {job['intro']}"] if job.get("intro") else []
+    given += [f"시각: {job['time']}"] if job.get("time") else []
     if job.get("place"):
         given.append(f"곳: {job['place']}" + (f". 모습: {job['desc']}" if job.get("desc") else ""))
     given += [f"이번에 적힌 것: {', '.join(job['written'])}"] if job.get("written") else []

@@ -32,7 +32,7 @@ def test_each_text_slot_gets_one_job_and_no_job_says_which_line_is_a_lie():
         assert not [w for w in ("거짓말", "깨진 뒤", "풀린 뒤", "참말") if w in json.dumps(jobs, ensure_ascii=False)]
         every += jobs
     opening, answer, first, back, again = (make_jobs(DAWN, *t)[0] for t in turns[:5])
-    assert opening["intro"] and opening["desc"] and answer["says"] == [DAWN.lines["말 고드릭.징수관.거짓말"].text]
+    assert opening["intro"] and opening["desc"] and opening["time"] == "밤 8시" and answer["says"] == [DAWN.lines["말 고드릭.징수관.거짓말"].text]
     assert first["desc"] and "입술이 검푸르게" in " ".join(first["written"]) and first["people"] == ["토빈"]
     assert back["desc"] is None and again["desc"] is None
     assert len([j for j in every if j.get("happening")]) >= 2
