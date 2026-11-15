@@ -5,7 +5,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .models import ModelUnavailable
+from .narrate import make_jobs
 from .rules.act import Refused, act
+from .rules.state import apply_turn, start_state
 from .save import SaveError, make_save, read_save, write_save
 from .view import make_feed, make_view
 
@@ -26,13 +28,39 @@ class Broken(ValueError):
         self.reason = reason
 
 
+class TextJob:
+    def __init__(self):
+        self.events = []
+        self.changed = asyncio.Condition()
+
+    async def add(self, event):
+        async with self.changed:
+            self.events.append(event)
+            self.changed.notify_all()
+
+    async def follow(self):
+        seen = 0
+        while True:
+            async with self.changed:
+                await self.changed.wait_for(lambda seen=seen: len(self.events) > seen)
+                new = self.events[seen:]
+            seen += len(new)
+            for event in new:
+                yield event
+            if new[-1]["type"] in ("done", "error"):
+                return
+
+
 class GameService:
-    def __init__(self, stories, save_dir, interpreter):
+    def __init__(self, stories, save_dir, interpreter, narrator):
         self.stories = stories
         self.save_dir = Path(save_dir)
         self.interpreter = interpreter
+        self.narrator = narrator
         self.games = {}
         self.locks = {}
+        self.texts = {}
+        self.tasks = set()
 
     def list_stories(self):
         return [{"story": name, "title": s.head.title, "intro": s.head.intro} for name, s in self.stories.items()]
@@ -71,6 +99,59 @@ class GameService:
     def list_turns(self, game, start):
         data, story, state = self.load(game)
         return [self.make_result(story, state, turn, False) for turn in data["turns"] if turn["turn"] >= start]
+
+    def stream_text(self, game, n):
+        data, _, _ = self.load(game)
+        if not 1 <= n <= len(data["turns"]):
+            raise Missing(f"no turn {n}")
+        if self.narrator is None:
+            raise ModelUnavailable("no narration model")
+        return self.follow_text(game, n)
+
+    async def follow_text(self, game, n):
+        texts = self.load(game)[0]["turns"][n - 1]["text"]
+        if texts is not None:
+            for slot, text in enumerate(texts):
+                yield {"type": "start", "slot": slot}
+                yield {"type": "delta", "slot": slot, "text": text["text"]}
+                yield {"type": "end", "slot": slot}
+            yield {"type": "done"}
+            return
+        if (game, n) not in self.texts:
+            self.texts[game, n] = TextJob()
+            task = asyncio.create_task(self.write_text(game, n, self.texts[game, n]))
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.discard)
+        async for event in self.texts[game, n].follow():
+            yield event
+
+    async def write_text(self, game, n, job):
+        try:
+            data, story, _ = self.load(game)
+            state = start_state(story, data["head"]["seed"])
+            for turn in data["turns"][:n - 1]:
+                state = apply_turn(story, state, turn["changes"])
+            turn = data["turns"][n - 1]
+            texts = []
+            for slot, spec in enumerate(make_jobs(story, state, apply_turn(story, state, turn["changes"]), turn)):
+                await job.add({"type": "start", "slot": slot})
+                async for event in self.narrator.write(spec):
+                    if event["type"] == "result":
+                        texts.append({"text": event["text"], "checks": event["checks"]})
+                    else:
+                        await job.add({**event, "slot": slot})
+                await job.add({"type": "end", "slot": slot})
+            async with self.locks.setdefault(game, asyncio.Lock()):
+                data, story, state = self.load(game)
+                turns = [*data["turns"][:n - 1], {**data["turns"][n - 1], "text": texts}, *data["turns"][n:]]
+                data = {**data, "turns": turns}
+                write_save(self.save_dir / f"{game}.json", data)
+                self.games[game] = (data, story, state)
+            await job.add({"type": "done"})
+        except ModelUnavailable:
+            await job.add({"type": "error"})
+        finally:
+            self.texts.pop((game, n), None)
 
     async def command(self, game, body):
         self.load(game)

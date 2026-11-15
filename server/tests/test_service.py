@@ -19,7 +19,7 @@ class FakeInterpreter:
 
 
 def make_service(tmp_path):
-    return GameService(STORIES, tmp_path, FakeInterpreter())
+    return GameService(STORIES, tmp_path, FakeInterpreter(), None)
 
 
 def send(service, game, receipt, action=None, **body):

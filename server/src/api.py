@@ -1,9 +1,10 @@
+import json
 import secrets
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -84,6 +85,13 @@ def list_turns(request: Request, game: str, start: Annotated[int, Query(alias="f
 @router.post("/games/{game}/commands")
 async def run_command(request: Request, game: str, body: CommandBody):
     return await request.app.state.service.command(game, body.model_dump(exclude_none=True))
+
+
+@router.get("/games/{game}/turns/{n}/text")
+def stream_text(request: Request, game: str, n: int):
+    events = request.app.state.service.stream_text(game, n)
+    lines = (json.dumps(event, ensure_ascii=False) + "\n" async for event in events)
+    return StreamingResponse(lines, media_type="application/x-ndjson")
 
 
 def add_error_handlers(app):

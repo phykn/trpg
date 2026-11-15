@@ -10,7 +10,10 @@ import yaml
 
 from ..interpret import Interpreter
 from ..models.decision import DecisionClient
+from ..models.llm import LLMClient
+from ..narrate import LEVELS, Narrator
 from ..rules.state import start_state
+from ..view import show_line, show_name
 from .load import StoryError, load_story, parse_address
 
 GOAL_RIGHT = 0.85
@@ -87,17 +90,78 @@ def summarize(results):
     return "\n".join(lines), passed
 
 
+def list_text_jobs(story):
+    jobs = []
+    for name, person in story.people.items():
+        mood = person.attitude
+        base = {"kind": "answer", "person": show_name(story, "사람", name), "bio": person.bio,
+                "attitude": f"믿음 {LEVELS[mood.trust]}, 두려움 {LEVELS[mood.fear]}"}
+        for topic, entry in person.topics.items():
+            said = entry.asks[0] if entry.asks else f"{topic}에 관해 묻습니다."
+            jobs += [(addr, {**base, "said": said, "says": [line.text], "quiet": False})
+                     for addr, line in story.lines.items() if line.kind == "말" and (line.name, line.topic) == (name, topic)]
+            if entry.stance == "꺼린다":
+                jobs.append((f"꺼림 {name}.{topic}", {**base, "said": said, "says": ["이 화제는 말해 주지 않는다"], "quiet": True}))
+        jobs.append((f"넘김 {name}", {**base, "said": "이 마을에서 수상한 사람을 본 적 있습니까?", "says": ["답할 것이 없다"],
+                                     "quiet": True}))
+    for name, place in story.places.items():
+        written = [show_line(story, a) for a, line in story.lines.items()
+                   if line.kind == "볼 것" and line.place == name and not line.cond and not line.lock]
+        people = [show_name(story, "사람", p) for p, person in story.people.items() if person.place == name]
+        jobs.append((f"곳 {name}", {"kind": "scene", "place": show_name(story, "곳", name), "desc": place.desc,
+                                    "written": written, "happening": [], "people": people}))
+    return jobs
+
+
+async def run_text_evals(folder, narrator):
+    results = []
+    for label, job in list_text_jobs(load_story(folder)):
+        began = time.monotonic()
+        async for result in narrator.write(job):
+            pass
+        results.append({"case": label, "text": result["text"], "checks": result["checks"],
+                        "seconds": round(time.monotonic() - began, 1)})
+    return results
+
+
+def summarize_text(results):
+    lines = []
+    for r in results:
+        first, last = r["checks"][0]["failed"], r["checks"][-1]["failed"]
+        mark = "통과" if not first else f"다시 씀 {len(r['checks']) - 1}" + (" · 끝내 떨어짐" if last else "")
+        lines.append(f"{mark:<12} {r['case']}: {r['text']}  [{', '.join(first) or '-'}]  {r['seconds']}s")
+    fails = Counter(f for r in results for f in r["checks"][0]["failed"])
+    failed = sum(1 for r in results if r["checks"][0]["failed"])
+    still = sum(1 for r in results if r["checks"][-1]["failed"])
+    rewrites = sum(len(r["checks"]) - 1 for r in results)
+    lines.append(f"첫 글이 떨어짐 {failed}/{len(results)} · 다시 쓴 횟수 {rewrites} · 끝내 떨어짐 {still} · "
+                 + " · ".join(f"{k} {v}" for k, v in fails.most_common()))
+    return "\n".join(lines)
+
+
+async def run_text(folder, cfg):
+    decision = DecisionClient(cfg.decision_base_url, cfg.decision_model)
+    llm = LLMClient(cfg.llm_base_url, cfg.llm_model)
+    await llm.check()
+    return await run_text_evals(folder, Narrator(llm, decision))
+
+
 def main():
     from run_api import local_settings
 
-    parser = argparse.ArgumentParser(description="Run a story's interpretation evals against the decision model.")
+    parser = argparse.ArgumentParser(description="Run a story's interpretation or text evals against the models.")
     parser.add_argument("folder", type=Path)
+    parser.add_argument("--text", action="store_true", help="write and check every answer and scene instead")
     parser.add_argument("--out", type=Path, help="a run folder under qa_test/runs/ for the report and the answers")
     args = parser.parse_args()
     cfg = local_settings()
-    decision = DecisionClient(cfg.decision_base_url, cfg.decision_model)
-    results = asyncio.run(run_evals(args.folder, Interpreter(decision)))
-    report, passed = summarize(results)
+    if args.text:
+        results = asyncio.run(run_text(args.folder, cfg))
+        report, passed = summarize_text(results), True
+    else:
+        decision = DecisionClient(cfg.decision_base_url, cfg.decision_model)
+        results = asyncio.run(run_evals(args.folder, Interpreter(decision)))
+        report, passed = summarize(results)
     print(report)
     if args.out:
         args.out.mkdir(parents=True, exist_ok=True)

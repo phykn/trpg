@@ -1,6 +1,6 @@
 # Server
 
-FastAPI + Pydantic v2. The design is in [docs/engine/](../docs/engine/): [02-api.md](../docs/engine/02-api.md) defines the HTTP boundary. Every route but `GET /health` needs Basic Auth. Startup checks both models ([01-ai.md](../docs/engine/01-ai.md)) and warms them, which can take a minute. Typed questions are read with Kanana; no narration is written yet.
+FastAPI + Pydantic v2. The design is in [docs/engine/](../docs/engine/): [02-api.md](../docs/engine/02-api.md) defines the HTTP boundary. Every route but `GET /health` needs Basic Auth. Startup checks both models ([01-ai.md](../docs/engine/01-ai.md)) and warms them, which can take a minute. Typed questions are read with Kanana; answers and scenes are written by gemma4, checked by Kanana and streamed as NDJSON.
 
 ## Run
 
@@ -39,6 +39,7 @@ From the repository root unless the line starts with `cd server`:
 .venv/bin/python -m ruff check server/
 cd server && ../.venv/bin/python -m src.story ../scenarios/<folder>   # check a story (docs/engine/03-check.md)
 cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<folder> --out ../qa_test/runs/<run>   # interpretation evals (docs/engine/01-ai.md 5)
+cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<folder> --text --out ../qa_test/runs/<run>   # text evals
 ```
 
 ## Layout
@@ -46,6 +47,6 @@ cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<folder> --out 
 ```
 server/
   run_api.py   app construction, --local defaults
-  src/         config.py, story/ (reading, references, compiling, checks, evals), rules/ (game state and changes), save.py, service.py, view.py, api.py, locale/ko.py, models/, interpret.py
+  src/         config.py, story/ (reading, references, compiling, checks, evals), rules/ (game state and changes), save.py, service.py, view.py, api.py, locale/ko.py, models/, interpret.py, narrate.py
   tests/
 ```

@@ -3,6 +3,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 from run_api import build_app, local_settings
+from src.models import ModelUnavailable
+from src.narrate import Narrator
 from src.service import GameService
 from src.story.load import load_story
 from src.view import show_name
@@ -20,8 +22,29 @@ class FakeInterpreter:
         return self.readings[text]
 
 
-def make_client(tmp_path, interpreter):
-    client = TestClient(build_app(local_settings(), GameService({"dawn": DAWN}, tmp_path, interpreter)))
+class FakeLLM:
+    def __init__(self, texts):
+        self.texts = list(texts)
+
+    async def stream(self, messages, max_tokens):
+        text = self.texts.pop(0)
+        if isinstance(text, Exception):
+            raise text
+        for word in text.split(" "):
+            yield word + " "
+
+
+class FakeChecks:
+    def __init__(self, verdicts):
+        self.verdicts = list(verdicts)
+
+    async def decide(self, state, questions):
+        ok = self.verdicts.pop(0)
+        return {key: {"noul": float(ok != (key == "added"))} for key in questions}
+
+
+def make_client(tmp_path, interpreter, narrator=None):
+    client = TestClient(build_app(local_settings(), GameService({"dawn": DAWN}, tmp_path, interpreter, narrator)))
     client.auth = ("local", "local")
     return client
 
@@ -101,3 +124,28 @@ def test_errors_keep_the_game_as_it_was(tmp_path):
     assert stale.status_code == 409 and stale.json()["view"] == first["view"]
     asked = client.post(f"/games/{game}/commands", json={"request_id": "r3", "revision": 1, "text": "안녕하십니까"})
     assert asked.status_code == 503 and client.get(f"/games/{game}").json() == first["view"]
+
+
+def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error(tmp_path):
+    text = "징수관은 언제 왔습니까?"
+    llm = FakeLLM([ModelUnavailable("down"), "사당에 들어섭니다.", "장부만 걷고 갔소.", "해 지기 전에 떠났소."])
+    narrator = Narrator(llm, FakeChecks([True, False, True]))
+    player = Player(make_client(tmp_path, FakeInterpreter({text: {"kind": "topics", "topics": ["징수관"]}}), narrator))
+    player.send(do=player.view["start"]["acts"][0]["id"])
+
+    def read(n):
+        response = player.client.get(f"/games/{player.game}/turns/{n}/text")
+        assert response.status_code == 200 and response.headers["content-type"].startswith("application/x-ndjson")
+        return [json.loads(line) for line in response.text.splitlines()]
+
+    assert [e["type"] for e in read(1)] == ["start", "error"]
+    assert [e["type"] for e in read(1)] == ["start", "delta", "delta", "end", "done"]
+    player.send(text=text)
+    events = read(2)
+    assert [e["type"] for e in events] == ["start", "delta", "delta", "delta", "replace", "end", "done"]
+    assert events[4] == {"type": "replace", "slot": 0, "text": "해 지기 전에 떠났소. "}
+    assert read(2) == [{"type": "start", "slot": 0}, {"type": "delta", "slot": 0, "text": "해 지기 전에 떠났소. "},
+                       {"type": "end", "slot": 0}, {"type": "done"}]
+    saved = json.loads((tmp_path / f"{player.game}.json").read_text(encoding="utf-8"))["turns"][1]["text"]
+    assert [c["failed"] for c in saved[0]["checks"]] == [["added", "meaning"], []]
+    assert player.client.get(f"/games/{player.game}/turns/9/text").status_code == 404

@@ -12,6 +12,7 @@ from src.interpret import Interpreter
 from src.models import ModelUnavailable
 from src.models.decision import DecisionClient
 from src.models.llm import LLMClient
+from src.narrate import Narrator
 from src.service import GameService
 from src.story.check import load_stories
 from src.story.load import StoryError
@@ -70,10 +71,10 @@ def main():
     except StoryError as exc:
         raise SystemExit(f"invalid story: {exc}") from None
     try:
-        decision, _ = asyncio.run(check_models(cfg))
+        decision, llm = asyncio.run(check_models(cfg))
     except (ValueError, ModelUnavailable) as exc:
         raise SystemExit(f"models: {exc}") from None
-    service = GameService(stories, cfg.save_dir, Interpreter(decision))
+    service = GameService(stories, cfg.save_dir, Interpreter(decision), Narrator(llm, decision))
     uvicorn.run(build_app(cfg, service), host=cfg.host, port=cfg.port)
 
 
