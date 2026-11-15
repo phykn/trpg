@@ -1,4 +1,4 @@
-import { clearGameId, loadGameId, loadLog, storeGameId, storeLog } from '../storage';
+import { clearGameId, loadGameId, storeGameId } from '../storage';
 
 const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
 const storage = { getItem: jest.fn(), setItem: jest.fn() };
@@ -49,11 +49,4 @@ test('a 404 clears the pointer, so the next start does not reopen a deleted game
   clearGameId();
   expect(items.has('trpg.game_id')).toBe(false);
   expect(loadGameId()).toBeNull();
-});
-
-test('the chat history survives a reload, and only the saved game keeps one', () => {
-  const items = device({ 'trpg.log.g_old': '[]', 'trpg.game_id': 'g_new' });
-  storeLog('g_new', [{ id: 'you:1', kind: 'you', text: 'a' }]);
-  expect(loadLog('g_new')).toEqual([{ id: 'you:1', kind: 'you', text: 'a' }]);
-  expect([...items.keys()].sort()).toEqual(['trpg.game_id', 'trpg.log.g_new']);
 });

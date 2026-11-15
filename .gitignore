@@ -29,7 +29,7 @@ agency/
 release/
 scenarios/*
 !scenarios/skeleton/
-!scenarios/pass/
+!scenarios/dawn/
 tools/
 notebooks/
 .notebooks/

@@ -1,6 +1,6 @@
 # Client
 
-The mobile web client (Expo, React Native Web, NativeWind). Its screens, state machine and module map are in [docs/old/ui.md](../docs/old/ui.md); it talks to the server only through [docs/old/api.md](../docs/old/api.md).
+The mobile web client (Expo, React Native Web, NativeWind). Its screens are in [docs/game/07-screen.md](../docs/game/07-screen.md); it talks to the server only through [docs/engine/02-api.md](../docs/engine/02-api.md). For now it shows an empty title screen.
 
 ## Commands
 
@@ -32,7 +32,7 @@ npm run serve            # run the API and a quick tunnel, and write the tunnel 
 `serve` deploys the client when it starts and again whenever client files change. When it is ready it prints the Worker's address, looked up from the Cloudflare account at run time. The Worker serves the static client and forwards `/api/*` to the tunnel URL in KV. While `serve` runs:
 
 - A dropped tunnel is reopened and its new URL written to KV, which takes about a minute to take effect.
-- A change to a `.py` file in `server/` or a `.yaml` file in `scenarios/` restarts only the API; the address keeps working. If the API fails to start (a story that fails validation, say), `/api` returns 502 until a later change fixes it. Changing a story makes its saved games incompatible: they open on a blocked screen, and the player starts a new game.
+- A change to a `.py` file in `server/` or a `.yaml` file in `scenarios/` restarts only the API; the address keeps working. If the API fails to start (a story that fails validation, say), `/api` returns 502 until a later change fixes it. A game in progress keeps the copy of its story it started with.
 - A change to client files rebuilds and redeploys the client (about a minute); reloading the page picks it up.
 
 Run `npx wrangler login` once before the first use; on another Cloudflare account, also create the KV namespace (`npx wrangler kv namespace create TUNNEL`) and put its id in `wrangler.jsonc`. Both models must be running. With `serve` stopped the page still opens, but `/api` returns 502.

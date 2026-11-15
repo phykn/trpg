@@ -11,7 +11,7 @@ const localEnv = (url) => ({
 async function health(base, ms) {
   try {
     const response = await fetch(`${base}/health`, { signal: AbortSignal.timeout(ms) });
-    return response.ok && (await response.json()).mode === 'engine' ? 'engine' : 'other';
+    return response.ok && (await response.json()).ok === true ? 'engine' : 'other';
   } catch (error) {
     return error.cause?.code === 'ECONNREFUSED' ? 'refused' : 'other';
   }

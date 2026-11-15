@@ -1,4 +1,3 @@
-import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,7 +5,7 @@ from pathlib import Path
 from dotenv import dotenv_values
 
 
-def load_server_env(server_dir: Path, app_env: str | None = None) -> None:
+def load_server_env(server_dir, app_env=None):
     """Process environment values win over the dotenv files."""
     existing = set(os.environ)
     env_name = app_env or os.environ.get("APP_ENV", "dev")
@@ -26,24 +25,19 @@ class Settings:
     cors_origins: list[str]
     scenario_dir: Path
     save_dir: Path
-    decision_model: str           # malkuth (models/decision.py)
+    decision_model: str
     decision_base_url: str
-    decision_min_confidence: float | None
-    decision_api_key: str
-    llm_model: str                # qwen, gemma4 or minicpm (models/llm.py)
+    llm_model: str
     llm_base_url: str
-    llm_sampling: dict | None
 
 
-def _path(server_dir: Path, value: str) -> Path:
+def _path(server_dir, value):
     path = Path(value)
     return path if path.is_absolute() else (server_dir / path).resolve()
 
 
-def settings(server_dir: Path) -> Settings:
+def settings(server_dir):
     env = os.environ
-    sampling = env.get("LLM_SAMPLING", "")
-    confidence = env.get("DECISION_MIN_CONFIDENCE", "")
     return Settings(
         host=env["HOST"],
         port=int(env["PORT"]),
@@ -54,9 +48,6 @@ def settings(server_dir: Path) -> Settings:
         save_dir=_path(server_dir, env["SAVE_DIR"]),
         decision_model=env["DECISION_MODEL"],
         decision_base_url=env["DECISION_BASE_URL"],
-        decision_min_confidence=float(confidence) if confidence else None,
-        decision_api_key=env.get("DECISION_API_KEY", ""),
         llm_model=env["LLM_MODEL"],
         llm_base_url=env["LLM_BASE_URL"],
-        llm_sampling=json.loads(sampling) if sampling else None,
     )
