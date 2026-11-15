@@ -90,4 +90,4 @@ AI는 심판이 아니라 **배우와 해설자**다. 지어내는 것은 목소
 | [09 이야기 만들기](09-authoring.md) | 줄거리로 새 이야기를 짜는 순서 |
 | [10 첫 이야기](10-first-story.md) | 처음 만들 이야기 하나 |
 
-이 게임을 담는 데이터는 [data/](../data/01-ontology.md)가, 그것을 움직이는 모델, API, 검사, 구현 계획은 [engine/](../engine/01-ai.md)이 정한다.
+이 게임을 담는 데이터는 [data/](../data/01-ontology.md)가, 그것을 움직이는 모델, API, 검사는 [engine/](../engine/01-ai.md)이 정한다.

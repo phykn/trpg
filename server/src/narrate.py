@@ -17,10 +17,11 @@ def make_jobs(story, before, after, turn):
     """One job per text slot of the turn's feed, in the same order (view.make_feed)."""
     action, jobs = turn["action"], []
     if action["do"] == "conclude":
-        ending = getattr(story.endings, judge_ending(story, after)["verdict"])
+        ending = judge_ending(story, after)
+        events = [getattr(story.events[i], result) for i, result in ending["events"]]
         clock, cells = story.head.clock, story.head.cells
         jobs.append({"kind": "ending", "time": ko.clock(clock.start + cells * clock.step) if clock else None,
-                     "happening": [ending, story.endings.explain]})
+                     "happening": [getattr(story.endings, ending["verdict"]), *events, story.endings.explain]})
     elif action["do"] not in ("face", "read"):
         speaker = next((find_speaker(story, t) for t in turn["talk"] if find_speaker(story, t)), None)
         jobs.append(make_answer(story, after, turn, speaker) if speaker else make_scene(story, before, after, turn))

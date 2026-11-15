@@ -13,13 +13,14 @@ export function Ending({ view, log, phase, onRetryText, onLeave }: {
   view: GameView; log: Entry[]; phase: Phase; onRetryText: () => void; onLeave: () => void;
 }) {
   const ending = view.ending!;
-  const texts = log.filter((e) => e.key.startsWith(`${ending.turn}:`) && 'who' in e && e.text);
+  const texts = log.filter((e): e is Extract<Entry, { who: string | null }> =>
+    e.key.startsWith(`${ending.turn}:`) && 'who' in e && !!e.text);
   const busy = phase === 'sending' || phase === 'streaming';
   return (
     <View className="min-h-0 flex-1 gap-4 px-4 py-6">
       <Text accessibilityRole="header" className="font-serif text-hero text-fg-default">{ko.verdicts[ending.verdict]}</Text>
       <ScrollView className="min-h-0 flex-1" contentContainerClassName="gap-5">
-        {texts.map((e) => 'who' in e ? <Text key={e.key} className="font-serif-body text-body text-fg-default">{e.text}</Text> : null)}
+        {texts.map((e) => <Text key={e.key} className="font-serif-body text-body text-fg-default">{e.text}</Text>)}
         {busy || phase === 'text_error' ? null : (
           <>
             <View className="gap-1.5">

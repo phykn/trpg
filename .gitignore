@@ -8,9 +8,6 @@ __pycache__/
 .venv/
 server/.env*
 client/.env*
-release/.env*
-!release/.env.example
-release/*.log
 .claude/
 .tmux-agent-bridge/
 .playwright-mcp/
@@ -20,13 +17,10 @@ release/*.log
 # Runtime data
 saves/
 logs/
-reports/
 qa_test/
-scenarios/*/.decomp/
 
 # Local-only (not part of the repo)
 agency/
-release/
 scenarios/*
 !scenarios/skeleton/
 !scenarios/dawn/

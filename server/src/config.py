@@ -5,11 +5,10 @@ from pathlib import Path
 from dotenv import dotenv_values
 
 
-def load_server_env(server_dir, app_env=None):
+def load_server_env(server_dir):
     """Process environment values win over the dotenv files."""
     existing = set(os.environ)
-    env_name = app_env or os.environ.get("APP_ENV", "dev")
-    for path in (server_dir / ".env.shared", server_dir / f".env.{env_name}"):
+    for path in (server_dir / ".env.shared", server_dir / f".env.{os.environ.get('APP_ENV', 'dev')}"):
         if path.is_file():
             for key, value in dotenv_values(path).items():
                 if value is not None and key not in existing:

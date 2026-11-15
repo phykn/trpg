@@ -40,6 +40,8 @@ def test_each_text_slot_gets_one_job_and_no_job_says_which_line_is_a_lie():
     assert "목소리다" in make_messages(answer)[0]["content"] and "서술자다" in make_messages(first)[0]["content"]
     ending = make_jobs(DAWN, *turns[-1])[0]
     assert ending["kind"] == "ending" and ending["time"] == "새벽 4시"   # when the cells run out, not when concluded
+    assert ending["happening"] == [DAWN.endings.unsolved, *(e.happened for e in DAWN.events if e.at <= 19),
+                                   DAWN.endings.explain] and len(ending["happening"]) == 4
 
 
 def test_a_text_fails_on_low_checks_and_on_length():

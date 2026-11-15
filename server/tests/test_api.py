@@ -43,6 +43,11 @@ class FakeChecks:
         return {key: {"noul": float(ok != (key == "added"))} for key in questions}
 
 
+class Down:
+    async def read(self, story, state, text):
+        raise ModelUnavailable("down")
+
+
 def make_client(tmp_path, interpreter, narrator=None):
     client = TestClient(build_app(local_settings(), GameService({"dawn": DAWN}, tmp_path, interpreter, narrator)))
     client.auth = ("local", "local")
@@ -109,7 +114,7 @@ def test_dawn_is_solved_without_dice_and_no_branch_name_reaches_the_screen(tmp_p
 
 
 def test_errors_keep_the_game_as_it_was(tmp_path):
-    client = make_client(tmp_path, None)
+    client = make_client(tmp_path, Down())
     assert client.get("/stories", auth=("local", "wrong")).status_code == 401
     assert client.get("/games/0123456789abcdef").status_code == 404
     reply = client.post("/games", json={"request_id": "g1", "story": "dawn"}).json()

@@ -188,11 +188,7 @@ class Turn:
             self.change("count", person=person, topic=None, value=0)
             self.write_up()
         elif kind == "none":
-            passes = self.state["talks"][person]["passes"] + 1
-            self.change("count", person=person, topic=None, value=passes)
-            self.talk.append({"pass": person})
-            if passes >= 3:
-                self.lead(person, None)
+            self.pass_on(person)
         elif kind in ("chat", "unsure"):
             self.talk.append({kind: person, **({"topics": heard["topics"]} if kind == "unsure" else {})})
         else:
@@ -213,6 +209,13 @@ class Turn:
         self.change("count", person=person, topic=topic, value=asked)
         if asked >= 3:
             self.lead(person, topic)
+
+    def pass_on(self, person):
+        passes = self.state["talks"][person]["passes"] + 1
+        self.change("count", person=person, topic=None, value=passes)
+        self.talk.append({"pass": person})
+        if passes >= 3:
+            self.lead(person, None)
 
     def lead(self, person, asked):
         for topic in list_topics(self.story, self.state, person):
@@ -272,11 +275,7 @@ class Turn:
             self.write_up()
             return
         if target in self.story.people:
-            passes = self.state["talks"][target]["passes"] + 1
-            self.change("count", person=target, topic=None, value=passes)
-            self.talk.append({"pass": target})
-            if passes >= 3:
-                self.lead(target, None)
+            self.pass_on(target)
         else:
             self.talk.append({"shut": target})
         self.spend()

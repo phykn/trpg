@@ -393,11 +393,9 @@ class Block(Record):
 
 class Story:
     def __init__(self, raw):
-        self.raw = raw
         self.copy = raw.model_dump(by_alias=True, exclude_unset=True)
         self.mark = hashlib.sha256(json.dumps(self.copy, ensure_ascii=False).encode()).hexdigest()
-        self.head, self.facts, self.props = raw.head, raw.facts, raw.props
-        self.places, self.things, self.people = raw.places, raw.things, raw.people
+        self.head, self.places, self.things, self.people = raw.head, raw.places, raw.things, raw.people
         self.events, self.endings = raw.events, raw.endings
         self.links = {name: [] for name in raw.places}
         for name, place in raw.places.items():

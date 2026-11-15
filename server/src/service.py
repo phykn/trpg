@@ -104,8 +104,6 @@ class GameService:
         data, _, _ = self.load(game)
         if not 1 <= n <= len(data["turns"]):
             raise Missing(f"no turn {n}")
-        if self.narrator is None:
-            raise ModelUnavailable("no narration model")
         return self.follow_text(game, n)
 
     async def follow_text(self, game, n):
@@ -210,8 +208,6 @@ class GameService:
         playing = state["stats"] is not None and state["conclusion"] is None and state["spent"] < story.head.cells
         if action["do"] != "ask" or not playing:
             return None
-        if self.interpreter is None:
-            raise ModelUnavailable("no decision model")
         return await self.interpreter.read(story, state, action["text"])
 
     def make_result(self, story, state, turn, with_view=True):
