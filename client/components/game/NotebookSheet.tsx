@@ -1,19 +1,28 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { pressed } from '@/components/ui/Button';
+import { Button, pressed } from '@/components/ui/Button';
 import { Sheet } from '@/components/ui/Sheet';
 import { ko } from '@/locale/ko';
-import type { GameView, Group } from '@/services/types';
+import type { GameView, Group, Line } from '@/services/types';
 import { Marks } from './Marks';
 
 export const GROUP_ORDER: Group[] = ['places', 'people', 'items', 'seen', 'heard'];
+
+export function findLine(view: GameView, id: number): [Group, Line] | null {
+  for (const g of GROUP_ORDER) {
+    const line = view.notebook[g].find((l) => l.id === id);
+    if (line) return [g, line];
+  }
+  return null;
+}
 
 function Dot() {
   return <View className="h-1.5 w-1.5 rounded-full bg-gold-fg" />;
 }
 
-export function NotebookSheet({ view, group, onGroup, onLine, onClose }: {
-  view: GameView; group: Group; onGroup: (g: Group) => void; onLine: (id: number) => void; onClose: () => void;
+export function NotebookSheet({ view, group, onGroup, onLine, onConclude, onClose }: {
+  view: GameView; group: Group; onGroup: (g: Group) => void; onLine: (id: number) => void; onConclude?: () => void;
+  onClose: () => void;
 }) {
   return (
     <Sheet full title={ko.notebook} icon="book" onClose={onClose}>
@@ -46,6 +55,7 @@ export function NotebookSheet({ view, group, onGroup, onLine, onClose }: {
           </Pressable>
         ))}
       </ScrollView>
+      {onConclude ? <Button tone="secondary" icon="flag" label={ko.conclude} onPress={onConclude} /> : null}
     </Sheet>
   );
 }

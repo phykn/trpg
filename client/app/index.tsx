@@ -1,6 +1,7 @@
 import { Frame } from '@/components/game/Frame';
 import { Resend } from '@/components/ui/Notice';
 import { useGame } from '@/logic/useGame';
+import { Ending } from '@/screens/Ending';
 import { Play } from '@/screens/Play';
 import { Start } from '@/screens/Start';
 import { Title } from '@/screens/Title';
@@ -23,6 +24,13 @@ export default function Index() {
       <Frame title={view.story.title}>
         <Start view={view} locked={phase !== 'ready'} onStart={(act) => g.send({ do: act })} />
         {phase === 'stuck' ? <View className="px-4 pb-4"><Resend onResend={g.resend} /></View> : null}
+      </Frame>
+    );
+  }
+  if (view.stage === 'over') {
+    return (
+      <Frame title={view.story.title}>
+        <Ending view={view} log={g.log} phase={phase} onRetryText={g.retryText} onLeave={g.leave} />
       </Frame>
     );
   }

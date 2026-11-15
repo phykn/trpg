@@ -49,7 +49,7 @@ def said(person, text):
 
 def clock(minutes):
     hour, minute = divmod(minutes % (24 * 60), 60)
-    part = "새벽" if hour < 5 else "오전" if hour < 12 else "오후" if hour < 18 else "밤"
+    part = "새벽" if 1 <= hour < 5 else "오전" if 5 <= hour < 12 else "오후" if 12 <= hour < 18 else "밤"
     return f"{part} {hour % 12 or 12}시" + (f" {minute}분" if minute else "")
 
 

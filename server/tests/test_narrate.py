@@ -23,7 +23,8 @@ def play(actions):
 def test_each_text_slot_gets_one_job_and_no_job_says_which_line_is_a_lie():
     moves = [({"do": "move", "place": p}, None) for p in ["숲길", "마을 사당"] * 9]
     turns = play([({"do": "stats", "plus2": "wit", "plus1": "charm"}, None),
-                  ({"do": "ask", "text": "징수관은?"}, {"kind": "topics", "topics": ["징수관"]}), *moves])
+                  ({"do": "ask", "text": "징수관은?"}, {"kind": "topics", "topics": ["징수관"]}), *moves,
+                  ({"do": "conclude", "who": None, "how": None, "why": None}, None)])
     every = []
     for before, after, turn in turns:
         jobs = make_jobs(DAWN, before, after, turn)
@@ -37,6 +38,8 @@ def test_each_text_slot_gets_one_job_and_no_job_says_which_line_is_a_lie():
     assert back["desc"] is None and again["desc"] is None
     assert len([j for j in every if j.get("happening")]) >= 2
     assert "목소리다" in make_messages(answer)[0]["content"] and "서술자다" in make_messages(first)[0]["content"]
+    ending = make_jobs(DAWN, *turns[-1])[0]
+    assert ending["kind"] == "ending" and ending["time"] == "새벽 4시"   # when the cells run out, not when concluded
 
 
 def test_a_text_fails_on_low_checks_and_on_length():

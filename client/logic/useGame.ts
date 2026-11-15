@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { ApiError, createGame, getGame, getStories, getTurns, sendCommand, streamText } from '@/services/api';
-import { loadGameId, storeGameId } from '@/services/storage';
+import { clearGameId, loadGameId, storeGameId } from '@/services/storage';
 import type { CommandBody, FeedItem, GameView, Story, TurnResult } from '@/services/types';
 
 // ready: commands open. sending, streaming: locked. stuck: only the same command again. text_error: only the text again.
@@ -147,5 +147,15 @@ export function useGame() {
     void readTexts(unread.current);
   }
 
-  return { phase, stories, saved, view, log, start, resume, send, resend, retryText };
+  // After the ending: the finished game is not offered again.
+  function leave() {
+    clearGameId();
+    setSaved(null);
+    game.current = null;
+    setView(null);
+    setLog([]);
+    setPhase('title');
+  }
+
+  return { phase, stories, saved, view, log, start, resume, send, resend, retryText, leave };
 }

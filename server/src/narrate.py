@@ -18,7 +18,9 @@ def make_jobs(story, before, after, turn):
     action, jobs = turn["action"], []
     if action["do"] == "conclude":
         ending = getattr(story.endings, judge_ending(story, after)["verdict"])
-        jobs.append({"kind": "ending", "happening": [ending, story.endings.explain]})
+        clock, cells = story.head.clock, story.head.cells
+        jobs.append({"kind": "ending", "time": ko.clock(clock.start + cells * clock.step) if clock else None,
+                     "happening": [ending, story.endings.explain]})
     elif action["do"] not in ("face", "read"):
         speaker = next((find_speaker(story, t) for t in turn["talk"] if find_speaker(story, t)), None)
         jobs.append(make_answer(story, after, turn, speaker) if speaker else make_scene(story, before, after, turn))

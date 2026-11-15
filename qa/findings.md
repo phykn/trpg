@@ -9,3 +9,7 @@ Each with its evidence (`qa_test/runs/<run>`, turn numbers).
 ## 브람's "~소" lands on other endings
 
 `qa_test/runs/ui-t13-1`, turn 4 at all three widths: "징수관은 우리 여관에 오지도 않았다소." The bio says he ends with "~소"; gemma4 glues it onto "-았다" despite the rule to write grammatical Korean. Try the bio's wording (an example sentence such as "왔소", "없소") or a grammar check.
+
+## The ending text adds or bends facts
+
+`qa_test/runs/ui-t14-1`: at 412, turn 27, the passage says "당신이 짚은 사람이 끌려가고" and gemma4 wrote "당신이 지목한 남자가" for 넬, a woman. At desktop, turn 11, the truth says the neck mark came from the cart rope; the ending calls it "범행의 흔적일 뿐". The ending is checked like a scene, so neither was caught. Try naming the accused in the ending job, and a check against the truth text.
