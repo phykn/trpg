@@ -8,8 +8,8 @@ MEANING = 0.5
 ADDED = 0.15
 QUIET = 0.5
 REWRITES = 2
-MAX_SENTENCES = {"answer": 3, "scene": 4, "ending": 8}
-MAX_TOKENS = {"answer": 200, "scene": 300, "ending": 700}
+MAX_SENTENCES = {"answer": 3, "scene": 4, "ending": 8, "dm": 3}
+MAX_TOKENS = {"answer": 200, "scene": 300, "ending": 700, "dm": 200}
 LEVELS = {-1: "낮음", 0: "보통", 1: "높음"}
 
 
@@ -29,7 +29,35 @@ def make_jobs(story, before, after, turn):
         event = story.events[happened["omen"] if "omen" in happened else happened["event"]]
         text = event.omen if "omen" in happened else getattr(event, happened["result"])
         jobs.append({"kind": "scene", "happening": [text]})
+    if turn.get("guide"):
+        jobs.append(make_dm(story, after, turn["guide"]))
     return jobs
+
+
+DM = {
+    "open": ("판이 막 시작되었다. 인물은 플레이어 곁에 있다.", "진행자가 본 인물의 첫인상을 한마디 하고, 그 사람에게 무엇이든 물어보라고 권한다"),
+    "meet": ("플레이어가 아직 말을 나눠 보지 않은 인물 곁에 왔다.", "진행자가 본 인물의 첫인상을 한마디 하고, 말을 걸어 보라고 권한다"),
+    "held": ("인물이 어떤 이야기에 입을 다물었다.", "진행자가 인물의 속내를 짐작하는 한마디를 하고, 마음을 움직일 무언가가 필요해 보인다고 넌지시 말한다"),
+    "unvisited": ("한동안 새로 알아낸 것이 없다.", "아직 가 보지 않은 곳에 가 보라고 권한다"),
+    "ask": ("한동안 새로 알아낸 것이 없다. 인물은 플레이어 곁에 있다.", "인물에게 다른 것을 묻거나, 알아낸 것을 내밀어 따져 보라고 권한다"),
+    "look": ("한동안 새로 알아낸 것이 없다.", "수첩을 다시 훑으며 서로 어긋나는 말을 찾아보라고 권한다"),
+    "conclude": ("시간이 다 되었다.", "누가, 어떻게, 왜, 플레이어의 결론을 들려 달라고 한다"),
+}
+
+
+def make_dm(story, after, guide):
+    situation, suggest = DM[guide["key"]]
+    name = guide.get("name")
+    if guide["key"] == "open" and not name:
+        situation, suggest = "판이 막 시작되었다. 곁에 아무도 없다.", "다른 곳으로 가 보라고 권한다"
+    job = {"kind": "dm", "situation": situation, "suggest": suggest, "person": None, "place": None}
+    if guide["key"] == "unvisited":
+        job["place"] = show_name(story, "곳", name)
+    elif name:
+        attitude = after["attitudes"][name]
+        job["person"] = {"name": show_name(story, "사람", name), "bio": story.people[name].bio,
+                         "attitude": f"믿음 {LEVELS[attitude['trust']]}, 두려움 {LEVELS[attitude['fear']]}"}
+    return job
 
 
 def make_answer(story, after, turn, person):
@@ -87,6 +115,13 @@ def make_scene(story, before, after, turn):
 
 
 def list_given(job):
+    if job["kind"] == "dm":
+        given = [f"상황: {job['situation']}"]
+        if job["person"]:
+            person = job["person"]
+            given.append(f"인물: {person['name']}. 신상: {person['bio']} 플레이어를 대하는 태도: {person['attitude']}")
+        given += [f"가 보지 않은 곳: {job['place']}"] if job["place"] else []
+        return given + [f"권할 일: {job['suggest']}"]
     if job["kind"] == "answer":
         return [f"신상: {job['bio']}", f"태도: {job['attitude']}", f"할 말: {' / '.join(job['says']) or '없다'}",
                 f"플레이어의 말: {job['said'] or '없다'}"]
@@ -102,7 +137,15 @@ def list_given(job):
 
 def make_messages(job):
     given = "\n".join(g for g in list_given(job) if not g.startswith("플레이어의 말"))
-    if job["kind"] == "answer":
+    if job["kind"] == "dm":
+        rules = ["플레이어를 \"당신\"이라 부르고 합니다체로 한두 문장만 쓴다. 플레이어를 이름이나 3인칭으로 부르지 않는다.",
+                 "탁자 앞에서 판을 이끄는 진행자처럼 가볍게 말을 건넨다. 가르치거나 잔소리하지 않는다.",
+                 "인물의 인상은 신상과 태도에서만 짐작한다. 사건의 진실, 단서, 누가 거짓말하는지는 말하지 않는다.",
+                 "화면, 단추, 누르는 법은 말하지 않는다. 받은 것에 없는 사람, 물건, 때, 곳을 더하지 않는다.",
+                 "권할 일은 진행자인 당신이 플레이어에게 직접 건네는 말로 쓴다. 인물이 권하는 것처럼 쓰지 않는다.",
+                 "한 문단으로 쓴다."]
+        head = "당신은 추리 TRPG 판을 이끄는 진행자(DM)다."
+    elif job["kind"] == "answer":
         rules = [f"{job['person']}의 대사만 한두 문장으로 쓴다. 이름, 따옴표, 설명은 붙이지 않는다.",
                  "신상의 말투를 따르되 문법에 맞는 한국어로 쓰고, 태도에 맞게 플레이어의 말을 받아친다.",
                  "할 말이 있으면 그 내용을 빠짐없이 말한다. 태도는 말투에만 드러내고, 모른다고 하거나 피하지 않는다.",
@@ -122,6 +165,8 @@ def make_messages(job):
     system = f"{head}\n\n받은 것:\n{given}\n\n지킬 것:\n" + "\n".join(f"- {r}" for r in rules)
     if job["kind"] == "answer":
         user = f"플레이어: {job['said']}" if job["said"] else "플레이어: (말없이 기다린다)"
+    elif job["kind"] == "dm":
+        user = "진행자로서 한마디 한다."
     else:
         user = "장면을 들려준다."
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]

@@ -15,10 +15,6 @@ def eul(word):
     return f"{word}{'을' if has_batchim(word) else '를'}"
 
 
-def ga(word):
-    return f"{word}{'이' if has_batchim(word) else '가'}"
-
-
 def eun(word):
     return f"{word}{'은' if has_batchim(word) else '는'}"
 
@@ -104,22 +100,3 @@ def opened(name):
 def missed_topic(person, topic):
     return f"{person} — {topic}"
 
-
-GUIDE = {
-    "talk": "곁에 {name} 있습니다. 무엇이든 물어보십시오.",
-    "move": "이곳에는 아무도 없습니다. 다른 곳으로 가 보는 건 어떻습니까?",
-    "notebook": "들은 말은 수첩에 남습니다. 다른 사람들의 이야기도 들어 보십시오. 다만 길을 나설 때마다 시간이 흐릅니다.",
-    "present": "두 사람의 말이 서로 맞는지 견주어 보십시오. 맞지 않는 데가 있다면 그 말을 내밀어 따질 수 있습니다.",
-    "held": "{name} 무언가 아는 눈치지만 입을 다뭅니다. 마음을 움직일 무언가가 필요해 보입니다.",
-    "broke": "거짓말이 무너졌습니다. 새로 들은 말이 다음 길을 열어 줄 것입니다.",
-    "lock": "잠겨 있습니다. 맞는 도구를 찾거나, 힘이나 솜씨를 믿어 볼 수도 있습니다.",
-    "omen": "무언가 벌어지려 합니다. 서두르면 막을 수 있을지도 모릅니다.",
-    "conclude": "시간이 다 됐습니다. 누가, 어떻게, 왜. 당신의 결론을 들려주십시오.",
-    "unvisited": "아직 {name}에는 가 보지 않았습니다.",
-    "ask": "{name}에게 다른 것을 물어보거나, 지금까지 알아낸 것을 내밀어 보십시오.",
-    "look": "수첩을 다시 훑어보십시오. 서로 어긋나는 줄이 있을지 모릅니다.",
-}
-
-
-def guide(key, name=None):
-    return GUIDE[key].format(name=ga(name) if key in ("talk", "held") else name)

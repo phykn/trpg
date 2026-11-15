@@ -52,3 +52,14 @@ def test_a_text_fails_on_low_checks_and_on_length():
     assert judge(job, {"added": {"noul": 0.9}, "meaning": {"noul": 0.4}}, "하나. 둘! 셋? 넷.")[0] == [
         "added", "meaning", "length"]
     assert count_sentences("……알았소, 그렇다면 말하리다. 해 지기 전에 떠났소") == 2
+
+
+def test_the_dm_is_the_last_slot_and_judges_a_person_only_by_bio_and_attitude():
+    (before, after, turn), = play([({"do": "stats", "plus2": "wit", "plus1": "charm"}, None)])
+    turn = {**turn, "guide": {"key": "open", "name": "고드릭"}}
+    jobs = make_jobs(DAWN, before, after, turn)
+    feed = [f for f in make_feed(DAWN, turn, {}) if "slot" in f]
+    assert [f["kind"] for f in feed] == ["text", "guide"] and jobs[-1]["kind"] == "dm"
+    system = make_messages(jobs[-1])[0]["content"]
+    assert DAWN.people["고드릭"].bio in system and "믿음 보통" in system
+    assert "거짓말" not in "\n".join(make_messages(jobs[-1])[0]["content"].split("지킬 것:")[0].splitlines())

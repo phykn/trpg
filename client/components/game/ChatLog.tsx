@@ -27,12 +27,12 @@ function Item({ entry, people, onNote }: { entry: Entry; people: string[]; onNot
         </Pressable>
       );
     case 'guide':
-      return (
+      return entry.text ? (
         <View className="gap-0.5 rounded-lg bg-canvas-subtle px-3 py-2">
           <Text className="font-mono-medium text-chip text-fg-subtle">{ko.dm}</Text>
           <Text className="font-sans text-panel text-fg-default">{entry.text}</Text>
         </View>
-      );
+      ) : null;
     case 'omen':
     case 'event':
       return entry.text ? (

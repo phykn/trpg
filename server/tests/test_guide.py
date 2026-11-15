@@ -5,27 +5,31 @@ from tests.test_act import CREW, PASS, STATS, STORY, ask, go, present
 
 
 def guides(steps):
-    state, said = start_state(STORY, 1), []
+    state, said, last = start_state(STORY, 1), [], 0
     for step in steps:
         action, heard = step if isinstance(step, tuple) else (step, None)
         result = act(STORY, state, action, heard)
         turn = {"action": action, "changes": result["changes"], "happened": result["happened"]}
-        guide = make_guide(STORY, state, result["state"], turn)
+        guide = make_guide(STORY, state, result["state"], turn, last)
         said.append(guide and guide["key"])
+        last = result["state"]["turn"] if guide else last
         state = result["state"]
     return said
 
 
-def test_the_dm_shows_each_part_once_as_it_first_comes_up():
-    assert guides([STATS, ask("밤"), ask("씨앗"), go("곡물 창고"), ask("그날 밤"), present(CREW, "한스"),
-                   ask("그날 밤")]) == ["talk", "notebook", None, "lock", "present", "broke", None]
+def test_the_dm_opens_and_then_waits_before_speaking_again():
+    assert guides([STATS, ask("밤"), go("곡물 창고"), ask("그날 밤"), present(CREW, "한스"), go("광장"),
+                   go("곡물 창고")]) == ["open", None, None, None, None, None, None]
 
 
-def test_the_dm_nudges_every_third_turn_without_a_new_line():
-    assert guides([STATS, ask("밤"), PASS, PASS, PASS, PASS, PASS, PASS]) == [
-        "talk", "notebook", None, None, "unvisited", None, None, "unvisited"]
+def test_the_dm_remarks_on_someone_not_yet_talked_to_on_arrival():
+    assert guides([STATS, ask("밤"), ask("씨앗"), PASS, go("곡물 창고")])[-1] == "meet"
 
 
-def test_a_held_topic_is_named_once():
-    keys = guides([STATS, ask("밤"), go("곡물 창고"), go("방앗간"), ask("새벽")])
-    assert keys[-1] == "held"
+def test_the_dm_nudges_after_a_while_without_a_new_line():
+    assert guides([STATS, ask("밤"), PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS]) == [
+        "open", None, None, None, None, "unvisited", None, None, None, "unvisited", None]
+
+
+def test_the_first_held_topic_gets_a_remark():
+    assert guides([STATS, ask("밤"), go("곡물 창고"), go("방앗간"), PASS, ask("새벽")])[-1] == "held"

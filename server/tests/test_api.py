@@ -133,8 +133,9 @@ def test_errors_keep_the_game_as_it_was(tmp_path):
 
 def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error(tmp_path):
     text = "징수관은 언제 왔습니까?"
-    llm = FakeLLM([ModelUnavailable("down"), "사당에 들어섭니다.", "장부만 걷고 갔소.", "해 지기 전에 떠났소."])
-    narrator = Narrator(llm, FakeChecks([True, False, True]))
+    llm = FakeLLM([ModelUnavailable("down"), "사당에 들어섭니다.", "고드릭에게 물어보시지요.", "장부만 걷고 갔소.",
+                   "해 지기 전에 떠났소."])
+    narrator = Narrator(llm, FakeChecks([True, True, False, True]))
     player = Player(make_client(tmp_path, FakeInterpreter({text: {"kind": "topics", "topics": ["징수관"]}}), narrator))
     player.send(do=player.view["start"]["acts"][0]["id"])
 
@@ -144,7 +145,7 @@ def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error
         return [json.loads(line) for line in response.text.splitlines()]
 
     assert [e["type"] for e in read(1)] == ["start", "error"]
-    assert [e["type"] for e in read(1)] == ["start", "delta", "delta", "end", "done"]
+    assert [e["type"] for e in read(1)] == ["start", "delta", "delta", "end", "start", "delta", "delta", "end", "done"]
     player.send(text=text)
     events = read(2)
     assert [e["type"] for e in events] == ["start", "delta", "delta", "delta", "replace", "end", "done"]

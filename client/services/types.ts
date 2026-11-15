@@ -37,9 +37,8 @@ export type FeedItem =
   | { kind: 'move'; text: string }
   | { kind: 'roll'; text: string; won: boolean }
   | { kind: 'note'; text: string; lines: number[] }
-  | { kind: 'guide'; text: string }
   | { kind: 'text'; who: string | null; slot: number }
-  | { kind: 'ending' | 'omen' | 'event'; who: null; slot: number };
+  | { kind: 'ending' | 'omen' | 'event' | 'guide'; who: null; slot: number };
 
 export type TurnResult = {
   kind: 'turn' | 'refused';
