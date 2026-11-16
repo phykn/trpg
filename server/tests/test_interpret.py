@@ -11,9 +11,11 @@ DAWN = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
 
 
 class FakeDecision:
-    def __init__(self, kind, topics=None, two=0.1, place="숲길", second="_none"):
+    def __init__(self, kind, topics=None, two=0.1, place="숲길", second="_none", impression=None):
+        impression = impression or {"_none": 0.9}
         self.answers = {"kind": {"choice": kind, "probabilities": {kind: 0.9}}, "two": {"noul": two},
-                        "place": {"choice": place, "probabilities": {}}, "second": {"choice": second, "probabilities": {}}}
+                        "place": {"choice": place, "probabilities": {}}, "second": {"choice": second, "probabilities": {}},
+                        "impression": {"choice": max(impression, key=impression.get), "probabilities": impression}}
         self.asked = []
         if topics:
             self.answers["topic"] = {"choice": max(topics, key=topics.get), "probabilities": topics}
@@ -51,7 +53,7 @@ def test_the_questions_offer_shown_topics_with_their_asks_and_reachable_places()
 ])
 def test_the_answers_become_one_reading(decision, heard):
     got = read(decision)
-    assert {k: v for k, v in got.items() if k != "probs"} == heard and "topic" in got["probs"]
+    assert {k: v for k, v in got.items() if k not in ("probs", "impression")} == heard and "topic" in got["probs"]
 
 
 def test_a_second_topic_is_asked_apart_only_when_two_things_are_asked():
@@ -72,3 +74,16 @@ def test_the_kinds_name_the_other_people_in_the_notebook():
 def test_an_answer_outside_the_options_is_no_answer():
     with pytest.raises(ModelUnavailable):
         read(FakeDecision("move", {"징수관": 1.0}, place="달나라"))
+
+
+def test_an_impression_is_taken_from_the_common_ones_and_the_persons_own_above_its_threshold():
+    rude = FakeDecision("chat", {"징수관": 0.1, "_none": 0.9}, impression={"무례": 0.7, "_none": 0.3})
+    assert read(rude)["impression"] == "무례"
+    assert {"다정", "위협", "눈감기", "_none"} <= set(rude.questions["impression"]["criteria"])
+    assert "들킴" not in rude.questions["impression"]["criteria"]
+    unsure = FakeDecision("chat", {"징수관": 0.1, "_none": 0.9}, impression={"무례": 0.4, "다정": 0.3, "_none": 0.3})
+    assert read(unsure)["impression"] is None
+    alone = FakeDecision("look", place="마을 사당")
+    assert read(alone, "곳 숲길")["impression"] is None and "impression" not in alone.questions
+    given = FakeDecision("chat", impression={"눈감기": 0.8, "_none": 0.2})
+    assert asyncio.run(Interpreter(given).read_impression(DAWN, "브람", "밀주 건은 못 본 걸로 하지"))["impression"] == "눈감기"

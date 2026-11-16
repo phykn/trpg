@@ -105,6 +105,22 @@ def does_fit(story, addr, block):
     return any(want == line.shows or want in line.props for want in block.wants)
 
 
+def find_listener(story, state, action):
+    """Who the player's words in this action are said to, so they may leave an impression (engine/01 1절)."""
+    if state["stats"] is None or state["conclusion"] is not None:
+        return None
+    target = action.get("target")
+    if action["do"] == "ask":
+        return state["partner"]
+    if action["do"] == "present" and target in list_people_here(story, state):
+        return target
+    if action["do"] == "bet" and action.get("text"):
+        found = story.lines.get(target) or story.blocks.get(target)
+        if found and found.kind != "잠김" and found.name in list_people_here(story, state):
+            return found.name
+    return None
+
+
 def find_bet_bonus(story, state, target, method):
     bonus = state["stats"][METHOD_STATS[method]]
     if method in LOCK_METHODS:
@@ -138,25 +154,10 @@ class Turn:
             "read": lambda: self.do_read(action["lines"]),
             "conclude": lambda: self.do_conclude(action["who"], action["how"], action["why"]),
         }
-        listener = self.find_listener(action, heard)
-        if listener:
+        listener = find_listener(self.story, self.state, action)
+        if listener and heard and heard.get("impression"):
             self.impress(listener, heard["impression"])
         steps[action["do"]]()
-
-    def find_listener(self, action, heard):
-        """Who the player's words leave an impression on, if they left one (engine/01 1절)."""
-        if not heard or not heard.get("impression") or self.state["stats"] is None:
-            return None
-        if action["do"] == "ask":
-            return self.state["partner"]
-        target = action.get("target")
-        if action["do"] == "present" and target in list_people_here(self.story, self.state):
-            return target
-        if action["do"] == "bet":
-            found = self.story.lines.get(target) or self.story.blocks.get(target)
-            return found.name if found and getattr(found, "kind", None) != "잠김" and found.name in self.story.people \
-                else None
-        return None
 
     def impress(self, person, name):
         """An impression builds up, may move the attitude, and spreads as a rumor (game/04 4절)."""

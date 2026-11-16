@@ -10,6 +10,7 @@ import yaml
 
 from ..config import local_settings
 from ..interpret import Interpreter
+from ..locale import ko
 from ..models.decision import DecisionClient
 from ..models.llm import LLMClient
 from ..names import show_line, show_name
@@ -20,6 +21,9 @@ from .load import StoryError, load_story, parse_address
 
 GOAL_RIGHT = 0.85
 GOAL_WRONG_TOPIC = 0.02
+GOAL_IMPRESSION = 0.8
+GOAL_WRONG_IMPRESSION = 0.05
+NO_IMPRESSION = "없음"
 
 
 def read_cases(folder, story, held=False):
@@ -34,6 +38,12 @@ def read_cases(folder, story, held=False):
             raise StoryError(f"{path.name}: {where}")
         for expect, texts in groups.items():
             topics = expect.split(" + ")
+            if expect.startswith("인상 "):
+                known = kind == "사람" and expect[3:] in (NO_IMPRESSION, *ko.IMPRESSIONS, *story.people[name].impressions)
+                if not known:
+                    raise StoryError(f"{path.name}: {where}: {expect}")
+                cases += [(where, expect, text) for text in texts]
+                continue
             known = expect in ("잡담", "넘김", "둘러봄") or expect.startswith("곳 ") and expect[2:] in story.places or (
                 kind == "사람" and all(t in story.people[name].topics for t in topics))
             if not known:
@@ -61,6 +71,9 @@ def show_heard(heard):
 
 
 def grade(expect, heard):
+    if expect.startswith("인상 "):   # only the impression counts here; the same sentence may also ask a topic
+        want, got = expect[3:], heard.get("impression") or NO_IMPRESSION
+        return "맞힘" if got == want else "놓침" if got == NO_IMPRESSION else "틀린 인상"
     if heard["kind"] == "topics" and set(heard["topics"]) == set(expect.split(" + ")):
         return "맞힘"
     if heard["kind"] == "topics":
@@ -76,21 +89,30 @@ async def run_evals(folder, interpreter, held=False):
     for where, expect, text in read_cases(folder, story, held):
         began = time.monotonic()
         heard = await interpreter.read(story, make_state(story, where), text)
-        results.append({"where": where, "text": text, "expect": expect, "got": show_heard(heard),
+        got = f"인상 {heard.get('impression') or NO_IMPRESSION}" if expect.startswith("인상 ") else show_heard(heard)
+        results.append({"where": where, "text": text, "expect": expect, "got": got,
                         "grade": grade(expect, heard), "seconds": round(time.monotonic() - began, 2), "heard": heard})
     return results
 
 
 def summarize(results):
-    counts = Counter(r["grade"] for r in results)
-    total = len(results)
     lines = [f"{'O' if r['grade'] == '맞힘' else 'X'} {r['grade']:<5} {r['where']}: {r['text']}  기대={r['expect']}"
              f"  얻음={r['got']}" for r in results]
-    lines.append(" · ".join(f"{g} {counts[g]}" for g in ("맞힘", "되물음", "모자람", "틀림", "틀린 화제")) + f" / {total}")
-    right, wrong = counts["맞힘"] / total, counts["틀린 화제"] / total
-    passed = right >= GOAL_RIGHT and wrong <= GOAL_WRONG_TOPIC
-    lines.append(f"{'통과' if passed else '떨어짐'}  맞힘 {right:.0%} (≥ {GOAL_RIGHT:.0%}), "
-                 f"틀린 화제 {wrong:.0%} (≤ {GOAL_WRONG_TOPIC:.0%})")
+    passed = True
+    parts = (([r for r in results if not r["expect"].startswith("인상 ")], ("맞힘", "되물음", "모자람", "틀림", "틀린 화제"),
+              "틀린 화제", GOAL_RIGHT, GOAL_WRONG_TOPIC),
+             ([r for r in results if r["expect"].startswith("인상 ")], ("맞힘", "놓침", "틀린 인상"),
+              "틀린 인상", GOAL_IMPRESSION, GOAL_WRONG_IMPRESSION))
+    for part, grades, worst, goal_right, goal_wrong in parts:
+        if not part:
+            continue
+        counts, total = Counter(r["grade"] for r in part), len(part)
+        right, wrong = counts["맞힘"] / total, counts[worst] / total
+        ok = right >= goal_right and wrong <= goal_wrong
+        passed = passed and ok
+        lines.append(" · ".join(f"{g} {counts[g]}" for g in grades) + f" / {total}")
+        lines.append(f"{'통과' if ok else '떨어짐'}  맞힘 {right:.0%} (≥ {goal_right:.0%}), "
+                     f"{worst} {wrong:.0%} (≤ {goal_wrong:.0%})")
     return "\n".join(lines), passed
 
 

@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .models import ModelUnavailable
-from .rules.act import Refused, act
+from .rules.act import Refused, act, find_listener
 from .rules.guide import make_guide
 from .save import SaveError, make_save, read_save, write_save
 from .slots import make_jobs
@@ -114,9 +114,12 @@ class GameService:
 
     async def interpret(self, story, state, action):
         playing = state["stats"] is not None and state["conclusion"] is None and state["spent"] < story.head.cells
-        if action["do"] != "ask" or not playing:
+        if not playing:
             return None
-        return await self.interpreter.read(story, state, action["text"])
+        if action["do"] == "ask":
+            return await self.interpreter.read(story, state, action["text"])
+        listener = find_listener(story, state, action) if action.get("text") else None
+        return await self.interpreter.read_impression(story, listener, action["text"]) if listener else None
 
     def make_result(self, story, state, turn, with_view=True):
         ids = {addr: i for i, addr in enumerate(state["notebook"], 1)}

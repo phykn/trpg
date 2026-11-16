@@ -1,4 +1,9 @@
 STATS = {"charm": "매력", "might": "완력", "wit": "재치", "skill": "솜씨"}
+# What each common impression means, for Kanana to recognize in a sentence (game/04 4절). 들킴 comes from deeds only.
+IMPRESSIONS = {"다정": "다정하게 부르거나 안부를 묻는다", "위로": "처지를 헤아려 달래거나 편들어 준다",
+               "칭찬": "추켜세우거나 솜씨를 알아준다", "선물": "무언가를 건네거나 대접하겠다고 한다",
+               "무례": "깔보거나 하인처럼 부리거나 욕한다", "의심": "범인이라거나 무언가 숨긴다고 몬다. 으르는 말은 위협이다",
+               "위협": "말하지 않으면 해치거나 고발하거나 망하게 하겠다고 으른다"}
 METHODS = {"soothe": "달랜다", "press": "몰아세운다", "trick": "속인다", "sneak": "몰래 연다", "force": "힘으로 연다"}
 JUDGED = {"lying": "숨기는 것이 있다", "true": "거짓이 아니다"}
 UNMET = {"lies": "듣지 못함", "held": "꺼내지 못함", "locks": "찾지 못함"}

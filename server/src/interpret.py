@@ -1,3 +1,4 @@
+from .locale import ko
 from .models import ModelUnavailable
 from .names import show_name
 from .rules.act import find_path, list_topics
@@ -6,6 +7,9 @@ THRESHOLD = 0.75
 TWO_THRESHOLD = 0.85
 MARGIN = 0.3   # a topic this far ahead of every other option is taken even under THRESHOLD (engine/01 1절)
 NO_TOPIC = "_none"
+IMPRESSION_THRESHOLD = 0.5
+# A weaker impression still counts when "none" is unlikely; set by the evals of 2026-11-16 (engine/01 1절).
+IMPRESSION_LOW, IMPRESSION_NONE_CEILING = 0.35, 0.2
 
 
 class Interpreter:
@@ -23,12 +27,23 @@ class Interpreter:
             if second:
                 questions = {**questions, "second": second}
                 answers = {**answers, **await self.decision.decide(situation, {"second": second})}
-            heard = pick(answers, questions)
+            heard = {**pick(answers, questions), "impression": pick_impression(answers, questions)}
             probs = {key: answers[key]["probabilities"] if q["type"] == "choice" else {"true": answers[key]["noul"]}
                      for key, q in questions.items()}
         except (KeyError, TypeError, AttributeError) as exc:
             raise ModelUnavailable(f"decision: {type(exc).__name__}: {exc}") from None
         return {**heard, "probs": probs}
+
+    async def read_impression(self, story, person, text):
+        """Only the impression of words that come with a present or a bet."""
+        question = ask_impression(story, person)
+        situation = f"말하는 상대: {show_name(story, '사람', person)}. 플레이어의 문장: {text}"
+        answers = await self.decision.decide(situation, {"impression": question})
+        try:
+            impression = pick_impression(answers, {"impression": question})
+            return {"impression": impression, "probs": {"impression": answers["impression"]["probabilities"]}}
+        except (KeyError, TypeError, AttributeError) as exc:
+            raise ModelUnavailable(f"decision: {type(exc).__name__}: {exc}") from None
 
 
 def make_questions(story, state):
@@ -50,11 +65,34 @@ def make_questions(story, state):
     topics = {t: describe_topic(story, person, t) for t in list_topics(story, state, person)} if person else {}
     if topics:
         questions["topic"] = choice("어느 화제를 묻는가", {**topics, NO_TOPIC: "위의 어느 화제도 아니다"})
+    if person:
+        questions["impression"] = ask_impression(story, person)
     if len(topics) > 1:
         questions["two"] = {"type": "noul", "instructions": "이 문장이 서로 다른 두 화제를 한꺼번에 묻는가",
                             "criteria": {"true": "서로 다른 두 가지를 묻는다",
                                          "false": "한 가지를 묻거나, 같은 것을 말을 바꿔 거듭 묻는다"}}
     return questions
+
+
+def ask_impression(story, person):
+    own = story.people[person].impressions
+    return choice(f"플레이어의 이 말이 {show_name(story, '사람', person)}에게 남기는 인상은 무엇인가",
+                  {**ko.IMPRESSIONS, **own, NO_TOPIC: "남기는 인상이 없다. 사건을 묻거나 덤덤하게 말한다"})
+
+
+def pick_impression(answers, questions):
+    if "impression" not in questions:
+        return None
+    probs = answers["impression"]["probabilities"]
+    if answers["impression"]["choice"] not in questions["impression"]["criteria"]:
+        raise ModelUnavailable("decision: impression answered outside its options")
+    top = max((p for p in probs if p != NO_TOPIC), key=probs.get, default=None)
+    if top is None:
+        return None
+    none = probs.get(NO_TOPIC, 0.0)
+    if probs[top] >= IMPRESSION_THRESHOLD or probs[top] >= IMPRESSION_LOW and none <= IMPRESSION_NONE_CEILING:
+        return top
+    return None
 
 
 def choice(instructions, criteria):

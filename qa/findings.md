@@ -42,6 +42,10 @@ A scene with many new lines now draws only two or three, where the notebook puts
 
 `react-evals-arena`: "벨트 없어질 때 실장님은 뭐 하고 계셨어요?" became 잡담 (was 되묻기) once requests, griping and jokes joined 잡담. `react-replay-2` turn 13: "아까 대기실 앞에서 누구 못 봤어?" to 강태오 was read as looking, though the evals with a full notebook pass it.
 
+## Impressions that overlap
+
+`impress-held-dawn`: "독초를 다룰 줄 아십니까?" to 넬 gave her own 약초 (an unlock) though it asks about poison; `impress-evals-dawn`: "할멈, 약초 다루는 솜씨가 대단하다고 들었소" gave the common 칭찬 instead of 약초. Threats that mention lying read as 의심 (`impress-evals-arena` 최두식, 강태오). Dawn and arena miss the 5% goal for wrong impressions by one sentence each.
+
 ## Questions for the playtest (T16, T17)
 
 Not bugs; the testers' play raises them and a person should judge them.
