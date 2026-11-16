@@ -198,7 +198,14 @@ def main():
     elif args.cmd == "say":
         run.send({"text": args.text[:MAX_TEXT]})   # the input box takes no more
     elif args.cmd == "do":
-        run.send({"do": args.act, **({"text": args.text[:MAX_TEXT]} if args.text else {})})
+        person = next((p for p in run.state["view"]["people"] if p["act"] == args.act), None)
+        if person:   # the phone's people row takes no text: face, then say it
+            run.send({"do": args.act})
+            run.show(f"({'마주하기 풀림' if person['partner'] else '마주함'}: {person['name']})")
+            if args.text:
+                run.send({"text": args.text[:MAX_TEXT]})
+        else:
+            run.send({"do": args.act, **({"text": args.text[:MAX_TEXT]} if args.text else {})})
     elif args.cmd == "read":   # read first: the act ids belong to the view after it
         new = [line["id"] for _, line in run.pick_lines(args.which) if line["new"]]
         if new and run.state["view"]["stage"] in ("play", "closing"):

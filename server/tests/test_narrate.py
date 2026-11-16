@@ -1,13 +1,21 @@
 import json
 from pathlib import Path
 
-from src.narrate import count_sentences, judge, make_checks, make_jobs, make_messages
+from src.narrate import (
+    count_sentences,
+    is_here,
+    judge,
+    make_checks,
+    make_jobs,
+    make_messages,
+)
 from src.rules.act import act
 from src.rules.state import start_state
 from src.story.load import load_story
 from src.view import make_feed
 
 DAWN = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
+SKELETON = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "skeleton")
 
 
 def play(actions):
@@ -52,6 +60,11 @@ def test_a_text_fails_on_low_checks_and_on_length():
     assert judge(job, {"added": {"noul": 0.9}, "meaning": {"noul": 0.4}}, "하나. 둘! 셋? 넷.")[0] == [
         "added", "meaning", "length"]
     assert count_sentences("……알았소, 그렇다면 말하리다. 해 지기 전에 떠났소") == 2
+    assert judge(job, {"added": {"noul": 0.2}, "meaning": {"noul": 0.8}}, "모르겠어요.")[0] == []   # a person keeps their own speech
+    dm, low = {"kind": "dm"}, {"added": {"noul": 0.1}}
+    assert judge(dm, low, "그에게 물어보도록 하세요.")[0] == ["style"]
+    assert judge(dm, low, "점잖은 얼굴이군요. 그에게 물어보십시오.")[0] == ["style"]
+    assert judge(dm, low, "그가 \"모르겠어요\" 하고 고개를 젓습니다.")[0] == []
 
 
 def test_the_dm_is_the_last_slot_and_judges_a_person_only_by_bio_and_attitude():
@@ -63,3 +76,10 @@ def test_the_dm_is_the_last_slot_and_judges_a_person_only_by_bio_and_attitude():
     system = make_messages(jobs[-1])[0]["content"]
     assert DAWN.people["고드릭"].bio in system and "믿음 보통" in system
     assert "거짓말" not in "\n".join(make_messages(jobs[-1])[0]["content"].split("지킬 것:")[0].splitlines())
+
+
+def test_an_event_is_news_only_where_the_player_is_not():
+    state, event = start_state(SKELETON, 1), SKELETON.events[0]   # 한스 moves, 빚 문서 at 방앗간 vanishes, 리사 leaves
+    assert is_here(SKELETON, state, {**state, "place": "방앗간"}, event)
+    assert is_here(SKELETON, state, {**state, "place": "곡물 창고"}, event)   # 한스 leaves from here
+    assert not is_here(SKELETON, state, state, event)

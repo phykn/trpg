@@ -4,8 +4,8 @@ from src.rules.state import start_state
 from tests.test_act import CREW, PASS, STATS, STORY, ask, go, present
 
 
-def guides(steps):
-    state, said, past = start_state(STORY, 1), [], []
+def guides(steps, seed=1):
+    state, said, past = start_state(STORY, seed), [], []
     for step in steps:
         action, heard = step if isinstance(step, tuple) else (step, None)
         result = act(STORY, state, action, heard)
@@ -39,3 +39,13 @@ def test_someone_who_held_back_is_not_met_again():
     keys = guides([STATS, ask("밤"), go("곡물 창고"), go("방앗간"), ask("새벽"), PASS, PASS, PASS, PASS, PASS,
                    go("광장"), go("방앗간")])
     assert "meet 리사" not in keys
+
+
+def test_a_roll_that_shows_a_lie_gets_a_remark():
+    bet = {"do": "bet", "target": "말 한스.그날 밤.거짓말", "method": "press"}   # seed 2 wins it
+    assert guides([STATS, ask("밤"), go("곡물 창고"), ask("그날 밤"), bet], seed=2)[-1] == "doubt 한스"
+
+
+def test_a_stuck_nudge_is_not_said_twice_running():
+    assert [k for k in guides([STATS, ask("밤"), *[PASS] * 30]) if k] == [
+        "open 오토", "unvisited 곡물 창고", "unvisited 방앗간", "ask 오토", "look"]
