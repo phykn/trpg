@@ -102,11 +102,12 @@ def list_text_jobs(story):
                 "attitude": f"믿음 {LEVELS[mood.trust]}, 두려움 {LEVELS[mood.fear]}"}
         for topic, entry in person.topics.items():
             said = entry.asks[0] if entry.asks else f"{topic}에 관해 묻습니다."
-            jobs += [(addr, {**base, "said": said, "says": [line.text], "quiet": False})
+            jobs += [(addr, {**base, "said": said, "says": [line.text], "lines": [line.text], "quiet": False})
                      for addr, line in story.lines.items() if line.kind == "말" and (line.name, line.topic) == (name, topic)]
             if entry.stance == "꺼린다":
-                jobs.append((f"꺼림 {name}.{topic}", {**base, "said": said, "says": ["이 화제는 말해 주지 않는다"], "quiet": True}))
-        jobs.append((f"넘김 {name}", {**base, "said": "이 마을에서 수상한 사람을 본 적 있습니까?", "says": ["답할 것이 없다"],
+                jobs.append((f"꺼림 {name}.{topic}", {**base, "said": said, "says": ["이 화제는 말해 주지 않는다"], "lines": [],
+                                                        "quiet": True}))
+        jobs.append((f"넘김 {name}", {**base, "said": "이 마을에서 수상한 사람을 본 적 있습니까?", "says": ["답할 것이 없다"], "lines": [],
                                      "quiet": True}))
     for name, place in story.places.items():
         written = [show_line(story, a) for a, line in story.lines.items()

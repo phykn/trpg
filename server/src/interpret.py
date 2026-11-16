@@ -38,7 +38,7 @@ def make_questions(story, state):
         name = show_name(story, "사람", person)
         others = [show_name(story, "사람", a[3:]) for a in state["notebook"] if a.startswith("사람 ") and a[3:] != person]
         kinds = {"topic": f"{name}에게 사건이나 {', '.join(others) or '다른 사람'}에 관해 묻는다",
-                 "chat": f"인사나 날씨, {name} 자신이나 가족에 관한 잡담처럼 사건과 상관없는 말이다",
+                 "chat": f"인사나 날씨, 부탁, 넋두리, 농담, {name} 자신이나 가족에 관한 잡담처럼 사건과 상관없는 말이다",
                  "look": "누구에게 묻지 않고 주위를 둘러보거나 이곳을 살펴본다"}
     else:
         kinds = {"look": "이곳에 머물며 둘러보거나 혼잣말을 한다"}

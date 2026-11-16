@@ -152,7 +152,8 @@ class GameService:
         try:
             data, story, states = self.load(game)
             texts = []
-            for slot, spec in enumerate(make_jobs(story, states[n - 1], states[n], data["turns"][n - 1])):
+            past = list(zip(data["turns"][:n - 1], states[1:n], strict=True))
+            for slot, spec in enumerate(make_jobs(story, states[n - 1], states[n], data["turns"][n - 1], past)):
                 await job.add({"type": "start", "slot": slot})
                 async for event in self.narrator.write(spec):
                     if event["type"] == "result":

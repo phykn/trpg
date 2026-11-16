@@ -25,6 +25,7 @@ DM = {
     "conclude": ("시간이 다 되었다.", "도입의 기한이 닥쳤음을 그리고, 누가, 어떻게, 왜, 당신의 결론을 들려 달라고 한다"),
 }
 PERSON_KEYS = ("open", "meet", "held", "doubt", "ask")
+RECENT = 3   # turns of talk with a person, and turns of the player's deeds they watched, an answer gets (game/04 3절)
 
 
 def list_slots(story, turn):
@@ -57,11 +58,12 @@ def find_speaker(story, talk):
     return None
 
 
-def make_jobs(story, before, after, turn):
-    return [make_job(story, before, after, turn, slot) for slot in list_slots(story, turn)]
+def make_jobs(story, before, after, turn, past=()):
+    """`past` holds each earlier turn with the state after it, oldest first."""
+    return [make_job(story, before, after, turn, slot, past) for slot in list_slots(story, turn)]
 
 
-def make_job(story, before, after, turn, slot):
+def make_job(story, before, after, turn, slot, past):
     if slot["kind"] == "ending":
         return make_ending(story, after)
     if slot["kind"] == "guide":
@@ -69,7 +71,7 @@ def make_job(story, before, after, turn, slot):
     if slot["kind"] in ("omen", "event"):
         return make_happening(story, before, after, slot["happened"])
     if slot["person"]:
-        return make_answer(story, after, turn, slot["person"])
+        return make_answer(story, before, after, turn, slot["person"], past)
     return make_scene(story, before, after, turn)
 
 
@@ -100,13 +102,52 @@ def is_here(story, before, after, event):
                for a in event.acts)
 
 
-def make_answer(story, after, turn, person):
+def make_answer(story, before, after, turn, person, past):
     says = [say for item in turn["talk"] if (say := tell_item(story, turn, item))]
-    quiet = not any("say" in item for item in turn["talk"])
+    lines = [story.lines[item["say"]].text for item in turn["talk"] if "say" in item]
     attitude = after["attitudes"][person]
+    clock = story.head.clock
+    told = [story.lines[a].text for a in before["notebook"]
+            if story.lines[a].kind == "말" and story.lines[a].name == person and a not in before["struck"]]
     return {"kind": "answer", "person": show_name(story, "사람", person), "bio": story.people[person].bio,
             "attitude": f"믿음 {LEVELS[attitude['trust']]}, 두려움 {LEVELS[attitude['fear']]}",
-            "said": find_said(story, turn), "says": says, "quiet": quiet and bool(says)}
+            "said": find_said(story, turn), "says": says, "lines": lines, "quiet": not lines and bool(says),
+            "where": ", ".join(filter(None, [show_name(story, "곳", after["place"]),
+                                             ko.clock(clock.start + after["spent"] * clock.step) if clock else None])),
+            "recent": list_recent(story, person, past), "told": told, "saw": list_seen(story, person, past)}
+
+
+def spoke(story, person, turn):
+    slots = list_slots(story, turn)
+    return bool(slots) and slots[0]["kind"] == "text" and slots[0]["person"] == person
+
+
+def list_recent(story, person, past):
+    """The last exchanges with this person, as the screen showed them."""
+    recent = []
+    for turn, _ in reversed(past):
+        if turn["text"] and spoke(story, person, turn):
+            recent.insert(0, {"said": find_said(story, turn), "answer": turn["text"][0]["text"]})
+            if len(recent) == RECENT:
+                break
+    return recent
+
+
+def list_seen(story, person, past):
+    """What the player did where this person stood and could watch since they last spoke, in the last few turns."""
+    seen = []
+    last = max((i + 1 for i, (turn, _) in enumerate(past) if spoke(story, person, turn)), default=0)
+    for turn, after in past[max(last, len(past) - RECENT):]:
+        if after["where"][person] != after["place"] or person in after["gone"]:
+            continue
+        speaker = find_speaker(story, turn["talk"])
+        for item in turn["talk"]:
+            seen += ["이곳을 둘러봤다"] if "look" in item else [x.removeprefix("당신이 ") for x in tell_lock(story, turn, after, item)]
+        if turn["action"]["do"] == "present" and speaker and speaker != person:
+            seen.append(f"{show_name(story, '사람', speaker)}에게 {ko.eul(show_line(story, turn['action']['line']))} 내밀었다")
+        if turn["action"]["do"] == "bet" and speaker and speaker != person:
+            seen.append(f"{ko.eul(show_name(story, '사람', speaker))} {ko.METHODS[turn['action']['method']]}")
+    return seen
 
 
 def tell_item(story, turn, item):

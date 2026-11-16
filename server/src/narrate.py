@@ -1,4 +1,5 @@
 import re
+from difflib import SequenceMatcher
 
 MEANING = 0.5
 ADDED = 0.15
@@ -10,8 +11,10 @@ MAX_TOKENS = {"answer": 200, "scene": 300, "ending": 700, "dm": 200}
 # syllables found in the answer catches them. On the AI testers' games (qa_test/runs/qa-1 to qa-6) answers that kept
 # their lines scored 0.69 and up, answers that dropped or bent one 0.44 and below.
 COVER = 0.5
+# An answer this close to one the person already gave says the same thing again; gemma4 did so even when told not to.
+REPEAT = 0.8
 # Words of the prompt itself; a text that names them is talking about its instructions, not to the player.
-PROMPT_WORDS = ("할 말", "받은 것", "지침", "지킬 것", "질문자", "신상", "그릴 기척")
+PROMPT_WORDS = ("할 말", "받은 것", "지침", "지킬 것", "질문자", "신상", "그릴 기척", "지켜본 일", "앞서 나눈 말")
 # The narrator and the DM speak 합니다체 (CLAUDE.md); quoted speech inside a scene keeps its own.
 HAEYO = re.compile(r"(세요|어요|아요|해요|예요|에요|죠|군요|네요)[.?!…~]*(\s|$)")
 # The DM shows a sign instead of advising (game/07 2절); these endings tell the player what to do.
@@ -23,7 +26,8 @@ REASONS = {"added": "받은 것에 없는 사람, 물건, 때, 곳을 더했다"
            "prompt": "지시문을 두고 말했다. 인물이나 진행자의 말만 쓴다",
            "style": "해요체로 썼다. 문장을 모두 '-습니다', '-ㅂ니까'로 맺는다",
            "push": "플레이어에게 할 일을 권했다. 권하지 말고 소리, 빛, 냄새, 몸짓 같은 기척만 그린다",
-           "speech": "인물의 대사를 지어냈다. 따옴표 없이 몸짓만 그린다"}
+           "speech": "인물의 대사를 지어냈다. 따옴표 없이 몸짓만 그린다",
+           "repeat": "앞서 한 대답을 되풀이했다. 플레이어가 방금 한 말에 맞춰 다르게 받아친다"}
 
 
 class Narrator:
@@ -66,8 +70,14 @@ def list_given(job):
     if job["kind"] == "dm":
         return list_dm_given(job)
     if job["kind"] == "answer":
-        return [f"신상: {job['bio']}", f"태도: {job['attitude']}", f"할 말: {' / '.join(job['says']) or '없다'}",
-                f"플레이어의 말: {job['said'] or '없다'}"]
+        given = [f"신상: {job['bio']}", f"태도: {job['attitude']}"]
+        given += [f"곳과 때: {job['where']}"] if job.get("where") else []
+        if job.get("recent"):
+            given.append("앞서 나눈 말:\n" + "\n".join(f"  플레이어: {r['said'] or '(말없이 기다렸다)'}\n  {job['person']}: {r['answer']}"
+                                                   for r in job["recent"]))
+        given += [f"이미 한 말: {' / '.join(job['told'])}"] if job.get("told") else []
+        given += [f"지켜본 일(플레이어가 한 일): {' / '.join(job['saw'])}"] if job.get("saw") else []
+        return given + [f"할 말: {' / '.join(job['says']) or '없다'}", f"플레이어의 말: {job['said'] or '없다'}"]
     given = [f"도입: {job['intro']}"] if job.get("intro") else []
     given += [f"시각: {job['time']}"] if job.get("time") else []
     if job.get("place"):
@@ -112,12 +122,20 @@ def make_answer_prompt(job):
              "플레이어는 지금 마주 보고 말을 건 사람이다. 플레이어에게 직접 말하고, '저 사람', '얘'처럼 남을 가리키듯 부르지 않는다.",
              "할 말이 있으면 그 내용을 빠짐없이 말한다. 태도는 말투에만 드러내고, 모른다고 하거나 피하지 않는다.",
              "할 말의 뜻을 바꾸지 않는다. 할 말에 없는 사람, 물건, 때, 곳을 더하지 않는다.",
-             "할 말이 없으면 신상에 기대어 짧게 받아친다. 사건에 관한 것은 지어내지 않는다.",
+             ("할 말이 없거나 답할 것이 없으면 플레이어의 말 자체에 신상대로 반응한다. 부탁이면 들어주거나 거절하고, "
+              "넋두리나 농담이면 맞장구치거나 핀잔하고, 다그치면 발끈하거나 움츠러든다. 사건에 관한 것은 지어내지 않는다."),
+             "앞서 나눈 말이 있으면 그 흐름을 이어 받고, 앞서 한 대답을 같은 말로 되풀이하지 않는다.",
+             "이미 한 말을 다시 물으면 아까 말했다는 투로 짧게 다시 말한다.",
+             "지켜본 일이 있으면 그 일을 보고 한마디 얹는다. 곳과 때, 지켜본 일에 없는 일은 더하지 않는다.",
              ("플레이어가 \"~했다면서요?\"처럼 할 말에 없는 일을 사실로 깔고 물으면, 했다고도 안 했다고도 하지 않는다. "
               "그 일을 이어 말하지 말고 누가 그러더냐고 되묻거나 말을 돌린다.")]
     if job["quiet"]:
         rules.append("화제의 내용은 한 마디도 말하지 않는다.")
+    if job["lines"] and not set(job["lines"]) & set(job.get("told", [])):
+        rules.append("할 말은 처음 하는 말이다. 아까 말했다고 하지 않는다.")
     user = f"플레이어: {job['said']}" if job["said"] else "플레이어: (말없이 기다린다)"
+    if job.get("saw"):   # in the system prompt alone gemma4 let it pass; next to the line it reacts
+        user = f"(플레이어가 방금 {job['person']} 앞에서 한 일: {' / '.join(job['saw'])})\n{user}"
     return f"당신은 추리 게임 속 인물 {job['person']}의 목소리다.", rules, user
 
 
@@ -142,7 +160,7 @@ def make_scene_prompt(job):
 
 def make_checks(job):
     checks = {"added": noul("쓴 글에 받은 것에 없는 사람, 물건, 때, 곳이 나오는가", "나온다", "나오지 않는다")}
-    if job["kind"] == "answer" and not job["quiet"] and job["says"]:
+    if job["kind"] == "answer" and job["lines"]:
         checks["meaning"] = noul("쓴 글이 할 말의 뜻을 바꾸지 않고 담고 있는가", "담고 있다", "빠졌거나 바뀌었다")
     if job["kind"] == "answer" and job["quiet"]:
         checks["quiet"] = noul("쓴 글이 사건에 관한 내용을 알려 주지 않는가", "알려 주지 않는다", "알려 준다")
@@ -157,8 +175,7 @@ def judge(job, answers, text):
     probs = {key: answers[key]["noul"] for key in make_checks(job)}
     least = {"added": ADDED, "meaning": MEANING, "quiet": QUIET}
     failed = [key for key, p in probs.items() if (1 - p if key == "added" else p) < least[key]]
-    if job["kind"] == "answer" and not job["quiet"] and "meaning" not in failed and \
-            any(cover(say, text) < COVER for say in job["says"]):
+    if job["kind"] == "answer" and "meaning" not in failed and any(cover(line, text) < COVER for line in job["lines"]):
         failed.append("meaning")
     return failed + list_faults(job, text), probs
 
@@ -171,7 +188,7 @@ def cover(say, text):
 def list_faults(job, text):
     kind, unquoted = job["kind"], QUOTED.sub("", text)
     faults = []
-    if count_sentences(text) > MAX_SENTENCES[kind] + 2 * max(0, len(job.get("says", [])) - 1):
+    if count_sentences(text) > MAX_SENTENCES[kind] + 2 * max(0, len(job.get("lines", [])) - 1):
         faults.append("length")
     if any(word in text for word in PROMPT_WORDS):
         faults.append("prompt")
@@ -181,6 +198,8 @@ def list_faults(job, text):
         faults.append("push")
     if kind == "dm" and re.search("[\"“”‘’]", text):
         faults.append("speech")
+    if any(SequenceMatcher(None, r["answer"], text).ratio() >= REPEAT for r in job.get("recent", [])):
+        faults.append("repeat")
     return faults
 
 

@@ -30,6 +30,18 @@ A scene with many new lines now draws only two or three, where the notebook puts
 
 `qa-1`: 브람 "않았다요", 넬 "내놓기나 해", 고드릭 between 하게체 and 합니다체; `qa-2` turns 5–7, 40. 고드릭 called an ordinary question "무례한" (`qa-1` turns 2–3), when the intro did not yet say the dead man was the lord's collector.
 
+## Answers rarely react to what the person watched
+
+`react-witness-3` turns 4–5: 최두식 got "이곳을 둘러봤다" both in 받은 것 and next to the player's line, and still answered as if nothing happened. Not yet tried with opening a lock or presenting to someone else in front of them.
+
+## A pass flags "할 말" as prompt words
+
+`react-text-2` 넘김 넬: "모르니까 그냥 가. 할 말 없으니." fails `prompt` twice, though "할 말 없다" is ordinary speech.
+
+## Chat that drifts into a case question
+
+`react-evals-arena`: "벨트 없어질 때 실장님은 뭐 하고 계셨어요?" became 잡담 (was 되묻기) once requests, griping and jokes joined 잡담. `react-replay-2` turn 13: "아까 대기실 앞에서 누구 못 봤어?" to 강태오 was read as looking, though the evals with a full notebook pass it.
+
 ## Questions for the playtest (T16, T17)
 
 Not bugs; the testers' play raises them and a person should judge them.

@@ -94,3 +94,14 @@ def test_an_event_is_news_only_where_the_player_is_not():
     assert is_here(SKELETON, state, {**state, "place": "방앗간"}, event)
     assert is_here(SKELETON, state, {**state, "place": "곡물 창고"}, event)   # 한스 leaves from here
     assert not is_here(SKELETON, state, state, event)
+
+
+def test_an_answer_knows_the_talk_so_far_what_the_person_said_and_what_they_watched():
+    turns = play(DAWN, [STATS, ask("징수관"), do("look"), ({"do": "ask", "text": "한 잔 하시겠소?"}, {"kind": "chat"})])
+    past = [({**turn, "text": [{"text": f"글 {i}"}]}, after) for i, (_, after, turn) in enumerate(turns[:-1])]
+    before, after, turn = turns[-1]
+    job = make_jobs(DAWN, before, after, turn, past)[0]
+    assert job["recent"] == [{"said": "x", "answer": "글 1"}]
+    assert job["told"] == [DAWN.lines["말 고드릭.징수관.거짓말"].text]
+    assert job["saw"] == ["이곳을 둘러봤다"] and job["lines"] == [] and job["where"].startswith("마을 사당")
+    assert "앞서 나눈 말" in make_messages(job)[0]["content"]
