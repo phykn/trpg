@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 
-import { Frame } from '@/components/game/Frame';
+import { Frame } from '@/components/ui/Frame';
 import { Resend } from '@/components/ui/Resend';
 import { useGame } from '@/logic/useGame';
 import { Ending } from '@/screens/Ending';

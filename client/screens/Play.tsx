@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
-import { ChatLog } from '@/components/game/ChatLog';
-import { DiceSheet } from '@/components/game/DiceSheet';
-import { ConcludeSheet, PickSheet, type Picks, type Question } from '@/components/game/ConcludeSheet';
-import { InputBar } from '@/components/game/InputBar';
-import { OffersRow } from '@/components/game/OffersRow';
-import { MovesSheet } from '@/components/game/MovesSheet';
-import { NotebookSheet } from '@/components/game/NotebookSheet';
-import { PeopleRow } from '@/components/game/PeopleRow';
-import { SettingsMenu } from '@/components/game/SettingsMenu';
-import { TopBar } from '@/components/game/TopBar';
-import { TopicCard, type Topic } from '@/components/game/TopicCard';
+import { ChatLog } from '@/components/play/ChatLog';
+import { DiceSheet } from '@/components/sheets/DiceSheet';
+import { ConcludeSheet, PickSheet, type Picks, type Question } from '@/components/sheets/ConcludeSheet';
+import { InputBar } from '@/components/play/InputBar';
+import { OffersRow } from '@/components/play/OffersRow';
+import { MovesSheet } from '@/components/sheets/MovesSheet';
+import { NotebookSheet } from '@/components/sheets/NotebookSheet';
+import { PeopleRow } from '@/components/play/PeopleRow';
+import { SettingsMenu } from '@/components/play/SettingsMenu';
+import { TopBar } from '@/components/play/TopBar';
+import { TopicCard, type Topic } from '@/components/play/TopicCard';
 import { Resend } from '@/components/ui/Resend';
 import { findAct, findLine } from '@/logic/notebook';
 import type { Entry, Phase } from '@/logic/useGame';

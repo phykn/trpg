@@ -6,7 +6,7 @@ import { text } from '@/design/ui';
 import { useReveal } from '@/logic/reveal';
 import { splitTopics } from '@/logic/topics';
 import type { Entry } from '@/logic/useGame';
-import { RollLine } from './RollParts';
+import { RollLine } from '@/components/dice/RollParts';
 import { findHue } from './speaker';
 import type { Topic } from './TopicCard';
 

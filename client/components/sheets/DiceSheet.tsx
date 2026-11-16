@@ -6,8 +6,8 @@ import { DragSheet } from '@/components/ui/DragSheet';
 import { text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import type { Roll, RollResult } from '@/services/types';
-import { Die } from './Die';
-import { Need, signed, Sum, Verdict } from './RollParts';
+import { Die } from '@/components/dice/Die';
+import { Need, signed, Sum, Verdict } from '@/components/dice/RollParts';
 
 const native = Platform.OS !== 'web';
 // The dice tumble at least this long even when the answer is quick, then land one after the other.

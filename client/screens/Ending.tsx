@@ -1,7 +1,7 @@
 import { ScrollView, Text, View } from 'react-native';
 
-import { Speaker, Spoken } from '@/components/game/ChatLog';
-import { QUESTIONS } from '@/components/game/ConcludeSheet';
+import { Speaker, Spoken } from '@/components/play/ChatLog';
+import { QUESTIONS } from '@/components/sheets/ConcludeSheet';
 import { Button } from '@/components/ui/Button';
 import { Resend } from '@/components/ui/Resend';
 import { surface, text } from '@/design/ui';
