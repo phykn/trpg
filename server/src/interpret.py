@@ -25,9 +25,10 @@ def make_questions(story, state):
     places = list_places(story, state)
     if person:
         kinds = {"topic": f"{show_name(story, '사람', person)}에게 사건이나 다른 사람에 관해 묻는다",
-                 "chat": f"인사나 날씨, {show_name(story, '사람', person)} 자신에 관한 잡담이다"}
+                 "chat": f"인사나 날씨, {show_name(story, '사람', person)} 자신에 관한 잡담이다",
+                 "look": "누구에게 묻지 않고 주위를 둘러보거나 이곳을 살펴본다"}
     else:
-        kinds = {"stay": "이곳에 머물며 둘러보거나 혼잣말을 한다"}
+        kinds = {"look": "이곳에 머물며 둘러보거나 혼잣말을 한다"}
     questions = {}
     if places:
         kinds["move"] = "다른 곳으로 가려 한다"
@@ -49,6 +50,8 @@ def pick(answers, questions):
     kind = answers["kind"]["choice"]
     if kind == "move":
         return {"kind": "move", "place": answers["place"]["choice"]}
+    if kind == "look":
+        return {"kind": "look"}
     if "topic" not in questions:
         return {"kind": "chat" if kind == "chat" else "none"}
     probs = answers["topic"]["probabilities"]

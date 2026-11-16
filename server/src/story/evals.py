@@ -30,7 +30,7 @@ def read_cases(folder, story):
             raise StoryError(f"{path.name}: {where}")
         for expect, texts in groups.items():
             topics = expect.split(" + ")
-            known = expect in ("잡담", "넘김") or expect.startswith("곳 ") and expect[2:] in story.places or (
+            known = expect in ("잡담", "넘김", "둘러봄") or expect.startswith("곳 ") and expect[2:] in story.places or (
                 kind == "사람" and all(t in story.people[name].topics for t in topics))
             if not known:
                 raise StoryError(f"{path.name}: {where}: {expect}")
@@ -53,7 +53,7 @@ def show_heard(heard):
         return f"곳 {heard['place']}"
     if heard["kind"] == "unsure":
         return f"되물음 {' / '.join(heard['topics'])}"
-    return {"chat": "잡담", "none": "넘김"}[heard["kind"]]
+    return {"chat": "잡담", "none": "넘김", "look": "둘러봄"}[heard["kind"]]
 
 
 def grade(expect, heard):

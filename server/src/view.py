@@ -100,7 +100,9 @@ class ViewMaker:
                 if path:
                     moves.append(self.add_act({"do": "move", "place": line.name}, name=show_name(
                         self.story, "곳", line.name), cells=len(path), unvisited=line.name not in self.state["visited"]))
-        return {"name": show_name(self.story, "곳", self.state["place"]), "moves": moves}
+        look = self.add_act({"do": "look"}) if self.stage == "play" else None
+        return {"name": show_name(self.story, "곳", self.state["place"]), "moves": moves, "look": look,
+                "looked": self.state["place"] in self.state["looked"]}
 
     def make_time(self):
         clock = self.story.head.clock

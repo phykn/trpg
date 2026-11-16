@@ -182,9 +182,8 @@ class Turn:
         person = self.state["partner"]
         if kind == "move":
             return self.do_move({"place": heard["place"]}, None)
-        if person is None:
-            self.talk.append({"look": self.state["place"]})
-            return None
+        if person is None or kind == "look":
+            return self.do_look(action, None)
         self.talk_to(person)
         if kind == "topics":
             shown = list_topics(self.story, self.state, person)
@@ -245,6 +244,15 @@ class Turn:
             block = f"꺼림 {person}.{topic}"
             if find_stance(self.story, self.state, person, topic) == "꺼린다" and block not in self.state["withheld"]:
                 self.change("withhold", block=block)
+
+    def do_look(self, action, heard):
+        self.look_around()
+        self.talk.append({"look": self.state["place"]})
+
+    def look_around(self):
+        if self.state["place"] not in self.state["looked"]:
+            self.change("look", place=self.state["place"])
+            self.write_up()
 
     def do_move(self, action, heard):
         path = find_path(self.story, self.state, action["place"])

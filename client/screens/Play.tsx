@@ -71,7 +71,8 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
       <ChatLog log={log} people={met} outgoing={outgoing} onNote={openNote}
         waiting={phase === 'sending' || phase === 'streaming' ? phase : null} />
       <View className="border-t border-border-default">
-        <PeopleRow people={view.people} met={met} locked={locked} onFace={(id) => send({ do: id })} />
+        <PeopleRow people={view.people} met={met} look={playing ? view.place.look : null} locked={locked}
+          onFace={(id) => send({ do: id })} onLook={(id) => send({ do: id })} />
         {phase === 'stuck' || phase === 'text_error' ? (
           <View className="px-3 py-2"><Resend onResend={phase === 'stuck' ? onResend : onRetryText} /></View>
         ) : (

@@ -19,7 +19,7 @@ export type GameView = {
     stats: { key: string; name: string }[];
     acts: { id: string; plus2: string; plus1: string }[];
   } | null;
-  place: { name: string; moves: { id: string; name: string; cells: number; unvisited: boolean }[] };
+  place: { name: string; moves: { id: string; name: string; cells: number; unvisited: boolean }[]; look: { id: string } | null; looked: boolean };
   time: { text: string; left: number; last: boolean };
   people: { name: string; partner: boolean; act: string | null }[];
   notebook: Record<Group, Line[]>;

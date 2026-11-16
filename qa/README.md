@@ -29,7 +29,7 @@ Game QA by agents that do not know the answer. [tester/PROMPT.md](tester/PROMPT.
 
 ```bash
 qa/tester/api.sh                                                  # the QA server on 127.0.0.1:8001, saves in qa_test/saves
-PLAY_API=http://127.0.0.1:8001 .venv/bin/python qa/play/play.py look <run>
+PLAY_API=http://127.0.0.1:8001 .venv/bin/python qa/play/play.py screen <run>
 ```
 
 Each tester returns its report and the lead saves it to `qa_test/runs/<run>/report.md`, then checks every reported bug against the transcript before fixing it, and moves what is not fixed into [findings.md](findings.md).
@@ -45,7 +45,7 @@ Each tester returns its report and the lead saves it to `qa_test/runs/<run>/repo
 .venv/bin/python qa/play/play.py do play-1 a6 "솔직히 말씀해 주십시오"     # an act id from the screen or a line
 .venv/bin/python qa/play/play.py conclude play-1 --who 2 --how 1      # line ids; a question left out stays blank
 .venv/bin/python qa/play/play.py retry play-1                         # after 응답을 받지 못했습니다 or 서술을 받지 못했습니다
-.venv/bin/python qa/play/play.py look play-1
+.venv/bin/python qa/play/play.py screen play-1
 ```
 
 `[턴 N]` is the game's turn; a notebook read is a turn of its own, as on the web. Act ids hold only until the next turn, so take them from the latest output.

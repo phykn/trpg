@@ -52,7 +52,9 @@ def list_shown_happenings(turn):
 
 
 DM = {
-    "open": ("판이 막 시작되었다. 인물은 플레이어 곁에 있다.", "진행자가 본 인물의 첫인상을 한마디 하고, 그 사람에게 무엇이든 물어보라고 권한다"),
+    "open": ("판이 막 시작되었다. 인물은 플레이어 곁에 있다.",
+             "진행자가 본 인물의 첫인상을 한마디 하고, 주위를 둘러보거나 그 사람에게 무엇이든 물어보라고 권한다"),
+    "around": ("플레이어가 아직 주위를 둘러보지 않았다.", "진행자가 주위를 한번 찬찬히 둘러보라고 가볍게 권한다"),
     "meet": ("플레이어가 아직 말을 나눠 보지 않은 인물 곁에 왔다.", "진행자가 본 인물의 첫인상을 한마디 하고, 말을 걸어 보라고 권한다"),
     "held": ("인물이 어떤 이야기에 입을 다물었다.", "진행자가 인물의 속내를 짐작하는 한마디를 하고, 마음을 움직일 무언가가 필요해 보인다고 넌지시 말한다"),
     "doubt": ("인물의 말에 숨기는 것이 있다는 것이 드러났다.", "진행자가 인물의 속내를 짐작하는 한마디를 하고, 그 말과 어긋나는 것을 찾아 내밀어 보라고 넌지시 권한다"),
@@ -67,11 +69,11 @@ def make_dm(story, after, guide):
     situation, suggest = DM[guide["key"]]
     name = guide.get("name")
     if guide["key"] == "open" and not name:
-        situation, suggest = "판이 막 시작되었다. 곁에 아무도 없다.", "다른 곳으로 가 보라고 권한다"
+        situation, suggest = "판이 막 시작되었다. 곁에 아무도 없다.", "주위를 둘러보거나 다른 곳으로 가 보라고 권한다"
     job = {"kind": "dm", "situation": situation, "suggest": suggest, "person": None, "place": None}
     if guide["key"] == "unvisited":
         job["place"] = show_name(story, "곳", name)
-    elif name:
+    elif name and guide["key"] != "around":
         attitude = after["attitudes"][name]
         job["person"] = {"name": show_name(story, "사람", name), "bio": story.people[name].bio,
                          "attitude": f"믿음 {LEVELS[attitude['trust']]}, 두려움 {LEVELS[attitude['fear']]}"}
@@ -119,12 +121,12 @@ def find_said(story, turn):
 
 def make_scene(story, before, after, turn):
     place = after["place"]
-    first = turn["action"]["do"] == "stats" or place not in before["visited"]
+    looking = any("look" in item for item in turn["talk"])
+    first = turn["action"]["do"] == "stats" or place not in before["visited"] or (
+        looking and place not in before["looked"])   # the first look takes the place in properly
     writes = [c["line"] for c in turn["changes"] if c["op"] == "write"]
-    if turn["action"]["do"] == "stats":   # the start place was looked over before the first turn
-        writes = [a for a, t in before["notebook"].items() if t == 0] + writes
     written = [show_line(story, a) for a in writes if story.lines[a].kind == "볼 것"]
-    happening = []
+    happening = ["당신이 주위를 찬찬히 둘러본다"] if looking else []
     for item in turn["talk"]:
         kind, value = next(iter(item.items()))
         if kind in ("open", "shut"):

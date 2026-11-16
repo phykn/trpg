@@ -13,7 +13,7 @@ def start_state(story, seed):
         "opened": [], "closed": [], "tried": [], "partner": None,
         "attitudes": {name: {"trust": p.attitude.trust, "fear": p.attitude.fear} for name, p in story.people.items()},
         "talks": {name: {"topics": {}, "passes": 0, "done": False} for name in story.people},
-        "spent": 0, "place": start, "visited": [start],
+        "spent": 0, "place": start, "visited": [start], "looked": [],
         "events": {}, "where": {name: p.place for name, p in story.people.items()}, "gone": [], "lost": [],
         "conclusion": None,
     }
@@ -67,7 +67,8 @@ def list_people_here(story, state):
 
 def list_writes(story, state, fresh):
     place = state["place"]
-    things = [a for a, line in story.lines.items() if line.kind == "볼 것" and line.place == place]
+    things = [a for a, line in story.lines.items() if line.kind == "볼 것" and line.place == place
+              and place in state["looked"]]   # what lies in a place is written once the player looks around it
     people = [f"사람 {p}" for p in list_people_here(story, state)]
     places = [f"곳 {place}"] + [f"곳 {p}" for p in story.links[place]]
     told = [t for a in fresh for t in story.lines[a].tells]
@@ -101,6 +102,8 @@ def apply_change(story, state, change, turn):
         new["stats"] = dict(change["stats"])
     elif op == "spend":
         new["spent"] = state["spent"] + 1
+    elif op == "look":
+        new["looked"] = add(state["looked"], change["place"])
     elif op == "move":
         new["place"] = change["place"]
         new["visited"] = add(state["visited"], change["place"])

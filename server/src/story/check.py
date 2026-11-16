@@ -53,6 +53,7 @@ class Checker:
         turn = Turn(self.story, state)
         while True:
             size = (len(turn.state["notebook"]), len(turn.state["opened"]))
+            turn.look_around()
             turn.write_up()
             for person in list_people_here(self.story, turn.state):
                 for topic in list_topics(self.story, turn.state, person):

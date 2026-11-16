@@ -83,6 +83,9 @@ class Player:
         label = f"{person}에게 내민다"
         return self.send(do=next(a["id"] for a in self.find_line(addr)["acts"] if a["label"].startswith(label)))
 
+    def look(self):
+        return self.send(do=self.view["place"]["look"]["id"])
+
     def move(self, place):
         name = show_name(DAWN, "곳", place)
         return self.send(do=next(m["id"] for m in self.view["place"]["moves"] if m["name"] == name))
@@ -95,9 +98,11 @@ def test_dawn_is_solved_without_dice_and_no_branch_name_reaches_the_screen(tmp_p
     player.send(do=next(a["id"] for a in player.view["start"]["acts"] if (a["plus2"], a["plus1"]) == ("wit", "charm")))
     asked = player.send(text=text)
     assert asked["said"] == text and asked["text"] and asked["feed"][0] == {"kind": "text", "who": "고드릭", "slot": 0}
-    assert player.move("숲길")["feed"][0]["kind"] == "move"
+    assert player.move("숲길")["feed"][0]["kind"] == "move" and not player.view["place"]["looked"]
+    assert player.look()["feed"][0] == {"kind": "text", "who": None, "slot": 0} and player.view["place"]["looked"]
     player.present("볼 것 쓸린 자국", "토빈")
     player.move("여관 물레방아")
+    player.look()
     player.present("볼 것 여관 나무패", "브람")
     news = [x["id"] for group in player.view["notebook"].values() for x in group if x["new"]]
     assert player.send(read=news)["text"] is False and player.view["badge"] == 0

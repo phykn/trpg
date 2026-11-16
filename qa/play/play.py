@@ -130,6 +130,8 @@ class Run:
             return
         self.show(f"\n[{v['place']['name']}] {v['time']['text']} · 수첩 {v['badge']}"
                  + (" · 마지막 턴들" if v["time"]["last"] else ""))
+        if v["stage"] == "play" and v["place"]["look"]:
+            self.show(f"둘러보기: {v['place']['look']['id']}" + ("" if v["place"]["looked"] else " 안 둘러봄"))
         if v["people"]:
             self.show("사람: " + "  ".join(f"{p['act'] or '-'} {p['name']}{'*' if p['partner'] else ''}"
                                          for p in v["people"]))
@@ -184,7 +186,7 @@ def main():
         p.add_argument(f"--{q}", type=int)
     p.add_argument("--blank", action="store_true", help="hand in with all three blank")
     sub.add_parser("retry", help="send again the command or ask again for the text that did not arrive").add_argument("run")
-    sub.add_parser("look", help="reload the game and show the screen").add_argument("run")
+    sub.add_parser("screen", help="reload the game and show the screen").add_argument("run")
     args = parser.parse_args()
     run = Run(args.run)
     if args.cmd != "new" and "game" not in run.state:

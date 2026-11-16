@@ -29,9 +29,10 @@ def play(actions):
 
 
 def test_each_text_slot_gets_one_job_and_no_job_says_which_line_is_a_lie():
-    moves = [({"do": "move", "place": p}, None) for p in ["숲길", "마을 사당"] * 9]
+    moves = [({"do": "move", "place": p}, None) for p in ["마을 사당", "숲길"] * 8 + ["마을 사당"]]
     turns = play([({"do": "stats", "plus2": "wit", "plus1": "charm"}, None),
-                  ({"do": "ask", "text": "징수관은?"}, {"kind": "topics", "topics": ["징수관"]}), *moves,
+                  ({"do": "ask", "text": "징수관은?"}, {"kind": "topics", "topics": ["징수관"]}),
+                  ({"do": "move", "place": "숲길"}, None), ({"do": "look"}, None), *moves,
                   ({"do": "conclude", "who": None, "how": None, "why": None}, None)])
     every = []
     for before, after, turn in turns:
@@ -40,9 +41,10 @@ def test_each_text_slot_gets_one_job_and_no_job_says_which_line_is_a_lie():
         assert len(jobs) == len([f for f in make_feed(DAWN, turn, ids) if "slot" in f])
         assert not [w for w in ("거짓말", "깨진 뒤", "풀린 뒤", "참말") if w in json.dumps(jobs, ensure_ascii=False)]
         every += jobs
-    opening, answer, first, back, again = (make_jobs(DAWN, *t)[0] for t in turns[:5])
+    opening, answer, first, looked, back, again = (make_jobs(DAWN, *t)[0] for t in turns[:6])
     assert opening["intro"] and opening["desc"] and opening["time"] == "밤 8시" and answer["says"] == [DAWN.lines["말 고드릭.징수관.거짓말"].text]
-    assert first["desc"] and "입술이 검푸르게" in " ".join(first["written"]) and first["people"] == ["토빈"]
+    assert not opening["written"] and first["desc"] and not first["written"] and first["people"] == ["토빈"]
+    assert "입술이 검푸르게" in " ".join(looked["written"]) and not looked["again"] and looked["happening"]
     assert back["again"] and again["again"] and not first["again"]
     assert len([j for j in every if j.get("happening")]) >= 2
     assert "목소리다" in make_messages(answer)[0]["content"] and "서술자다" in make_messages(first)[0]["content"]

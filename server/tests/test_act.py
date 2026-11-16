@@ -10,6 +10,7 @@ STATS = {"do": "stats", "plus2": "skill", "plus1": "charm"}
 CREW = "말 오토.밤.참말"
 LOCK = "잠김 잠긴 뒷문"
 PASS = ({"do": "ask"}, {"kind": "none"})
+LOOK = {"do": "look"}
 
 
 def ask(*topics):
@@ -63,26 +64,26 @@ def test_asking_writes_once_then_leads_and_passes_lead_to_done():
 
 def test_a_held_topic_that_appears_after_done_is_marked_the_next_time_you_talk():
     chat = ({"do": "ask"}, {"kind": "chat"})
-    _, rs = play(1, [STATS, ask("밤"), go("방앗간"), PASS, PASS, PASS, go("곡물 창고"),
+    _, rs = play(1, [STATS, ask("밤"), go("방앗간"), PASS, PASS, PASS, go("곡물 창고"), LOOK,
                          present("볼 것 꺼진 등잔", "한스"), go("방앗간"), chat])
     assert rs[5]["talk"] == [{"pass": "리사"}, {"done": "리사"}] and ops(rs[5]) == ["count", "done"]
-    assert "꺼림 리사.새벽" not in rs[8]["state"]["withheld"]   # the topic appeared after she was done
-    assert rs[9]["changes"] == [{"op": "withhold", "block": "꺼림 리사.새벽"}] and rs[9]["talk"] == [{"chat": "리사"}]
+    assert "꺼림 리사.새벽" not in rs[9]["state"]["withheld"]   # the topic appeared after she was done
+    assert rs[10]["changes"] == [{"op": "withhold", "block": "꺼림 리사.새벽"}] and rs[10]["talk"] == [{"chat": "리사"}]
 
 
 def test_a_held_back_topic_is_withheld_then_opened_by_what_it_wants():
-    state, rs = play(1, [STATS, ask("밤"), go("곡물 창고"), go("방앗간"), ask("새벽"), present(CREW, "리사")])
-    assert rs[4]["changes"][0] == {"op": "withhold", "block": "꺼림 리사.새벽"}
-    assert ops(rs[5]) == ["unwithhold", "open", "write", "shift"]
+    state, rs = play(1, [STATS, ask("밤"), go("곡물 창고"), LOOK, go("방앗간"), ask("새벽"), present(CREW, "리사")])
+    assert rs[5]["changes"][0] == {"op": "withhold", "block": "꺼림 리사.새벽"}
+    assert ops(rs[6]) == ["unwithhold", "open", "write", "shift"]
     assert (state["spent"], state["attitudes"]["리사"]["trust"], state["withheld"]) == (3, 1, [])
 
 
 def test_presenting_right_is_free_and_wrong_costs_a_cell_and_a_pass():
-    state, rs = play(1, [STATS, ask("밤"), go("곡물 창고"), ask("그날 밤"), present("볼 것 쇠 지렛대", "한스"),
+    state, rs = play(1, [STATS, LOOK, ask("밤"), go("곡물 창고"), LOOK, ask("그날 밤"), present("볼 것 쇠 지렛대", "한스"),
                          present(CREW, "한스"), present("볼 것 쇠 지렛대", LOCK)])
-    assert ops(rs[4]) == ["try", "count", "spend"] and rs[4]["talk"] == [{"pass": "한스"}]
-    assert ops(rs[5]) == ["open", "strike", "write", "shift"]
-    assert ops(rs[6]) == ["open", "write"] and rs[6]["changes"][1]["line"] == "볼 것 수레 자국"
+    assert ops(rs[6]) == ["try", "count", "spend"] and rs[6]["talk"] == [{"pass": "한스"}]
+    assert ops(rs[7]) == ["open", "strike", "write", "shift"]
+    assert ops(rs[8]) == ["open", "write"] and rs[8]["changes"][1]["line"] == "볼 것 수레 자국"
     assert (state["spent"], state["struck"], state["attitudes"]["한스"]["fear"]) == (2, ["말 한스.그날 밤.거짓말"], 1)
 
 
@@ -104,13 +105,13 @@ def test_betting_on_a_line_marks_it_or_costs_trust(win):
 
 
 def test_a_failed_bet_on_a_lock_hints_and_closes_that_way_only():
-    seed = find_seed(3, 1, False)
-    state, _ = play(seed, [STATS, go("곡물 창고"), bet(LOCK, "sneak")])
+    seed = find_seed(4, 1, False)
+    state, _ = play(seed, [STATS, go("곡물 창고"), LOOK, bet(LOCK, "sneak")])
     assert (state["closed"], state["hints"]) == ([[LOCK, "sneak"]], [LOCK])
     with pytest.raises(Refused):
         act(STORY, state, bet(LOCK, "sneak"))
     assert act(STORY, state, bet(LOCK, "force"))["state"]["spent"] == 3
-    won, _ = play(find_seed(3, 1, True), [STATS, go("곡물 창고"), bet(LOCK, "sneak")])
+    won, _ = play(find_seed(4, 1, True), [STATS, go("곡물 창고"), LOOK, bet(LOCK, "sneak")])
     assert LOCK in won["opened"] and "볼 것 수레 자국" in won["notebook"]
 
 
@@ -125,7 +126,7 @@ def test_the_event_happens_after_its_omen_unless_its_block_is_open():
 
 
 def test_when_the_cells_run_out_only_reading_and_concluding_remain():
-    state, _ = play(1, [STATS] + [go("곡물 창고"), go("광장")] * 4)
+    state, _ = play(1, [STATS, go("곡물 창고"), LOOK, go("광장")] + [go("곡물 창고"), go("광장")] * 3)
     assert state["spent"] == 8
     with pytest.raises(Refused):
         act(STORY, state, go("곡물 창고"))
@@ -139,20 +140,29 @@ def test_when_the_cells_run_out_only_reading_and_concluding_remain():
 
 
 def test_the_same_actions_make_the_same_game():
-    steps = [STATS, ask("밤"), go("곡물 창고"), bet(LOCK, "force"), present(CREW, "한스"), go("방앗간")]
+    steps = [STATS, ask("밤"), go("곡물 창고"), LOOK, bet(LOCK, "force"), present(CREW, "한스"), go("방앗간")]
     assert play(5, steps) == play(5, steps)
 
 
 def test_arriving_as_an_event_takes_a_thing_away_writes_only_what_is_left():
-    state, _ = play(1, [STATS, ask("밤"), go("곡물 창고"), go("광장"), go("곡물 창고"), go("광장"), go("방앗간")])
+    state, _ = play(1, [STATS, ask("밤"), go("곡물 창고"), go("광장"), go("곡물 창고"), go("광장"), go("방앗간"), LOOK])
     assert state["spent"] == 5 and "빚 문서" in state["lost"] and "볼 것 빚 문서" not in state["notebook"]
 
 
 def test_a_failed_present_is_known_until_the_person_holds_something_new():
     lever = "볼 것 쇠 지렛대"
-    state, _ = play(1, [STATS, ask("밤"), go("곡물 창고"), present(lever, "한스")])
+    state, _ = play(1, [STATS, LOOK, ask("밤"), go("곡물 창고"), present(lever, "한스")])
     assert state["spent"] == 2 and was_tried(STORY, state, lever, "한스")
     tried = {**start_state(STORY, 1), "place": "방앗간", "tried": [{"line": CREW, "target": "리사", "blocks": []}]}
     assert was_tried(STORY, tried, CREW, "리사")
     lamp = {**tried, "notebook": {"볼 것 꺼진 등잔": 1}}   # her held topic is out now; the line may yet answer it
     assert not was_tried(STORY, lamp, CREW, "리사")
+
+
+def test_arriving_writes_who_is_there_and_looking_writes_what_lies_there():
+    lamp = "볼 것 꺼진 등잔"
+    state, rs = play(1, [STATS, go("곡물 창고")])
+    assert "사람 한스" in state["notebook"] and lamp not in state["notebook"] and "볼 것 쇠 지렛대" not in state["notebook"]
+    state, rs = play(1, [STATS, go("곡물 창고"), LOOK, LOOK])
+    assert ops(rs[2])[0] == "look" and lamp in state["notebook"] and state["spent"] == 1
+    assert ops(rs[3]) == [] and rs[3]["talk"] == [{"look": "곡물 창고"}]   # a second look only tells the scene again

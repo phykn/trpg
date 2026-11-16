@@ -6,7 +6,7 @@ STUCK = 4
 
 def make_guide(story, before, after, turn, past):
     """When the DM, the host of the table, speaks after a turn (game/07 2절): at the start and when time is up, and
-    otherwise at most once every GAP turns, on arriving where someone is not yet talked to, at the first line a roll shows to hide something, at the first held topic,
+    otherwise at most once every GAP turns, on arriving where someone is not yet talked to or where the player has not looked around, at the first line a roll shows to hide something, at the first held topic,
     or when nothing new has turned up for a while. `past` holds what the DM said before, each with its turn."""
     action, changes = turn["action"], turn["changes"]
     if action["do"] in ("read", "face", "conclude"):
@@ -27,14 +27,19 @@ def make_guide(story, before, after, turn, past):
     here = list_people_here(story, after)
     talked = {p for p, talk in before["talks"].items() if talk["topics"] or talk["passes"]}
     new = [p for p in here if p not in talked]
-    if new and any(c["op"] == "move" for c in changes):
+    moved = any(c["op"] == "move" for c in changes)
+    if new and moved:
         return {"key": "meet", "name": new[0]}
+    if moved and after["place"] not in after["looked"] and ("around", after["place"]) not in [
+            (g["key"], g.get("name")) for g in past]:
+        return {"key": "around", "name": after["place"]}
     idle = after["turn"] - max(after["notebook"].values())
     if any(c["op"] == "write" for c in changes) or idle < STUCK or idle % STUCK:
         return None
     said = [(g["key"], g.get("name")) for g in past]
     unvisited = [a[2:] for a in after["notebook"] if a.startswith("곳 ") and a[2:] not in after["visited"]]
-    nudges = [("unvisited", p) for p in unvisited] + [("ask", p) for p in here] + [("look", None)]
+    around = [] if after["place"] in after["looked"] else [("around", after["place"])]
+    nudges = around + [("unvisited", p) for p in unvisited] + [("ask", p) for p in here] + [("look", None)]
     fresh = [n for n in nudges if n not in said]   # each nudge once; after that only "look", never twice running
     if not fresh and said[-1] == ("look", None):
         return None

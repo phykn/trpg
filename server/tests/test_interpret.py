@@ -32,12 +32,13 @@ def test_the_questions_offer_shown_topics_with_their_asks_and_reachable_places()
     topic = decision.questions["topic"]["criteria"]
     assert set(topic) == {"징수관", "독미나리", "_none"} and "여관에 들렀습니까" in topic["징수관"]
     assert set(decision.questions["place"]["criteria"]) == set(DAWN.places) - {"여관 물레방아"}
-    alone = FakeDecision("stay", place="마을 사당")
-    assert read(alone, "곳 숲길")["kind"] == "none" and "topic" not in alone.questions
+    alone = FakeDecision("look", place="마을 사당")
+    assert read(alone, "곳 숲길")["kind"] == "look" and "topic" not in alone.questions
 
 
 @pytest.mark.parametrize(("decision", "heard"), [
     (FakeDecision("move", {"징수관": 0.9, "_none": 0.1}, place="촌장 집"), {"kind": "move", "place": "촌장 집"}),
+    (FakeDecision("look", {"징수관": 0.9, "_none": 0.1}), {"kind": "look"}),
     (FakeDecision("chat", {"징수관": 0.8, "독미나리": 0.1, "_none": 0.1}), {"kind": "topics", "topics": ["징수관"]}),
     (FakeDecision("topic", {"징수관": 0.6, "독미나리": 0.3, "_none": 0.1}, two=0.9),
      {"kind": "topics", "topics": ["징수관", "독미나리"]}),

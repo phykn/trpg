@@ -16,7 +16,7 @@ def start():
 
 def test_start_writes_what_the_start_shows():
     state = start()
-    assert state["notebook"] == {"볼 것 쇠 지렛대": 0, "사람 오토": 0, "곳 광장": 0, "곳 곡물 창고": 0}
+    assert state["notebook"] == {"사람 오토": 0, "곳 광장": 0, "곳 곡물 창고": 0}   # what lies here waits for a look
     assert (state["partner"], state["place"], state["visited"]) == ("오토", "광장", ["광장"])
     assert state["attitudes"]["한스"] == {"trust": -1, "fear": 0}
 
@@ -26,8 +26,8 @@ def test_start_writes_what_the_start_shows():
      {"charm": 2, "might": 1, "wit": 0, "skill": 0}),
     ([{"op": "spend"}, {"op": "spend"}], "spent", 2),
     ([{"op": "move", "place": "곡물 창고"}], "visited", ["광장", "곡물 창고"]),
-    ([{"op": "write", "line": CREW}], "notebook", {"볼 것 쇠 지렛대": 0, "사람 오토": 0, "곳 광장": 0, "곳 곡물 창고": 0,
-                                                  CREW: 1}),
+    ([{"op": "write", "line": CREW}], "notebook", {"사람 오토": 0, "곳 광장": 0, "곳 곡물 창고": 0, CREW: 1}),
+    ([{"op": "look", "place": "광장"}], "looked", ["광장"]),
     ([{"op": "strike", "line": LIE}], "struck", [LIE]),
     ([{"op": "withhold", "block": "꺼림 리사.새벽"}], "withheld", ["꺼림 리사.새벽"]),
     ([{"op": "withhold", "block": "꺼림 리사.새벽"}, {"op": "unwithhold", "block": "꺼림 리사.새벽"}], "withheld", []),
