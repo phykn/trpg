@@ -67,7 +67,10 @@ function NotebookLine({ line, view, open, locked, onToggle, onLine, onAct, onLay
       ) : null}
       {open && line.acts.length ? (
         <View className="gap-2">
-          {line.acts.map((a) => <Button key={a.id} tone="secondary" label={a.label} disabled={locked} onPress={() => onAct(a.id)} />)}
+          {line.acts.map((a) => (
+            <Button key={a.id} tone="secondary" icon={a.roll ? 'dice' : undefined} label={a.label} disabled={locked}
+              onPress={() => onAct(a.id)} />
+          ))}
         </View>
       ) : null}
     </View>

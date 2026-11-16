@@ -64,6 +64,7 @@ export function DiceSheet({ roll, result, locked, onRoll, onClose }: {
         <View className="flex-row flex-wrap justify-center gap-x-3">
           {roll.adds.map((a) => <Text key={a.name} className={text({ kind: 'sub' })}>{a.name} {signed(a.value)}</Text>)}
           <Text className={text({ kind: 'sub' }, 'font-sans-semibold')}>{ko.chance(roll.chance)}</Text>
+          <Text className={text({ kind: 'sub' })}>{ko.cells(1)}</Text>
         </View>
       </View>
       <View className="h-20 flex-row items-center justify-center gap-6">

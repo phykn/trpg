@@ -27,7 +27,7 @@ export function Speaker({ who, met, children }: { who: string; met: string[]; ch
   const hue = findHue(met, who);
   return (
     <View className={`gap-0.5 border-l-2 pl-3 ${hue.border}`}>
-      <Text className={`font-sans-semibold text-chip ${hue.text}`}>{who}</Text>
+      <Text className={text({ kind: 'head' }, hue.text)}>{who}</Text>
       {children}
     </View>
   );

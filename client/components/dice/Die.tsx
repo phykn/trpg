@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, View } from 'react-native';
 
-import { cn } from '@/design/ui';
-
 const native = Platform.OS !== 'web';
 // Which of the nine places in a 3 by 3 grid hold a pip, for each face.
 const PIPS: Record<number, number[]> = { 1: [4], 2: [2, 6], 3: [2, 4, 6], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
@@ -49,14 +47,16 @@ export function Die({ face, rolling, spin = 1, size = 64 }: { face: number; roll
 
   const rotate = turn.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${spin * 360}deg`] });
   const lift = hop.interpolate({ inputRange: [0, 1], outputRange: [0, -size / 4] });
-  const cell = size / 3;
-  const pip = Math.round(size * 0.17);
+  // Inside the 2px border; pips sit about a quarter in from each edge, as on an ordinary die.
+  const inner = size - 4;
+  const pip = Math.round(size * 0.16);
+  const at = (i: number) => inner * [0.27, 0.5, 0.73][i] - pip / 2;
   return (
     <Animated.View style={{ width: size, height: size, transform: [{ translateY: lift }, { rotate }, { scale: land }] }}>
-      <View accessibilityElementsHidden className={cn('h-full w-full rounded-xl border-2 border-fg-default bg-canvas-floating shadow-sm')}>
-        {PIPS[shown].map((at) => (
-          <View key={at} className="absolute rounded-full bg-fg-default"
-            style={{ width: pip, height: pip, left: (at % 3) * cell + (cell - pip) / 2 - 2, top: Math.floor(at / 3) * cell + (cell - pip) / 2 - 2 }} />
+      <View accessibilityElementsHidden className="h-full w-full rounded-xl border-2 border-fg-default bg-canvas-floating shadow-sm">
+        {PIPS[shown].map((i) => (
+          <View key={i} className="absolute rounded-full bg-fg-default"
+            style={{ width: pip, height: pip, left: at(i % 3), top: at(Math.floor(i / 3)) }} />
         ))}
       </View>
     </Animated.View>

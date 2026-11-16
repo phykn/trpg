@@ -94,9 +94,9 @@ def try_lock(method, thing):
     return f"당신이 {eul(thing)} {how} 손을 댄다. 아직 열리지 않았고 잠긴 그대로다"
 
 
-def bet(method, chance, topic=None, person=None):
+def bet(method, topic=None, person=None):
     act = f"{eul(person)} {METHODS[method]}" if person else METHODS[method]
-    return f"{topic + ' · ' if topic else ''}{act} · {chance}% · 1턴"
+    return f"{topic} 이야기로 {act}" if topic else act
 
 
 def divider(place, cells):

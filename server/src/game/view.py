@@ -220,7 +220,7 @@ class ViewMaker:
             bonus = find_bet_bonus(self.story, self.state, target, method)
             chance = round(100 * sum(1 for a in range(1, 7) for b in range(1, 7) if a + b + bonus >= NEED) / 36)
             bets.append(self.add_act({"do": "bet", "target": target, "method": method},
-                                     label=ko.bet(method, chance, topic, person), roll=self.make_roll(target, method, chance)))
+                                     label=ko.bet(method, topic, person), roll=self.make_roll(target, method, chance)))
         return bets
 
     def make_roll(self, target, method, chance):

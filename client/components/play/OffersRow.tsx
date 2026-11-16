@@ -1,6 +1,8 @@
 import { Pressable, ScrollView, Text } from 'react-native';
 
 import { pressed } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { colors, icon } from '@/design/tokens';
 import { control, text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import type { Act } from '@/services/types';
@@ -14,6 +16,7 @@ export function OffersRow({ offers, locked, onAct }: { offers: Act[]; locked: bo
         <Pressable key={a.id} accessibilityRole="button" accessibilityLabel={a.label} accessibilityState={{ disabled: locked }}
           disabled={locked} onPress={() => onAct(a.id)} style={pressed}
           className={control({ kind: 'pill', tone: 'offer', off: locked })}>
+          <Icon name="dice" size={icon.md} color={colors.fg.default} width={2} />
           <Text className={text({ kind: 'label' })}>{a.label}</Text>
         </Pressable>
       ))}

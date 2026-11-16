@@ -8,4 +8,5 @@ def test_midnight_is_night_and_one_oclock_is_dawn():
 
 def test_particles_follow_the_last_sound():
     assert [ko.ro(w) for w in ("구둣주걱", "칼", "드라이버")] == ["구둣주걱으로", "칼로", "드라이버로"]
-    assert ko.bet("press", 72, person="최두식") == "최두식을 몰아세운다 · 72% · 1턴"
+    assert ko.bet("press", person="최두식") == "최두식을 몰아세운다"
+    assert ko.bet("soothe", topic="벨트") == "벨트 이야기로 달랜다"
