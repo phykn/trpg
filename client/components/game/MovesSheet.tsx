@@ -8,7 +8,7 @@ export function MovesSheet({ moves, locked, onMove, onClose }: {
   moves: GameView['place']['moves']; locked: boolean; onMove: (act: string) => void; onClose: () => void;
 }) {
   return (
-    <Sheet title={ko.moves} icon="arrow" onClose={onClose}>
+    <Sheet title={ko.moves} onClose={onClose}>
       <View className="gap-2">
         {moves.map((m) => (
           <Choice key={m.id} label={m.name} sub={m.unvisited ? `${ko.cells(m.cells)} · ${ko.unvisited}` : ko.cells(m.cells)}

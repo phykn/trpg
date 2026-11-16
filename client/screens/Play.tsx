@@ -98,11 +98,9 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
         </Overlay>
       ) : null}
       {group ? (
-        <Overlay full onClose={() => setOpen(null)}>
-          <NotebookSheet view={view} group={group} line={open?.kind === 'notebook' ? open.line : undefined} locked={locked}
-            onGroup={(g) => setOpen({ kind: 'notebook', group: g })} onLine={(id) => openLine(id)} onAct={act}
-            onConclude={playing ? () => setOpen({ kind: 'conclude' }) : undefined} onClose={() => setOpen(null)} />
-        </Overlay>
+        <NotebookSheet view={view} group={group} line={open?.kind === 'notebook' ? open.line : undefined} locked={locked}
+          onGroup={(g) => setOpen({ kind: 'notebook', group: g })} onLine={(id) => openLine(id)} onAct={act}
+          onConclude={playing ? () => setOpen({ kind: 'conclude' }) : undefined} onClose={() => setOpen(null)} />
       ) : null}
     </View>
   );

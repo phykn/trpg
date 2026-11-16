@@ -18,7 +18,7 @@ export function ConcludeSheet({ view, picks, locked, onPick, onSubmit, onMore, o
   onMore?: () => void; onNotebook: () => void;
 }) {
   return (
-    <Sheet title={ko.conclusion} icon="flag" onClose={onMore}>
+    <Sheet title={ko.conclusion} onClose={onMore}>
       <View className="gap-2">
         {QUESTIONS.map((q) => <Choice key={q} label={ko.questions[q]} sub={showLine(view, picks[q])} onPress={() => onPick(q)} />)}
       </View>

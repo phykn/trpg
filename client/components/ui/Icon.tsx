@@ -1,10 +1,9 @@
-import { ArrowRight, BookOpen, ChevronRight, Eye, Flag, RotateCcw, Send, X } from 'lucide-react-native';
+import { BookOpen, ChevronRight, Eye, Flag, RotateCcw, Send, X } from 'lucide-react-native';
 
 // Lucide's one stroke set, so every icon has the same weight and optical size.
 const ICONS = {
   flag: Flag,
   eye: Eye,
-  arrow: ArrowRight,
   send: Send,
   close: X,
   next: ChevronRight,

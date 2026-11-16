@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { Pressable, type ScrollView, Text, View } from 'react-native';
 
 import { Button, pressed } from '@/components/ui/Button';
-import { Sheet } from '@/components/ui/Sheet';
+import { DragSheet } from '@/components/ui/DragSheet';
+import { spacing } from '@/design/tokens';
 import { control, surface, text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import { findLine, GROUPS } from '@/logic/notebook';
@@ -23,8 +25,8 @@ function Intro({ words, open, onCut }: { words: string; open: boolean; onCut: (c
         {words}
       </Text>
       {open ? null : (
-        <Text aria-hidden onLayout={(e) => setFull(e.nativeEvent.layout.height)} pointerEvents="none"
-          className={text({ kind: 'note' }, 'absolute left-0 right-0 top-0 opacity-0')}>{words}</Text>
+        <Text aria-hidden onLayout={(e) => setFull(e.nativeEvent.layout.height)}
+          className={text({ kind: 'note' }, 'pointer-events-none absolute left-0 right-0 top-0 opacity-0')}>{words}</Text>
       )}
     </View>
   );
@@ -98,7 +100,8 @@ export function NotebookSheet({ view, group, line, locked, onGroup, onLine, onAc
     onLine(id === line ? undefined : id);
   }
   return (
-    <Sheet full title={ko.notebook} icon="book" onClose={onClose}>
+    <DragSheet title={ko.notebook} full={line !== undefined} onClose={onClose}
+      footer={onConclude ? <Button tone="secondary" icon="flag" label={ko.conclude} onPress={onConclude} /> : undefined}>
       <View accessibilityRole="tablist" className="flex-row gap-1">
         {GROUPS.map((g) => (
           <Pressable key={g} accessibilityRole="tab" accessibilityState={{ selected: g === group }} onPress={() => onGroup(g)}
@@ -107,18 +110,18 @@ export function NotebookSheet({ view, group, line, locked, onGroup, onLine, onAc
             <Text numberOfLines={1} className={text({ kind: 'tab', on: g === group })}>
               {ko.groups[g]}
             </Text>
-            {view.notebook[g].some((l) => l.new) ? <Unread /> : null}
+            {view.notebook[g].some((l) => l.new) ? <View className="absolute right-1 top-1"><Unread /></View> : null}
           </Pressable>
         ))}
       </View>
-      <ScrollView key={group} ref={scroll} className="min-h-0 flex-1" contentContainerClassName="gap-2">
+      <BottomSheetScrollView key={group} ref={scroll} style={{ flex: 1 }}
+        contentContainerStyle={{ gap: spacing[2], paddingBottom: onConclude ? spacing[20] : spacing[4] }}>
         {view.notebook[group].map((l) => (
           <NotebookLine key={l.id} line={l} view={view} open={l.id === line} locked={locked}
             onToggle={() => toggle(l.id)} onLine={onLine} onAct={onAct}
             onLayout={(y) => place(l.id, y)} />
         ))}
-      </ScrollView>
-      {onConclude ? <Button tone="secondary" icon="flag" label={ko.conclude} onPress={onConclude} /> : null}
-    </Sheet>
+      </BottomSheetScrollView>
+    </DragSheet>
   );
 }

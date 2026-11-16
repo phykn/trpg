@@ -5,6 +5,7 @@ import { NanumGothic_400Regular, NanumGothic_700Bold } from '@expo-google-fonts/
 import { NanumMyeongjo_400Regular, NanumMyeongjo_800ExtraBold } from '@expo-google-fonts/nanum-myeongjo';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { colors } from '@/design/tokens';
 
@@ -14,5 +15,10 @@ export default function RootLayout() {
   });
   // A font that fails to load falls back to the system font rather than leaving the screen blank.
   if (!loaded && !error) return null;
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas.default } }} />;
+  // Drag sheets need the gesture handler's root.
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas.default } }} />
+    </GestureHandlerRootView>
+  );
 }

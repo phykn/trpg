@@ -19,6 +19,7 @@
     "@expo-google-fonts/geist-mono": "^0.4.1",
     "@expo-google-fonts/nanum-gothic": "^0.4.0",
     "@expo-google-fonts/nanum-myeongjo": "^0.4.1",
+    "@gorhom/bottom-sheet": "^5.2.14",
     "class-variance-authority": "^0.7.1",
     "expo": "~54.0.34",
     "expo-constants": "~18.0.13",
