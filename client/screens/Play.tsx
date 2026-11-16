@@ -5,7 +5,6 @@ import { ChatLog } from '@/components/game/ChatLog';
 import { ConcludeSheet, PickSheet, type Picks, type Question } from '@/components/game/ConcludeSheet';
 import { InputBar } from '@/components/game/InputBar';
 import { OffersRow } from '@/components/game/OffersRow';
-import { LineSheet } from '@/components/game/LineSheet';
 import { MovesSheet } from '@/components/game/MovesSheet';
 import { NotebookSheet } from '@/components/game/NotebookSheet';
 import { Overlay } from '@/components/game/Overlay';
@@ -16,10 +15,9 @@ import { findLine } from '@/logic/notebook';
 import type { Entry, Phase } from '@/logic/useGame';
 import type { CommandBody, GameView, Group } from '@/services/types';
 
-// Which sheet is open; a line opened from the notebook remembers its group, so closing it goes back there.
+// Which sheet is open; the notebook may have one line unfolded.
 type Open =
-  | { kind: 'notebook'; group: Group }
-  | { kind: 'line'; id: number; group?: Group }
+  | { kind: 'notebook'; group: Group; line?: number }
   | { kind: 'moves' }
   | { kind: 'conclude' }
   | { kind: 'pick'; question: Question }
@@ -36,14 +34,12 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
   const closing = view.stage === 'closing';
   const locked = phase !== 'ready' || !playing;
   const met = view.notebook.people.map((l) => l.text);
-  const found = open?.kind === 'line' ? findLine(view, open.id) : null;
-  const group = open?.kind === 'notebook' || open?.kind === 'line' ? open.group : undefined;
+  const group = open?.kind === 'notebook' ? open.group : undefined;
   // With the turns spent the conclusion stays up whenever nothing else is open.
   const concluding = open?.kind === 'conclude' || open?.kind === 'pick' || (closing && !open && phase === 'ready');
 
-  // Lines count as read once their group or the line itself is on screen.
-  const unread = open?.kind === 'notebook' ? view.notebook[open.group].filter((l) => l.new).map((l) => l.id)
-    : found?.line.new ? [found.line.id] : [];
+  // Lines count as read once their group is on screen.
+  const unread = group ? view.notebook[group].filter((l) => l.new).map((l) => l.id) : [];
   const readable = phase === 'ready' && (playing || closing);
   useEffect(() => {
     if (readable && unread.length) send({ read: unread });
@@ -56,19 +52,20 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
     setOpen(null);
   }
 
-  function openNote(lines: number[]) {
+  // A line opens unfolded in its group; several lines open their group.
+  function openLine(id: number | undefined, lines = id === undefined ? [] : [id]) {
     const first = lines.length ? findLine(view, lines[0]) : null;
-    if (first) setOpen(lines.length === 1 ? { kind: 'line', id: lines[0] } : { kind: 'notebook', group: first.group });
+    if (first) setOpen({ kind: 'notebook', group: first.group, line: lines.length === 1 ? lines[0] : undefined });
+    else if (group) setOpen({ kind: 'notebook', group });
   }
 
-  const closeLine = () => setOpen(open?.kind === 'line' && open.group ? { kind: 'notebook', group: open.group } : null);
   const openNotebook = () => setOpen({ kind: 'notebook', group: 'places' });
 
   return (
     <View className="min-h-0 flex-1">
       <TopBar view={view} onPlace={playing && view.place.moves.length ? () => setOpen({ kind: 'moves' }) : undefined}
         onNotebook={openNotebook} />
-      <ChatLog log={log} met={met} outgoing={outgoing} onNote={openNote}
+      <ChatLog log={log} met={met} outgoing={outgoing} onNote={(lines) => openLine(undefined, lines)}
         waiting={phase === 'sending' || phase === 'streaming' ? phase : null} />
       <View className="border-t border-border-default">
         <PeopleRow people={view.people} met={met} look={playing ? view.place.look : null} locked={locked}
@@ -102,15 +99,9 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
       ) : null}
       {group ? (
         <Overlay full onClose={() => setOpen(null)}>
-          <NotebookSheet view={view} group={group} onGroup={(g) => setOpen({ kind: 'notebook', group: g })}
-            onLine={(id) => setOpen({ kind: 'line', id, group })}
+          <NotebookSheet view={view} group={group} line={open?.kind === 'notebook' ? open.line : undefined} locked={locked}
+            onGroup={(g) => setOpen({ kind: 'notebook', group: g })} onLine={(id) => openLine(id)} onAct={act}
             onConclude={playing ? () => setOpen({ kind: 'conclude' }) : undefined} onClose={() => setOpen(null)} />
-        </Overlay>
-      ) : null}
-      {found ? (
-        <Overlay onClose={closeLine}>
-          <LineSheet line={found.line} about={found.line.about.flatMap((id) => findLine(view, id)?.line ?? [])} locked={locked}
-            onAct={act} onLine={(id) => setOpen({ kind: 'line', id, group })} onClose={closeLine} />
         </Overlay>
       ) : null}
     </View>
