@@ -5,11 +5,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .models import ModelUnavailable
-from .narrate import make_jobs
 from .rules.act import Refused, act
 from .rules.guide import make_guide
 from .rules.state import apply_turn, start_state
 from .save import SaveError, make_save, read_save, write_save
+from .slots import make_jobs
 from .view import make_feed, make_view
 
 

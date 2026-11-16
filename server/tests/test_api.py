@@ -5,10 +5,10 @@ from fastapi.testclient import TestClient
 from src.api import build_app
 from src.config import local_settings
 from src.models import ModelUnavailable
+from src.names import show_name
 from src.narrate import Narrator
 from src.service import GameService
 from src.story.load import load_story
-from src.view import show_name
 
 SCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"
 DAWN = load_story(SCENARIOS / "dawn")

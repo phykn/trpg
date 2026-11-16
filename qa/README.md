@@ -13,7 +13,7 @@ Cheapest first. Run every row your change touches, and when you report a result,
 | Any server code | `.venv/bin/python -m pytest -q` · `.venv/bin/python -m ruff check server/` | no | 1 s |
 | A story in `scenarios/` | `cd server && ../.venv/bin/python -m src.story ../scenarios/<folder>` | no | 1 s |
 | `interpret.py` or a story's topics, `묻는 말` or `evals.yaml` | `cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<folder> --out ../qa_test/runs/<run>`, then once with `--held` (measure only; never edit asks to fit it) | Kanana | 30 s |
-| `narrate.py`, its prompts or thresholds, or a story's lines | `cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<folder> --text --out ../qa_test/runs/<run>` | gemma4, Kanana | 5 min |
+| `slots.py` or `narrate.py`, their prompts or thresholds, or a story's lines | `cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<folder> --text --out ../qa_test/runs/<run>` | gemma4, Kanana | 5 min |
 | Screens in `client/` | `cd client && npm test -- --runInBand && npx tsc --noEmit && npm run lint` · the real UI check below | no | 20 s · by hand |
 | The API boundary: `api.py`, `service.py`, `view.py`, or a story's flow | The above · a short [shell game](#shell-game) through the changed flow | gemma4, Kanana | 2 min |
 

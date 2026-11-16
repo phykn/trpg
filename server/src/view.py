@@ -1,4 +1,5 @@
 from .locale import ko
+from .names import show_line, show_name
 from .rules.act import (
     LOCK_METHODS,
     NEED,
@@ -9,6 +10,7 @@ from .rules.act import (
     was_tried,
 )
 from .rules.state import STATS, judge_ending, list_people_here
+from .slots import list_slots
 
 GROUPS = {"곳": "places", "사람": "people", "물건": "items", "본 것": "seen", "들은 말": "heard"}
 
@@ -23,20 +25,6 @@ def find_stage(story, state):
     if state["stats"] is None:
         return "start"
     return "closing" if state["spent"] >= story.head.cells else "play"
-
-
-def show_name(story, kind, name):
-    entry = {"곳": story.places, "사람": story.people, "볼 것": story.things}[kind][name]
-    return entry.display or name
-
-
-def show_line(story, addr):
-    line = story.lines[addr]
-    if line.kind == "말":
-        return ko.said(show_name(story, "사람", line.name), line.text)
-    if line.kind == "볼 것" and not story.things[line.name].item:
-        return line.text
-    return show_name(story, line.kind, line.name)
 
 
 def find_group(story, addr):
@@ -207,43 +195,20 @@ class ViewMaker:
 
 def make_feed(story, turn, ids, opening=()):
     """`opening` holds the lines written before the first turn; the first turn tells them as its own notes."""
-    feed = []
-    action, changes = turn["action"], turn["changes"]
-    if action["do"] == "stats":
+    changes = turn["changes"]
+    if turn["action"]["do"] == "stats":
         changes = [{"op": "write", "line": a} for a in opening] + changes
-
-    def add_text(kind, who):
-        feed.append({"kind": kind, "who": who, "slot": len([f for f in feed if "slot" in f])})
-
+    feed = []
     moves = [c["place"] for c in changes if c["op"] == "move"]
     if moves:
         feed.append({"kind": "move", "text": ko.divider(show_name(story, "곳", moves[-1]), len(moves))})
     if turn["dice"]:
         dice = turn["dice"]
         feed.append({"kind": "roll", "text": ko.roll(dice["method"], dice["eyes"], dice["total"], NEED), "won": dice["won"]})
-    if action["do"] == "conclude":
-        add_text("ending", None)
-    elif action["do"] not in ("face", "read"):
-        speaker = next((find_speaker(story, t) for t in turn["talk"] if find_speaker(story, t)), None)
-        add_text("text", speaker and show_name(story, "사람", speaker))
-    feed += make_notes(story, changes, ids)
-    for happened in turn["happened"]:
-        if happened.get("result") != "prevented":   # it passes quietly; the ending tells it
-            add_text("omen" if "omen" in happened else "event", None)
-    if turn.get("guide"):
-        add_text("guide", None)
-    return feed
-
-
-def find_speaker(story, talk):
-    kind, value = next(iter(talk.items()))
-    if kind == "say":
-        return story.lines[value].name
-    if kind == "withhold":
-        return story.blocks[value].name
-    if kind == "lead":
-        return value.split(".")[0]
-    return value if kind in ("pass", "done", "chat", "unsure") else None
+    texts = [{"kind": s["kind"], "who": s.get("person") and show_name(story, "사람", s["person"]), "slot": i}
+             for i, s in enumerate(list_slots(story, turn))]
+    lead = [t for t in texts if t["kind"] in ("text", "ending")]
+    return feed + lead + make_notes(story, changes, ids) + texts[len(lead):]
 
 
 def make_notes(story, changes, ids):

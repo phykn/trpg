@@ -47,6 +47,6 @@ cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<folder> --text
 ```
 server/
   run_api.py   arguments, story and model checks, serving
-  src/         config.py, story/ (reading, references, compiling, checks, evals), rules/ (game state, changes, actions, when the DM speaks), save.py, service.py, view.py, api.py, locale/ko.py, models/, interpret.py, narrate.py
+  src/         config.py, story/ (reading, references, compiling, checks, evals), rules/ (game state, changes, actions, when the DM speaks), save.py, service.py, view.py, api.py, locale/ko.py, names.py, models/, interpret.py, slots.py, narrate.py
   tests/
 ```

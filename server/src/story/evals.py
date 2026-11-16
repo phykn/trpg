@@ -12,9 +12,10 @@ from ..config import local_settings
 from ..interpret import Interpreter
 from ..models.decision import DecisionClient
 from ..models.llm import LLMClient
-from ..narrate import LEVELS, Narrator
+from ..names import show_line, show_name
+from ..narrate import Narrator
 from ..rules.state import start_state
-from ..view import show_line, show_name
+from ..slots import LEVELS
 from .load import StoryError, load_story, parse_address
 
 GOAL_RIGHT = 0.85
@@ -22,8 +23,8 @@ GOAL_WRONG_TOPIC = 0.02
 
 
 def read_cases(folder, story, held=False):
-    """`evals.yaml` is the set to work from; `evals-held.yaml` holds sentences players really typed, kept apart so that
-    asks and prompts are never fitted to them (engine/01 5절)."""
+    # evals-held.yaml holds sentences players really typed, kept apart so asks and prompts are never fitted to them
+    # (engine/01 5절).
     path = Path(folder) / ("evals-held.yaml" if held else "evals.yaml")
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     cases = []
