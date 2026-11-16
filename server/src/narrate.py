@@ -6,6 +6,7 @@ from .slots import VOICE
 MEANING = 0.5
 ADDED = 0.15
 QUIET = 0.5
+OUTCOME = 0.5
 REWRITES = 2
 # An answer may end on a question back and the DM on a dry joke (game/04 3절, game/07 2절), a sentence each.
 MAX_SENTENCES = {"answer": 4, "scene": 4, "ending": 8, "dm": 4}
@@ -30,7 +31,7 @@ PLAIN = re.compile(r"(?<!니)다([.!?…]+(\s|$)|$)")   # 해라체, as a story'
 BRACKET = re.compile(r"[()（）]")   # gemma4 wrote stage directions and copied name(doing) in brackets
 QUOTED = re.compile(r"\"[^\"]*\"|“[^”]*”|'[^']*'|‘[^’]*’")
 REASONS = {"added": "받은 것에 없는 사람, 물건, 때, 곳을 더했다", "meaning": "할 말의 뜻이 빠졌거나 바뀌었다",
-           "quiet": "말하지 않아야 할 내용을 말했다", "length": "너무 길다",
+           "quiet": "말하지 않아야 할 내용을 말했다", "outcome": "주사위의 결과가 대답에 드러나지 않는다", "length": "너무 길다",
            "prompt": "지시문을 두고 말했다. 인물이나 진행자의 말만 쓴다",
            "style": "합니다체가 아닌 문장이 있다. 문장을 모두 '-습니다', '-ㅂ니까'로 맺는다",
            "push": "플레이어에게 할 일을 권했다. 권하지 말고 소리, 빛, 냄새, 몸짓 같은 기척만 그린다",
@@ -201,7 +202,7 @@ def make_answer_prompt(job):
         user = "플레이어: (방금 당신 앞에 왔다)"
     if job.get("saw"):   # in the system prompt alone gemma4 let it pass; next to the line it reacts
         user = f"(플레이어가 방금 {job['person']} 앞에서 한 일: {' / '.join(job['saw'])})\n{user}"
-    if job.get("bet") and job["lines"]:   # after a typed action gemma4 copied that answer over the line it was given
+    if job.get("bet") and job["says"]:   # after a typed action gemma4 copied that answer over the line it was given
         user += f"\n(이번에 할 말: {' / '.join(job['says'])})"
     return f"당신은 추리 게임 속 인물 {job['person']}의 목소리다.", rules, user
 
@@ -235,6 +236,8 @@ def make_checks(job):
         checks["meaning"] = noul("쓴 글이 할 말의 뜻을 바꾸지 않고 담고 있는가", "담고 있다", "빠졌거나 바뀌었다")
     if job["kind"] == "answer" and job["quiet"]:
         checks["quiet"] = noul("쓴 글이 사건에 관한 내용을 알려 주지 않는가", "알려 주지 않는다", "알려 준다")
+    if job["kind"] == "answer" and job.get("outcome"):
+        checks["outcome"] = noul(f"쓴 글에서 말하는 사람이 {job['outcome']} 티가 나는가", "난다", "나지 않는다")
     return checks
 
 
@@ -244,7 +247,7 @@ def noul(instructions, yes, no):
 
 def judge(job, answers, text):
     probs = {key: answers[key]["noul"] for key in make_checks(job)}
-    least = {"added": ADDED, "meaning": MEANING, "quiet": QUIET}
+    least = {"added": ADDED, "meaning": MEANING, "quiet": QUIET, "outcome": OUTCOME}
     failed = [key for key, p in probs.items() if (1 - p if key == "added" else p) < least[key]]
     if job["kind"] == "answer" and "meaning" not in failed and any(cover(line, text) < COVER for line in job["lines"]):
         failed.append("meaning")

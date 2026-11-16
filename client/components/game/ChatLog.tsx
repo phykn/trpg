@@ -6,6 +6,7 @@ import { text } from '@/design/ui';
 import { useReveal } from '@/logic/reveal';
 import { splitTopics } from '@/logic/topics';
 import type { Entry } from '@/logic/useGame';
+import { RollLine } from './RollParts';
 import { findHue } from './speaker';
 import type { Topic } from './TopicCard';
 
@@ -60,9 +61,7 @@ function Line({ entry, met, typing, onNote, onTopic }: {
     );
   }
   if (entry.kind === 'move') return <Text className="py-1 text-center font-mono-medium text-chip text-fg-subtle">{entry.text}</Text>;
-  if (entry.kind === 'roll') {
-    return <Text className={`font-mono-medium text-panel ${entry.won ? 'text-health-fg' : 'text-danger-fg'}`}>{entry.text}</Text>;
-  }
+  if (entry.kind === 'roll') return <RollLine result={entry} />;
   if (entry.kind === 'note') {
     return (
       <Pressable accessibilityRole="button" onPress={() => onNote(entry.lines)} style={pressed} className="self-start">

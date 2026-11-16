@@ -1,7 +1,7 @@
 import BottomSheet, {
   BottomSheetBackdrop, type BottomSheetBackdropProps, BottomSheetFooter, type BottomSheetFooterProps, BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import { type ReactNode, useCallback, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { colors, radius } from '@/design/tokens';
@@ -14,11 +14,14 @@ const SNAPS = ['50%', '100%'];
 // Every sheet (@gorhom/bottom-sheet). A long one opens halfway, so the chat above stays in view, and is pulled up to
 // fill the screen; a short one (`fit`) is as tall as what it holds. Either is pulled down to close. The footer stays on
 // the visible bottom edge. A list inside scrolls with BottomSheetScrollView, so dragging it first pulls the sheet up.
-// Without onClose the sheet stays until something else replaces it.
-export function DragSheet({ title, footer, full, fit, onClose, children }: {
-  title: string; footer?: ReactNode; full?: boolean; fit?: boolean; onClose?: () => void; children: ReactNode;
+// Without onClose the sheet stays until something else replaces it. `shut` closes it from outside, sliding down.
+export function DragSheet({ title, footer, full, fit, shut, onClose, children }: {
+  title: string; footer?: ReactNode; full?: boolean; fit?: boolean; shut?: boolean; onClose?: () => void; children: ReactNode;
 }) {
   const sheet = useRef<BottomSheet>(null);
+  useEffect(() => {
+    if (shut) sheet.current?.close();
+  }, [shut]);
   // `full` opens it at full height, for a line opened from elsewhere that has to be seen whole; it is read once.
   const [start] = useState(full ? 1 : 0);
   const close = useCallback(() => sheet.current?.close(), []);

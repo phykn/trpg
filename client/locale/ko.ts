@@ -30,4 +30,9 @@ export const ko = {
   answers: { hit: '맞힘', miss: '틀림', blank: '비움' },
   missed: { lies: '깨지 못한 거짓말', held: '풀지 못한 꺼림', locks: '열지 못한 잠김' },
   toTitle: '제목으로',
+  need: (n: number) => `${n} 이상`,
+  chance: (n: number) => `${n}%`,
+  roll: '굴린다',
+  won: '성공',
+  lost: '실패',
 };

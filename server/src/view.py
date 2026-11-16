@@ -2,6 +2,7 @@ from .locale import ko
 from .names import show_line, show_name
 from .rules.act import (
     LOCK_METHODS,
+    METHOD_STATS,
     NEED,
     TALK_METHODS,
     find_bet_bonus,
@@ -104,15 +105,21 @@ class ViewMaker:
             return []
         target, method = tried[0]["try"], tried[0]["method"]
         if target in self.story.blocks:
-            return self.list_bets(target, (method,)) if self.story.blocks[target] in self.locks else []
-        if target not in self.here:
-            return []
-        state, name = self.state, show_name(self.story, "사람", target)
-        held = [b for b in self.story.blocks.values() if b.name == target and b.addr in state["withheld"]]
-        offers = [bet for b in held for bet in self.list_bets(b.addr, (method,), b.topic)]
-        said = [a for a in state["notebook"] if self.story.lines[a].kind == "말" and self.story.lines[a].name == target
+            bets = self.list_bets(target, (method,)) if self.story.blocks[target] in self.locks else []
+        elif target in self.here and (aim := self.find_aim(target, method)):
+            bets = self.list_bets(aim, (method,), person=show_name(self.story, "사람", target))
+        else:
+            bets = []
+        # A sure action opens the dice at once; a guessed one only offers them (game/07 2절)
+        return [{**bet, "now": not tried[0].get("guess")} for bet in bets]
+
+    def find_aim(self, person, method):
+        """What an action at a person bets on: what they hold back, else the last thing they said (game/05 3절)."""
+        state = self.state
+        held = [b.addr for b in self.story.blocks.values() if b.name == person and b.addr in state["withheld"]]
+        said = [a for a in state["notebook"] if self.story.lines[a].kind == "말" and self.story.lines[a].name == person
                 and a not in state["struck"] and a not in state["judged"]]
-        return offers + [bet for a in said for bet in self.list_bets(a, (method,), person=name)]
+        return next((a for a in [*held, *reversed(said)] if [a, method] not in state["closed"]), None)
 
     def make_notebook(self):
         book = {group: [] for group in GROUPS.values()}
@@ -214,8 +221,24 @@ class ViewMaker:
             bonus = find_bet_bonus(self.story, self.state, target, method)
             chance = round(100 * sum(1 for a in range(1, 7) for b in range(1, 7) if a + b + bonus >= NEED) / 36)
             bets.append(self.add_act({"do": "bet", "target": target, "method": method},
-                                     label=ko.bet(method, chance, topic, person)))
+                                     label=ko.bet(method, chance, topic, person), roll=self.make_roll(target, method, chance)))
         return bets
+
+    def make_roll(self, target, method, chance):
+        """What the dice sheet shows before the roll: who, what is aimed at, the number to reach and what adds to it."""
+        story, state = self.story, self.state
+        adds = [{"name": ko.STATS[METHOD_STATS[method]], "value": state["stats"][METHOD_STATS[method]]}]
+        if method in LOCK_METHODS:
+            block = story.blocks[target]
+            who, aim = show_name(story, "볼 것", block.name), None
+            adds += [{"name": ko.HARD, "value": -block.hard}] if block.hard else []
+        else:
+            found = story.lines.get(target) or story.blocks[target]
+            who = show_name(story, "사람", found.name)
+            aim = f"“{found.text}”" if target in story.lines else ko.withheld(found.topic)
+            feeling = {"soothe": "trust", "press": "fear"}.get(method)
+            adds += [{"name": ko.FEELINGS[feeling], "value": state["attitudes"][found.name][feeling]}] if feeling else []
+        return {"title": f"{ko.eul(who)} {ko.METHODS[method]}", "aim": aim, "need": NEED, "adds": adds, "chance": chance}
 
     def make_ending(self):
         ending = judge_ending(self.story, self.state)
@@ -258,7 +281,8 @@ def make_feed(story, turn, ids, opening=(), after=None):
         feed.append({"kind": "move", "text": ko.divider(show_name(story, "곳", moves[-1]), len(moves))})
     dice = turn["dice"]
     if dice:
-        feed.append({"kind": "roll", "text": ko.roll(dice["method"], dice["eyes"], dice["total"], NEED), "won": dice["won"]})
+        feed.append({"kind": "roll", "method": ko.METHODS[dice["method"]], "need": NEED, "eyes": dice["eyes"],
+                     "add": dice["total"] - sum(dice["eyes"]), "total": dice["total"], "won": dice["won"]})
     texts = [{"kind": s["kind"], "who": s.get("person") and show_name(story, "사람", s["person"]), "slot": i,
               **({"topics": list_unheard(story, after, s["person"])} if after and s.get("person") else {}),
               **({"topics": [s["guide"]["topic"]]} if s["kind"] == "guide" and "topic" in s["guide"] else {})}

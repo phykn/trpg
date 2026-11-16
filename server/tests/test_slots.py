@@ -178,7 +178,7 @@ def test_an_answer_knows_its_impressions_and_the_rumors_it_heard():
 def test_a_typed_action_is_answered_by_the_person_or_told_as_a_scene_at_a_lock():
     pressed = play(STORY, [STATS, ({"do": "ask", "text": "x"}, {"kind": "chat"}), doing("press")])[-1]
     job = make_jobs(STORY, *pressed)[0]
-    assert job["kind"] == "answer" and job["says"] == ["플레이어가 거칠게 몰아붙이려 든다. 그 행동에 반응한다"] and job["quiet"]
+    assert job["kind"] == "answer" and job["says"] == ["플레이어가 거칠게 몰아붙이려 든다. 그 행동에 반응하되, 결과는 아직 모르므로 털어놓거나 굴복하지 않는다"] and job["quiet"]
     forced = play(STORY, [STATS, do("move", place="곡물 창고"), do("look"), doing("force", LOCK)])[-1]
     assert make_jobs(STORY, *forced)[0]["happening"] == ["당신이 잠긴 뒷문을 힘으로 비틀어 열어 보려 손을 댄다. 아직 열리지 않았고 잠긴 그대로다"]
 
@@ -200,3 +200,14 @@ def test_the_narrator_gets_its_own_last_texts_and_not_what_people_said():
     assert scene["kind"] == "scene" and len(scene["narrated"]) == NARRATED
     assert scene["narrated"] == ["글 2.0", "글 3.0", "글 4.0", "글 5.0"]   # 1 is 징수관's answer
     assert "글 1.0" not in list_narrated(DAWN, past[:3]) and "앞서 들려준 글" in make_messages(scene)[0]["content"]
+
+
+def test_a_bet_on_a_line_shows_in_the_answer_whether_the_person_gave_way():
+    from tests.test_act import CREW, ask, bet, find_seed
+    # wit +2, charm +1: soothing 오토 adds 1 (game/05 3절)
+    for win, say, outcome in [(True, "다독임에 마음이 누그러져 이 말이 참이라고 흔들림 없이 힘주어 다시 말한다: ", "밀려서"),
+                              (False, "다독여도 마음을 열지 않고 차갑게 선을 긋는다. 새로 털어놓는 것은 없고", "넘어가지 않고")]:
+        turns = play(STORY, [STATS, ask("밤"), (bet(CREW, "soothe"), None)], seed=find_seed(3, 1, win))
+        job = make_jobs(STORY, *turns[-1])[0]
+        assert job["says"][0].startswith(say) and job["outcome"].startswith(outcome)
+        assert bool(job["lines"]) == win and job["quiet"] != win

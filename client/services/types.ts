@@ -2,7 +2,12 @@
 
 export type Story = { story: string; title: string; intro: string };
 
-export type Act = { id: string; label: string };
+// What the dice sheet shows before the roll (engine/02 4절).
+export type Roll = { title: string; aim: string | null; need: number; adds: { name: string; value: number }[]; chance: number };
+
+export type Act = { id: string; label: string; roll?: Roll; now?: boolean };
+
+export type RollResult = { method: string; need: number; eyes: number[]; add: number; total: number; won: boolean };
 
 export type Line = {
   id: number; text: string; marks: string[]; struck: boolean; intro: string | null; about: number[]; new: boolean; acts: Act[];
@@ -45,7 +50,7 @@ export type TextKind = 'text' | 'ending' | 'omen' | 'event' | 'guide';
 
 export type FeedItem =
   | { kind: 'move'; text: string }
-  | { kind: 'roll'; text: string; won: boolean }
+  | ({ kind: 'roll' } & RollResult)
   | { kind: 'note'; text: string; lines: number[] }
   | { kind: TextKind; who: string | null; slot: number; topics?: string[] };
 

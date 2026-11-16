@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { ChatLog } from '@/components/game/ChatLog';
+import { DiceSheet } from '@/components/game/DiceSheet';
 import { ConcludeSheet, PickSheet, type Picks, type Question } from '@/components/game/ConcludeSheet';
 import { InputBar } from '@/components/game/InputBar';
 import { OffersRow } from '@/components/game/OffersRow';
@@ -12,9 +13,9 @@ import { SettingsMenu } from '@/components/game/SettingsMenu';
 import { TopBar } from '@/components/game/TopBar';
 import { TopicCard, type Topic } from '@/components/game/TopicCard';
 import { Resend } from '@/components/ui/Resend';
-import { findLine } from '@/logic/notebook';
+import { findAct, findLine } from '@/logic/notebook';
 import type { Entry, Phase } from '@/logic/useGame';
-import type { CommandBody, GameView, Group } from '@/services/types';
+import type { Act, CommandBody, GameView, Group, RollResult } from '@/services/types';
 
 // Which sheet is open; the notebook may have one line unfolded.
 type Open =
@@ -24,6 +25,8 @@ type Open =
   | { kind: 'pick'; question: Question }
   | { kind: 'topic'; topic: Topic }
   | { kind: 'settings' }
+  // A roll: `from` is where the log stood when it was sent, so its result is the first roll after it.
+  | { kind: 'dice'; act: Act & { roll: NonNullable<Act['roll']> }; from: number | null }
   | null;
 
 export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, onHome }: {
@@ -50,10 +53,40 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
 
   // What is typed in the box goes along with an act, as what the player says while doing it.
   function act(id: string) {
+    const found = findAct(view, id);
+    if (found?.roll) {   // dice are rolled by the player on their sheet
+      setOpen({ kind: 'dice', act: { ...found, roll: found.roll }, from: null });
+      return;
+    }
     send(draft.trim() ? { do: id, text: draft.trim() } : { do: id });
     setDraft('');
     setOpen(null);
   }
+
+  function roll() {
+    if (open?.kind !== 'dice') return;
+    send(draft.trim() ? { do: open.act.id, text: draft.trim() } : { do: open.act.id });
+    setDraft('');
+    setOpen({ ...open, from: log.length });
+  }
+
+  const dice = open?.kind === 'dice' ? open : null;
+  const rolled = dice && dice.from !== null
+    ? (log.slice(dice.from).find((e) => e.kind === 'roll') as RollResult | undefined) ?? null : null;
+  // A roll that was refused or got no answer leaves no result: the sheet goes and the screen shows why.
+  useEffect(() => {
+    if (dice && dice.from !== null && !rolled && (phase === 'ready' || phase === 'stuck')) setOpen(null);
+  }, [dice, rolled, phase]);
+
+  // A sure action opens its dice once the answer is in (game/07 2절); closing leaves the button.
+  const opened = useRef('');
+  const now = playing && phase === 'ready' ? view.offers.find((o) => o.now && o.roll) : undefined;
+  useEffect(() => {
+    const key = `${view.revision}:${now?.id}`;
+    if (!now?.roll || open || opened.current === key) return;
+    opened.current = key;
+    setOpen({ kind: 'dice', act: { ...now, roll: now.roll }, from: null });
+  }, [now, open, view.revision]);
 
   // A line opens unfolded in its group; several lines open their group.
   function openLine(id: number | undefined, lines = id === undefined ? [] : [id]) {
@@ -85,6 +118,10 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
             onSend={(text) => { send({ text }); setDraft(''); }} />
         )}
       </View>
+      {dice ? (
+        <DiceSheet roll={dice.act.roll} result={rolled} locked={locked && dice.from === null}
+          onRoll={roll} onClose={() => setOpen(null)} />
+      ) : null}
       {open?.kind === 'settings' ? <SettingsMenu onNewGame={onHome} onClose={() => setOpen(null)} /> : null}
       {open?.kind === 'moves' ? (
         <MovesSheet moves={view.place.moves} locked={locked} onMove={act} onClose={() => setOpen(null)} />

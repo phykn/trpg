@@ -150,8 +150,12 @@ class Run:
                           + texts.get(item["slot"], ""))
             elif item["kind"] == "note":
                 self.show(f"{item['text']}  [줄 {', '.join(map(str, item['lines']))}]")
+            elif item["kind"] == "roll":
+                add = f" {'+' if item['add'] > 0 else '-'} {abs(item['add'])}" if item["add"] else ""
+                self.show(f"{item['method']} [{item['need']} 이상] {item['total']} ({' + '.join(map(str, item['eyes']))}{add}) "
+                          + ("성공" if item["won"] else "실패"))
             else:
-                self.show(item["text"] + (" (성공)" if item.get("won") else " (실패)" if "won" in item else ""))
+                self.show(item["text"])
 
     def show_view(self):
         v = self.state["view"]

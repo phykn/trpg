@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ApiError, createGame, getGame, getStories, getTurns, sendCommand, streamText } from '@/services/api';
 import { clearGameId, loadGameId, storeGameId } from '@/services/storage';
-import type { CommandBody, FeedItem, GameView, Story, TextKind } from '@/services/types';
+import type { CommandBody, FeedItem, GameView, RollResult, Story, TextKind } from '@/services/types';
 
 // ready: commands open. sending, streaming: locked. stuck: only the same command again. text_error: only the text again.
 export type Phase = 'loading' | 'title' | 'ready' | 'sending' | 'streaming' | 'stuck' | 'text_error';
@@ -11,7 +11,7 @@ export type Phase = 'loading' | 'title' | 'ready' | 'sending' | 'streaming' | 's
 export type Entry = { key: string; turn: number } & (
   | { kind: 'said'; text: string }
   | { kind: 'move'; text: string }
-  | { kind: 'roll'; text: string; won: boolean }
+  | ({ kind: 'roll' } & RollResult)
   | { kind: 'note'; text: string; lines: number[] }
   | { kind: TextKind; slot: number; who: string | null; text: string; topics?: string[] }
 );

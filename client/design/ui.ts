@@ -37,6 +37,9 @@ export const text = withMerge(cva('text-fg-default', {
       // The top bar's clock, turns and notebook count: one face for Hangul and digits alike, so none looks bigger.
       bar: 'font-sans-semibold text-body text-fg-muted',
       value: 'w-9 text-center font-mono-medium text-title', // a number set with steppers
+      total: 'font-mono-medium text-title', // what a roll came to
+      // The number a roll has to reach, ringed: in the chat line and, larger, on the dice sheet.
+      need: 'rounded-full border border-border-strong px-2 font-sans-semibold text-chip text-fg-muted',
       notice: 'font-sans text-chip italic text-gold-fg', // a notebook notice in the chat
       mark: 'rounded-full bg-gold-muted px-2 font-sans text-chip text-gold-fg', // a mark on a line
       topic: 'font-sans text-body text-topic-fg underline', // a topic named in what a person says

@@ -103,7 +103,9 @@ def test_betting_on_a_line_marks_it_or_costs_trust(win):
     assert rs[2]["dice"] == {"method": "soothe", "eyes": roll_dice(seed, 3), "total": sum(roll_dice(seed, 3)) + 1,
                            "won": win} and state["spent"] == 1
     assert state["judged"] == ({CREW: "true"} if win else {})
-    assert state["closed"] == ([] if win else [[CREW, "soothe"]]) and state["hints"] == []
+    # A failed line is lost to every way (game/05 3절)
+    assert state["closed"] == ([] if win else [[CREW, m] for m in ("soothe", "press", "trick")]) and state["hints"] == []
+    assert rs[2]["talk"] == ([{"say": CREW}] if win else [{"refuse": CREW}])
     assert state["attitudes"]["오토"]["trust"] == (1 if win else -1)
 
 

@@ -74,6 +74,8 @@ def find_speaker(story, talk):
             return story.blocks[value].name
         if kind == "lead":
             return value.split(".")[0]
+        if kind == "refuse":
+            return story.lines[value].name
         if kind in ("case", "pass", "done", "chat", "unsure") or kind == "try" and value in story.people:
             return value
     return None
@@ -206,6 +208,8 @@ def make_answer(story, before, after, turn, person, past):
             "attitude": f"믿음 {LEVELS[attitude['trust']]}, 두려움 {LEVELS[attitude['fear']]}",
             "said": find_said(story, turn), "says": says, "lines": lines, "quiet": not lines and bool(says) and not case,
             "leads": leads, "bet": turn["action"]["do"] == "bet",
+            # A bet on a person must show in the answer whether they gave way (engine/01 4절)
+            **({"outcome": ko.OUTCOMES[turn["dice"]["won"]]} if turn["dice"] else {}),
             "where": show_name(story, "곳", after["place"]),
             "doing": find_doing(story, after, person),
             "recent": list_recent(story, person, past), "told": told, "saw": list_seen(story, person, past),
@@ -264,12 +268,23 @@ def list_seen(story, person, past):
 
 def tell_item(story, turn, item):
     kind, value = next(iter(item.items()))
+    dice = turn["dice"]
+    method = turn["action"].get("method")
     if kind == "say":
-        repeat = turn["dice"] is not None and turn["action"]["target"] in story.lines
-        lead = ("이 말을 짧게 되풀이한다: " if repeat else
-                "거짓말이 들통나 앞의 말을 거두고 털어놓는다: " if value.endswith(".깨진 뒤") else
-                "마음이 풀려 숨기던 것을 털어놓는다: " if value.endswith(".풀린 뒤") else "")
+        if dice and turn["action"]["target"] == value:
+            # Older saves told a failed bet the line as well; a won bet shows the person give way (game/05 3절)
+            lead = ("이 말을 짧게 되풀이한다: " if not dice["won"] else
+                    f"{ko.GAVE[method]} 이 말을 다시 하지만, 말끝이 흔들리고 무언가 숨기는 티가 난다: "
+                    if story.lines[value].branch == "거짓말" else f"{ko.GAVE[method]} 이 말이 참이라고 흔들림 없이 힘주어 다시 말한다: ")
+        else:
+            lead = ("거짓말이 들통나 앞의 말을 거두고 털어놓는다: " if value.endswith(".깨진 뒤") else
+                    f"{ko.GAVE[method]} 숨기던 것을 털어놓는다: " if dice and value.endswith(".풀린 뒤") else
+                    "마음이 풀려 숨기던 것을 털어놓는다: " if value.endswith(".풀린 뒤") else "")
         return lead + story.lines[value].text
+    if kind == "refuse":
+        return f"{ko.HELD[method]}. 새로 털어놓는 것은 없고, 그 말에 대해서는 더 말하지 않겠다고 한다"
+    if kind == "withhold" and dice:
+        return f"{ko.HELD[method]}. 그 화제는 끝내 말해 주지 않는다. 말하지 않는 까닭은 지어내지 않는다"
     if kind == "pass":
         return "내민 것이 자기와 무슨 상관이냐는 듯 받아넘긴다" if turn["action"]["do"] == "present" else "답할 것이 없다"
     if kind == "lead":
@@ -277,7 +292,8 @@ def tell_item(story, turn, item):
     if kind == "unsure":
         return f"무엇을 묻는지 되묻는다: {' / '.join(item['topics'])}"
     if kind == "try":   # a guessed action only offers buttons; the answer is the reading's
-        return None if item.get("guess") else f"{ko.TRIES[item['method']]}. 그 행동에 반응한다"
+        return None if item.get("guess") else (f"{ko.TRIES[item['method']]}. 그 행동에 반응하되, 결과는 아직 모르므로 "
+                                               "털어놓거나 굴복하지 않는다")
     if kind == "done" and item.get("point"):
         kind_, name = story.lines[item["point"]].kind, story.lines[item["point"]].name
         return (f"더 말할 것은 없다. 대신 {ko.eul(show_name(story, kind_, name))} 제 짐작처럼 넌지시 입에 올린다. "

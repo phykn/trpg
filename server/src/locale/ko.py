@@ -5,6 +5,8 @@ IMPRESSIONS = {"다정": "다정하게 부르거나 안부를 묻는다", "위�
                "무례": "깔보거나 하인처럼 부리거나 욕한다", "의심": "범인이라거나 무언가 숨긴다고 몬다. 으르는 말은 위협이다",
                "위협": "말하지 않으면 해치거나 고발하거나 망하게 하겠다고 으른다"}
 METHODS = {"soothe": "달랜다", "press": "몰아세운다", "trick": "속인다", "sneak": "몰래 연다", "force": "힘으로 연다"}
+FEELINGS = {"trust": "믿음", "fear": "두려움"}
+HARD = "단단함"
 JUDGED = {"lying": "숨기는 것이 있다", "true": "거짓이 아니다"}
 UNMET = {"lies": "듣지 못함", "held": "꺼내지 못함", "locks": "찾지 못함"}
 UNVISITED = "안 가 봄"
@@ -74,6 +76,11 @@ def use_on(lock, tried=False):
 # What a typed action tries, as the person's answer or the scene is told it (game/04 2절).
 TRIES = {"press": "플레이어가 거칠게 몰아붙이려 든다", "soothe": "플레이어가 다독이며 마음을 열려 든다",
          "trick": "플레이어가 거짓으로 꾀어 떠보려 든다"}
+# How a bet on a person turned out, told to the answer so the dice show in what they say (game/05 3절)
+GAVE = {"press": "몰아세우는 기세에 눌려", "soothe": "다독임에 마음이 누그러져", "trick": "떠보는 말에 넘어가"}
+HELD = {"press": "몰아세워도 넘어가지 않고 발끈해 맞선다", "soothe": "다독여도 마음을 열지 않고 차갑게 선을 긋는다",
+        "trick": "떠보는 속셈을 알아채고 불쾌해한다"}
+OUTCOMES = {True: "밀려서 물러서거나 흔들리는", False: "넘어가지 않고 버티거나 맞서는"}
 
 
 # The options of "어떤 행동인가" (engine/01 1절).
@@ -94,12 +101,6 @@ def bet(method, chance, topic=None, person=None):
 
 def divider(place, cells):
     return f"── {place} · {cells}턴 ──"
-
-
-def roll(method, eyes, total, need):
-    bonus = total - sum(eyes)
-    more = f" {'+' if bonus > 0 else '-'} {abs(bonus)}" if bonus else ""
-    return f"{METHODS[method]} · {eyes[0]} + {eyes[1]}{more} = {total} · {need} 이상"
 
 
 def note(text):

@@ -429,10 +429,13 @@ class Turn:
             self.open_block(block)
             self.write_up()
         else:
-            self.change("close", target=target, method=method)
+            # A failed line is lost to every way: the chance to get more out of it is the price (game/05 3절)
+            for way in TALK_METHODS if line else (method,):
+                if [target, way] not in self.state["closed"]:
+                    self.change("close", target=target, method=way)
             if block:
                 self.change("hint", block=target)
-            self.talk.append({"say": target} if line else {"withhold": target} if block.kind == "꺼림" else
+            self.talk.append({"refuse": target} if line else {"withhold": target} if block.kind == "꺼림" else
                              {"shut": target})
         self.shift_after_bet(person, method, won)
         self.impress_watchers(person, block, method, won)

@@ -64,6 +64,12 @@ def test_a_typed_action_offers_the_dice_it_could_bet_and_nothing_else_does():
     state, rs = play_skeleton(0, [STATS, ask("밤"), doing("press")])
     assert [o["label"].split(" · ")[0] for o in make_view(SKELETON, state, rs[-1])[0]["offers"]] == ["오토를 몰아세운다"]
     assert make_view(SKELETON, state)[0]["offers"] == []
+    # Two things said, one button: it aims at the last of them and opens the dice at once (game/05 3절)
+    state, rs = play_skeleton(0, [STATS, ask("밤"), ask("씨앗"), doing("press")])
+    [offer] = make_view(SKELETON, state, rs[-1])[0]["offers"]
+    assert offer["now"] and offer["roll"] == {"title": "오토를 몰아세운다", "aim": "“그 씨앗은 봄에 온 마을이 나눠 뿌릴 몫이다.”",
+                                              "need": 8, "adds": [{"name": "완력", "value": 0}, {"name": "두려움", "value": 0}],
+                                              "chance": 42}
     state, rs = play_skeleton(0, [STATS, go("곡물 창고"), LOOK, doing("sneak", LOCK)])
     assert [o["label"].split(" · ")[0] for o in make_view(SKELETON, state, rs[-1])[0]["offers"]] == ["몰래 연다"]
 
@@ -71,5 +77,6 @@ def test_a_typed_action_offers_the_dice_it_could_bet_and_nothing_else_does():
 def test_a_guessed_action_offers_its_dice_but_the_answer_and_impressions_are_the_readings():
     guess = {"do": "ask", "text": "x"}, {"kind": "chat", "guess": {"method": "press", "target": None}}
     state, rs = play_skeleton(0, [STATS, ask("밤"), guess])
-    assert [o["label"].split(" · ")[0] for o in make_view(SKELETON, state, rs[-1])[0]["offers"]] == ["오토를 몰아세운다"]
+    [offer] = make_view(SKELETON, state, rs[-1])[0]["offers"]
+    assert offer["label"].split(" · ")[0] == "오토를 몰아세운다" and not offer["now"]
     assert state["impressions"]["오토"] == {} and rs[-1]["talk"][0] == {"chat": "오토"}
