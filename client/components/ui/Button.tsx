@@ -16,7 +16,7 @@ export function Button({ label, icon, tone = 'primary', disabled, onPress }: {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }}
       disabled={disabled} onPress={onPress} style={pressed}
-      className={control({ kind: 'button', tone: primary ? 'picked' : 'idle', off: disabled })}>
+      className={control({ kind: 'button', tone: primary ? 'active' : 'idle', off: disabled })}>
       {icon ? <Icon name={icon} size={iconSize.md} color={fg} width={2} /> : null}
       <Text className={text({ kind: 'strong', on: primary })}>{label}</Text>
     </Pressable>

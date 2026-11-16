@@ -6,6 +6,7 @@ import { text } from '@/design/ui';
 import { splitTopics } from '@/logic/topics';
 import type { Entry } from '@/logic/useGame';
 import { findHue } from './speaker';
+import type { Topic } from './TopicCard';
 
 function Typing() {
   const [lit, setLit] = useState(1);
@@ -30,19 +31,24 @@ export function Speaker({ who, met, children }: { who: string; met: string[]; ch
   );
 }
 
-// The unheard topic names a text names are underlined in blue (docs/game/04-talk.md 5).
-export function Spoken({ text: words, topics, className }: { text: string; topics?: string[]; className: string }) {
+// The unheard topic names a text names are underlined in blue (docs/game/04-talk.md 5); a tap shows what one is.
+export function Spoken({ text: words, topics, className, onTopic }: {
+  text: string; topics?: string[]; className: string; onTopic?: (name: string) => void;
+}) {
   return (
     <Text className={className}>
       {splitTopics(words, topics).map((part, i) => (
-        part.topic ? <Text key={i} className={text({ kind: 'topic' })}>{part.text}</Text> : part.text
+        part.topic ? (
+          <Text key={i} accessibilityRole={onTopic ? 'button' : undefined} onPress={onTopic && (() => onTopic(part.text))}
+            className={text({ kind: 'topic' })}>{part.text}</Text>
+        ) : part.text
       ))}
     </Text>
   );
 }
 
-function Line({ entry, met, typing, onNote }: {
-  entry: Entry; met: string[]; typing: boolean; onNote: (lines: number[]) => void;
+function Line({ entry, met, typing, onNote, onTopic }: {
+  entry: Entry; met: string[]; typing: boolean; onNote: (lines: number[]) => void; onTopic: (topic: Topic) => void;
 }) {
   if (entry.kind === 'said') {
     return (
@@ -66,7 +72,8 @@ function Line({ entry, met, typing, onNote }: {
   if (entry.who) {
     return (
       <Speaker who={entry.who} met={met}>
-        {typing ? <Typing /> : <Spoken text={entry.text} topics={entry.topics} className={text()} />}
+        {typing ? <Typing /> : <Spoken text={entry.text} topics={entry.topics} className={text()}
+          onTopic={(name) => onTopic({ name, who: entry.who })} />}
       </Speaker>
     );
   }
@@ -74,13 +81,14 @@ function Line({ entry, met, typing, onNote }: {
   if (!entry.text) return null;
   const happening = entry.kind === 'omen' || entry.kind === 'event';
   return (
-    <Spoken text={entry.text} topics={entry.topics} className={text({ kind: 'scene' }, happening && 'border-l-2 border-danger-fg pl-3')} />
+    <Spoken text={entry.text} topics={entry.topics} className={text({ kind: 'scene' }, happening && 'border-l-2 border-danger-fg pl-3')}
+      onTopic={(name) => onTopic({ name, who: null })} />
   );
 }
 
-export function ChatLog({ log, met, waiting, outgoing, onNote }: {
+export function ChatLog({ log, met, waiting, outgoing, onNote, onTopic }: {
   log: Entry[]; met: string[]; waiting: 'sending' | 'streaming' | null; outgoing: Entry | null;
-  onNote: (lines: number[]) => void;
+  onNote: (lines: number[]) => void; onTopic: (topic: Topic) => void;
 }) {
   const ref = useRef<ScrollView>(null);
   // While the reader is at the newest line, it stays in view when the box shrinks (the keyboard comes up) or grows.
@@ -94,8 +102,8 @@ export function ChatLog({ log, met, waiting, outgoing, onNote }: {
       onScroll={({ nativeEvent: { contentOffset, contentSize, layoutMeasurement } }) => {
         atBottom.current = contentOffset.y + layoutMeasurement.height >= contentSize.height - 24;
       }}>
-      {log.map((e) => <Line key={e.key} entry={e} met={met} typing={e === writing} onNote={onNote} />)}
-      {outgoing ? <Line entry={outgoing} met={met} typing={false} onNote={onNote} /> : null}
+      {log.map((e) => <Line key={e.key} entry={e} met={met} typing={e === writing} onNote={onNote} onTopic={onTopic} />)}
+      {outgoing ? <Line entry={outgoing} met={met} typing={false} onNote={onNote} onTopic={onTopic} /> : null}
       {waiting === 'sending' ? <Typing /> : null}
     </ScrollView>
   );

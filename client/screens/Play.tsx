@@ -8,7 +8,9 @@ import { OffersRow } from '@/components/game/OffersRow';
 import { MovesSheet } from '@/components/game/MovesSheet';
 import { NotebookSheet } from '@/components/game/NotebookSheet';
 import { PeopleRow } from '@/components/game/PeopleRow';
+import { SettingsMenu } from '@/components/game/SettingsMenu';
 import { TopBar } from '@/components/game/TopBar';
+import { TopicCard, type Topic } from '@/components/game/TopicCard';
 import { Resend } from '@/components/ui/Resend';
 import { findLine } from '@/logic/notebook';
 import type { Entry, Phase } from '@/logic/useGame';
@@ -20,11 +22,13 @@ type Open =
   | { kind: 'moves' }
   | { kind: 'conclude' }
   | { kind: 'pick'; question: Question }
+  | { kind: 'topic'; topic: Topic }
+  | { kind: 'settings' }
   | null;
 
-export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }: {
+export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, onHome }: {
   view: GameView; log: Entry[]; outgoing: Entry | null; phase: Phase; send: (body: CommandBody) => void;
-  onResend: () => void; onRetryText: () => void;
+  onResend: () => void; onRetryText: () => void; onHome: () => void;
 }) {
   const [open, setOpen] = useState<Open>(null);
   const [draft, setDraft] = useState('');
@@ -62,13 +66,17 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
 
   return (
     <View className="min-h-0 flex-1">
-      <TopBar view={view} onPlace={playing && view.place.moves.length ? () => setOpen({ kind: 'moves' }) : undefined}
-        onNotebook={openNotebook} />
-      <ChatLog log={log} met={met} outgoing={outgoing} onNote={(lines) => openLine(undefined, lines)}
-        waiting={phase === 'sending' || phase === 'streaming' ? phase : null} />
+      <TopBar view={view} onNotebook={openNotebook} onSettings={() => setOpen({ kind: 'settings' })} />
+      <View className="min-h-0 flex-1">
+        <ChatLog log={log} met={met} outgoing={outgoing} onNote={(lines) => openLine(undefined, lines)}
+          onTopic={(topic) => setOpen({ kind: 'topic', topic })}
+          waiting={phase === 'sending' || phase === 'streaming' ? phase : null} />
+        {open?.kind === 'topic' ? <TopicCard topic={open.topic} met={met} onClose={() => setOpen(null)} /> : null}
+      </View>
       <View className="border-t border-border-default">
         <PeopleRow people={view.people} met={met} look={playing ? view.place.look : null} locked={locked}
-          onAct={(id) => send({ do: id })} />
+          onAct={(id) => send({ do: id })}
+          onMoves={playing && view.place.moves.length ? () => setOpen({ kind: 'moves' }) : undefined} />
         <OffersRow offers={playing ? view.offers : []} locked={locked} onAct={act} />
         {phase === 'stuck' || phase === 'text_error' ? (
           <View className="px-3 py-2"><Resend onResend={phase === 'stuck' ? onResend : onRetryText} /></View>
@@ -77,6 +85,7 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
             onSend={(text) => { send({ text }); setDraft(''); }} />
         )}
       </View>
+      {open?.kind === 'settings' ? <SettingsMenu onNewGame={onHome} onClose={() => setOpen(null)} /> : null}
       {open?.kind === 'moves' ? (
         <MovesSheet moves={view.place.moves} locked={locked} onMove={act} onClose={() => setOpen(null)} />
       ) : null}

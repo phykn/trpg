@@ -34,7 +34,7 @@ export default function Index() {
     <Frame title={view.story.title}>
       {view.stage === 'over' ? <Ending view={view} log={g.log} phase={phase} onRetryText={g.retryText} onLeave={g.leave} /> : (
         <Play view={view} log={g.log} outgoing={g.outgoing} phase={phase} send={g.send} onResend={g.resend}
-          onRetryText={g.retryText} />
+          onRetryText={g.retryText} onHome={g.home} />
       )}
     </Frame>
   );

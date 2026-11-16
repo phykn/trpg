@@ -4,12 +4,15 @@ import { Pressable, type ScrollView, Text, View } from 'react-native';
 
 import { Button, pressed } from '@/components/ui/Button';
 import { DragSheet } from '@/components/ui/DragSheet';
-import { spacing } from '@/design/tokens';
+import { Icon, type IconName } from '@/components/ui/Icon';
+import { colors, icon, spacing } from '@/design/tokens';
 import { control, surface, text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import { findLine, GROUPS } from '@/logic/notebook';
 import type { GameView, Group, Line } from '@/services/types';
 import { Marks } from './Marks';
+
+const GROUP_ICONS: Record<Group, IconName> = { places: 'place', people: 'person', items: 'item', seen: 'eye', heard: 'heard' };
 
 const Unread = () => <View className="h-1.5 w-1.5 rounded-full bg-gold-fg" />;
 const struck = (line: Line) => (line.struck ? 'line-through opacity-60' : '');
@@ -101,16 +104,17 @@ export function NotebookSheet({ view, group, line, locked, onGroup, onLine, onAc
   }
   return (
     <DragSheet title={ko.notebook} full={line !== undefined} onClose={onClose}
-      footer={onConclude ? <Button tone="secondary" icon="flag" label={ko.conclude} onPress={onConclude} /> : undefined}>
-      <View accessibilityRole="tablist" className="flex-row gap-1">
+      footer={onConclude ? <Button icon="conclude" label={ko.conclude} onPress={onConclude} /> : undefined}>
+      <View accessibilityRole="tablist" className={surface({ kind: 'well' }, 'flex-row gap-1 p-1')}>
         {GROUPS.map((g) => (
-          <Pressable key={g} accessibilityRole="tab" accessibilityState={{ selected: g === group }} onPress={() => onGroup(g)}
-            style={pressed}
-            className={control({ kind: 'tab', tone: g === group ? 'active' : 'quiet' })}>
-            <Text numberOfLines={1} className={text({ kind: 'tab', on: g === group })}>
-              {ko.groups[g]}
+          <Pressable key={g} accessibilityRole="tab" accessibilityLabel={`${ko.groups[g]} ${view.notebook[g].length}`}
+            accessibilityState={{ selected: g === group }} onPress={() => onGroup(g)} style={pressed}
+            className={control({ kind: 'segment', tone: g === group ? 'raised' : 'plain' })}>
+            <Icon name={GROUP_ICONS[g]} size={icon.md} color={g === group ? colors.gold.fg : colors.fg.muted} width={2} />
+            <Text numberOfLines={1} className={text({ kind: 'tab', quiet: g !== group })}>
+              {`${ko.groups[g]} ${view.notebook[g].length}`}
             </Text>
-            {view.notebook[g].some((l) => l.new) ? <View className="absolute right-1 top-1"><Unread /></View> : null}
+            {view.notebook[g].some((l) => l.new) ? <View className="absolute right-2 top-1.5"><Unread /></View> : null}
           </Pressable>
         ))}
       </View>

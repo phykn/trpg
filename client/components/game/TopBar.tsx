@@ -7,30 +7,30 @@ import { control, text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 
-// The place opens where to go, the clock turns red in the last turns, and the notebook counts what is unread.
-export function TopBar({ view, onPlace, onNotebook }: { view: GameView; onPlace?: () => void; onNotebook: () => void }) {
+// Where you are, the time (red in the last turns), the notebook with what is unread, and settings.
+export function TopBar({ view, onNotebook, onSettings }: { view: GameView; onNotebook: () => void; onSettings: () => void }) {
   const { last } = view.time;
   return (
-    <View className={`min-h-12 flex-row items-center gap-2 border-b px-3 ${last ? 'border-danger-fg bg-canvas-subtle' : 'border-border-default'}`}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${view.place.name}, ${ko.moves}`}
-        accessibilityState={{ disabled: !onPlace }} disabled={!onPlace} onPress={onPlace} style={pressed}
-        className="min-w-0 flex-1 flex-row items-center gap-1">
-        <Text accessibilityRole="header" numberOfLines={1} className={text({ kind: 'title' }, 'min-w-0 shrink')}>
-          {view.place.name}
-        </Text>
-        {onPlace ? <Icon name="next" size={icon.sm} color={colors.fg.subtle} /> : null}
-      </Pressable>
-      <Text className={text({ kind: 'mono' }, last && 'text-danger-fg')}>{view.time.text}</Text>
+    <View className={`min-h-12 flex-row items-center gap-1.5 border-b pl-4 pr-1 ${last ? 'border-danger-fg bg-canvas-subtle' : 'border-border-default'}`}>
+      <Icon name="place" size={icon.md} color={colors.gold.fg} width={2.2} />
+      <Text accessibilityRole="header" numberOfLines={1} className={text({ kind: 'title' }, 'min-w-0 shrink font-serif')}>
+        {view.place.name}
+      </Text>
+      <View className="min-w-0 flex-1" />
+      <Icon name="clock" size={icon.sm} color={last ? colors.danger.fg : colors.fg.muted} width={2} />
+      <Text numberOfLines={1} className={text({ kind: 'mono' }, 'shrink-0', last && 'text-danger-fg')}>{view.time.text}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={view.badge ? `${ko.notebook} ${view.badge}` : ko.notebook}
-        onPress={onNotebook} style={pressed}
-        className={control({ kind: 'pill' }, 'pl-3', view.badge ? 'pr-1.5' : 'pr-3')}>
-        <Icon name="book" size={icon.lg} color={colors.fg.muted} width={2} />
-        <Text className={text({ kind: 'label' })}>{ko.notebook}</Text>
+        onPress={onNotebook} style={pressed} className={control({ kind: 'icon', tone: 'quiet' }, 'ml-1')}>
+        <Icon name="book" size={icon.lg} color={colors.fg.default} width={2} />
         {view.badge ? (
-          <View className="h-6 min-w-6 items-center justify-center rounded-full bg-gold-muted px-1.5">
-            <Text className="font-mono-medium text-chip text-gold-fg">{view.badge}</Text>
+          <View className="absolute -right-0.5 -top-0.5 h-5 min-w-5 items-center justify-center rounded-full bg-gold-fg px-1">
+            <Text className={text({ kind: 'small', on: true }, 'font-sans-semibold')}>{view.badge}</Text>
           </View>
         ) : null}
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={ko.settings} onPress={onSettings} style={pressed}
+        className={control({ kind: 'icon', tone: 'plain' })}>
+        <Icon name="settings" size={icon.lg} color={colors.fg.muted} width={2} />
       </Pressable>
     </View>
   );

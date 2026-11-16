@@ -154,6 +154,15 @@ export function useGame() {
     void readTexts(unread.current);
   }
 
+  // Back to the title for a new game; the game in progress stays saved, so it can be picked up again.
+  function home() {
+    setSaved(game.current);
+    game.current = null;
+    setView(null);
+    setLog([]);
+    setPhase('title');
+  }
+
   // After the ending the finished game is not offered again.
   function leave() {
     clearGameId();
@@ -169,5 +178,5 @@ export function useGame() {
   const outgoing: Entry | null = phase === 'sending' && p?.kind === 'command' && 'text' in p.body && p.body.text
     ? { key: 'outgoing', turn: p.revision + 1, kind: 'said', text: p.body.text } : null;
 
-  return { phase, stories, saved, view, log, outgoing, start, resume, send, resend, retryText, leave };
+  return { phase, stories, saved, view, log, outgoing, start, resume, send, resend, retryText, home, leave };
 }

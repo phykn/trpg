@@ -34,6 +34,7 @@ export const text = withMerge(cva('text-fg-default', {
       small: 'font-sans text-chip', // a line gathered under another
       head: 'font-sans-semibold text-chip text-fg-muted', // a group's heading
       mono: 'font-mono-medium text-panel text-fg-muted', // the clock
+      value: 'w-9 text-center font-mono-medium text-title', // a number set with steppers
       notice: 'font-sans text-chip italic text-gold-fg', // a notebook notice in the chat
       mark: 'rounded-full bg-gold-muted px-2 font-sans text-chip text-gold-fg', // a mark on a line
       topic: 'font-sans text-body text-topic-fg underline', // a topic named in what a person says
@@ -51,6 +52,7 @@ export const surface = withMerge(cva('', {
     kind: {
       card: 'rounded-xl border border-border-default bg-canvas-default px-3 py-2.5',
       well: 'rounded-xl bg-canvas-subtle px-3 py-2',
+      float: 'gap-2.5 rounded-xl border border-border-default bg-canvas-floating p-3 shadow-lg', // a card over the page
       screen: 'min-h-0 flex-1 gap-4 px-4 py-6',
     },
   },
@@ -64,6 +66,10 @@ export const control = withMerge(cva('flex-row items-center', {
     kind: {
       pill: 'h-9 justify-center gap-2 rounded-full px-4',
       tab: 'h-9 min-w-0 flex-1 justify-center gap-1 rounded-full px-1', // shares a row evenly
+      // An icon over its word, sharing a row evenly: the notebook's groups.
+      segment: 'h-12 min-w-0 flex-1 flex-col justify-center gap-0.5 rounded-xl px-1',
+      icon: 'h-10 w-10 justify-center rounded-full', // an icon alone: the notebook, settings
+      step: 'h-9 w-9 justify-center rounded-xl', // a triangle that steps a number up or down
       button: 'h-12 justify-center gap-2 rounded-full px-5',
       row: 'min-h-12 gap-3 rounded-xl px-4 py-2',
       // The chat box: the words and the send button inside one rounded box that grows with the words.
@@ -77,6 +83,8 @@ export const control = withMerge(cva('flex-row items-center', {
       quiet: 'border border-border-default bg-canvas-subtle',
       dashed: 'border border-dashed border-border-strong',
       focus: 'border-gold-fg',
+      plain: '', // no border or fill: a step, a menu entry on its card
+      raised: 'bg-canvas-floating shadow-sm', // the open segment
     },
     off: { true: 'opacity-40' },
   },
