@@ -193,6 +193,12 @@ class Truth(Shape):
     why: str = Field(alias="왜")
 
 
+class Opening(Shape):
+    """The first turn's text, written by the author so the game opens at once (game/08 2절)."""
+    scene: str = Field(alias="장면")
+    first: str = Field(alias="첫마디")
+
+
 class Head(Shape):
     name: str = Field(alias="이름", pattern=r"^[a-z][a-z0-9-]*$")
     title: str = Field(alias="제목")
@@ -201,6 +207,7 @@ class Head(Shape):
     cells: int = Field(alias="칸 수", ge=1)
     clock: Clock | None = Field(None, alias="시각")
     mood: str | None = Field(None, alias="분위기")   # the voice of scenes and the DM (game/08 2절)
+    opening: Opening | None = Field(None, alias="여는 글")   # optional so old saves' story copies still open
     truth: Truth = Field(alias="진실")
 
 

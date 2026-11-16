@@ -183,6 +183,11 @@ class GameService:
                     spec = {**spec, "narrated": [*spec["narrated"], *told][-NARRATED:]}
                 specs.append(spec)
                 await job.add({"type": "start", "slot": slot})
+                if spec["kind"] == "written":
+                    texts.append({"text": spec["text"], "checks": []})
+                    await job.add({"type": "delta", "slot": slot, "text": spec["text"]})
+                    await job.add({"type": "end", "slot": slot})
+                    continue
                 async for event in self.narrator.write(spec):
                     if event["type"] == "result":
                         texts.append({"text": event["text"], "checks": event["checks"]})

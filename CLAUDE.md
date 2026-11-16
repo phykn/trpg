@@ -14,7 +14,7 @@ A story-agnostic Korean mystery TRPG. The player asks people questions in Korean
 
 ## Models
 
-Both models are required and run outside this repo. Never start or stop them (no `kevctl`/`llmctl`); assume they are up. Do not add a mode without models or replace narration with authored text. [docs/engine/01-ai.md](docs/engine/01-ai.md) defines how each is asked.
+Both models are required and run outside this repo. Never start or stop them (no `kevctl`/`llmctl`); assume they are up. Do not add a mode without models or replace narration with authored text; the one exception is the first turn, which the story writes itself (`여는 글`) so the game opens at once. [docs/engine/01-ai.md](docs/engine/01-ai.md) defines how each is asked.
 
 - **Decision model**: Kanana (`kakaocorp/kanana-2-v-decide-3b-2611`, `:8081`, `DECISION_MODEL=kanana`, checked through `GET /v1/info`). It answers closed questions the engine builds: which topic or place a sentence means, and whether a narration keeps to the facts. It never invents anything.
 - **LLM**: gemma4 (`mlx-community/gemma-4-26B-A4B-it-qat-4bit`, `:8082`, `LLM_MODEL=gemma4`) narrates only what changed, and the decision model checks the text, with up to 2 rewrites. It is always non-thinking (`enable_thinking: false` on every request).

@@ -144,14 +144,17 @@ def test_errors_keep_the_game_as_it_was(tmp_path):
 
 
 def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error(tmp_path):
-    llm = FakeLLM([ModelUnavailable("down"), "사당에 들어섭니다.", "고드릭에게 물어보시지요.", "장부만 걷고 갔소. 새벽 종 얘기라면 내가 알지.",
+    llm = FakeLLM([ModelUnavailable("down"), "장부만 걷고 갔소. 새벽 종 얘기라면 내가 알지.",
                    "해 지기 전에 장부만 걷고 떠났소. 새벽 종 얘기라면 내가 알지."])
-    player = Player(make_client(tmp_path, FakeInterpreter(HEARD), Narrator(llm, FakeChecks([True, True, False, True]))))
+    player = Player(make_client(tmp_path, FakeInterpreter(HEARD), Narrator(llm, FakeChecks([False, True]))))
     player.send(do=player.view["start"]["acts"][0]["id"])
-    assert [e["type"] for e in player.read_text(1)] == ["start", "error"]
-    assert [e["type"] for e in player.read_text(1)] == ["start", "delta", "delta", "end", "start", "delta", "delta",
-                                                         "end", "done"]
+    # The first turn is the story's opening, there at once.
+    assert player.read_text(1) == [{"type": "start", "slot": 0}, {"type": "delta", "slot": 0, "text": DAWN.head.opening.scene},
+                                   {"type": "end", "slot": 0}, {"type": "start", "slot": 1},
+                                   {"type": "delta", "slot": 1, "text": DAWN.head.opening.first}, {"type": "end", "slot": 1},
+                                   {"type": "done"}]
     player.send(text=ASK)
+    assert [e["type"] for e in player.read_text(2)] == ["start", "error"]
     events = player.read_text(2)
     assert [e["type"] for e in events] == ["start", *["delta"] * 8, "replace", "end", "done"]
     assert events[9] == {"type": "replace", "slot": 0, "text": "해 지기 전에 장부만 걷고 떠났소. 새벽 종 얘기라면 내가 알지. "}
@@ -164,17 +167,18 @@ def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error
 
 
 def test_text_can_be_polled_for_a_tunnel_that_holds_streams_back(tmp_path):
-    llm = FakeLLM(["사당에 들어섭니다.", "고드릭에게 물어보시지요."])
-    player = Player(make_client(tmp_path, FakeInterpreter(HEARD), Narrator(llm, FakeChecks([True, True]))))
+    llm = FakeLLM(["장부만 걷고 갔소. 새벽 종 얘기라면 내가 알지.", "해 지기 전에 장부만 걷고 떠났소. 새벽 종 얘기라면 내가 알지."])
+    player = Player(make_client(tmp_path, FakeInterpreter(HEARD), Narrator(llm, FakeChecks([False, True]))))
     player.send(do=player.view["start"]["acts"][0]["id"])
+    player.send(text=ASK)
     events, after = [], 0
     while not events or events[-1]["type"] not in ("done", "error"):
-        polled = player.client.get(f"/games/{player.game}/turns/1/text/poll", params={"after": after}).json()
+        polled = player.client.get(f"/games/{player.game}/turns/2/text/poll", params={"after": after}).json()
         events, after = events + polled["events"], polled["next"]
-    assert [e["type"] for e in events] == ["start", "delta", "delta", "end", "start", "delta", "delta", "end", "done"]
+    assert [e["type"] for e in events] == ["start", *["delta"] * 8, "replace", "end", "done"]
     # Once saved, every poll gets the whole text again, so a screen that saw part of it still ends whole.
-    again = player.client.get(f"/games/{player.game}/turns/1/text/poll", params={"after": 3}).json()
-    assert again["events"] == player.read_text(1) and again["next"] == len(again["events"])
+    again = player.client.get(f"/games/{player.game}/turns/2/text/poll", params={"after": 3}).json()
+    assert again["events"] == player.read_text(2) and again["next"] == len(again["events"])
     assert player.client.get(f"/games/{player.game}/turns/9/text/poll").status_code == 404
 
 

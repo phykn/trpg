@@ -79,12 +79,14 @@ def test_a_failing_narration_ends_its_stream_and_the_next_ask_writes_it(tmp_path
     service = make_service(tmp_path, FakeNarrator([KeyError("bug")]))
     game, _ = service.create("r1", "skeleton")
     send(service, game, "a1", STATS)
-    assert [e["type"] for e in read_text(service, game, 1)] == ["start", "error"]
-    events = read_text(service, game, 1)
+    read_text(service, game, 1)   # the story's own opening; no model writes it
+    send(service, game, "a2", text=ASK)
+    assert [e["type"] for e in read_text(service, game, 2)] == ["start", "error"]
+    events = read_text(service, game, 2)
     assert events[-1] == {"type": "done"} and not service.texts
-    saved = make_service(tmp_path).load(game)[0]["turns"][0]["text"]
+    saved = make_service(tmp_path).load(game)[0]["turns"][1]["text"]
     assert [t["text"] for t in saved] == [e["text"] for e in events if e["type"] == "delta"]
-    assert read_text(service, game, 1) == read_text(make_service(tmp_path), game, 1)
+    assert read_text(service, game, 2) == read_text(make_service(tmp_path), game, 2)
 
 
 @pytest.mark.parametrize(("damage", "reason"), [
@@ -132,5 +134,8 @@ def test_the_narrator_gets_what_it_wrote_before_and_not_what_people_said(tmp_pat
     for n, (receipt, action) in enumerate([("a1", STATS), ("a2", {"do": "move", "place": "곡물 창고"})], 1):
         send(service, game, receipt, action)
         read_text(service, game, n)
-    assert [j["kind"] for j in narrator.jobs] == ["scene", "answer", "scene"]
-    assert "narrated" not in narrator.jobs[1] and narrator.jobs[2]["narrated"] == ["scene"]
+    # The opening is the story's, so the first scene the model writes already knows it.
+    assert [j["kind"] for j in narrator.jobs] == ["scene"]
+    assert narrator.jobs[0]["narrated"] == [STORIES["skeleton"].head.opening.scene]
+    saved = service.load(game)[0]["turns"][0]["text"]
+    assert [t["text"] for t in saved] == [STORIES["skeleton"].head.opening.scene, STORIES["skeleton"].head.opening.first]

@@ -23,8 +23,18 @@ from tests.test_act import LOCK, STORY, doing, said
 SCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"
 DAWN = load_story(SCENARIOS / "dawn")
 SKELETON = load_story(SCENARIOS / "skeleton")
+
+
+def unopened(story):
+    """The story as an old save's copy keeps it, from before stories had an opening: the model writes turn 1."""
+    copy = object.__new__(type(story))
+    copy.__dict__.update(story.__dict__, head=story.head.model_copy(update={"opening": None}))
+    return copy
+
+
+OLD_DAWN = unopened(DAWN)
 STATS = ({"do": "stats", "plus2": "wit", "plus1": "charm"}, None)
-JOB_KINDS = {"text": ("answer", "scene"), "ending": ("ending",), "omen": ("scene",), "event": ("scene",),
+JOB_KINDS = {"text": ("answer", "scene", "written"), "ending": ("ending",), "omen": ("scene",), "event": ("scene",),
              "guide": ("dm",)}
 
 
@@ -76,7 +86,8 @@ def test_every_text_slot_of_a_whole_game_gets_one_job_of_its_kind_and_no_job_nam
 
 def test_jobs_tell_what_is_new_and_the_ending_tells_the_time_the_cells_ran_out():
     turns = play(DAWN, DAWN_GAME)
-    opening, answer, first, looked, back, again = (make_jobs(DAWN, *t)[0] for t in turns[:6])
+    opening = make_jobs(OLD_DAWN, *turns[0])[0]
+    answer, first, looked, back, again = (make_jobs(DAWN, *t)[0] for t in turns[1:6])
     assert "intro" not in opening and opening["desc"] and opening["time"] == "밤 8시"
     # The first talk with the opener tells the case, says the line asked for, then names one more topic.
     assert answer["says"][1] == DAWN.lines["말 고드릭.징수관.거짓말"].text and answer["case"] == DAWN.head.intro
@@ -99,7 +110,9 @@ def test_the_game_opens_with_the_scene_then_the_opener_calling_out_without_namin
     jobs = make_jobs(DAWN, before, after, turn)
     feed = [f for f in make_feed(DAWN, turn, {}, after=after) if "slot" in f]
     assert [(f["kind"], f["who"]) for f in feed] == [("text", None), ("text", "고드릭")]
-    hook = jobs[1]
+    opening = DAWN.head.opening
+    assert jobs == [{"kind": "written", "text": opening.scene}, {"kind": "written", "text": opening.first}]
+    hook = make_jobs(OLD_DAWN, before, after, turn)[1]   # an old save's turn 1 still unwritten
     assert hook["kind"] == "answer" and hook["hook"] and hook["case"] == DAWN.head.intro and not hook["leads"]
     assert "방금 당신 앞에 왔다" in make_messages(hook)[-1]["content"]
 
@@ -119,7 +132,7 @@ def test_people_are_seen_doing_what_they_do_by_now():
 
 def test_the_story_mood_reaches_the_narrator_and_the_dm_but_never_a_person():
     turns = play(DAWN, [STATS, ask("징수관")])
-    scene = make_jobs(DAWN, *turns[0])[0]
+    scene = make_jobs(OLD_DAWN, *turns[0])[0]
     dm = make_job(DAWN, *turns[0], {"kind": "guide", "guide": {"key": "meet", "name": "고드릭"}}, ())
     answer = make_jobs(DAWN, *turns[1])[0]
     assert scene["mood"] == dm["mood"] == DAWN.head.mood and "mood" not in answer

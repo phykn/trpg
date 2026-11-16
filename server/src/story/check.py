@@ -45,7 +45,7 @@ class Checker:
         return [
             self.check_lies(), self.check_holds(), self.check_truth(), self.check_reach(), self.check_time(),
             self.check_events(), self.check_first(), self.check_unreached(), self.check_intros(), self.check_mbti(), self.check_opener(),
-            self.check_impressions(),
+            self.check_opening(), self.check_impressions(),
             *self.alert_size(), *self.alert_long(), *self.alert_asks(), *self.alert_necks(),
         ]
 
@@ -134,6 +134,9 @@ class Checker:
 
     def check_opener(self):
         return judge("첫 사람", [] if self.story.opener else [self.story.head.start])
+
+    def check_opening(self):
+        return judge("여는 글", [] if self.story.head.opening else ["머리"])
 
     def check_impressions(self):
         failed = []

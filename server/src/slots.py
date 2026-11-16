@@ -85,6 +85,10 @@ def make_jobs(story, before, after, turn, past=()):
 
 
 def make_job(story, before, after, turn, slot, past):
+    opening = story.head.opening
+    if opening and turn["action"]["do"] == "stats" and slot["kind"] == "text":
+        # The author wrote the first turn, so the game opens without waiting on a model (game/08 2절).
+        return {"kind": "written", "text": opening.first if slot.get("job") == "hook" else opening.scene}
     job = make_slot_job(story, before, after, turn, slot, past)
     if job["kind"] == "answer":
         return job

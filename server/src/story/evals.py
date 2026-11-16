@@ -179,16 +179,15 @@ def list_text_jobs(story):
 
 
 def list_flow_jobs(story):
-    """The jobs of the game's flow, made by the rules: the start, the case, pointing on, help and the end (game/04 5절)."""
+    """The jobs of the game's flow, made by the rules: the case, pointing on, help and the end (game/04 5절)."""
     opener, truth = story.opener, story.head.truth
     state = start_state(story, 0)
     stats = {"do": "stats", "plus2": "charm", "plus1": "wit"}
     started = played(story, state, stats)
-    scene, hook = make_jobs(story, state, started["state"], started["turn"])
     asked = played(story, started["state"], {"do": "ask", "text": "무슨 일인데요?"}, {"kind": "chat"})
     after = asked["state"]
-    jobs = [("시작 장면", scene), (f"운 떼기 {opener}", hook),
-            (f"상황 {opener}", make_jobs(story, started["state"], after, asked["turn"])[0])]
+    # The first turn is the author's (game/08 2절), so its scene and the opener's first words are not written here.
+    jobs = [(f"상황 {opener}", make_jobs(story, started["state"], after, asked["turn"])[0])]
     place = next(a for a in after["notebook"] if a.startswith("곳 ") and a[2:] not in after["visited"])
     more = {"action": {"do": "ask", "text": "더 아는 건 없어요?"}, "talk": [{"done": opener, "point": place}],
             "dice": None, "changes": [], "happened": []}
