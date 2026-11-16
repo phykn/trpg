@@ -1,6 +1,6 @@
 # 이야기 만들기
 
-**사람이 준 줄거리로 AI가 이야기 하나를 짜는 순서**를 정한다. 무엇을 적고 어떻게 검사하는지는 [08-story.md](08-story.md)가, 크기는 [02-loop.md](02-loop.md) 6절이 정한다. 다 짠 보기는 [10-first-story.md](10-first-story.md)다.
+**사람이 준 줄거리로 AI가 이야기 하나를 짜는 순서**를 정한다. 무엇을 적고 어떻게 검사하는지는 [08-story.md](08-story.md)가, 크기는 [02-loop.md](02-loop.md) 6절이 정한다. 다 짠 보기는 [scenarios/dawn](../../scenarios/dawn/story.yaml)이다.
 
 ## 한눈에
 

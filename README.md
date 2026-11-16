@@ -11,7 +11,7 @@ The server plays a story through the routes of [docs/engine/02-api.md](docs/engi
 
 | Folder | Defines |
 |---|---|
-| [docs/game/](docs/game/01-concept.md) | The game: concept, loop, notebook, talk, blocks, time, screen, story format, authoring, the first story |
+| [docs/game/](docs/game/01-concept.md) | The game: concept, loop, notebook, talk, blocks, time, screen, story format, authoring |
 | [docs/data/](docs/data/01-ontology.md) | The data: ontology, story file, game state, changes, invariants and saves |
 | [docs/engine/](docs/engine/01-ai.md) | The engine: models, API, story checks |
 
