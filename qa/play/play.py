@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 RUNS = ROOT / "qa_test" / "runs"
 sys.path.insert(0, str(ROOT / "server"))
 
-from run_api import local_settings
+from src.config import local_settings
 
 MAX_TEXT = 200   # client/components/game/InputBar.tsx maxLength
 GROUPS = {"places": "곳", "people": "사람", "items": "물건", "seen": "본 것", "heard": "들은 말"}

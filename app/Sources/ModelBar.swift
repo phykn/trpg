@@ -2,10 +2,11 @@ import AppKit
 
 // The server's own model tables and the addresses `--local` uses, so the app keeps no copy of either.
 private let configScript = """
-import json, run_api
+import json
+from src.config import local_settings
 from src.models.decision import DECISION_MODELS
 from src.models.llm import LLM_MODELS
-cfg = run_api.local_settings()
+cfg = local_settings()
 print(json.dumps({
     "decision": {"url": cfg.decision_base_url + "/v1/info", "models": {k: [v] for k, v in DECISION_MODELS.items()}},
     "llm": {"url": cfg.llm_base_url + "/models", "models": {k: list(v.ids) for k, v in LLM_MODELS.items()}},

@@ -1,13 +1,9 @@
 import argparse
 import asyncio
-import os
-from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from src.api import add_error_handlers, router
-from src.config import Settings, load_server_env, settings
+from src.api import build_app
+from src.config import env_settings, local_settings
 from src.interpret import Interpreter
 from src.models import ModelUnavailable
 from src.models.decision import DecisionClient
@@ -17,55 +13,14 @@ from src.service import GameService
 from src.story.check import load_stories
 from src.story.load import StoryError
 
-SERVER_DIR = Path(__file__).resolve().parent
-
-
-def build_app(cfg, service):
-    app = FastAPI(title="TRPG")
-    app.state.service = service
-    app.state.basic_auth_user = cfg.basic_auth_user
-    app.state.basic_auth_pass = cfg.basic_auth_pass
-    app.add_middleware(CORSMiddleware, allow_origins=cfg.cors_origins, allow_methods=["GET", "POST", "OPTIONS"],
-                       allow_headers=["Authorization", "Content-Type", "Accept"])
-
-    @app.get("/health")
-    async def health():
-        return {"ok": True}
-
-    app.include_router(router)
-    add_error_handlers(app)
-    return app
-
-
-async def check_models(cfg):
-    decision = DecisionClient(cfg.decision_base_url, cfg.decision_model)
-    llm = LLMClient(cfg.llm_base_url, cfg.llm_model)
-    await decision.check()
-    await llm.check()
-    return decision, llm
-
-
-def local_settings():
-    """Under `--local` only the models and their URLs may come from the process environment."""
-    return Settings(
-        host="127.0.0.1", port=8000, basic_auth_user="local", basic_auth_pass="local",
-        cors_origins=["http://localhost:8090", "http://127.0.0.1:8090"],
-        scenario_dir=SERVER_DIR.parent / "scenarios", save_dir=SERVER_DIR.parent / "saves" / "game",
-        decision_model=os.environ.get("DECISION_MODEL", "kanana"),
-        decision_base_url=os.environ.get("DECISION_BASE_URL", "http://127.0.0.1:8081"),
-        llm_model=os.environ.get("LLM_MODEL", "gemma4"),
-        llm_base_url=os.environ.get("LLM_BASE_URL", "http://127.0.0.1:8082/v1"),
-    )
-
 
 def main():
     parser = argparse.ArgumentParser(description="Run the TRPG API.")
     parser.add_argument("--local", action="store_true", help="loopback defaults on 127.0.0.1:8000, no dotenv")
-    if parser.parse_args().local:
-        cfg = local_settings()
-    else:
-        load_server_env(SERVER_DIR)
-        cfg = settings(SERVER_DIR)
+    try:
+        cfg = local_settings() if parser.parse_args().local else env_settings()
+    except ValueError as exc:
+        raise SystemExit(f"settings: {exc}") from None
     try:
         stories = load_stories(cfg.scenario_dir)
     except StoryError as exc:
@@ -76,6 +31,14 @@ def main():
         raise SystemExit(f"models: {exc}") from None
     service = GameService(stories, cfg.save_dir, Interpreter(decision), Narrator(llm, decision))
     uvicorn.run(build_app(cfg, service), host=cfg.host, port=cfg.port)
+
+
+async def check_models(cfg):
+    decision = DecisionClient(cfg.decision_base_url, cfg.decision_model)
+    llm = LLMClient(cfg.llm_base_url, cfg.llm_model)
+    await decision.check()
+    await llm.check()
+    return decision, llm
 
 
 if __name__ == "__main__":

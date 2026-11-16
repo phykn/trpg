@@ -6,7 +6,6 @@ def test_midnight_is_night_and_one_oclock_is_dawn():
         ["밤 8시", "자정", "밤 12시 20분", "새벽 1시", "새벽 4시", "오후 12시"]
 
 
-
 def test_a_roll_shows_how_the_total_is_made():
     assert ko.roll("press", [5, 1], 8, 8) == "몰아세운다 · 5 + 1 + 2 = 8 · 8 이상"
     assert ko.roll("press", [5, 1], 5, 8) == "몰아세운다 · 5 + 1 - 1 = 5 · 8 이상"

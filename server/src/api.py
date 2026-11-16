@@ -2,8 +2,9 @@ import json
 import secrets
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -12,12 +13,36 @@ from .models import ModelUnavailable
 from .service import Broken, Conflict, Missing
 
 REQUEST_ID = r"^[A-Za-z0-9_-]{1,64}$"
-security = HTTPBasic()
+ERRORS = {
+    Missing: lambda _request, _exc: JSONResponse({}, 404),
+    Conflict: lambda _request, exc: JSONResponse({"view": exc.view}, 409),
+    Broken: lambda _request, exc: JSONResponse({"reason": exc.reason}, 409),
+    ModelUnavailable: lambda _request, _exc: JSONResponse({}, 503),
+    RequestValidationError: lambda _request, _exc: JSONResponse({"reason": "bad request"}, 422),
+}
 
 
-def authenticate(request: Request, creds: Annotated[HTTPBasicCredentials, Depends(security)]):
-    user_ok = secrets.compare_digest(creds.username.encode(), request.app.state.basic_auth_user.encode())
-    pass_ok = secrets.compare_digest(creds.password.encode(), request.app.state.basic_auth_pass.encode())
+def build_app(cfg, service):
+    app = FastAPI(title="TRPG")
+    app.state.service = service
+    app.state.auth = (cfg.basic_auth_user, cfg.basic_auth_pass)
+    app.add_middleware(CORSMiddleware, allow_origins=cfg.cors_origins, allow_methods=["GET", "POST", "OPTIONS"],
+                       allow_headers=["Authorization", "Content-Type", "Accept"])
+
+    @app.get("/health")
+    async def health():
+        return {"ok": True}
+
+    app.include_router(router)
+    for error, reply in ERRORS.items():
+        app.add_exception_handler(error, reply)
+    return app
+
+
+def authenticate(request: Request, creds: Annotated[HTTPBasicCredentials, Depends(HTTPBasic())]):
+    user, password = request.app.state.auth
+    user_ok = secrets.compare_digest(creds.username.encode(), user.encode())
+    pass_ok = secrets.compare_digest(creds.password.encode(), password.encode())
     if not (user_ok and pass_ok):
         raise HTTPException(401, "invalid credentials", headers={"WWW-Authenticate": "Basic"})
 
@@ -51,7 +76,7 @@ class CommandBody(Strict):
         return value.strip() or None if value is not None else None
 
     @model_validator(mode="after")
-    def one_command(self):
+    def check_one(self):
         given = [self.do is not None or self.text is not None, self.read is not None, self.conclude is not None]
         if sum(given) != 1:
             raise ValueError("send one of text, do, read and conclude")
@@ -92,15 +117,3 @@ def stream_text(request: Request, game: str, n: int):
     events = request.app.state.service.stream_text(game, n)
     lines = (json.dumps(event, ensure_ascii=False) + "\n" async for event in events)
     return StreamingResponse(lines, media_type="application/x-ndjson")
-
-
-def add_error_handlers(app):
-    replies = {
-        Missing: lambda exc: JSONResponse({}, 404),
-        Conflict: lambda exc: JSONResponse({"view": exc.view}, 409),
-        Broken: lambda exc: JSONResponse({"reason": exc.reason}, 409),
-        ModelUnavailable: lambda exc: JSONResponse({}, 503),
-        RequestValidationError: lambda exc: JSONResponse({"reason": "bad request"}, 422),
-    }
-    for error, reply in replies.items():
-        app.add_exception_handler(error, lambda request, exc, reply=reply: reply(exc))

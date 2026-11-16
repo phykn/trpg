@@ -26,6 +26,7 @@ class LLMClient:
             raise ValueError(f"unknown llm {model!r}; one of {sorted(LLM_MODELS)}")
         self.base_url = base_url.rstrip("/")
         self.name = model
+        self.spec = LLM_MODELS[model]
         self.model = None
         self.transport = transport
 
@@ -37,18 +38,17 @@ class LLMClient:
             ids = [m["id"] for m in response.json()["data"] if m.get("loaded")]
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
             raise ModelUnavailable(f"llm: {type(exc).__name__}: {exc}") from None
-        mine = [i for i in ids if any(name.lower() in i.lower() for name in LLM_MODELS[self.name].ids)]
+        mine = [i for i in ids if any(name.lower() in i.lower() for name in self.spec.ids)]
         if not mine:
             raise ModelUnavailable(f"llm: {self.name} is configured but not loaded (loaded: {ids or 'nothing'})")
         self.model = mine[0]
-        async for _ in self.stream([{"role": "user", "content": "안녕하십니까"}], max_tokens=4, timeout=300.0):
+        async for _ in self.stream([{"role": "user", "content": "안녕하십니까"}], 4, timeout=300.0):
             pass
 
     async def stream(self, messages, max_tokens, timeout=120.0):
         # mlx-lm reads chat_template_kwargs and mlx-vlm the top-level flag, so both go, always off.
         body = {"model": self.model, "messages": messages, "stream": True, "max_tokens": max_tokens,
-                "enable_thinking": False, "chat_template_kwargs": {"enable_thinking": False},
-                **LLM_MODELS[self.name].sampling}
+                "enable_thinking": False, "chat_template_kwargs": {"enable_thinking": False}, **self.spec.sampling}
         try:
             async with (httpx.AsyncClient(timeout=timeout, transport=self.transport) as client,
                         client.stream("POST", f"{self.base_url}/chat/completions", json=body) as response):

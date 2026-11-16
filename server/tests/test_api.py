@@ -2,7 +2,8 @@ import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from run_api import build_app, local_settings
+from src.api import build_app
+from src.config import local_settings
 from src.models import ModelUnavailable
 from src.narrate import Narrator
 from src.service import GameService
@@ -160,3 +161,8 @@ def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error
     saved = json.loads((tmp_path / f"{player.game}.json").read_text(encoding="utf-8"))["turns"][1]["text"]
     assert [c["failed"] for c in saved[0]["checks"]] == [["added", "meaning"], []]
     assert player.client.get(f"/games/{player.game}/turns/9/text").status_code == 404
+
+
+def test_health_answers_without_auth():
+    response = TestClient(build_app(local_settings(), None)).get("/health")
+    assert response.status_code == 200 and response.json() == {"ok": True}

@@ -21,14 +21,15 @@ def make_client(models, chunks):
     return LLMClient("http://gemma/v1", "gemma4", httpx.MockTransport(handle)), sent
 
 
+async def collect(client):
+    return [chunk async for chunk in client.stream([{"role": "user", "content": "x"}], 10)]
+
+
 def test_check_finds_the_loaded_snapshot_and_writes_without_thinking():
     client, sent = make_client([{"id": "/w/qwen", "loaded": True}, {"id": SNAPSHOT, "loaded": True}], ["안", "녕"])
     asyncio.run(client.check())
     assert client.model == SNAPSHOT and sent[0]["model"] == SNAPSHOT and sent[0]["enable_thinking"] is False
-
-    async def collect():
-        return [chunk async for chunk in client.stream([{"role": "user", "content": "x"}], 10)]
-    assert asyncio.run(collect()) == ["안", "녕"]
+    assert asyncio.run(collect(client)) == ["안", "녕"]
     unloaded, _ = make_client([{"id": SNAPSHOT, "loaded": False}], [])
     with pytest.raises(ModelUnavailable, match="not loaded"):
         asyncio.run(unloaded.check())

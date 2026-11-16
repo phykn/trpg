@@ -8,6 +8,7 @@ from pathlib import Path
 
 import yaml
 
+from ..config import local_settings
 from ..interpret import Interpreter
 from ..models.decision import DecisionClient
 from ..models.llm import LLMClient
@@ -149,8 +150,6 @@ async def run_text(folder, cfg):
 
 
 def main():
-    from run_api import local_settings
-
     parser = argparse.ArgumentParser(description="Run a story's interpretation or text evals against the models.")
     parser.add_argument("folder", type=Path)
     parser.add_argument("--text", action="store_true", help="write and check every answer and scene instead")

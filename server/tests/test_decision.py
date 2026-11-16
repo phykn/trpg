@@ -12,8 +12,8 @@ def make_client(run, answers=None):
         if request.url.path == "/v1/info":
             return httpx.Response(200, json={"run": run})
         questions = json.loads(request.content)["questions"]
-        return httpx.Response(200, json={"answers": {q: {"type": "noul", "noul": 0.9} for q in questions}
-                                         if answers is None else answers})
+        every = {q: {"type": "noul", "noul": 0.9} for q in questions}
+        return httpx.Response(200, json={"answers": every if answers is None else answers})
     return DecisionClient("http://kanana", "kanana", httpx.MockTransport(handle))
 
 
