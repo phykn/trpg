@@ -95,6 +95,11 @@ class ViewMaker:
     def make_notebook(self):
         book = {group: [] for group in GROUPS.values()}
         speakers = []
+        heard = {}
+        for addr in self.state["notebook"]:
+            line = self.story.lines[addr]
+            if line.kind == "말":
+                heard.setdefault(line.name, []).append(self.ids[addr])
         for addr in self.state["notebook"]:
             line = self.story.lines[addr]
             if line.kind == "볼 것":
@@ -103,7 +108,8 @@ class ViewMaker:
                 group = GROUPS["들은 말" if line.kind == "말" else line.kind]
             book[group].append({
                 "id": self.ids[addr], "text": show_line(self.story, addr), "marks": self.list_marks(addr),
-                "struck": addr in self.state["struck"], "new": addr not in self.state["read"],
+                "struck": addr in self.state["struck"], "intro": self.find_intro(line),
+                "about": heard.get(line.name, []) if line.kind == "사람" else [], "new": addr not in self.state["read"],
                 "acts": self.list_acts(addr) if self.stage == "play" else []})
             if group == "heard":
                 speakers.append(line.name)
@@ -111,6 +117,11 @@ class ViewMaker:
         order = list(dict.fromkeys(speakers))
         book["heard"] = [x for _, x in sorted(zip(speakers, book["heard"], strict=True), key=lambda p: order.index(p[0]))]
         return book
+
+    def find_intro(self, line):
+        if line.kind == "사람":
+            return self.story.people[line.name].intro
+        return self.story.things[line.name].intro if line.kind == "볼 것" else None
 
     def list_marks(self, addr):
         line, state = self.story.lines[addr], self.state

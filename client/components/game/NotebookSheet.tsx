@@ -37,6 +37,7 @@ export function NotebookSheet({ view, group, onGroup, onLine, onConclude, onClos
               </Text>
               {line.new ? <Unread /> : null}
             </View>
+            {line.intro ? <Text className="font-sans text-chip text-fg-muted">{line.intro}</Text> : null}
             <Marks marks={line.marks} />
           </Pressable>
         ))}

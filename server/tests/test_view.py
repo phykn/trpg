@@ -17,6 +17,13 @@ def test_what_each_person_said_stays_together_in_the_order_they_first_spoke():
     assert [line["id"] for line in make_view(DAWN, state)[0]["notebook"]["heard"]] == [1, 3, 2]
 
 
+def test_a_person_shows_their_intro_and_what_they_said_and_an_item_its_intro():
+    state = make_state(["사람 브람", "말 브람.징수관.거짓말", "말 넬.해 질 녘.참말", "볼 것 쇠꼬챙이", "볼 것 목 자국"])
+    book = make_view(DAWN, state)[0]["notebook"]
+    assert [(x["intro"], x["about"]) for x in book["people"]] == [(DAWN.people["브람"].intro, [2])]
+    assert [x["intro"] for x in book["items"] + book["seen"]] == [DAWN.things["쇠꼬챙이"].intro, None]
+
+
 def test_the_badge_counts_every_unread_line():
     state = make_state(["곳 숲길", "말 넬.해 질 녘.참말", "볼 것 목 자국"], read=["곳 숲길"])
     assert make_view(DAWN, state)[0]["badge"] == 2

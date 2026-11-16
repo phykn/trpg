@@ -107,7 +107,8 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
       ) : null}
       {found ? (
         <Overlay onClose={closeLine}>
-          <LineSheet line={found.line} locked={locked} onAct={act} onClose={closeLine} />
+          <LineSheet line={found.line} about={found.line.about.flatMap((id) => findLine(view, id)?.line ?? [])} locked={locked}
+            onAct={act} onLine={(id) => setOpen({ kind: 'line', id, group })} onClose={closeLine} />
         </Overlay>
       ) : null}
     </View>

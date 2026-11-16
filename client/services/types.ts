@@ -4,7 +4,9 @@ export type Story = { story: string; title: string; intro: string };
 
 export type Act = { id: string; label: string };
 
-export type Line = { id: number; text: string; marks: string[]; struck: boolean; new: boolean; acts: Act[] };
+export type Line = {
+  id: number; text: string; marks: string[]; struck: boolean; intro: string | null; about: number[]; new: boolean; acts: Act[];
+};
 
 export type Group = 'places' | 'people' | 'items' | 'seen' | 'heard';
 
