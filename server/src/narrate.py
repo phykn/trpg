@@ -18,7 +18,7 @@ COVER = 0.5
 REPEAT = 0.8
 # Words of the prompt itself; a text that names them is talking about its instructions, not to the player.
 # "할 말" alone is everyday speech ("더 할 말 있나?"), so only the label with its colon counts.
-PROMPT_WORDS = ("할 말:", "받은 것", "지침", "지킬 것", "질문자", "신상", "그릴 기척", "지켜본 일", "앞서 나눈 말", "받은 인상")
+PROMPT_WORDS = ("할 말:", "받은 것", "앞서 들려준 글", "지침", "지킬 것", "질문자", "신상", "그릴 기척", "지켜본 일", "앞서 나눈 말", "받은 인상")
 # The narrator and the DM speak 합니다체 (CLAUDE.md); quoted speech inside a scene keeps its own.
 HAEYO = re.compile(r"(세요|어요|아요|해요|예요|에요|죠|군요|네요)[.?!…~]*(\s|$)")
 # The DM shows a sign instead of advising (game/07 2절); these endings tell the player what to do.
@@ -86,6 +86,12 @@ def pick_best(checks):
 def make_messages(job):
     given = "\n".join(g for g in list_given(job) if not g.startswith("플레이어의 말"))
     head, rules, user = {"dm": make_dm_prompt, "answer": make_answer_prompt}.get(job["kind"], make_scene_prompt)(job)
+    # Left out of what Kanana checks against: it is what not to write again, not a fact the text may use.
+    narrated = "".join(f"\n  {t}" for t in job.get("narrated", []))
+    if narrated:
+        given += f"\n앞서 들려준 글:{narrated}"
+        rules = [*rules, ("앞서 들려준 글의 감각과 표현을 되풀이하지 않는다. 같은 냄새, 소리, 비유, 농담을 다시 쓰지 말고 "
+                          "다른 감각과 다른 말을 고른다.")]
     system = f"{head}\n\n받은 것:\n{given}\n\n지킬 것:\n" + "\n".join(f"- {r}" for r in rules)
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 

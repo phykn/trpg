@@ -8,7 +8,7 @@ from .models import ModelUnavailable
 from .rules.act import Refused, act, find_listener
 from .rules.guide import make_guide
 from .save import SaveError, make_save, read_save, write_save
-from .slots import find_last_said, make_jobs
+from .slots import NARRATED, find_last_said, make_jobs
 from .view import make_feed, make_view
 
 
@@ -156,9 +156,13 @@ class GameService:
     async def write_text(self, game, n, job):
         try:
             data, story, states = self.load(game)
-            texts = []
+            texts, specs = [], []
             past = list(zip(data["turns"][:n - 1], states[1:n], strict=True))
             for slot, spec in enumerate(make_jobs(story, states[n - 1], states[n], data["turns"][n - 1], past)):
+                if "narrated" in spec:   # this turn's earlier narration is the latest the narrator wrote
+                    told = [t["text"] for t, s in zip(texts, specs, strict=True) if "narrated" in s]
+                    spec = {**spec, "narrated": [*spec["narrated"], *told][-NARRATED:]}
+                specs.append(spec)
                 await job.add({"type": "start", "slot": slot})
                 async for event in self.narrator.write(spec):
                     if event["type"] == "result":

@@ -113,3 +113,24 @@ def test_a_write_cut_short_leaves_the_old_file(tmp_path, monkeypatch):
     with pytest.raises(OSError):
         send(service, game, "a1", STATS)
     assert path.read_text(encoding="utf-8") == before and [p.name for p in tmp_path.iterdir()] == [path.name]
+
+
+def test_the_narrator_gets_what_it_wrote_before_and_not_what_people_said(tmp_path):
+    class Recording(FakeNarrator):
+        def __init__(self):
+            super().__init__()
+            self.jobs = []
+
+        async def write(self, job):
+            self.jobs.append(job)
+            async for event in super().write(job):
+                yield event
+
+    narrator = Recording()
+    service = make_service(tmp_path, narrator)
+    game, _ = service.create("r1", "skeleton")
+    for n, (receipt, action) in enumerate([("a1", STATS), ("a2", {"do": "move", "place": "곡물 창고"})], 1):
+        send(service, game, receipt, action)
+        read_text(service, game, n)
+    assert [j["kind"] for j in narrator.jobs] == ["scene", "answer", "scene"]
+    assert "narrated" not in narrator.jobs[1] and narrator.jobs[2]["narrated"] == ["scene"]

@@ -41,6 +41,8 @@ VOICE = ("시각, 소리, 냄새, 맛, 촉감 가운데 하나만 살려 감각�
          "'-습니다', '-ㅂ니다'로 맺고 '-군요'는 쓰지 않는다. 크게 웃기지 않는다. 비유와 농담에도 받은 것에 없는 사람, 물건, 일은 넣지 않는다.")
 CAUGHT = "남을 속이려다 들켰다"   # 들킴 comes from a deed, so it has no meaning for Kanana in ko.IMPRESSIONS
 RECENT = 3   # turns of talk with a person, and turns of the player's deeds they watched, an answer gets (game/04 3절)
+# The narrator's own last texts it gets, so it stops reaching for the same smell every turn (game/07 2절)
+NARRATED = 4
 
 
 def list_slots(story, turn):
@@ -84,8 +86,25 @@ def make_jobs(story, before, after, turn, past=()):
 
 def make_job(story, before, after, turn, slot, past):
     job = make_slot_job(story, before, after, turn, slot, past)
+    if job["kind"] == "answer":
+        return job
     # The story's voice for the narrator alone; people speak in their own (game/08 2절)
-    return job if job["kind"] == "answer" or not story.head.mood else {**job, "mood": story.head.mood}
+    return {**job, **({"mood": story.head.mood} if story.head.mood else {}), "narrated": list_narrated(story, past)}
+
+
+def is_narrator(slot):
+    return slot["kind"] != "text" or not slot["person"]
+
+
+def list_narrated(story, past):
+    """The narrator's texts of the last turns, oldest first; a person's lines are theirs, not the narrator's."""
+    texts = []
+    for turn, _ in reversed(past):
+        texts = [t["text"] for slot, t in zip(list_slots(story, turn), turn["text"] or [], strict=False)
+                 if is_narrator(slot)] + texts
+        if len(texts) >= NARRATED:
+            break
+    return texts[-NARRATED:]
 
 
 def make_slot_job(story, before, after, turn, slot, past):

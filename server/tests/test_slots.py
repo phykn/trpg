@@ -5,7 +5,17 @@ from src.narrate import make_messages
 from src.rules.act import act
 from src.rules.guide import make_guide
 from src.rules.state import start_state
-from src.slots import find_doing, find_last_said, is_here, make_dm, make_job, make_jobs
+from src.slots import (
+    NARRATED,
+    find_doing,
+    find_last_said,
+    is_here,
+    list_narrated,
+    list_slots,
+    make_dm,
+    make_job,
+    make_jobs,
+)
 from src.story.load import load_story
 from src.view import make_feed
 from tests.test_act import LOCK, STORY, doing, said
@@ -166,3 +176,14 @@ def test_the_last_line_a_person_said_is_found_even_in_the_opening_call():
     turns[0] = {**turns[0], "text": [{"text": "사당입니다."}, {"text": "자네, 큰일 났소!"}]}
     turns[1] = {**turns[1], "text": [{"text": "둘러봅니다."}]}
     assert find_last_said(DAWN, "고드릭", turns) == "자네, 큰일 났소!"
+
+
+def test_the_narrator_gets_its_own_last_texts_and_not_what_people_said():
+    turns = play(DAWN, [STATS, ask("징수관"), do("look"), do("look"), do("look"), do("look"), do("look")])
+    past = [({**turn, "text": [{"text": f"글 {i}.{k}"} for k in range(len(list_slots(DAWN, turn)))]}, after)
+            for i, (_, after, turn) in enumerate(turns[:-1])]
+    before, after, turn = turns[-1]
+    scene = make_jobs(DAWN, before, after, turn, past)[0]
+    assert scene["kind"] == "scene" and len(scene["narrated"]) == NARRATED
+    assert scene["narrated"] == ["글 2.0", "글 3.0", "글 4.0", "글 5.0"]   # 1 is 징수관's answer
+    assert "글 1.0" not in list_narrated(DAWN, past[:3]) and "앞서 들려준 글" in make_messages(scene)[0]["content"]
