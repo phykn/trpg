@@ -10,9 +10,9 @@ from src.narrate import Narrator
 from src.service import GameService
 from src.story.load import load_story
 
-SCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"
-DAWN = load_story(SCENARIOS / "dawn")
-BRANCHES = ("거짓말", "깨진 뒤", "풀린 뒤", "참말")
+DAWN = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
+ASK = "징수관은 언제 왔습니까?"
+HEARD = {ASK: {"kind": "topics", "topics": ["징수관"]}}
 
 
 class FakeInterpreter:
@@ -21,6 +21,11 @@ class FakeInterpreter:
 
     async def read(self, story, state, text):
         return self.readings[text]
+
+
+class Down:
+    async def read(self, story, state, text):
+        raise ModelUnavailable("down")
 
 
 class FakeLLM:
@@ -36,17 +41,12 @@ class FakeLLM:
 
 
 class FakeChecks:
-    def __init__(self, verdicts):
-        self.verdicts = list(verdicts)
+    def __init__(self, passes):
+        self.passes = list(passes)
 
     async def decide(self, state, questions):
-        ok = self.verdicts.pop(0)
+        ok = self.passes.pop(0)
         return {key: {"noul": float(ok != (key == "added"))} for key in questions}
-
-
-class Down:
-    async def read(self, story, state, text):
-        raise ModelUnavailable("down")
 
 
 def make_client(tmp_path, interpreter, narrator=None):
@@ -81,8 +81,8 @@ class Player:
         return next(x for group in self.view["notebook"].values() for x in group if x["text"] == text)
 
     def present(self, addr, person):
-        label = f"{person}에게 내민다"
-        return self.send(do=next(a["id"] for a in self.find_line(addr)["acts"] if a["label"].startswith(label)))
+        return self.send(do=next(a["id"] for a in self.find_line(addr)["acts"]
+                                 if a["label"].startswith(f"{person}에게 내민다")))
 
     def look(self):
         return self.send(do=self.view["place"]["look"]["id"])
@@ -91,14 +91,18 @@ class Player:
         name = show_name(DAWN, "곳", place)
         return self.send(do=next(m["id"] for m in self.view["place"]["moves"] if m["name"] == name))
 
+    def read_text(self, n):
+        response = self.client.get(f"/games/{self.game}/turns/{n}/text")
+        assert response.status_code == 200 and response.headers["content-type"].startswith("application/x-ndjson")
+        return [json.loads(line) for line in response.text.splitlines()]
+
 
 def test_dawn_is_solved_without_dice_and_no_branch_name_reaches_the_screen(tmp_path):
-    text = "징수관은 언제 왔습니까?"
-    player = Player(make_client(tmp_path, FakeInterpreter({text: {"kind": "topics", "topics": ["징수관"]}})))
+    player = Player(make_client(tmp_path, FakeInterpreter(HEARD)))
     assert player.view["stage"] == "start"
     player.send(do=next(a["id"] for a in player.view["start"]["acts"] if (a["plus2"], a["plus1"]) == ("wit", "charm")))
-    asked = player.send(text=text)
-    assert asked["said"] == text and asked["text"] and asked["feed"][0] == {"kind": "text", "who": "고드릭", "slot": 0}
+    asked = player.send(text=ASK)
+    assert asked["said"] == ASK and asked["text"] and asked["feed"][0] == {"kind": "text", "who": "고드릭", "slot": 0}
     assert player.move("숲길")["feed"][0]["kind"] == "move" and not player.view["place"]["looked"]
     assert player.look()["feed"][0] == {"kind": "text", "who": None, "slot": 0} and player.view["place"]["looked"]
     player.present("볼 것 쓸린 자국", "토빈")
@@ -116,7 +120,7 @@ def test_dawn_is_solved_without_dice_and_no_branch_name_reaches_the_screen(tmp_p
     assert player.call("get", f"/games/{player.game}") == player.view
     assert len(player.call("get", f"/games/{player.game}/turns?from=1")) == player.view["revision"]
     seen = json.dumps(player.replies, ensure_ascii=False)
-    assert not [word for word in BRANCHES if word in seen]
+    assert not [word for word in ("거짓말", "깨진 뒤", "풀린 뒤", "참말") if word in seen]
 
 
 def test_errors_keep_the_game_as_it_was(tmp_path):
@@ -138,26 +142,20 @@ def test_errors_keep_the_game_as_it_was(tmp_path):
 
 
 def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error(tmp_path):
-    text = "징수관은 언제 왔습니까?"
     llm = FakeLLM([ModelUnavailable("down"), "사당에 들어섭니다.", "고드릭에게 물어보시지요.", "장부만 걷고 갔소.",
                    "해 지기 전에 장부만 걷고 떠났소."])
-    narrator = Narrator(llm, FakeChecks([True, True, False, True]))
-    player = Player(make_client(tmp_path, FakeInterpreter({text: {"kind": "topics", "topics": ["징수관"]}}), narrator))
+    player = Player(make_client(tmp_path, FakeInterpreter(HEARD), Narrator(llm, FakeChecks([True, True, False, True]))))
     player.send(do=player.view["start"]["acts"][0]["id"])
-
-    def read(n):
-        response = player.client.get(f"/games/{player.game}/turns/{n}/text")
-        assert response.status_code == 200 and response.headers["content-type"].startswith("application/x-ndjson")
-        return [json.loads(line) for line in response.text.splitlines()]
-
-    assert [e["type"] for e in read(1)] == ["start", "error"]
-    assert [e["type"] for e in read(1)] == ["start", "delta", "delta", "end", "start", "delta", "delta", "end", "done"]
-    player.send(text=text)
-    events = read(2)
+    assert [e["type"] for e in player.read_text(1)] == ["start", "error"]
+    assert [e["type"] for e in player.read_text(1)] == ["start", "delta", "delta", "end", "start", "delta", "delta",
+                                                         "end", "done"]
+    player.send(text=ASK)
+    events = player.read_text(2)
     assert [e["type"] for e in events] == ["start", "delta", "delta", "delta", "replace", "end", "done"]
     assert events[4] == {"type": "replace", "slot": 0, "text": "해 지기 전에 장부만 걷고 떠났소. "}
-    assert read(2) == [{"type": "start", "slot": 0}, {"type": "delta", "slot": 0, "text": "해 지기 전에 장부만 걷고 떠났소. "},
-                       {"type": "end", "slot": 0}, {"type": "done"}]
+    assert player.read_text(2) == [{"type": "start", "slot": 0},
+                                   {"type": "delta", "slot": 0, "text": "해 지기 전에 장부만 걷고 떠났소. "},
+                                   {"type": "end", "slot": 0}, {"type": "done"}]
     saved = json.loads((tmp_path / f"{player.game}.json").read_text(encoding="utf-8"))["turns"][1]["text"]
     assert [c["failed"] for c in saved[0]["checks"]] == [["added", "meaning"], []]
     assert player.client.get(f"/games/{player.game}/turns/9/text").status_code == 404

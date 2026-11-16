@@ -18,18 +18,35 @@ class FakeInterpreter:
         return HEARD
 
 
-def make_service(tmp_path):
-    return GameService(STORIES, tmp_path, FakeInterpreter(), None)
+class FakeNarrator:
+    def __init__(self, failures=()):
+        self.failures = list(failures)
+
+    async def write(self, job):
+        if self.failures:
+            raise self.failures.pop(0)
+        yield {"type": "delta", "text": job["kind"]}
+        yield {"type": "result", "text": job["kind"], "checks": []}
+
+
+def make_service(tmp_path, narrator=None):
+    return GameService(STORIES, tmp_path, FakeInterpreter(), narrator)
 
 
 def send(service, game, receipt, action=None, **body):
-    _, story, state = service.load(game)
+    _, story, states = service.load(game)
     if action:
-        body["do"] = next(i for i, a in make_view(story, state)[1].items() if a == action)
-    return asyncio.run(service.command(game, {"request_id": receipt, "revision": state["turn"], **body}))
+        body["do"] = next(i for i, a in make_view(story, states[-1])[1].items() if a == action)
+    return asyncio.run(service.command(game, {"request_id": receipt, "revision": states[-1]["turn"], **body}))
 
 
-def test_a_saved_game_reopens_as_the_same_game(tmp_path):
+def read_text(service, game, n):
+    async def follow():
+        return [event async for event in service.stream_text(game, n)]
+    return asyncio.run(asyncio.wait_for(follow(), 2))
+
+
+def test_a_reopened_game_holds_the_same_turns_and_states(tmp_path):
     service = make_service(tmp_path)
     game, _ = service.create("r1", "skeleton")
     send(service, game, "a1", STATS)
@@ -38,21 +55,36 @@ def test_a_saved_game_reopens_as_the_same_game(tmp_path):
     send(service, game, "a4", {"do": "present", "line": "말 오토.밤.참말", "target": "한스"})
     reopened = make_service(tmp_path)
     assert reopened.create("r1", "skeleton") == (game, service.show(game))
-    data, _, state = reopened.load(game)
-    assert state == service.load(game)[2] == data["state"]
+    data, _, states = reopened.load(game)
+    assert states == service.load(game)[2] and len(states) == 5 and states[-1] == data["state"]
     assert [t["receipt"] for t in data["turns"]] == ["a1", "a2", "a3", "a4"] and data["turns"][1]["heard"] == HEARD
 
 
-def test_the_same_receipt_is_processed_once(tmp_path):
+def test_a_receipt_runs_once_and_a_stale_or_unknown_command_changes_nothing(tmp_path):
     service = make_service(tmp_path)
     game, _ = service.create("r1", "skeleton")
-    first = asyncio.run(service.command(game, {"request_id": "a1", "revision": 0, "do": "a1"}))
-    assert asyncio.run(service.command(game, {"request_id": "a1", "revision": 0, "do": "a1"})) == first
+    body = {"request_id": "a1", "revision": 0, "do": "a1"}
+    first = asyncio.run(service.command(game, body))
+    assert asyncio.run(service.command(game, body)) == first
     with pytest.raises(Conflict):
         send(service, game, "a1", text=ASK)
+    with pytest.raises(Conflict):
+        asyncio.run(service.command(game, {**body, "request_id": "a2"}))
     assert send(service, game, "a2", do="a999")["kind"] == "refused"
     send(service, game, "a2", text=ASK)
     assert [t["receipt"] for t in make_service(tmp_path).load(game)[0]["turns"]] == ["a1", "a2"]
+
+
+def test_a_failing_narration_ends_its_stream_and_the_next_ask_writes_it(tmp_path):
+    service = make_service(tmp_path, FakeNarrator([KeyError("bug")]))
+    game, _ = service.create("r1", "skeleton")
+    send(service, game, "a1", STATS)
+    assert [e["type"] for e in read_text(service, game, 1)] == ["start", "error"]
+    events = read_text(service, game, 1)
+    assert events[-1] == {"type": "done"} and not service.texts
+    saved = make_service(tmp_path).load(game)[0]["turns"][0]["text"]
+    assert [t["text"] for t in saved] == [e["text"] for e in events if e["type"] == "delta"]
+    assert read_text(service, game, 1) == read_text(make_service(tmp_path), game, 1)
 
 
 @pytest.mark.parametrize(("damage", "reason"), [

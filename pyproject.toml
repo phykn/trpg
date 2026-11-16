@@ -3,3 +3,9 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["server/tests"]
 pythonpath = ["server"]
+
+[tool.ruff.lint]
+extend-select = ["ARG", "C901"]
+
+[tool.ruff.lint.per-file-ignores]
+"server/tests/**" = ["ARG"]   # fakes take the arguments of what they stand in for
