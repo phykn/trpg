@@ -5,7 +5,7 @@ from src.narrate import make_messages
 from src.rules.act import act
 from src.rules.guide import make_guide
 from src.rules.state import start_state
-from src.slots import is_here, make_jobs
+from src.slots import find_doing, is_here, make_jobs
 from src.story.load import load_story
 from src.view import make_feed
 from tests.test_act import LOCK, STORY, doing, said
@@ -70,6 +70,7 @@ def test_jobs_tell_what_is_new_and_the_ending_tells_the_time_the_cells_ran_out()
     assert opening["intro"] and opening["desc"] and opening["time"] == "밤 8시"
     assert answer["says"] == [DAWN.lines["말 고드릭.징수관.거짓말"].text]
     assert not opening["written"] and first["desc"] and not first["written"] and first["people"] == ["토빈"]
+    assert first["doing"] == [f"토빈은 {DAWN.people['토빈'].doing[0]}"] and "(" not in make_messages(first)[0]["content"]
     assert "입술이 검푸르게" in " ".join(looked["written"]) and not looked["again"] and looked["happening"]
     assert back["again"] and again["again"] and not first["again"]
     assert len([j for t in turns for j in make_jobs(DAWN, *t) if j.get("happening")]) >= 2
@@ -80,7 +81,7 @@ def test_jobs_tell_what_is_new_and_the_ending_tells_the_time_the_cells_ran_out()
                                    DAWN.endings.explain] and len(ending["happening"]) == 4
 
 
-def test_the_dm_is_the_last_slot_and_judges_a_person_only_by_bio_and_attitude():
+def test_the_dm_is_the_last_slot_and_judges_a_person_only_by_bio_doing_and_attitude():
     (before, after, turn), = play(DAWN, [STATS])
     assert turn["guide"] == {"key": "open", "name": "고드릭"}
     jobs = make_jobs(DAWN, before, after, turn)
@@ -88,6 +89,29 @@ def test_the_dm_is_the_last_slot_and_judges_a_person_only_by_bio_and_attitude():
     assert [f["kind"] for f in feed] == ["text", "guide"] and jobs[-1]["kind"] == "dm"
     given = make_messages(jobs[-1])[0]["content"].split("지킬 것:")[0]
     assert DAWN.people["고드릭"].bio in given and "믿음 보통" in given and "거짓말" not in given
+    assert DAWN.people["고드릭"].doing[0] in given
+
+
+def test_people_are_seen_doing_what_they_do_by_now():
+    state, hans = start_state(SKELETON, 0), SKELETON.people["한스"].doing
+    assert [find_doing(SKELETON, {**state, "spent": s}, "한스") for s in (0, 4, 5, 8)] == [hans[0], hans[0], hans[5], hans[5]]
+
+
+def test_the_story_mood_reaches_the_narrator_and_the_dm_but_never_a_person():
+    turns = play(DAWN, [STATS, ask("징수관")])
+    scene, dm = make_jobs(DAWN, *turns[0])
+    answer = make_jobs(DAWN, *turns[1])[0]
+    assert scene["mood"] == dm["mood"] == DAWN.head.mood and "mood" not in answer
+    system = make_messages(scene)[0]["content"]
+    assert DAWN.head.mood not in system.split("지킬 것:")[0] and f"문체: {DAWN.head.mood}" in system
+    assert answer["doing"] == DAWN.people["고드릭"].doing[0] and f"지금 하는 일: {answer['doing']}" in make_messages(answer)[0]["content"]
+
+
+def test_only_a_bet_answer_is_told_its_line_next_to_the_player_line():
+    answer = make_jobs(DAWN, *play(DAWN, [STATS, ask("징수관")])[1])[0]
+    note = f"(이번에 할 말: {answer['says'][0]})"
+    assert not answer["bet"] and note not in make_messages(answer)[-1]["content"]
+    assert make_messages({**answer, "bet": True})[-1]["content"].endswith(note)
 
 
 def test_an_event_is_news_only_where_the_player_is_not():

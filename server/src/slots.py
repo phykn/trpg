@@ -68,6 +68,12 @@ def make_jobs(story, before, after, turn, past=()):
 
 
 def make_job(story, before, after, turn, slot, past):
+    job = make_slot_job(story, before, after, turn, slot, past)
+    # The story's voice for the narrator alone; people speak in their own (game/08 2절)
+    return job if job["kind"] == "answer" or not story.head.mood else {**job, "mood": story.head.mood}
+
+
+def make_slot_job(story, before, after, turn, slot, past):
     if slot["kind"] == "ending":
         return make_ending(story, after)
     if slot["kind"] == "guide":
@@ -106,6 +112,17 @@ def is_here(story, before, after, event):
                for a in event.acts)
 
 
+def find_doing(story, state, person):
+    """What the person is doing by now (game/04 1절): the latest entry at or before the spent cells."""
+    doing = story.people[person].doing
+    return doing[max(at for at in doing if at <= state["spent"])] if doing else None
+
+
+def list_doing(story, state, people):
+    # A sentence each: given as name(doing), gemma4 copied the brackets into the scene
+    return [f"{ko.eun(show_name(story, '사람', p))} {doing}" for p in people if (doing := find_doing(story, state, p))]
+
+
 def make_answer(story, before, after, turn, person, past):
     says = [say for item in turn["talk"] if (say := tell_item(story, turn, item))]
     lines = [story.lines[item["say"]].text for item in turn["talk"] if "say" in item]
@@ -116,8 +133,10 @@ def make_answer(story, before, after, turn, person, past):
     return {"kind": "answer", "person": show_name(story, "사람", person), "bio": story.people[person].bio,
             "attitude": f"믿음 {LEVELS[attitude['trust']]}, 두려움 {LEVELS[attitude['fear']]}",
             "said": find_said(story, turn), "says": says, "lines": lines, "quiet": not lines and bool(says),
+            "bet": turn["action"]["do"] == "bet",
             "where": ", ".join(filter(None, [show_name(story, "곳", after["place"]),
                                              ko.clock(clock.start + after["spent"] * clock.step) if clock else None])),
+            "doing": find_doing(story, after, person),
             "recent": list_recent(story, person, past), "told": told, "saw": list_seen(story, person, past),
             "impressions": list_impressions(story, after, person),
             "rumors": [f"{show_name(story, '사람', r['about'])}에게 {r['impression']}({'직접 봄' if r['seen'] else '전해 들음'})"
@@ -177,8 +196,8 @@ def tell_item(story, turn, item):
         return f'"{value.split(".", 1)[1]}"에 관해서라면 할 말이 있다는 듯 운을 뗀다'
     if kind == "unsure":
         return f"무엇을 묻는지 되묻는다: {' / '.join(item['topics'])}"
-    if kind == "try":
-        return f"{ko.TRIES[item['method']]}. 그 행동에 반응한다"
+    if kind == "try":   # a guessed action only offers buttons; the answer is the reading's
+        return None if item.get("guess") else f"{ko.TRIES[item['method']]}. 그 행동에 반응한다"
     return {"withhold": "이 화제는 얼버무리며 말해 주지 않는다. 말하지 않는 까닭은 지어내지 않는다",
             "done": "더 말할 것이 없다"}.get(kind)
 
@@ -203,14 +222,14 @@ def make_scene(story, before, after, turn):
     happening = ["당신이 주위를 찬찬히 둘러본다"] if looking else []
     for item in turn["talk"]:
         happening += tell_lock(story, turn, after, item)
-        if "try" in item:
+        if "try" in item and not item.get("guess"):
             happening.append(ko.try_lock(item["method"], show_name(story, "볼 것", story.blocks[item["try"]].name)))
-    clock = story.head.clock
+    clock, people = story.head.clock, list_people_here(story, after)
     return {"kind": "scene", "intro": story.head.intro if turn["action"]["do"] == "stats" else None,
             "time": ko.clock(clock.start + after["spent"] * clock.step) if clock else None,
             "place": show_name(story, "곳", place), "desc": story.places[place].desc, "again": not first,
             "written": [show_line(story, a) for a in writes if story.lines[a].kind == "볼 것"], "happening": happening,
-            "people": [show_name(story, "사람", p) for p in list_people_here(story, after)]}
+            "people": [show_name(story, "사람", p) for p in people], "doing": list_doing(story, after, people)}
 
 
 def tell_lock(story, turn, after, item):
@@ -245,5 +264,6 @@ def make_dm(story, after, guide):
     if key in PERSON_KEYS and name:
         attitude = after["attitudes"][name]
         job["person"] = {"name": show_name(story, "사람", name), "bio": story.people[name].bio,
+                         "doing": find_doing(story, after, name),
                          "attitude": f"믿음 {LEVELS[attitude['trust']]}, 두려움 {LEVELS[attitude['fear']]}"}
     return job

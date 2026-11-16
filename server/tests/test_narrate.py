@@ -10,6 +10,7 @@ def test_a_text_fails_on_low_checks_and_on_length():
     assert judge(job, {"added": {"noul": 0.9}, "meaning": {"noul": 0.4}}, "하나. 둘! 셋? 넷.")[0] == [
         "added", "meaning", "length"]
     assert count_sentences("……알았소, 그렇다면 말하리다. 해 지기 전에 떠났소") == 2
+    assert count_sentences("그... 그래요. 미... 미안하면 됐어요.") == 2   # research2-text-skeleton 인상 리사
     assert judge(job, {"added": {"noul": 0.2}, "meaning": {"noul": 0.8}}, "말 모르겠어요.")[0] == []   # a person keeps their own speech
 
 
@@ -38,6 +39,22 @@ def test_the_dm_shows_a_sign_in_합니다체_without_advice_or_invented_speech()
     assert judge(dm, low, "아직 가 보지 않은 경기장으로 가 보길 권합니다.")[0] == ["push"]
     assert judge(dm, low, "경기장 쪽에서 함성이 한 차례 터져 나옵니다.")[0] == []
     assert judge({"kind": "dm", "key": "conclude"}, low, "공이 울립니다. 당신의 결론을 들려주십시오.")[0] == []
+
+
+def test_narration_in_해라체_is_written_again():
+    low = {"added": {"noul": 0.1}}
+    assert judge({"kind": "scene"}, low, "풀 냄새가 납니다. 넬은 처마 밑에서 풀 다발을 뒤집어 건다.")[0] == ["style"]   # research2-text-dawn
+    assert judge({"kind": "scene"}, low, "넬이 처마 밑에서 풀 다발을 뒤집어 겁니다. \"됐다.\" 하고 중얼거립니다.")[0] == []
+    assert judge({"kind": "answer", "says": [], "lines": [], "quiet": False}, low, "됐다. 가 보거라.")[0] == []
+
+
+def test_brackets_are_written_again_in_every_kind():
+    low = {"added": {"noul": 0.1}, "quiet": {"noul": 0.9}}
+    scene = {"kind": "scene"}
+    assert judge(scene, low, "대기실입니다. 최두식(빈 벨트 케이스 앞을 서성인다)")[0] == ["bracket"]   # research-text-arena
+    assert judge(scene, low, "대기실입니다. 최두식이 빈 벨트 케이스 앞을 서성입니다.")[0] == []
+    answer = {"kind": "answer", "says": ["답할 것이 없다"], "lines": [], "quiet": True}
+    assert judge(answer, low, "(나무 뒤에서 눈을 깜빡이며) 그런 건 잘 모르겠어요.")[0] == ["bracket"]
 
 
 def test_an_answer_that_repeats_an_earlier_one_is_written_again():

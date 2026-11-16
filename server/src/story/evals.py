@@ -16,7 +16,7 @@ from ..models.llm import LLMClient
 from ..names import show_line, show_name
 from ..narrate import Narrator
 from ..rules.state import start_state
-from ..slots import LEVELS
+from ..slots import LEVELS, list_doing
 from .load import StoryError, load_story, parse_address
 
 GOAL_RIGHT = 0.85
@@ -148,7 +148,7 @@ def list_text_jobs(story):
     jobs = []
     for name, person in story.people.items():
         mood = person.attitude
-        base = {"kind": "answer", "person": show_name(story, "사람", name), "bio": person.bio,
+        base = {"kind": "answer", "person": show_name(story, "사람", name), "bio": person.bio, "doing": person.doing.get(0),
                 "attitude": f"믿음 {LEVELS[mood.trust]}, 두려움 {LEVELS[mood.fear]}"}
         for topic, entry in person.topics.items():
             said = entry.asks[0] if entry.asks else f"{topic}에 관해 묻습니다."
@@ -164,9 +164,10 @@ def list_text_jobs(story):
     for name, place in story.places.items():
         written = [show_line(story, a) for a, line in story.lines.items()
                    if line.kind == "볼 것" and line.place == name and not line.cond and not line.lock]
-        people = [show_name(story, "사람", p) for p, person in story.people.items() if person.place == name]
+        here = [p for p, person in story.people.items() if person.place == name]
         jobs.append((f"곳 {name}", {"kind": "scene", "place": show_name(story, "곳", name), "desc": place.desc,
-                                    "written": written, "happening": [], "people": people}))
+                                    "written": written, "happening": [], "people": [show_name(story, "사람", p) for p in here],
+                                    "doing": list_doing(story, {"spent": 0}, here), "mood": story.head.mood}))
     return jobs
 
 

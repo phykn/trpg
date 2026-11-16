@@ -110,6 +110,7 @@ class Person(Shape):
     display: str | None = Field(None, alias="화면 이름")
     impressions: dict[str, str] = Field({}, alias="인상")   # the person's own, beside the common ones
     close: list[str] = Field([], alias="가까운 사람")
+    doing: dict[int, str] = Field({}, alias="하는 일")   # from which spent cell each holds (game/08 2절)
 
 
 class Lock(Shape):
@@ -197,6 +198,7 @@ class Head(Shape):
     start: str = Field(alias="시작하는 곳")
     cells: int = Field(alias="칸 수", ge=1)
     clock: Clock | None = Field(None, alias="시각")
+    mood: str | None = Field(None, alias="분위기")   # the voice of scenes and the DM (game/08 2절)
     truth: Truth = Field(alias="진실")
 
 
@@ -234,6 +236,13 @@ class StoryFile(Shape):
             for topic in p.topics:
                 if "." in topic:
                     raise ValueError(f"화제 {person}.{topic}: a name has no '.'")
+        return self
+
+    @model_validator(mode="after")
+    def fit_cells(self):
+        for person, p in self.people.items():
+            if p.doing and (0 not in p.doing or any(not 0 <= at <= self.head.cells for at in p.doing)):
+                raise ValueError(f"사람 {person}의 하는 일: 칸 {sorted(p.doing)} must start at 0 and end by {self.head.cells}")
         for event in self.events:
             if event.at > self.head.cells:
                 raise ValueError(f"번진 일 때 {event.at} is past 칸 수 {self.head.cells}")

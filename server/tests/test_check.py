@@ -29,6 +29,8 @@ def test_both_stories_pass_and_the_first_takes_three_cells(capsys):
 def drop_event_and_shrink(d):
     d["번진 일"] = []
     d["머리"]["칸 수"] = 4
+    for person in d["사람"].values():   # what they do later would run past the cells
+        person["하는 일"] = {0: person["하는 일"][0]}
 
 
 @pytest.mark.parametrize("folder, edit, name, detail", [

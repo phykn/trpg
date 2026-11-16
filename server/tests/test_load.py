@@ -60,6 +60,8 @@ def test_each_pointer_to_nothing_is_named():
     (lambda d: d["사실"].update({"광장": "x"}), "광장 names both 사실 and 곳"),
     (lambda d: d["번진 일"][0].pop("조짐"), "조짐 is required"),
     (lambda d: d["볼 것"]["꺼진 등잔"].update({"물건인가": "yes"}), "write 예 or 아니오"),
+    (lambda d: d["사람"]["리사"].update({"하는 일": {1: "x"}}), "리사의 하는 일: .* must start at 0"),
+    (lambda d: d["사람"]["리사"].update({"하는 일": {0: "x", 9: "y"}}), "리사의 하는 일: .* end by 8"),
 ])
 def test_shape_errors_stop_reading(tmp_path, edit, error):
     data = skeleton_data()

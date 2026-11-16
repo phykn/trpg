@@ -21,6 +21,10 @@ def eul(word):
     return f"{word}{'을' if has_batchim(word) else '를'}"
 
 
+def eun(word):
+    return f"{word}{'은' if has_batchim(word) else '는'}"
+
+
 def ro(word):
     # ㄹ (final 8) takes 로, like a word without a final consonant.
     code = ord(word[-1]) - 0xAC00
