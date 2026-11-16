@@ -14,11 +14,10 @@ shadow.set()
 NSColor.black.setFill()
 tile.fill()
 NSGraphicsContext.current?.restoreGraphicsState()
-// the client's canvas colors (client/design/tokens.js)
 NSGradient(colors: [NSColor(red: 0.04, green: 0.08, blue: 0.09, alpha: 1),
                     NSColor(red: 0.12, green: 0.22, blue: 0.25, alpha: 1)])!.draw(in: tile, angle: -60)
 
-// a die in the client's gold, its middle pip the server light
+// a gold die, its middle pip the green of a running server
 let gold = NSColor(red: 0.90, green: 0.74, blue: 0.46, alpha: 1)
 let die = NSRect(x: 252, y: 252, width: 520, height: 520)
 let face = NSBezierPath(roundedRect: die, xRadius: 112, yRadius: 112)

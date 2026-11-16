@@ -8,57 +8,53 @@ async function listen(t, handler) {
   const server = http.createServer(handler).listen(0, '127.0.0.1');
   await once(server, 'listening');
   t.after(() => server.close());
-  return server;
+  return `http://127.0.0.1:${server.address().port}`;
 }
 
-test('forwards an authenticated choice, query and receipt and preserves conflict responses', async (t) => {
+const portOf = (url) => Number(new URL(url).port);
+
+test('a command reaches the API whole, and a conflict comes back as the API sent it', async (t) => {
+  const command = { request_id: 'r1', revision: 3, do: 'a2' };
   const api = await listen(t, async (req, res) => {
-    assert.equal(req.url, '/games/g_saved/commands?source=phone');
-    assert.equal(req.method, 'POST');
-    assert.equal(req.headers.authorization, 'Basic bG9jYWw6bG9jYWw=');
     let body = '';
     for await (const chunk of req) body += chunk;
-    assert.deepEqual(JSON.parse(body), { option_id: 'move:quay', revision: 3, request_id: 'same-receipt' });
+    assert.deepEqual([req.method, req.url, req.headers.authorization, JSON.parse(body)],
+      ['POST', '/games/g1/commands?x=1', 'Basic bG9jYWw6bG9jYWw=', command]);
     res.writeHead(409, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ detail: 'stale choice' }));
+    res.end(JSON.stringify({ view: { revision: 4 } }));
   });
-  const web = await listen(t, proxyApi(() => assert.fail('API request fell through'), api.address().port));
-  const response = await fetch(`http://127.0.0.1:${web.address().port}/api/games/g_saved/commands?source=phone`, {
-    method: 'POST', headers: { Authorization: 'Basic bG9jYWw6bG9jYWw=', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ option_id: 'move:quay', revision: 3, request_id: 'same-receipt' }),
+  const web = await listen(t, proxyApi(() => assert.fail('an API path fell through to Metro'), portOf(api)));
+  const response = await fetch(`${web}/api/games/g1/commands?x=1`, {
+    method: 'POST', headers: { Authorization: 'Basic bG9jYWw6bG9jYWw=' }, body: JSON.stringify(command),
   });
   assert.equal(response.status, 409);
-  assert.deepEqual(await response.json(), { detail: 'stale choice' });
+  assert.deepEqual(await response.json(), { view: { revision: 4 } });
 });
 
-test('leaves web routes to Metro', async (t) => {
+test('every other path is left to Metro', async (t) => {
   const middleware = proxyApi((req, res, next) => next());
   const web = await listen(t, (req, res) => middleware(req, res, () => res.end(req.url)));
-  const response = await fetch(`http://127.0.0.1:${web.address().port}/assets/example.png`);
-  assert.equal(await response.text(), '/assets/example.png');
+  assert.equal(await (await fetch(`${web}/assets/icon.png`)).text(), '/assets/icon.png');
 });
 
-test('returns 502 instead of hanging when the API is stopped', async (t) => {
-  const api = await listen(t, () => {});
-  const port = api.address().port;
-  await new Promise((resolve) => api.close(resolve));
+test('a stopped API answers 502 at once', async (t) => {
+  const stopped = http.createServer().listen(0, '127.0.0.1');
+  await once(stopped, 'listening');
+  const { port } = stopped.address();
+  await new Promise((resolve) => stopped.close(resolve));
   const web = await listen(t, proxyApi(() => {}, port));
-  const response = await fetch(`http://127.0.0.1:${web.address().port}/api/catalog`);
+  const response = await fetch(`${web}/api/stories`);
   assert.equal(response.status, 502);
   assert.deepEqual(await response.json(), { error: 'api_unavailable' });
 });
 
-test('a broken API response does not take down the web server', async (t) => {
+test('an answer cut off midway does not take Metro down', async (t) => {
   const api = await listen(t, (req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.write('{');
     setImmediate(() => res.destroy());
   });
-  const web = await listen(t, proxyApi((req, res) => res.end('web alive'), api.address().port));
-  const url = `http://127.0.0.1:${web.address().port}`;
-  await assert.rejects(async () => {
-    const response = await fetch(`${url}/api/catalog`);
-    await response.text();
-  });
-  assert.equal(await (await fetch(`${url}/`)).text(), 'web alive');
+  const web = await listen(t, proxyApi((req, res) => res.end('web alive'), portOf(api)));
+  await assert.rejects(async () => (await fetch(`${web}/api/stories`)).text());
+  assert.equal(await (await fetch(`${web}/`)).text(), 'web alive');
 });

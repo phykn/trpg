@@ -1,11 +1,12 @@
 import AppKit
 
-final class Section: NSView {
+// The server: one button that starts and stops serve.cjs, its state, and the address to open on a phone.
+final class ServerPanel: NSView {
     var env: () -> [String: String] = { [:] }
     var onOwn: ((pid_t, Bool) -> Void)?
     private var pid: pid_t?               // the group this app started
     private var api = false               // something answers on the API port, started here or elsewhere
-    private var state = Progress()
+    private var state = ServeState()
     private var stopping = false
     private var failure: String?
     private var probing = false
@@ -50,16 +51,14 @@ final class Section: NSView {
         address.font = .monospacedSystemFont(ofSize: 12.5, weight: .medium)
         address.lineBreakMode = .byTruncatingMiddle
         address.isSelectable = true
-        for (b, sel) in [(copy, #selector(copyAddress)), (open, #selector(openPage))] {
+        for (b, action, symbol) in [(copy, #selector(copyAddress), "doc.on.doc"), (open, #selector(openPage), "arrow.up.right.square")] {
             b.bezelStyle = .push
             b.controlSize = .small
             b.target = self
-            b.action = sel
+            b.action = action
+            b.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+            b.imagePosition = .imageLeading
         }
-        copy.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: nil)
-        open.image = NSImage(systemSymbolName: "arrow.up.right.square", accessibilityDescription: nil)
-        copy.imagePosition = .imageLeading
-        open.imagePosition = .imageLeading
         let actions = NSStackView(views: [copy, open])
         actions.spacing = 6
         note.font = .systemFont(ofSize: 11.5)
@@ -112,18 +111,18 @@ final class Section: NSView {
         probing = true
         let gen = generation
         DispatchQueue.global().async {
-            let up = listening(apiPort), p = progress()
+            let up = isListening(apiPort), s = readServeState()
             DispatchQueue.main.async {
                 self.probing = false
                 guard gen == self.generation else { return }
                 self.api = up
-                self.state = p
+                self.state = s
                 self.render()
             }
         }
     }
 
-    func render() {
+    private func render() {
         var head = "Stopped", color = NSColor.tertiaryLabelColor, busy = false
         var cap = "PHONE", url: String?, text = "Start the server to get an address you can open from anywhere."
         var textColor = NSColor.secondaryLabelColor, logged = false
@@ -196,9 +195,9 @@ final class Section: NSView {
 
     private func start() {
         failure = nil
-        state = Progress()
+        state = ServeState()
         do {
-            let p = try spawn(env: env())
+            let p = try spawnServe(env: env())
             pid = p
             onOwn?(p, true)
             DispatchQueue.global().async {
@@ -215,8 +214,9 @@ final class Section: NSView {
     private func exited(_ p: pid_t) {
         guard pid == p else { return }
         if !stopping {
-            failure = failureLine()
-            // serve.cjs gave up on its own; an API still waiting on a model would otherwise outlive it
+            // serve.cjs says why it gave up; with nothing said, it did not get far enough to say it
+            failure = readServeState().error ?? "The server stopped. See the log."
+            // an API still waiting on a model would otherwise outlive the script
             DispatchQueue.global().async { stopGroup(p) }
         }
         pid = nil
@@ -240,7 +240,7 @@ final class Section: NSView {
                     self.onOwn?(p, false)
                 }
                 self.api = false
-                self.state = Progress()
+                self.state = ServeState()
                 self.generation += 1
                 self.render()
                 self.poll()

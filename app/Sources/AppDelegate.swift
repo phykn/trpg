@@ -1,17 +1,18 @@
 import AppKit
 
-let ownedFile = root.appendingPathComponent("logs/app-owned")
+// The process groups this app started, for the watchdog to stop if the app dies without stopping them.
+private let ownedURL = root.appendingPathComponent("logs/app-owned")
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 100),
                           styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
-    let server = Section()
+    let server = ServerPanel()
     let models = ModelBar()
     private var owned: [pid_t] = []
 
     func applicationDidFinishLaunching(_ note: Notification) {
         // a list left by an earlier run whose watchdog never ran, e.g. across a reboot; this run started none of those
-        try? FileManager.default.removeItem(at: ownedFile)
+        try? FileManager.default.removeItem(at: ownedURL)
         buildWindow()
         window.center()
         window.makeKeyAndOrderFront(nil)
@@ -24,12 +25,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.refresh() }
     }
 
-    func refresh() {
+    private func refresh() {
         server.poll()
         models.poll()
     }
 
-    func buildWindow() {
+    private func buildWindow() {
         window.title = "TRPG"
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
@@ -59,17 +60,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ])
     }
 
-    func own(_ pid: pid_t, _ on: Bool) {
+    private func own(_ pid: pid_t, _ on: Bool) {
         owned.removeAll { $0 == pid }
         if on { owned.append(pid) }
-        try? FileManager.default.createDirectory(at: ownedFile.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? owned.map { "\($0)\n" }.joined().write(to: ownedFile, atomically: true, encoding: .utf8)
+        try? FileManager.default.createDirectory(at: ownedURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? owned.map { "\($0)\n" }.joined().write(to: ownedURL, atomically: true, encoding: .utf8)
     }
 
-    // serve.cjs clears its tunnel URL from KV on SIGTERM, so the script alone gets it first.
-    // applicationWillTerminate runs only on a normal quit. A child process outlives the app (macOS does not kill
-    // children with their parent), so it can stop the app's servers after a force quit or crash too.
-    func startWatchdog() {
+    // A child process outlives the app (macOS does not kill children with their parent), so it can stop the app's
+    // servers after a force quit or a crash too. serve.cjs clears its tunnel URL from KV on SIGTERM, so the script
+    // alone gets that first, and the rest of its group is killed after.
+    private func startWatchdog() {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/sh")
         p.arguments = ["-c", """
@@ -79,7 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             for pg in $pgs; do kill -TERM "$pg" 2>/dev/null; done
             sleep 15
             for pg in $pgs; do kill -KILL -- "-$pg" 2>/dev/null; done
-            """, "watchdog", String(getpid()), ownedFile.path]
+            """, "watchdog", String(getpid()), ownedURL.path]
         p.standardOutput = FileHandle.nullDevice
         p.standardError = FileHandle.nullDevice
         try? p.run()

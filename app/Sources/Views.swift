@@ -16,22 +16,20 @@ func link(_ title: String) -> NSButton {
     return b
 }
 
-// resolved when drawn, so they follow light and dark mode
-extension NSColor {
-    static let groupFill = NSColor(name: nil) { $0.isDark ? .white.withAlphaComponent(0.05) : .white.withAlphaComponent(0.7) }
-    static let groupStroke = NSColor(name: nil) { $0.isDark ? .white.withAlphaComponent(0.09) : .black.withAlphaComponent(0.09) }
-}
+// Resolved when drawn, so they follow light and dark mode.
+private let groupFill = NSColor(name: nil) { $0.isDark ? .white.withAlphaComponent(0.05) : .white.withAlphaComponent(0.7) }
+private let groupStroke = NSColor(name: nil) { $0.isDark ? .white.withAlphaComponent(0.09) : .black.withAlphaComponent(0.09) }
 
-extension NSAppearance {
+private extension NSAppearance {
     var isDark: Bool { bestMatch(from: [.aqua, .darkAqua]) == .darkAqua }
 }
 
 final class Card: NSView {
     override func draw(_ r: NSRect) {
         let box = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 12, yRadius: 12)
-        NSColor.groupFill.setFill()
+        groupFill.setFill()
         box.fill()
-        NSColor.groupStroke.setStroke()
+        groupStroke.setStroke()
         box.stroke()
     }
 }

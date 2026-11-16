@@ -1,13 +1,29 @@
+// `npm run serve`: the local API behind a quick tunnel whose URL the Worker reads from KV, with watchers that restart
+// the API when the server or a story changes and redeploy the page when the client changes. Its state goes to
+// logs/serve.json for the Mac app.
 const { spawn, spawnSync } = require('node:child_process');
+const fs = require('node:fs');
 const path = require('node:path');
-const { health } = require('./common.cjs');
+const { checkApi, root, sleep, spawnApi, waitForApi } = require('./common.cjs');
 const { tunnelBinary } = require('./tunnel.cjs');
 
-const root = path.resolve(__dirname, '../..');
 const client = path.join(root, 'client');
-const wrangler = path.join(__dirname, '../node_modules/wrangler/bin/wrangler.js');
+const wrangler = path.join(client, 'node_modules/wrangler/bin/wrangler.js');
+const statePath = path.join(root, 'logs/serve.json');
+const state = { ready: false, address: null, deploying: false, error: null };
 const children = [];
 let stopping = false;
+let published = false;   // KV points at this run's tunnel
+let api = null;
+let deploying = false;
+let deployAgain = false;
+
+function report(change) {
+  Object.assign(state, change);
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(`${statePath}.tmp`, JSON.stringify(state));
+  fs.renameSync(`${statePath}.tmp`, statePath);
+}
 
 function kv(...args) {
   const { status } = spawnSync(process.execPath, [wrangler, 'kv', 'key', ...args, '--binding', 'TUNNEL', '--remote'],
@@ -19,72 +35,65 @@ function stop(code = 0) {
   if (stopping) return;
   stopping = true;
   for (const child of children) if (child.exitCode === null) child.kill('SIGTERM');
-  // Without this the Worker keeps proxying to a dead tunnel until KV is overwritten.
-  kv('delete', 'origin');
+  // Without this the Worker keeps forwarding to a dead tunnel until KV is overwritten. A run that never published
+  // leaves KV alone: it may belong to another serve that is still running.
+  if (published) kv('delete', 'origin');
   console.log('서버를 내렸습니다.');
   process.exit(code);
 }
 
 function track(child, name) {
   children.push(child);
-  child.on('error', (error) => { console.error(`${name}: ${error.message}`); stop(1); });
+  child.on('error', (error) => fail(new Error(`${name}: ${error.message}`)));
   return child;
 }
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function fail(error) {
+  console.error(error.message);
+  report({ error: error.message });
+  stop(1);
+}
 
-const healthy = async (base) => (await health(base, 5000)) === 'engine';
-
-let api = null;
-
-function spawnApi() {
-  const self = track(spawn(path.join(root, '.venv/bin/python'), ['server/run_api.py', '--local'], { cwd: root, stdio: 'inherit' }), 'api');
+function startApi() {
+  const self = track(spawnApi(), 'api');
   self.on('exit', () => { if (!stopping && api === self) console.error('API가 멈췄습니다. 코드를 고치면 다시 시작합니다.'); });
   api = self;
+  return self;
 }
 
-async function startApi() {
-  if (await healthy('http://127.0.0.1:8000')) {
-    throw new Error('Port 8000 already has an API. Stop it so serve can restart its own API on code changes.');
-  }
-  spawnApi();
-  for (let attempt = 0; attempt < 60; attempt++) {
-    if (await healthy('http://127.0.0.1:8000')) return;
-    await sleep(500);
-  }
-  throw new Error('API startup timed out. Check the server output.');
-}
-
+// Only the API restarts; the tunnel and its KV entry stay, so the address keeps working.
 function restartApi() {
   const old = api;
   api = null;
-  const start = () => { if (!stopping) { console.log('\n코드가 바뀌어 API를 다시 시작합니다.'); spawnApi(); } };
+  const start = () => {
+    if (stopping) return;
+    console.log('\n코드가 바뀌어 API를 다시 시작합니다.');
+    startApi();
+  };
   if (old && old.exitCode === null && old.signalCode === null) {
     old.once('exit', start);
     old.kill('SIGTERM');
   } else start();
 }
 
-// Only the API restarts; the tunnel and its KV entry stay, so the address keeps working.
-function watchSources() {
+function watch(dir, accept, act, ms) {
   let timer = null;
-  const watch = (dir, ext) => require('node:fs').watch(path.join(root, dir), { recursive: true }, (_, file) => {
-    if (!file || !file.endsWith(ext) || file.includes('__pycache__') || file.startsWith('tests')) return;
+  fs.watch(path.join(root, dir), { recursive: true }, (_, file) => {
+    if (!file || !accept(file)) return;
     clearTimeout(timer);
-    timer = setTimeout(restartApi, 500);
+    timer = setTimeout(act, ms);
   });
-  watch('server', '.py');
-  watch('scenarios', '.yaml');
 }
-
-let deploying = false;
-let deployAgain = false;
 
 // One build at a time; edits made during a build trigger exactly one more.
 function deployClient(reason = '화면 코드가 바뀌어 배포합니다') {
   if (stopping) return;
-  if (deploying) { deployAgain = true; return; }
+  if (deploying) {
+    deployAgain = true;
+    return;
+  }
   deploying = true;
+  report({ deploying: true });
   console.log(`\n${reason} (1분쯤).`);
   let log = '';
   const child = track(spawn(process.execPath, [path.join(__dirname, 'deploy.cjs')], { cwd: client, stdio: ['ignore', 'pipe', 'pipe'] }), 'deploy');
@@ -95,18 +104,10 @@ function deployClient(reason = '화면 코드가 바뀌어 배포합니다') {
     if (stopping) return;
     if (code === 0) console.log('화면 배포 완료. 새로고침하면 반영됩니다.');
     else console.error(`화면 배포 실패:\n${log.trim().split('\n').slice(-15).join('\n')}`);
-    if (deployAgain) { deployAgain = false; deployClient(); }
-  });
-}
-
-function watchClient() {
-  let timer = null;
-  const skip = ['node_modules', 'dist', '.expo', '.wrangler', '__tests__', 'scripts'];
-  require('node:fs').watch(client, { recursive: true }, (_, file) => {
-    if (!file || skip.some((dir) => file.split(path.sep).includes(dir))) return;
-    if (!/\.(tsx?|jsx?|cjs|css|json|jsonc|png|ttf)$/.test(file) || file.startsWith('package-lock')) return;
-    clearTimeout(timer);
-    timer = setTimeout(deployClient, 2000);
+    if (deployAgain) {
+      deployAgain = false;
+      deployClient();
+    } else report({ deploying: false });
   });
 }
 
@@ -124,13 +125,15 @@ async function runTunnel(binary) {
       tunnel.on('exit', () => resolve(null));
     });
     if (url) {
-      let ready = false;
-      for (let attempt = 0; attempt < 60 && !ready && tunnel.exitCode === null; attempt++) {
-        ready = await healthy(url);
-        if (!ready) await sleep(2000);
+      let up = false;
+      for (let attempt = 0; attempt < 60 && !up && tunnel.exitCode === null; attempt++) {
+        up = await checkApi(url, 5000) === 'engine';
+        if (!up) await sleep(2000);
       }
-      if (ready && kv('put', 'origin', url)) {
-        console.log(`\n외부 접속 준비 완료: ${address ?? '배포한 workers.dev 주소'} (1분쯤 뒤부터)\n터널: ${url}\n코드를 바꾸면 알아서 반영합니다: 서버·스토리는 API 재시작, 화면은 자동 배포(1분쯤).\n종료: Ctrl+C\n`);
+      if (up && kv('put', 'origin', url)) {
+        published = true;
+        console.log(`\n외부 접속 준비 완료: ${state.address ?? '배포한 workers.dev 주소'} (1분쯤 뒤부터)\n터널: ${url}\n코드를 바꾸면 알아서 반영합니다: 서버·스토리는 API 재시작, 화면은 자동 배포(1분쯤).\n종료: Ctrl+C\n`);
+        report({ ready: true });
       } else {
         console.error('터널이 응답하지 않아 다시 엽니다.');
         tunnel.kill('SIGTERM');
@@ -144,8 +147,8 @@ async function runTunnel(binary) {
   }
 }
 
-// The Worker's address comes from the account's workers.dev subdomain at run time; the repo never holds it.
-async function workerAddress() {
+// The Worker's address comes from the account's workers.dev subdomain at run time; the repository never holds it.
+async function findWorkerAddress() {
   try {
     const json = (...args) => JSON.parse(spawnSync(process.execPath, [wrangler, ...args, '--json'],
       { cwd: client, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).stdout);
@@ -154,26 +157,31 @@ async function workerAddress() {
     const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/workers/subdomain`,
       { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) });
     const { subdomain } = (await response.json()).result;
-    const config = require('node:fs').readFileSync(path.join(client, 'wrangler.jsonc'), 'utf8').replace(/^\s*\/\/.*$/gm, '');
+    const config = fs.readFileSync(path.join(client, 'wrangler.jsonc'), 'utf8').replace(/^\s*\/\/.*$/gm, '');
     return `https://${JSON.parse(config).name}.${subdomain}.workers.dev`;
   } catch {
     return null;
   }
 }
 
-let address = null;
-
 async function main() {
-  address = await workerAddress();
+  report({});
+  report({ address: await findWorkerAddress() });
   if (process.platform === 'darwin') track(spawn('caffeinate', ['-i', '-w', String(process.pid)], { stdio: 'ignore' }), 'caffeinate');
   const binary = await tunnelBinary();
-  await startApi();
-  watchSources();
-  watchClient();
+  if (await checkApi() === 'engine') {
+    throw new Error('Port 8000 already has an API. Stop it so serve can restart its own API on code changes.');
+  }
+  await waitForApi(startApi());
+  watch('server', (file) => file.endsWith('.py') && !file.includes('__pycache__') && !file.startsWith('tests'), restartApi, 500);
+  watch('scenarios', (file) => file.endsWith('.yaml'), restartApi, 500);
+  const skipped = ['node_modules', 'dist', '.expo', '.wrangler', '__tests__', 'scripts'];
+  watch('client', (file) => !skipped.some((dir) => file.split(path.sep).includes(dir))
+    && /\.(tsx?|jsx?|cjs|css|json|jsonc|png|ttf)$/.test(file) && !file.startsWith('package-lock'), () => deployClient(), 2000);
   deployClient('최신 화면을 배포합니다');
   await runTunnel(binary);
 }
 
 process.on('SIGINT', () => stop());
 process.on('SIGTERM', () => stop());
-main().catch((error) => { console.error(error.message); stop(1); });
+main().catch(fail);

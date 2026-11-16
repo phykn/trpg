@@ -1,13 +1,12 @@
-// Explicit loopback settings; keep local startup independent of personal env files.
+// `npm run web` and `npm run build:web`: Expo against the local API, whatever the personal env files say.
 const { spawn } = require('node:child_process');
 const { localEnv } = require('./common.cjs');
 
 const build = process.argv.includes('--export');
-const extraArgs = process.argv.slice(2).filter((arg) => arg !== '--export');
-const hasHostOption = extraArgs.some((arg) => ['--offline', '--host', '--localhost', '--lan', '--tunnel'].includes(arg) || arg.startsWith('--host='));
-const hostArgs = hasHostOption ? [] : ['--host', 'localhost'];
-const command = build ? ['export', '--platform', 'web'] : ['start', '--web', '--port', '8090', ...hostArgs];
-const child = spawn(process.execPath, [require.resolve('expo/bin/cli'), ...command, ...extraArgs], {
+const extra = process.argv.slice(2).filter((arg) => arg !== '--export');
+const hosted = extra.some((arg) => ['--offline', '--host', '--localhost', '--lan', '--tunnel'].includes(arg) || arg.startsWith('--host='));
+const command = build ? ['export', '--platform', 'web'] : ['start', '--web', '--port', '8090', ...(hosted ? [] : ['--host', 'localhost'])];
+const child = spawn(process.execPath, [require.resolve('expo/bin/cli'), ...command, ...extra], {
   stdio: 'inherit',
   env: localEnv('http://127.0.0.1:8000'),
 });

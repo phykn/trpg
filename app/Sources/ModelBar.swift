@@ -13,42 +13,40 @@ print(json.dumps({
 }))
 """
 
-private struct Config: Decodable {
+private struct ModelConfig: Decodable {
     struct Role: Decodable { let url: String; let models: [String: [String]] }
     let decision: Role
     let llm: Role
 }
 
-// Shows which engine model each model server has loaded, and hands those names to the API at start, so it runs
-// with whatever LOCAL-MODELS loaded. The API still checks them itself (DecisionClient.check, LLMClient.check).
+// Shows which of the server's models each model server has loaded, and hands those names to the API at start, so it
+// runs with whatever local-models loaded. The API still checks them itself (DecisionClient.check, LLMClient.check).
 final class ModelBar: NSView {
     private enum State { case unknown, off, empty, other([String]), on(String) }
 
     private final class Role {
         let env: String
         let title: String
+        // each model server lists what it loaded in its own shape
+        let listLoaded: ([String: Any]) -> [String]
         var url: URL?
         var models: [String: [String]] = [:]
         var state = State.unknown
         var probing = false
         let light = StatusLight()
         let name = label("", size: 12)
-        // each server lists its models in its own shape
-        let loaded: ([String: Any]) -> [String]
 
-        init(env: String, title: String, loaded: @escaping ([String: Any]) -> [String]) {
+        init(env: String, title: String, listLoaded: @escaping ([String: Any]) -> [String]) {
             self.env = env
             self.title = title
-            self.loaded = loaded
+            self.listLoaded = listLoaded
         }
 
         var key: String? { if case .on(let k) = state { k } else { nil } }
     }
 
     private let roles = [
-        Role(env: "DECISION_MODEL", title: "Decision") { obj in
-            (obj["run"] as? String).map { [$0] } ?? []
-        },
+        Role(env: "DECISION_MODEL", title: "Decision") { obj in (obj["run"] as? String).map { [$0] } ?? [] },
         Role(env: "LLM_MODEL", title: "Narration") { obj in
             let ms = obj["data"] as? [[String: Any]] ?? []
             return ms.filter { $0["loaded"] as? Bool ?? (ms.count == 1) }.compactMap { $0["id"] as? String }
@@ -86,7 +84,7 @@ final class ModelBar: NSView {
     }
     required init?(coder: NSCoder) { fatalError() }
 
-    // off the main thread: it waits for Python
+    // Off the main thread: it waits for Python.
     func load() {
         let p = Process()
         p.executableURL = root.appendingPathComponent(".venv/bin/python")
@@ -95,13 +93,13 @@ final class ModelBar: NSView {
         let out = Pipe(), err = Pipe()
         p.standardOutput = out
         p.standardError = err
-        var cfg: Config?
+        var cfg: ModelConfig?
         var why = ""
         do {
             try p.run()
             let o = out.fileHandleForReading.readDataToEndOfFile(), e = err.fileHandleForReading.readDataToEndOfFile()
             p.waitUntilExit()
-            cfg = try? JSONDecoder().decode(Config.self, from: o)
+            cfg = try? JSONDecoder().decode(ModelConfig.self, from: o)
             why = String(data: e, encoding: .utf8)?.split(separator: "\n").last.map(String.init) ?? ""
         } catch {
             why = error.localizedDescription
@@ -139,9 +137,10 @@ final class ModelBar: NSView {
                         self.render()
                         return
                     }
-                    let ids = r.loaded(obj)
+                    // a loaded model is the server's name for it when its id contains one of that model's ids
+                    let ids = r.listLoaded(obj)
                     let key = r.models.keys.sorted().first { k in
-                        r.models[k]!.contains { p in ids.contains { $0.lowercased().contains(p.lowercased()) } }
+                        r.models[k]!.contains { m in ids.contains { $0.lowercased().contains(m.lowercased()) } }
                     }
                     r.state = key.map { .on($0) } ?? (ids.isEmpty ? .empty : .other(ids))
                     self.render()
