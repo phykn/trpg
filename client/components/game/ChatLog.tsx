@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { pressed } from '@/components/ui/Button';
 import { text } from '@/design/ui';
+import { useReveal } from '@/logic/reveal';
 import { splitTopics } from '@/logic/topics';
 import type { Entry } from '@/logic/useGame';
 import { findHue } from './speaker';
@@ -50,6 +51,7 @@ export function Spoken({ text: words, topics, className, onTopic }: {
 function Line({ entry, met, typing, onNote, onTopic }: {
   entry: Entry; met: string[]; typing: boolean; onNote: (lines: number[]) => void; onTopic: (topic: Topic) => void;
 }) {
+  const shown = useReveal('slot' in entry ? entry.text : '');
   if (entry.kind === 'said') {
     return (
       <View className="max-w-[85%] self-end rounded-2xl rounded-br-sm bg-gold-muted px-3 py-2">
@@ -72,7 +74,7 @@ function Line({ entry, met, typing, onNote, onTopic }: {
   if (entry.who) {
     return (
       <Speaker who={entry.who} met={met}>
-        {typing ? <Typing /> : <Spoken text={entry.text} topics={entry.topics} className={text()}
+        {typing ? <Typing /> : <Spoken text={shown} topics={entry.topics} className={text()}
           onTopic={(name) => onTopic({ name, who: entry.who })} />}
       </Speaker>
     );
@@ -81,7 +83,7 @@ function Line({ entry, met, typing, onNote, onTopic }: {
   if (!entry.text) return null;
   const happening = entry.kind === 'omen' || entry.kind === 'event';
   return (
-    <Spoken text={entry.text} topics={entry.topics} className={text({ kind: 'scene' }, happening && 'border-l-2 border-danger-fg pl-3')}
+    <Spoken text={shown} topics={entry.topics} className={text({ kind: 'scene' }, happening && 'border-l-2 border-danger-fg pl-3')}
       onTopic={(name) => onTopic({ name, who: null })} />
   );
 }
