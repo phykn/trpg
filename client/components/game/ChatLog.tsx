@@ -71,11 +71,17 @@ export function ChatLog({ log, met, waiting, outgoing, onNote }: {
   onNote: (lines: number[]) => void;
 }) {
   const ref = useRef<ScrollView>(null);
+  // While the reader is at the newest line, it stays in view when the box shrinks (the keyboard comes up) or grows.
+  const atBottom = useRef(true);
   // Texts stream turn by turn and slot by slot, so the first empty one is the one being written.
   const writing = waiting === 'streaming' ? log.find((e) => 'slot' in e && !e.text) : undefined;
   return (
     <ScrollView ref={ref} className="min-h-0 flex-1" contentContainerClassName="gap-3 px-4 py-4"
-      onContentSizeChange={() => ref.current?.scrollToEnd({ animated: false })}>
+      onContentSizeChange={() => ref.current?.scrollToEnd({ animated: false })}
+      onLayout={() => atBottom.current && ref.current?.scrollToEnd({ animated: false })} scrollEventThrottle={100}
+      onScroll={({ nativeEvent: { contentOffset, contentSize, layoutMeasurement } }) => {
+        atBottom.current = contentOffset.y + layoutMeasurement.height >= contentSize.height - 24;
+      }}>
       {log.map((e) => <Line key={e.key} entry={e} met={met} typing={e === writing} onNote={onNote} />)}
       {outgoing ? <Line entry={outgoing} met={met} typing={false} onNote={onNote} /> : null}
       {waiting === 'sending' ? <Typing /> : null}

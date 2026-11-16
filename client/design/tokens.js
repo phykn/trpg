@@ -35,6 +35,7 @@ const fontSize = {
   chip: ['12px', { lineHeight: '18px' }],
   panel: ['13px', { lineHeight: '20px' }],
   body: ['15px', { lineHeight: '24px' }],
+  input: ['16px', { lineHeight: '24px' }], // 16px keeps iOS from zooming in on focus
   title: ['17px', { lineHeight: '26px' }],
   hero: ['28px', { lineHeight: '36px' }],
   display: ['40px', { lineHeight: '48px' }],

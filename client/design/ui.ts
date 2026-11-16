@@ -24,6 +24,7 @@ export const text = withMerge(cva('text-fg-default', {
       title: 'font-sans-semibold text-title',
       scene: 'font-serif-body text-body', // narration and story writing
       body: 'font-sans text-body', // what people say, notebook lines
+      input: 'font-sans text-input', // what the player types
       strong: 'font-sans-semibold text-body', // on buttons and rows
       label: 'font-sans-semibold text-panel', // on pills
       tab: 'font-sans-semibold text-chip', // five tabs share 320
@@ -65,7 +66,8 @@ export const control = withMerge(cva('flex-row items-center', {
       tab: 'h-9 min-w-0 flex-1 justify-center gap-1 rounded-full px-1', // shares a row evenly
       button: 'h-12 justify-center gap-2 rounded-full px-5',
       row: 'min-h-12 gap-3 rounded-xl px-4 py-2',
-      field: 'h-11 rounded-full px-4',
+      // The chat box: the words and the send button inside one rounded box that grows with the words.
+      composer: 'items-end rounded-2xl border-2 border-border-default bg-canvas-floating',
     },
     tone: {
       idle: 'border border-border-strong',
@@ -74,7 +76,7 @@ export const control = withMerge(cva('flex-row items-center', {
       offer: 'border border-gold-fg bg-gold-muted',
       quiet: 'border border-border-default bg-canvas-subtle',
       dashed: 'border border-dashed border-border-strong',
-      field: 'border border-border-strong bg-canvas-floating',
+      focus: 'border-gold-fg',
     },
     off: { true: 'opacity-40' },
   },

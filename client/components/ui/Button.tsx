@@ -23,15 +23,14 @@ export function Button({ label, icon, tone = 'primary', disabled, onPress }: {
   );
 }
 
-export function IconButton({ icon, label, tone = 'plain', size = 36, disabled, onPress }: {
-  icon: IconName; label: string; tone?: 'plain' | 'gold'; size?: number; disabled?: boolean; onPress: () => void;
+export function IconButton({ icon, label, size = 36, disabled, onPress }: {
+  icon: IconName; label: string; size?: number; disabled?: boolean; onPress: () => void;
 }) {
-  const gold = tone === 'gold';
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }}
       disabled={disabled} onPress={onPress} style={(state) => ({ ...pressed(state), width: size, height: size })}
-      className={cn('items-center justify-center rounded-full', gold && 'bg-gold-fg', disabled && 'opacity-40')}>
-      <Icon name={icon} size={Math.round(size * 0.5)} color={gold ? colors.fg['on-emphasis'] : colors.fg.muted} width={2} />
+      className={cn('items-center justify-center rounded-full', disabled && 'opacity-40')}>
+      <Icon name={icon} size={Math.round(size * 0.5)} color={colors.fg.muted} width={2} />
     </Pressable>
   );
 }
