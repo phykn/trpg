@@ -18,7 +18,7 @@ def start_state(story, seed):
         "talks": {name: {"topics": {}, "passes": 0, "done": False} for name in story.people},
         "spent": 0, "place": start, "visited": [start], "looked": [],
         "events": {}, "where": {name: p.place for name, p in story.people.items()}, "gone": [], "lost": [],
-        "conclusion": None,
+        "impressions": {name: {} for name in story.people}, "rumors": [], "conclusion": None,
     }
     state, _ = write_up(story, state, [], 0)
     here = list_people_here(story, state)
@@ -128,6 +128,24 @@ def shift_attitude(state, change):
     return {"attitudes": {**state["attitudes"], person: {**old, axis: max(-1, min(1, old[axis] + change["by"]))}}}
 
 
+def impress(state, change):
+    old = state["impressions"][change["person"]]
+    name = change["impression"]
+    return {"impressions": {**state["impressions"], change["person"]: {**old, name: old.get(name, 0) + 1}}}
+
+
+def spread(state, change):
+    rumor = {k: change[k] for k in ("to", "about", "impression", "at", "seen")}
+    same = [r for r in state["rumors"] if (r["to"], r["about"], r["impression"]) == (rumor["to"], rumor["about"],
+                                                                                     rumor["impression"])]
+    return {} if same else {"rumors": state["rumors"] + [rumor]}
+
+
+def list_rumors(state, person):
+    """The rumors a person knows by now (data/03 2절)."""
+    return [r for r in state["rumors"] if r["to"] == person and r["at"] <= state["spent"] and person not in state["gone"]]
+
+
 def count_talk(state, change):
     old = state["talks"][change["person"]]
     talk = ({**old, "passes": change["value"]} if change["topic"] is None
@@ -160,6 +178,8 @@ WRITES = {
     "face": lambda _state, change: {"partner": change["person"]},
     "read": lambda state, change: {"read": state["read"] + [a for a in change["lines"] if a not in state["read"]]},
     "try": record_try,
+    "impress": impress,
+    "rumor": spread,
     "conclude": lambda _state, change: {"conclusion": {k: change[k] for k in ("who", "how", "why")}},
 }
 

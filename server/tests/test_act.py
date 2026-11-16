@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 from src.rules.act import Refused, act, roll_dice, was_tried
-from src.rules.state import start_state
+from src.rules.state import list_rumors, start_state
 from src.story.load import load_story
 
 STORY = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "skeleton")
@@ -166,3 +166,34 @@ def test_arriving_writes_who_is_there_and_looking_writes_what_lies_there():
     state, rs = play(1, [STATS, go("곡물 창고"), LOOK, LOOK])
     assert ops(rs[2])[0] == "look" and lamp in state["notebook"] and state["spent"] == 1
     assert ops(rs[3]) == [] and rs[3]["talk"] == [{"look": "곡물 창고"}]   # a second look only tells the scene again
+
+
+def said(impression, *topics):
+    heard = {"kind": "topics", "topics": list(topics)} if topics else {"kind": "chat"}
+    return {"do": "ask", "text": "x"}, {**heard, "impression": impression}
+
+
+def test_two_impressions_of_one_lean_move_the_attitude_and_close_people_hear_later():
+    state, rs = play(0, [STATS, said("다정"), said("칭찬")])
+    assert ops(rs[1]) == ["impress", "rumor"] and ops(rs[2]) == ["impress", "shift", "rumor"]
+    assert state["impressions"]["오토"] == {"다정": 1, "칭찬": 1} and state["attitudes"]["오토"]["trust"] == 1
+    assert [(r["to"], r["impression"], r["at"], r["seen"]) for r in state["rumors"]] == [
+        ("한스", "다정", 2, False), ("한스", "칭찬", 2, False)]
+    later, _ = play(0, [STATS, said("다정"), go("곡물 창고"), go("광장")])
+    assert [r["impression"] for r in list_rumors(later, "한스")] == ["다정"]
+
+
+def test_the_right_impression_opens_a_held_topic_as_a_fitting_clue_would():
+    state, rs = play(1, [STATS, ask("밤"), go("곡물 창고"), LOOK, go("방앗간"), said("위로", "새벽")])
+    assert ops(rs[5])[:5] == ["impress", "open", "write", "shift", "count"]
+    assert "꺼림 리사.새벽" in state["opened"] and "말 리사.새벽.풀린 뒤" in state["notebook"]
+    assert rs[5]["talk"][0] == {"say": "말 리사.새벽.풀린 뒤"}
+    held, _ = play(1, [STATS, ask("밤"), go("곡물 창고"), LOOK, go("방앗간"), said("다정", "새벽")])
+    assert "꺼림 리사.새벽" not in held["opened"]
+
+
+def test_a_deed_impresses_the_owner_who_watched_and_an_unknown_impression_is_refused():
+    state, _ = play(find_seed(4, 1, True), [STATS, go("곡물 창고"), LOOK, bet(LOCK, "sneak")])
+    assert state["impressions"]["한스"] == {"무례": 1}
+    with pytest.raises(Refused):
+        play(0, [STATS, said("사탕")])   # 리사's own impression, not 오토's

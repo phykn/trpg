@@ -1,6 +1,7 @@
 import hashlib
 
 from .state import (
+    IMPRESSIONS,
     STATS,
     apply_change,
     apply_turn,
@@ -14,6 +15,7 @@ NEED = 8   # 2d6 + bonus must reach this (game/05 4절)
 METHOD_STATS = {"soothe": "charm", "press": "might", "trick": "wit", "sneak": "skill", "force": "might"}
 TALK_METHODS = ("soothe", "press", "trick")
 LOCK_METHODS = ("sneak", "force")
+RUMOR_DELAY = 2   # cells before close people hear of an impression (game/04 4절)
 
 
 class Refused(ValueError):
@@ -136,7 +138,44 @@ class Turn:
             "read": lambda: self.do_read(action["lines"]),
             "conclude": lambda: self.do_conclude(action["who"], action["how"], action["why"]),
         }
+        listener = self.find_listener(action, heard)
+        if listener:
+            self.impress(listener, heard["impression"])
         steps[action["do"]]()
+
+    def find_listener(self, action, heard):
+        """Who the player's words leave an impression on, if they left one (engine/01 1절)."""
+        if not heard or not heard.get("impression") or self.state["stats"] is None:
+            return None
+        if action["do"] == "ask":
+            return self.state["partner"]
+        target = action.get("target")
+        if action["do"] == "present" and target in list_people_here(self.story, self.state):
+            return target
+        if action["do"] == "bet":
+            found = self.story.lines.get(target) or self.story.blocks.get(target)
+            return found.name if found and getattr(found, "kind", None) != "잠김" and found.name in self.story.people \
+                else None
+        return None
+
+    def impress(self, person, name):
+        """An impression builds up, may move the attitude, and spreads as a rumor (game/04 4절)."""
+        known = {*IMPRESSIONS, *self.story.people[person].impressions}
+        if name not in known:
+            raise Refused(f"an impression {person} cannot take")
+        self.change("impress", person=person, impression=name)
+        if name in IMPRESSIONS:
+            lean = IMPRESSIONS[name]
+            total = sum(n for i, n in self.state["impressions"][person].items() if IMPRESSIONS.get(i) == lean)
+            if total % 2 == 0:
+                self.change("shift", person=person, axis=lean[0], by=lean[1], why="impression")
+        here = [p for p in list_people_here(self.story, self.state) if p != person]
+        for other in here:
+            self.change("rumor", to=other, about=person, impression=name, at=self.state["spent"], seen=True)
+        for other in self.story.close[person]:
+            if other not in here and other not in self.state["gone"]:
+                self.change("rumor", to=other, about=person, impression=name, at=self.state["spent"] + RUMOR_DELAY,
+                            seen=False)
 
     def do_stats(self, plus2, plus1):
         if plus2 == plus1 or plus2 not in STATS or plus1 not in STATS:
@@ -172,7 +211,12 @@ class Turn:
         self.write_up()
 
     def ask_topic(self, person, topic):
-        if find_stance(self.story, self.state, person, topic) == "꺼린다":
+        block = self.find_unlocked(person, topic)
+        if block:
+            self.open_block(block)
+            if block.kind == "꺼림":
+                self.shift(block.name, "trust", 1)
+        elif find_stance(self.story, self.state, person, topic) == "꺼린다":
             block = f"꺼림 {person}.{topic}"
             if block not in self.state["withheld"]:
                 self.change("withhold", block=block)
@@ -185,6 +229,15 @@ class Turn:
         self.change("count", person=person, topic=topic, value=asked)
         if asked >= 3:
             self.lead(person, topic)
+
+    def find_unlocked(self, person, topic):
+        """A 꺼림 or 거짓말 the person's impressions open when the topic is asked (game/05 1절)."""
+        for kind in ("꺼림", "거짓말"):
+            block = self.story.blocks.get(f"{kind} {person}.{topic}")
+            if block and block.unlock and block.addr not in self.state["opened"] and \
+                    self.state["impressions"][person].get(block.unlock, 0) >= block.unlock_count:
+                return block
+        return None
 
     def pass_on(self, person):
         passes = self.state["talks"][person]["passes"] + 1
@@ -302,7 +355,17 @@ class Turn:
             self.talk.append({"say": target} if line else {"withhold": target} if block.kind == "꺼림" else
                              {"shut": target})
         self.shift_after_bet(person, method, won)
+        self.impress_watchers(person, block, method, won)
         self.spend()
+
+    def impress_watchers(self, person, block, method, won):
+        """Deeds leave impressions on whoever watched them and was not their target (game/04 4절)."""
+        here = list_people_here(self.story, self.state)
+        if method == "press" or method == "trick" and not won:
+            for other in [p for p in here if p != person]:
+                self.impress(other, "위협" if method == "press" else "들킴")
+        elif method in LOCK_METHODS and block.owner in here:
+            self.impress(block.owner, "무례")
 
     def find_bet(self, target, method):
         state = self.state
