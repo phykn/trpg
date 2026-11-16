@@ -6,11 +6,12 @@ import { ConcludeSheet, PickSheet, type Picks, type Question } from '@/component
 import { InputBar } from '@/components/game/InputBar';
 import { LineSheet } from '@/components/game/LineSheet';
 import { MovesSheet } from '@/components/game/MovesSheet';
-import { findLine, NotebookSheet } from '@/components/game/NotebookSheet';
+import { NotebookSheet } from '@/components/game/NotebookSheet';
 import { Overlay } from '@/components/game/Overlay';
 import { PeopleRow } from '@/components/game/PeopleRow';
 import { TopBar } from '@/components/game/TopBar';
-import { Resend } from '@/components/ui/Notice';
+import { Resend } from '@/components/ui/Resend';
+import { findLine } from '@/logic/notebook';
 import type { Entry, Phase } from '@/logic/useGame';
 import type { CommandBody, GameView, Group } from '@/services/types';
 
@@ -23,7 +24,7 @@ type Open =
   | null;
 
 export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }: {
-  view: GameView; log: Entry[]; outgoing: string | null; phase: Phase; send: (body: CommandBody) => void; onResend: () => void;
+  view: GameView; log: Entry[]; outgoing: Entry | null; phase: Phase; send: (body: CommandBody) => void; onResend: () => void;
   onRetryText: () => void;
 }) {
   const [open, setOpen] = useState<Open>(null);
@@ -38,7 +39,7 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
   const concluding = open?.kind === 'conclude' || open?.kind === 'pick' || (closing && !open && phase === 'ready');
 
   const unread = open?.kind === 'notebook' ? view.notebook[open.group].filter((l) => l.new).map((l) => l.id)
-    : found?.[1].new ? [found[1].id] : [];
+    : found?.line.new ? [found.line.id] : [];
   const readable = phase === 'ready' && (playing || closing);
   useEffect(() => {
     if (readable && unread.length) send({ read: unread });
@@ -58,7 +59,7 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
   function openNote(lines: number[]) {
     const first = lines.length ? findLine(view, lines[0]) : null;
     if (!first) return;
-    setOpen(lines.length === 1 ? { kind: 'line', id: lines[0] } : { kind: 'notebook', group: first[0] });
+    setOpen(lines.length === 1 ? { kind: 'line', id: lines[0] } : { kind: 'notebook', group: first.group });
   }
 
   const close = () => setOpen(open?.kind === 'line' && open.group ? { kind: 'notebook', group: open.group } : null);
@@ -108,7 +109,7 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
       ) : null}
       {found ? (
         <Overlay onClose={close}>
-          <LineSheet line={found[1]} locked={locked} onAct={act} onClose={close} />
+          <LineSheet line={found.line} locked={locked} onAct={act} onClose={close} />
         </Overlay>
       ) : null}
     </View>

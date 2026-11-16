@@ -4,13 +4,13 @@ import { Button } from '@/components/ui/Button';
 import { Choice, Sheet } from '@/components/ui/Sheet';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
-import { findLine } from './NotebookSheet';
+import { findLine } from '@/logic/notebook';
 
 export type Question = 'who' | 'how' | 'why';
 export type Picks = Record<Question, number | null>;
 export const QUESTIONS: Question[] = ['who', 'how', 'why'];
 
-const lineText = (view: GameView, id: number | null) => (id === null ? undefined : findLine(view, id)?.[1].text);
+const lineText = (view: GameView, id: number | null) => (id === null ? undefined : findLine(view, id)?.line.text);
 
 // Without onMore (the cells are spent) the sheet cannot be closed; only the notebook can be read.
 export function ConcludeSheet({ view, picks, locked, onPick, onSubmit, onMore, onNotebook }: {

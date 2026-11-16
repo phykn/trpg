@@ -2,31 +2,30 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ApiError, createGame, getGame, getStories, getTurns, sendCommand, streamText } from '@/services/api';
 import { clearGameId, loadGameId, storeGameId } from '@/services/storage';
-import type { CommandBody, FeedItem, GameView, Story, TurnResult } from '@/services/types';
+import type { CommandBody, FeedItem, GameView, Story, TextKind } from '@/services/types';
 
 // ready: commands open. sending, streaming: locked. stuck: only the same command again. text_error: only the text again.
 export type Phase = 'loading' | 'title' | 'ready' | 'sending' | 'streaming' | 'stuck' | 'text_error';
 
-export type Entry =
-  | { key: string; kind: 'said'; text: string }
-  | { key: string; kind: 'move'; text: string }
-  | { key: string; kind: 'roll'; text: string; won: boolean }
-  | { key: string; kind: 'note'; text: string; lines: number[] }
-  | { key: string; kind: 'text' | 'ending' | 'omen' | 'event' | 'guide'; who: string | null; text: string };
+// A line of the chat log; `key` only tells React the lines apart, `turn` and `slot` say where a line belongs.
+export type Entry = { key: string; turn: number } & (
+  | { kind: 'said' | 'move'; text: string }
+  | { kind: 'roll'; text: string; won: boolean }
+  | { kind: 'note'; text: string; lines: number[] }
+  | { kind: TextKind; slot: number; who: string | null; text: string }
+);
 
 type Pending =
   | { kind: 'create'; requestId: string; story: string }
   | { kind: 'command'; requestId: string; revision: number; body: CommandBody };
 
-export function newRequestId(): string {
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
-}
+const makeRequestId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
 
-export function toEntries(turn: number, said: string | null, feed: FeedItem[]): Entry[] {
-  const entries: Entry[] = said ? [{ key: `${turn}-said`, kind: 'said', text: said }] : [];
+function makeEntries(turn: number, said: string | null, feed: FeedItem[]): Entry[] {
+  const entries: Entry[] = said ? [{ key: `${turn}-said`, turn, kind: 'said', text: said }] : [];
   feed.forEach((item, i) => {
-    if ('slot' in item) entries.push({ key: `${turn}:${item.slot}`, kind: item.kind, who: item.who, text: '' });
-    else entries.push({ ...item, key: `${turn}-${i}` } as Entry);
+    const key = `${turn}-${i}`;
+    entries.push('slot' in item ? { ...item, key, turn, text: '' } : { ...item, key, turn });
   });
   return entries;
 }
@@ -46,10 +45,11 @@ export function useGame() {
     getStories().then(setStories, () => setStories([])).finally(() => setPhase('title'));
   }, []);
 
-  function setText(turn: number, slot: number, change: (text: string) => string) {
-    setLog((entries) => entries.map((e) => (e.key === `${turn}:${slot}` && 'who' in e ? { ...e, text: change(e.text) } : e)));
+  function changeText(turn: number, slot: number, change: (text: string) => string) {
+    setLog((entries) => entries.map((e) => (e.turn === turn && 'slot' in e && e.slot === slot ? { ...e, text: change(e.text) } : e)));
   }
 
+  // Turn by turn, so a failure leaves the turns not yet read for retryText.
   async function readTexts(turns: number[]) {
     unread.current = turns;
     setPhase('streaming');
@@ -57,12 +57,15 @@ export function useGame() {
       const turn = unread.current[0];
       let done = false;
       await streamText(game.current!, turn, (e) => {
-        if (e.type === 'start') setText(turn, e.slot, () => '');
-        else if (e.type === 'delta') setText(turn, e.slot, (t) => t + e.text);
-        else if (e.type === 'replace') setText(turn, e.slot, () => e.text);
+        if (e.type === 'start') changeText(turn, e.slot, () => '');
+        else if (e.type === 'delta') changeText(turn, e.slot, (t) => t + e.text);
+        else if (e.type === 'replace') changeText(turn, e.slot, () => e.text);
         else if (e.type === 'done') done = true;
       });
-      if (!done) { setPhase('text_error'); return; }
+      if (!done) {
+        setPhase('text_error');
+        return;
+      }
       unread.current = unread.current.slice(1);
     }
     setPhase('ready');
@@ -75,11 +78,11 @@ export function useGame() {
     try {
       const [next, turns] = await Promise.all([getGame(id), getTurns(id, 1)]);
       game.current = id;
-      setLog(turns.flatMap((t) => toEntries(t.turn!, t.said, t.feed)));
+      setLog(turns.flatMap((t) => makeEntries(t.turn, t.said, t.feed)));
       setView(next);
-      await readTexts(turns.filter((t) => t.text).map((t) => t.turn!));
+      await readTexts(turns.filter((t) => t.text).map((t) => t.turn));
     } catch {
-      setPhase('title');   // the saved pointer stays: the game may open next time
+      setPhase('title');   // the pointer stays: the game may open next time
     }
   }
 
@@ -87,13 +90,13 @@ export function useGame() {
     pending.current = p;
     setPhase('sending');
     try {
-      const r = await createGame(p.requestId, p.story);
+      const reply = await createGame(p.requestId, p.story);
       pending.current = null;
-      game.current = r.game;
-      storeGameId(r.game);
-      setSaved(r.game);
+      game.current = reply.game;
+      storeGameId(reply.game);
+      setSaved(reply.game);
       setLog([]);
-      setView(r.view);
+      setView(reply.view);
       setPhase('ready');
     } catch {
       setPhase('stuck');
@@ -103,11 +106,11 @@ export function useGame() {
   async function run(p: Extract<Pending, { kind: 'command' }>) {
     pending.current = p;
     setPhase('sending');
-    let result: TurnResult;
+    let result;
     try {
       result = await sendCommand(game.current!, p.requestId, p.revision, p.body);
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409 && e.view) {
+      if (e instanceof ApiError && e.status === 409 && e.view) {   // the game moved on: show it as it is
         pending.current = null;
         setView(e.view);
         setPhase('ready');
@@ -121,20 +124,23 @@ export function useGame() {
     }
     pending.current = null;
     setView(result.view);
-    if (result.kind === 'refused') { setPhase('ready'); return; }
-    setLog((entries) => [...entries, ...toEntries(result.turn!, result.said, result.feed)]);
-    if (result.text) await readTexts([result.turn!]);
+    if (result.kind === 'refused') {
+      setPhase('ready');
+      return;
+    }
+    setLog((entries) => [...entries, ...makeEntries(result.turn, result.said, result.feed)]);
+    if (result.text) await readTexts([result.turn]);
     else setPhase('ready');
   }
 
   function send(body: CommandBody) {
     if (phase !== 'ready' || !view || !game.current) return;
-    void run({ kind: 'command', requestId: newRequestId(), revision: view.revision, body });
+    void run({ kind: 'command', requestId: makeRequestId(), revision: view.revision, body });
   }
 
   function start(story: string) {
     if (phase !== 'title') return;
-    void create({ kind: 'create', requestId: newRequestId(), story });
+    void create({ kind: 'create', requestId: makeRequestId(), story });
   }
 
   function resend() {
@@ -147,7 +153,7 @@ export function useGame() {
     void readTexts(unread.current);
   }
 
-  // After the ending: the finished game is not offered again.
+  // After the ending the finished game is not offered again.
   function leave() {
     clearGameId();
     setSaved(null);
@@ -157,9 +163,10 @@ export function useGame() {
     setPhase('title');
   }
 
-  // What the player just typed shows at once, before the server answers with the turn that holds it.
+  // What the player just typed shows at once, as the turn it is about to become.
   const p = pending.current;
-  const outgoing = phase === 'sending' && p?.kind === 'command' && 'text' in p.body && p.body.text ? p.body.text : null;
+  const outgoing: Entry | null = phase === 'sending' && p?.kind === 'command' && 'text' in p.body && p.body.text
+    ? { key: 'outgoing', turn: p.revision + 1, kind: 'said', text: p.body.text } : null;
 
   return { phase, stories, saved, view, log, outgoing, start, resume, send, resend, retryText, leave };
 }

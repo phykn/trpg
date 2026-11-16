@@ -1,5 +1,3 @@
-import { fetch } from 'expo/fetch';
-
 import type { CommandBody, GameView, PastTurn, Story, TextEvent, TurnResult } from './types';
 
 const baseUrl = process.env.EXPO_PUBLIC_API_URL;
@@ -8,13 +6,11 @@ const pass = process.env.EXPO_PUBLIC_API_PASS;
 if (!baseUrl || !user || !pass) {
   throw new Error('Set EXPO_PUBLIC_API_URL, EXPO_PUBLIC_API_USER and EXPO_PUBLIC_API_PASS');
 }
-const headers = {
-  Authorization: `Basic ${btoa(`${user}:${pass}`)}`,
-  'Content-Type': 'application/json',
-};
+const headers = { Authorization: `Basic ${btoa(`${user}:${pass}`)}`, 'Content-Type': 'application/json' };
 
+// A 409 carries the game as it now is (engine/02 6절).
 export class ApiError extends Error {
-  constructor(public status: number, public view: GameView | null, public reason: string | null) {
+  constructor(public status: number, public view: GameView | null) {
     super(`HTTP ${status}`);
   }
 }
@@ -26,68 +22,48 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {
-    let payload: { view?: GameView; reason?: string } = {};
-    try { payload = await response.json() as typeof payload; } catch { /* a body that is not JSON */ }
-    throw new ApiError(response.status, payload.view ?? null, payload.reason ?? null);
+    const payload = await response.json().catch(() => ({})) as { view?: GameView };
+    throw new ApiError(response.status, payload.view ?? null);
   }
   return await response.json() as T;
 }
 
-const game = (id: string) => `/games/${encodeURIComponent(id)}`;
+const gamePath = (id: string) => `/games/${encodeURIComponent(id)}`;
 
 export const getStories = () => request<Story[]>('/stories');
 export const createGame = (requestId: string, story: string) =>
   request<{ game: string; view: GameView }>('/games', { request_id: requestId, story });
-export const getGame = (id: string) => request<GameView>(game(id));
-export const getTurns = (id: string, from: number) => request<PastTurn[]>(`${game(id)}/turns?from=${from}`);
+export const getGame = (id: string) => request<GameView>(gamePath(id));
+export const getTurns = (id: string, from: number) => request<PastTurn[]>(`${gamePath(id)}/turns?from=${from}`);
 export const sendCommand = (id: string, requestId: string, revision: number, body: CommandBody) =>
-  request<TurnResult>(`${game(id)}/commands`, { request_id: requestId, revision, ...body });
+  request<TurnResult>(`${gamePath(id)}/commands`, { request_id: requestId, revision, ...body });
 
-export class LineReader {
-  private buffer = '';
-
-  feed(chunk: string): TextEvent[] {
-    this.buffer += chunk;
-    const out: TextEvent[] = [];
-    let newline = this.buffer.indexOf('\n');
-    while (newline >= 0) {
-      const line = this.buffer.slice(0, newline).trim();
-      this.buffer = this.buffer.slice(newline + 1);
-      if (line) out.push(JSON.parse(line) as TextEvent);
-      newline = this.buffer.indexOf('\n');
-    }
-    return out;
-  }
-
-  end(): TextEvent[] {
-    const rest = this.buffer.trim();
-    this.buffer = '';
-    return rest ? [JSON.parse(rest) as TextEvent] : [];
-  }
-}
-
-// Ends with done or error: a dropped connection counts as error, so the caller can ask again.
+// Always ends with done or error; a dropped connection counts as an error, so the caller can ask again.
 export async function streamText(id: string, turn: number, onEvent: (event: TextEvent) => void): Promise<void> {
   let ended = false;
-  const emit = (e: TextEvent) => {
-    if (e.type === 'error' || e.type === 'done') ended = true;
-    onEvent(e);
+  const emit = (line: string) => {
+    if (!line.trim()) return;
+    const event = JSON.parse(line) as TextEvent;
+    ended ||= event.type === 'done' || event.type === 'error';
+    onEvent(event);
   };
   try {
-    const response = await fetch(`${baseUrl}${game(id)}/turns/${turn}/text`, { headers });
-    if (!response.ok || !response.body) throw new ApiError(response.status, null, null);
+    const response = await fetch(`${baseUrl}${gamePath(id)}/turns/${turn}/text`, { headers });
+    if (!response.ok || !response.body) throw new ApiError(response.status, null);
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    const lines = new LineReader();
+    let buffer = '';
     for (;;) {
       const { done, value } = await reader.read();
-      lines.feed(decoder.decode(value ?? new Uint8Array(), { stream: !done })).forEach(emit);
+      buffer += decoder.decode(value, { stream: !done });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+      lines.forEach(emit);
       if (done) break;
     }
-    lines.end().forEach(emit);
+    emit(buffer);
   } catch {
-    if (!ended) emit({ type: 'error' });
-    return;
+    // ends as an error below
   }
-  if (!ended) emit({ type: 'error' });
+  if (!ended) onEvent({ type: 'error' });
 }

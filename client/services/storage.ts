@@ -1,25 +1,26 @@
 const KEY = 'trpg.game_id';
 
+// A private window or a full disk refuses storage; the game goes on, it just cannot be reopened later.
 export function loadGameId(): string | null {
   try {
-    return typeof window === 'undefined' ? null : window.localStorage.getItem(KEY);
+    return window.localStorage.getItem(KEY);
   } catch {
     return null;
   }
 }
 
-export function storeGameId(id: string): boolean {
+export function storeGameId(id: string) {
   try {
-    if (typeof window === 'undefined') return false;
     window.localStorage.setItem(KEY, id);
-    return true;
   } catch {
-    return false;
+    // see above
   }
 }
 
-export function clearGameId(): void {
+export function clearGameId() {
   try {
-    if (typeof window !== 'undefined') window.localStorage.removeItem(KEY);
-  } catch { /* storage unavailable: nothing to clear */ }
+    window.localStorage.removeItem(KEY);
+  } catch {
+    // see above
+  }
 }

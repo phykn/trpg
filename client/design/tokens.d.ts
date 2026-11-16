@@ -5,10 +5,7 @@ export const colors: {
   danger: { fg: string };
   health: { fg: string };
   gold: { fg: string; muted: string };
-  chip: { stat: string; help: string; guard: string; hinder: string };
-  kind: { person: string; thing: string; obstacle: string };
   speaker: Record<1 | 2 | 3 | 4 | 5 | 6, string>;
-  box: { empty: string; full: string; danger: string };
   overlay: string;
 };
 export const spacing: Record<string, number>;
@@ -16,9 +13,4 @@ export const radius: Record<string, number>;
 export const fontFamily: Record<string, string[]>;
 export const fontSize: Record<string, [string, { lineHeight: string }]>;
 export const layout: { mobile: number };
-export const motion: {
-  cloud: number; die: number; dieGap: number; line: number; chip: number; settle: number; decisive: number;
-  box: number; fold: number; change: number; blockedFade: number; reduced: number;
-  typeRate: number; shakeMax: number; stuck: number; enter: number; ripple: number;
-  stamp: number; jolt: number; chapterIn: number; chapterHold: number; chapterOut: number;
-};
+export const motion: { enter: number };

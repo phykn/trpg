@@ -1,26 +1,30 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { colors } from '@/design/tokens';
+import { colors, motion } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import { IconButton, pressed } from './Button';
 import { Icon, type IconName } from './Icon';
-import { useEnter } from './motion';
 import { useDialog } from './useDialog';
 
 // A card that rises from the bottom and covers only its own height, so the scene above stays readable; `full` fills its parent.
-export function Sheet({ title, icon, tone, full, onClose, children }: {
-  title?: string; icon?: IconName; tone?: string; full?: boolean; onClose?: () => void; children: ReactNode;
+export function Sheet({ title, icon, full, onClose, children }: {
+  title?: string; icon?: IconName; full?: boolean; onClose?: () => void; children: ReactNode;
 }) {
   const ref = useDialog(onClose);
-  const enter = useEnter(24);
+  const reduced = useReducedMotion();
+  const shown = useSharedValue(reduced ? 1 : 0);
+  useEffect(() => {
+    if (!reduced) shown.value = withTiming(1, { duration: motion.enter, easing: Easing.out(Easing.cubic) });
+  }, [reduced, shown]);
+  const enter = useAnimatedStyle(() => ({ opacity: shown.value, transform: [{ translateY: (1 - shown.value) * 24 }] }));
   return (
     <Animated.View style={[enter, full ? { flex: 1, minHeight: 0 } : null]}>
       <View ref={ref} accessibilityRole={'dialog' as never} aria-modal
         className={`gap-3 rounded-t-2xl border-x border-t border-border-strong bg-canvas-floating px-4 pb-4 pt-3 ${full ? 'min-h-0 flex-1' : ''}`}>
         <View className="min-h-[36px] flex-row items-center gap-2">
-          {icon ? <Icon name={icon} size={18} color={tone ?? colors.gold.fg} /> : null}
+          {icon ? <Icon name={icon} size={18} color={colors.gold.fg} /> : null}
           {title ? (
             <Text accessibilityRole="header" className="min-w-0 flex-1 font-sans-semibold text-title text-fg-default">{title}</Text>
           ) : <View className="flex-1" />}

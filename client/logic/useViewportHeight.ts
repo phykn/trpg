@@ -1,19 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 
+// The visual viewport shrinks while a phone's keyboard is up, so the frame and its input stay above the keyboard.
 export function useViewportHeight() {
   const { height } = useWindowDimensions();
   const [visible, setVisible] = useState(height);
   useEffect(() => {
-    const viewport = window.visualViewport;
-    const update = () => setVisible(viewport?.height ?? window.innerHeight);
+    const target = window.visualViewport ?? window;
+    const update = () => setVisible(window.visualViewport?.height ?? window.innerHeight);
     update();
-    viewport?.addEventListener('resize', update);
-    window.addEventListener('resize', update);
-    return () => {
-      viewport?.removeEventListener('resize', update);
-      window.removeEventListener('resize', update);
-    };
+    target.addEventListener('resize', update);
+    return () => target.removeEventListener('resize', update);
   }, []);
   return visible;
 }

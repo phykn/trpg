@@ -47,4 +47,4 @@ The scripts above always use local settings. To use another server, set the thre
 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://127.0.0.1:8000 EXPO_PUBLIC_API_USER=local EXPO_PUBLIC_API_PASS=local npx expo start --web --host localhost --port 8090
 ```
 
-These values end up in the web bundle, so treat them as public. `npx expo export --platform web` with the same variables makes a static build for that server. `npm start`, `npm run android` and `npm run ios` read `.env.shared` and `.env.dev`; only the web build is verified.
+These values end up in the web bundle, so treat them as public. `npx expo export --platform web` with the same variables makes a static build for that server.

@@ -75,7 +75,7 @@ function Item({ entry, people, typing, onNote }: {
 }
 
 export function ChatLog({ log, people, waiting, outgoing, onNote }: {
-  log: Entry[]; people: string[]; waiting: 'sending' | 'streaming' | null; outgoing: string | null;
+  log: Entry[]; people: string[]; waiting: 'sending' | 'streaming' | null; outgoing: Entry | null;
   onNote: (lines: number[]) => void;
 }) {
   const ref = useRef<ScrollView>(null);
@@ -85,7 +85,7 @@ export function ChatLog({ log, people, waiting, outgoing, onNote }: {
     <ScrollView ref={ref} className="min-h-0 flex-1" contentContainerClassName="gap-3 px-4 py-4"
       onContentSizeChange={() => ref.current?.scrollToEnd({ animated: false })}>
       {log.map((entry) => <Item key={entry.key} entry={entry} people={people} typing={entry.key === typing} onNote={onNote} />)}
-      {outgoing ? <Item entry={{ key: 'outgoing', kind: 'said', text: outgoing }} people={people} typing={false} onNote={onNote} /> : null}
+      {outgoing ? <Item entry={outgoing} people={people} typing={false} onNote={onNote} /> : null}
       {waiting === 'sending' ? <Typing /> : null}
     </ScrollView>
   );

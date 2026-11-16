@@ -2,7 +2,7 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { QUESTIONS } from '@/components/game/ConcludeSheet';
 import { Button } from '@/components/ui/Button';
-import { Resend } from '@/components/ui/Notice';
+import { Resend } from '@/components/ui/Resend';
 import { ko } from '@/locale/ko';
 import type { Entry, Phase } from '@/logic/useGame';
 import type { Answer, GameView } from '@/services/types';
@@ -13,8 +13,7 @@ export function Ending({ view, log, phase, onRetryText, onLeave }: {
   view: GameView; log: Entry[]; phase: Phase; onRetryText: () => void; onLeave: () => void;
 }) {
   const ending = view.ending!;
-  const texts = log.filter((e): e is Extract<Entry, { who: string | null }> =>
-    e.key.startsWith(`${ending.turn}:`) && 'who' in e && !!e.text);
+  const texts = log.filter((e) => e.turn === ending.turn && 'slot' in e && !!e.text);
   const busy = phase === 'sending' || phase === 'streaming';
   return (
     <View className="min-h-0 flex-1 gap-4 px-4 py-6">
