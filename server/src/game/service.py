@@ -5,11 +5,11 @@ import re
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .models import ModelUnavailable
-from .rules.act import Refused, act, find_listener
-from .rules.guide import make_guide
+from ..ai import ModelUnavailable
+from ..ai.jobs import NARRATED, find_last_said, make_jobs
+from ..rules.act import Refused, act, find_listener
+from ..rules.guide import make_guide
 from .save import SaveError, make_save, read_save, write_save
-from .slots import NARRATED, find_last_said, make_jobs
 from .view import make_feed, make_view
 
 POLL_WAIT = 2   # seconds a poll waits for new text before answering with none

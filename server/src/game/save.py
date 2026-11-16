@@ -3,8 +3,8 @@ import os
 import tempfile
 from pathlib import Path
 
-from .rules.state import apply_turn, start_state
-from .story.load import Story, StoryFile
+from ..rules.state import apply_turn, start_state
+from ..story.load import Story, StoryFile
 
 FORMAT = 1
 

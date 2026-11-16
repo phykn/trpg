@@ -2,10 +2,10 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from src.interpret import Interpreter
-from src.models import ModelUnavailable
-from src.story.evals import make_state
+from src.ai import ModelUnavailable
+from src.ai.interpret import Interpreter
 from src.story.load import load_story
+from tools.evals import make_state
 
 DAWN = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
 

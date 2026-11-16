@@ -1,6 +1,6 @@
-from .locale import ko
-from .names import show_line, show_name
-from .rules.state import judge_ending, list_people_here, list_rumors
+from ..game.names import show_line, show_name
+from ..locale import ko
+from ..rules.state import judge_ending, list_people_here, list_rumors
 
 LEVELS = {-1: "낮음", 0: "보통", 1: "높음"}
 # The DM shows signs in the world and leaves the choice to the player (game/07 2절): a sound, a light, a smell or a

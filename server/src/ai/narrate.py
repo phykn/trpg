@@ -1,7 +1,7 @@
 import re
 from difflib import SequenceMatcher
 
-from .slots import VOICE
+from .jobs import VOICE
 
 MEANING = 0.5
 ADDED = 0.15

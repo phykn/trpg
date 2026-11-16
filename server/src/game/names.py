@@ -1,5 +1,5 @@
-from .locale import ko
-from .story.load import CASE
+from ..locale import ko
+from ..story.load import CASE
 
 
 def show_name(story, kind, name):

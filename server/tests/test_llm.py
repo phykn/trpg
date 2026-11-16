@@ -3,8 +3,8 @@ import json
 
 import httpx
 import pytest
-from src.models import ModelUnavailable
-from src.models.llm import LLMClient
+from src.ai import ModelUnavailable
+from src.ai.llm import LLMClient
 
 SNAPSHOT = "/w/hub/models--mlx-community--gemma-4-26B-A4B-it-qat-4bit/snapshots/0e3c"
 

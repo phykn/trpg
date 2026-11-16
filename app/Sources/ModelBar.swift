@@ -4,8 +4,8 @@ import AppKit
 private let configScript = """
 import json
 from src.config import local_settings
-from src.models.decision import DECISION_MODELS
-from src.models.llm import LLM_MODELS
+from src.ai.decision import DECISION_MODELS
+from src.ai.llm import LLM_MODELS
 cfg = local_settings()
 print(json.dumps({
     "decision": {"url": cfg.decision_base_url + "/v1/info", "models": {k: [v] for k, v in DECISION_MODELS.items()}},

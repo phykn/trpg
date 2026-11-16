@@ -1,4 +1,4 @@
-from src.narrate import count_sentences, judge, make_checks, pick_best
+from src.ai.narrate import count_sentences, judge, make_checks, pick_best
 
 
 def test_a_text_fails_on_low_checks_and_on_length():

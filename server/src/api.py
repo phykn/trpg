@@ -9,8 +9,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from .models import ModelUnavailable
-from .service import Broken, Conflict, Missing
+from .ai import ModelUnavailable
+from .game.service import Broken, Conflict, Missing
 
 REQUEST_ID = r"^[A-Za-z0-9_-]{1,64}$"
 ERRORS = {

@@ -1,8 +1,8 @@
-from .locale import ko
-from .models import ModelUnavailable
-from .names import show_line, show_name
-from .rules.act import find_path, list_blocks_here, list_topics
-from .rules.state import list_people_here
+from ..game.names import show_line, show_name
+from ..locale import ko
+from ..rules.act import find_path, list_blocks_here, list_topics
+from ..rules.state import list_people_here
+from . import ModelUnavailable
 
 THRESHOLD = 0.75
 TWO_THRESHOLD = 0.85

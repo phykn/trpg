@@ -3,9 +3,9 @@ import json
 from pathlib import Path
 
 import pytest
-from src.service import Broken, Conflict, GameService
+from src.game.service import Broken, Conflict, GameService
+from src.game.view import make_view
 from src.story.load import load_story
-from src.view import make_view
 
 STORIES = {"skeleton": load_story(Path(__file__).resolve().parents[2] / "scenarios" / "skeleton")}
 STATS = {"do": "stats", "plus2": "skill", "plus1": "charm"}
@@ -111,7 +111,7 @@ def test_a_write_cut_short_leaves_the_old_file(tmp_path, monkeypatch):
     game, _ = service.create("r1", "skeleton")
     path = tmp_path / f"{game}.json"
     before = path.read_text(encoding="utf-8")
-    monkeypatch.setattr("src.save.os.fsync", lambda fd: (_ for _ in ()).throw(OSError("disk")))
+    monkeypatch.setattr("src.game.save.os.fsync", lambda fd: (_ for _ in ()).throw(OSError("disk")))
     with pytest.raises(OSError):
         send(service, game, "a1", STATS)
     assert path.read_text(encoding="utf-8") == before and [p.name for p in tmp_path.iterdir()] == [path.name]

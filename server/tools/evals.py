@@ -8,17 +8,17 @@ from pathlib import Path
 
 import yaml
 
-from ..config import local_settings
-from ..interpret import Interpreter
-from ..locale import ko
-from ..models.decision import DecisionClient
-from ..models.llm import LLMClient
-from ..names import show_line, show_name
-from ..narrate import Narrator
-from ..rules.act import act, list_untold
-from ..rules.state import start_state
-from ..slots import LEVELS, list_doing, make_job, make_jobs, tell_lead
-from .load import StoryError, load_story, parse_address
+from src.config import local_settings
+from src.ai.interpret import Interpreter
+from src.locale import ko
+from src.ai.decision import DecisionClient
+from src.ai.llm import LLMClient
+from src.game.names import show_line, show_name
+from src.ai.narrate import Narrator
+from src.rules.act import act, list_untold
+from src.rules.state import start_state
+from src.ai.jobs import LEVELS, list_doing, make_job, make_jobs, tell_lead
+from src.story.load import StoryError, load_story, parse_address
 
 GOAL_RIGHT = 0.85
 GOAL_WRONG_TOPIC = 0.02

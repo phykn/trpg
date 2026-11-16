@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 import yaml
-from src.story.evals import grade, read_cases, run_evals, summarize
 from src.story.load import StoryError, load_story
+from tools.evals import grade, read_cases, run_evals, summarize
 
 SCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"
 

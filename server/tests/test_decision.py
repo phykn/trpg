@@ -3,8 +3,8 @@ import json
 
 import httpx
 import pytest
-from src.models import ModelUnavailable
-from src.models.decision import DecisionClient
+from src.ai import ModelUnavailable
+from src.ai.decision import DecisionClient
 
 
 def make_client(run, answers=None):

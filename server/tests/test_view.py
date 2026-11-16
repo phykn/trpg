@@ -1,9 +1,9 @@
 from pathlib import Path
 
+from src.game.view import make_feed, make_view
 from src.rules.act import act
 from src.rules.state import start_state
 from src.story.load import load_story
-from src.view import make_feed, make_view
 from tests.test_act import LOCK, LOOK, STATS, ask, doing, go
 from tests.test_act import STORY as SKELETON
 from tests.test_act import play as play_skeleton

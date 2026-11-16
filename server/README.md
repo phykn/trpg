@@ -38,8 +38,8 @@ From the repository root unless the line starts with `cd server`:
 .venv/bin/python -m pytest -q
 .venv/bin/python -m ruff check server/
 cd server && ../.venv/bin/python -m src.story ../scenarios/<folder>   # check a story (docs/engine/03-check.md)
-cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<folder> --out ../qa_test/runs/<run>   # interpretation evals (docs/engine/01-ai.md 5)
-cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<folder> --text --out ../qa_test/runs/<run>   # text evals
+cd server && ../.venv/bin/python -m tools.evals ../scenarios/<folder> --out ../qa_test/runs/<run>   # interpretation evals (docs/engine/01-ai.md 5)
+cd server && ../.venv/bin/python -m tools.evals ../scenarios/<folder> --text --out ../qa_test/runs/<run>   # text evals
 ```
 
 ## Layout
@@ -47,6 +47,7 @@ cd server && ../.venv/bin/python -m src.story.evals ../scenarios/<folder> --text
 ```
 server/
   run_api.py   arguments, story and model checks, serving
-  src/         config.py, story/ (reading, references, compiling, checks, evals), rules/ (game state, changes, actions, when the DM speaks), save.py, service.py, view.py, api.py, locale/ko.py, names.py, models/, interpret.py, slots.py, narrate.py
+  src/         config.py, api.py, locale/ko.py, story/ (reading and checks), rules/ (game state, changes, actions, when the DM speaks), game/ (service, save, view, names), ai/ (models, interpreting, narration)
+  tools/       evals.py
   tests/
 ```

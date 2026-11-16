@@ -1,6 +1,6 @@
-from .locale import ko
-from .names import show_line, show_name
-from .rules.act import (
+from ..ai.jobs import list_slots
+from ..locale import ko
+from ..rules.act import (
     LOCK_METHODS,
     METHOD_STATS,
     NEED,
@@ -11,9 +11,9 @@ from .rules.act import (
     list_topics,
     was_tried,
 )
-from .rules.state import STATS, judge_ending, list_people_here
-from .slots import list_slots
-from .story.load import CASE
+from ..rules.state import STATS, judge_ending, list_people_here
+from ..story.load import CASE
+from .names import show_line, show_name
 
 GROUPS = {"곳": "places", "사람": "people", "물건": "items", "본 것": "seen", "들은 말": "heard", CASE: "heard"}
 

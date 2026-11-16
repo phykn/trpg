@@ -1,11 +1,7 @@
 import json
 from pathlib import Path
 
-from src.narrate import make_messages
-from src.rules.act import act
-from src.rules.guide import make_guide
-from src.rules.state import start_state
-from src.slots import (
+from src.ai.jobs import (
     NARRATED,
     find_doing,
     find_last_said,
@@ -16,8 +12,12 @@ from src.slots import (
     make_job,
     make_jobs,
 )
+from src.ai.narrate import make_messages
+from src.game.view import make_feed
+from src.rules.act import act
+from src.rules.guide import make_guide
+from src.rules.state import start_state
 from src.story.load import load_story
-from src.view import make_feed
 from tests.test_act import LOCK, STORY, doing, said
 
 SCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"

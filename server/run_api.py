@@ -2,14 +2,14 @@ import argparse
 import asyncio
 
 import uvicorn
+from src.ai import ModelUnavailable
+from src.ai.decision import DecisionClient
+from src.ai.interpret import Interpreter
+from src.ai.llm import LLMClient
+from src.ai.narrate import Narrator
 from src.api import build_app
 from src.config import env_settings, local_settings
-from src.interpret import Interpreter
-from src.models import ModelUnavailable
-from src.models.decision import DecisionClient
-from src.models.llm import LLMClient
-from src.narrate import Narrator
-from src.service import GameService
+from src.game.service import GameService
 from src.story.check import load_stories
 from src.story.load import StoryError
 

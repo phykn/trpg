@@ -2,12 +2,12 @@ import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from src.ai import ModelUnavailable
+from src.ai.narrate import Narrator
 from src.api import build_app
 from src.config import local_settings
-from src.models import ModelUnavailable
-from src.names import show_name
-from src.narrate import Narrator
-from src.service import GameService
+from src.game.names import show_name
+from src.game.service import GameService
 from src.story.load import load_story
 
 DAWN = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
