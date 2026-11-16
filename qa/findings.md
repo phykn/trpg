@@ -20,7 +20,7 @@ After the asks rules and the new kind, two and second questions (engine/01 1절;
 
 ## Narration places things where the notebook does not
 
-A scene with many new lines now draws only two or three, where the notebook puts them; on the forest road three runs out of three matched (gemma4 directly, before and after). Left: `qa-2` turns 25, 33, the chimney-smoke omen is gone from the next scene of that house, and `qa-5` turn 60 "아무런 기척도 … 이곳에는 고드릭과 마렌이 있습니다". Replay a full game to see whether placements still slip.
+A scene with many new lines now draws only two or three, where the notebook puts them; on the forest road three runs out of three matched (gemma4 directly, before and after). Left: `qa-2` turns 25, 33, the chimney-smoke omen is gone from the next scene of that house, and `qa-5` turn 60 "아무런 기척도 … 이곳에는 고드릭과 마렌이 있습니다". Replay a full game to see whether placements still slip. `research5-text-dawn` 촌장 집: "넓은 마당 끝에 묵직한 장부 궤짝이" puts the chest in the yard.
 
 ## Answers take the player's premise as fact
 
@@ -44,7 +44,7 @@ A scene with many new lines now draws only two or three, where the notebook puts
 
 ## Impressions that overlap
 
-`impress-held-dawn`: "독초를 다룰 줄 아십니까?" to 넬 gave her own 약초 (an unlock) though it asks about poison; `impress-evals-dawn`: "할멈, 약초 다루는 솜씨가 대단하다고 들었소" gave the common 칭찬 instead of 약초. Threats that mention lying read as 의심 (`impress-evals-arena` 최두식, 강태오). Dawn and arena miss the 5% goal for wrong impressions by one sentence each.
+`impress-held-dawn`: "독초를 다룰 줄 아십니까?" to 넬 gave her own 약초 (an unlock) though it asks about poison; `impress-evals-dawn`: "할멈, 약초 다루는 솜씨가 대단하다고 들었소" gave the common 칭찬 instead of 약초. Threats that accuse now leave 위협 (위협 ≥ 0.3 outranks a top 의심; arena wrong impressions 2 → 0, `research5-evals-arena`). Dawn still misses the 5% goal by one sentence: "징수관이 해 질 녘에 여기 왔소?" reads as 의심 (0.51), and 넬's own 약초 loses to the common 칭찬 (0.79 against 0.15) because 칭찬 already covers praising a skill. Rewording 약초 twice changed nothing; the story should give 넬 an impression the common ones do not cover, or open 시신 with 칭찬.
 
 ## Questions for the playtest (T16, T17)
 
@@ -53,10 +53,22 @@ Not bugs; the testers' play raises them and a person should judge them.
 - A failed roll closes that way and lowers the others with no reason shown (`qa-5` turns 63, 66).
 - The ending is told at the hour the cells run out, not when the player concluded (`qa-5`, `qa-6`: "새벽 4시").
 
-## A failed bet after a typed action repeats the action's answer
+## A told plea with nothing else to go on is missed
 
-`qa_test/runs/action-arena`, turns 4–5: "멱살을 잡는다" got "봉식아, 너 미쳤어? 제발 좀 그만해, …"; the 몰아세운다 bet that followed failed and its answer was the same sentence, word for word. The repeat and meaning checks failed all three tries, and gemma4 wrote it unchanged each time, despite the note that quotes it. The bet's job gives "이 말을 짧게 되풀이한다: <벨트 line>" and the recent exchange; gemma4 copies the recent answer instead. Try leaving the try turn's answer out of the recent exchanges of the bet right after it, or naming the line to repeat in the user message.
+`qa_test/runs/research5-evals-dawn`: "부탁이오, 하고 넬에게 고개를 숙인다" reads as 넘김 with no button: the action option is 0.14 and the told-deed question 0.77, under its 0.8. The told-deed question alone no longer offers buttons: it gave 0.6–0.74 to plain questions ("창문은 누가 열었어요?"), and nine of the ten buttons it raised were on non-actions (`research-held-arena`, five of fifteen plain questions). Actions overall: 75/78.
 
-## Told lies and pleas still pass as nothing
+## A topic and a move that tie
 
-`qa_test/runs/action-evals4-*`: typed actions hit 63/72 (dawn 81%, under the 85% goal). The misses are deeds told without quotes, "브람이 촌장님 얘기를 다 했다고 거짓말한다", "부탁이오, 하고 넬에게 고개를 숙인다": read as 넘김 or a topic, with the action option at 0.14–0.44 and the told-deed question under 0.8. Topic sentences reach 0.46 on the action option, so no threshold on it separates them. Topic accuracy fell by one sentence in arena ("두식아 담배하나 꽂아봐라" read as 속인다) and dawn ("촌장 집에 가 봐야겠소", topic 0.42 against move 0.40).
+`research5-evals-dawn`: "촌장 집에 가 봐야겠소." to 브람 reads as 넘김: topic 0.42, move 0.40 (the topic question says none). Dawn's original topic sentences are one under `impress-evals` because of it. Not taken as a move on a tie, since a wrong move spends a cell and a wrong pass costs nothing.
+
+## A threat built on a bluff reads as deceit
+
+`qa_test/runs/research-dawn` turn 24: "계속 거짓말하면 영주님 기사들한테 당신 장부부터 넘기겠소." (the player has no ledger) became 속인다 (0.51, and 0.63 after 몰아세운다 got "윽박지른다"). The impression was 위협. Both readings are defensible; a playtest should say which the player meant.
+
+## Conjugation slips in narration
+
+`research-dawn` turn 10: "말린 풀 다발을 뒤집어 건습니다" for 겁니다 (걸다). The 해라체 of a story's doing sentence is now caught and rewritten (`research5-text-dawn`, 오두막), but a wrong 합니다체 form is not checked.
+
+## The pass check flags 토빈's plain pass
+
+`research5-text-dawn` 넘김 토빈: "무서운 걸 물으시네요, 전 그런 건 잘 몰라요." fails `added` on all three tries though it adds nothing. Seen before this work too (`impress-text-dawn`).
