@@ -173,6 +173,8 @@ class Run:
             self.show(f"둘러보기: {v['place']['look']['id']}" + ("" if v["place"]["looked"] else " 안 둘러봄"))
         if v["people"]:
             self.show("사람: " + "  ".join(f"{p['act'] or '-'} {p['name']}{'*' if p['partner'] else ''}" for p in v["people"]))
+        if playing and v.get("offers"):
+            self.show("띄운 단추: " + "  ".join(f"{a['id']} {a['label']}" for a in v["offers"]))
         if playing and v["place"]["moves"]:
             self.show("갈 곳: " + "  ".join(f"{m['id']} {m['name']} {m['cells']}턴{' 안 가 봄' if m['unvisited'] else ''}"
                                           for m in v["place"]["moves"]))
