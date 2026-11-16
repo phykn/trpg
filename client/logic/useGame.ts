@@ -9,7 +9,8 @@ export type Phase = 'loading' | 'title' | 'ready' | 'sending' | 'streaming' | 's
 
 // A line of the chat log; `key` only tells React the lines apart, `turn` and `slot` say where a line belongs.
 export type Entry = { key: string; turn: number } & (
-  | { kind: 'said' | 'move'; text: string }
+  | { kind: 'said'; text: string }
+  | { kind: 'move'; text: string }
   | { kind: 'roll'; text: string; won: boolean }
   | { kind: 'note'; text: string; lines: number[] }
   | { kind: TextKind; slot: number; who: string | null; text: string }

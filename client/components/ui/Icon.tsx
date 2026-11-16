@@ -17,7 +17,7 @@ export type IconName = keyof typeof SHAPES;
 export function Icon({ name, size, color, width = 1.8 }: { name: IconName; size: number; color: string; width?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={width}
-      strokeLinecap="round" strokeLinejoin="round" pointerEvents="none">
+      strokeLinecap="round" strokeLinejoin="round">
       {SHAPES[name]}
     </Svg>
   );

@@ -7,30 +7,25 @@ import { GROUPS } from '@/logic/notebook';
 import type { GameView, Group } from '@/services/types';
 import { Marks } from './Marks';
 
-function Dot() {
-  return <View className="h-1.5 w-1.5 rounded-full bg-gold-fg" />;
-}
+const Unread = () => <View className="h-1.5 w-1.5 rounded-full bg-gold-fg" />;
 
 export function NotebookSheet({ view, group, onGroup, onLine, onConclude, onClose }: {
-  view: GameView; group: Group; onGroup: (g: Group) => void; onLine: (id: number) => void; onConclude?: () => void;
+  view: GameView; group: Group; onGroup: (group: Group) => void; onLine: (id: number) => void; onConclude?: () => void;
   onClose: () => void;
 }) {
   return (
     <Sheet full title={ko.notebook} icon="book" onClose={onClose}>
       <View accessibilityRole="tablist" className="flex-row gap-1">
-        {GROUPS.map((g) => {
-          const on = g === group;
-          return (
-            <Pressable key={g} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => onGroup(g)}
-              style={pressed}
-              className={`h-9 min-w-0 flex-1 flex-row items-center justify-center gap-1 rounded-full ${on ? 'bg-fg-default' : 'bg-canvas-subtle'}`}>
-              <Text numberOfLines={1} className={`font-sans-semibold text-chip ${on ? 'text-fg-on-emphasis' : 'text-fg-default'}`}>
-                {ko.groups[g]}
-              </Text>
-              {view.notebook[g].some((l) => l.new) ? <Dot /> : null}
-            </Pressable>
-          );
-        })}
+        {GROUPS.map((g) => (
+          <Pressable key={g} accessibilityRole="tab" accessibilityState={{ selected: g === group }} onPress={() => onGroup(g)}
+            style={pressed}
+            className={`h-9 min-w-0 flex-1 flex-row items-center justify-center gap-1 rounded-full ${g === group ? 'bg-fg-default' : 'bg-canvas-subtle'}`}>
+            <Text numberOfLines={1} className={`font-sans-semibold text-chip ${g === group ? 'text-fg-on-emphasis' : 'text-fg-default'}`}>
+              {ko.groups[g]}
+            </Text>
+            {view.notebook[g].some((l) => l.new) ? <Unread /> : null}
+          </Pressable>
+        ))}
       </View>
       <ScrollView className="min-h-0 flex-1" contentContainerClassName="gap-2">
         {view.notebook[group].map((line) => (
@@ -40,7 +35,7 @@ export function NotebookSheet({ view, group, onGroup, onLine, onConclude, onClos
               <Text className={`min-w-0 flex-1 font-sans text-body text-fg-default ${line.struck ? 'line-through opacity-60' : ''}`}>
                 {line.text}
               </Text>
-              {line.new ? <Dot /> : null}
+              {line.new ? <Unread /> : null}
             </View>
             <Marks marks={line.marks} />
           </Pressable>

@@ -5,24 +5,23 @@ import { Button, pressed } from '@/components/ui/Button';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 
-function Pick({ label, stats, chosen, other, onPick }: {
-  label: string; stats: { key: string; name: string }[]; chosen: string | null; other: string | null;
-  onPick: (key: string) => void;
+type Stats = NonNullable<GameView['start']>['stats'];
+
+// One row per bonus; the stat the other row took cannot be taken twice.
+function StatRow({ label, stats, chosen, taken, onPick }: {
+  label: string; stats: Stats; chosen: string | null; taken: string | null; onPick: (key: string) => void;
 }) {
   return (
     <View className="flex-row items-center gap-2">
       <Text className="w-8 font-mono-medium text-body text-gold-fg">{label}</Text>
-      {stats.map((s) => {
-        const on = chosen === s.key;
-        return (
-          <Pressable key={s.key} accessibilityRole="button" accessibilityLabel={`${label} ${s.name}`}
-            accessibilityState={{ selected: on, disabled: other === s.key }} disabled={other === s.key}
-            onPress={() => onPick(s.key)} style={pressed}
-            className={`h-10 min-w-0 flex-1 items-center justify-center rounded-full border ${on ? 'border-gold-fg bg-gold-fg' : 'border-border-strong'} ${other === s.key ? 'opacity-40' : ''}`}>
-            <Text className={`font-sans-semibold text-panel ${on ? 'text-fg-on-emphasis' : 'text-fg-default'}`}>{s.name}</Text>
-          </Pressable>
-        );
-      })}
+      {stats.map(({ key, name }) => (
+        <Pressable key={key} accessibilityRole="button" accessibilityLabel={`${label} ${name}`}
+          accessibilityState={{ selected: chosen === key, disabled: taken === key }} disabled={taken === key}
+          onPress={() => onPick(key)} style={pressed}
+          className={`h-10 min-w-0 flex-1 items-center justify-center rounded-full border ${chosen === key ? 'border-gold-fg bg-gold-fg' : 'border-border-strong'} ${taken === key ? 'opacity-40' : ''}`}>
+          <Text className={`font-sans-semibold text-panel ${chosen === key ? 'text-fg-on-emphasis' : 'text-fg-default'}`}>{name}</Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -39,8 +38,8 @@ export function Start({ view, locked, onStart }: { view: GameView; locked: boole
         <Text className="font-serif-body text-body text-fg-default">{start.intro}</Text>
       </ScrollView>
       <View className="gap-3">
-        <Pick label={ko.plus2} stats={start.stats} chosen={plus2} other={plus1} onPick={setPlus2} />
-        <Pick label={ko.plus1} stats={start.stats} chosen={plus1} other={plus2} onPick={setPlus1} />
+        <StatRow label={ko.plus2} stats={start.stats} chosen={plus2} taken={plus1} onPick={setPlus2} />
+        <StatRow label={ko.plus1} stats={start.stats} chosen={plus1} taken={plus2} onPick={setPlus1} />
         <Button label={ko.begin} disabled={!act || locked} onPress={() => act && onStart(act.id)} />
       </View>
     </View>

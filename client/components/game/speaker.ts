@@ -7,9 +7,9 @@ const HUES = [
   { text: 'text-speaker-5', bg: 'bg-speaker-5', border: 'border-speaker-5' },
   { text: 'text-speaker-6', bg: 'bg-speaker-6', border: 'border-speaker-6' },
 ];
-const NONE = { text: 'text-fg-muted', bg: 'bg-border-strong', border: 'border-border-strong' };
+const UNMET = { text: 'text-fg-muted', bg: 'bg-border-strong', border: 'border-border-strong' };
 
-export function speakerHue(people: string[], name: string) {
-  const i = people.indexOf(name);
-  return i < 0 ? NONE : HUES[i % HUES.length];
+export function findHue(met: string[], name: string) {
+  const i = met.indexOf(name);
+  return i < 0 ? UNMET : HUES[i % HUES.length];
 }

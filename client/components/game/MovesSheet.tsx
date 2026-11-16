@@ -11,7 +11,7 @@ export function MovesSheet({ moves, locked, onMove, onClose }: {
     <Sheet title={ko.moves} icon="arrow" onClose={onClose}>
       <View className="gap-2">
         {moves.map((m) => (
-          <Choice key={m.id} label={m.name} sub={[ko.cells(m.cells), m.unvisited ? ko.unvisited : null].filter(Boolean).join(' · ')}
+          <Choice key={m.id} label={m.name} sub={m.unvisited ? `${ko.cells(m.cells)} · ${ko.unvisited}` : ko.cells(m.cells)}
             onPress={() => !locked && onMove(m.id)} />
         ))}
       </View>

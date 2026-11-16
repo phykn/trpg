@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { ko } from '@/locale/ko';
 import { useViewportHeight } from '@/logic/useViewportHeight';
 
+// The same narrow phone frame on every screen width; the page around it never scrolls.
 export function Frame({ title, children }: { title?: string; children: ReactNode }) {
   const height = useViewportHeight();
   return (

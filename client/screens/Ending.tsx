@@ -9,11 +9,12 @@ import type { Answer, GameView } from '@/services/types';
 
 const TONE: Record<Answer, string> = { hit: 'text-health-fg', miss: 'text-danger-fg', blank: 'text-fg-muted' };
 
+// The verdict, the ending told in the last turn's text, then the answers and what was left closed once it is told.
 export function Ending({ view, log, phase, onRetryText, onLeave }: {
   view: GameView; log: Entry[]; phase: Phase; onRetryText: () => void; onLeave: () => void;
 }) {
   const ending = view.ending!;
-  const texts = log.filter((e) => e.turn === ending.turn && 'slot' in e && !!e.text);
+  const texts = log.filter((e) => e.turn === ending.turn && 'slot' in e && e.text);
   const busy = phase === 'sending' || phase === 'streaming';
   return (
     <View className="min-h-0 flex-1 gap-4 px-4 py-6">
@@ -30,12 +31,12 @@ export function Ending({ view, log, phase, onRetryText, onLeave }: {
                 </View>
               ))}
             </View>
-            {(['lies', 'held', 'locks'] as const).map((k) => (ending.missed[k].length ? (
+            {(['lies', 'held', 'locks'] as const).filter((k) => ending.missed[k].length).map((k) => (
               <View key={k} className="gap-1.5">
                 <Text className="font-sans-semibold text-chip text-fg-muted">{ko.missed[k]}</Text>
                 {ending.missed[k].map((t) => <Text key={t} className="font-sans text-panel text-fg-default">{t}</Text>)}
               </View>
-            ) : null))}
+            ))}
           </>
         )}
       </ScrollView>

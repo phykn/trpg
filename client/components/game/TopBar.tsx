@@ -6,8 +6,9 @@ import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 
-export function TopBar({ view, onPlace, onNotebook }: { view: GameView; onPlace?: () => void; onNotebook?: () => void }) {
-  const last = view.time.last;
+// The place opens where to go, the clock turns red in the last turns, and the notebook counts what is unread.
+export function TopBar({ view, onPlace, onNotebook }: { view: GameView; onPlace?: () => void; onNotebook: () => void }) {
+  const { last } = view.time;
   return (
     <View className={`min-h-[48px] flex-row items-center gap-2 border-b px-3 ${last ? 'border-danger-fg bg-canvas-subtle' : 'border-border-default'}`}>
       <Pressable accessibilityRole="button" accessibilityLabel={`${view.place.name}, ${ko.moves}`}
@@ -18,11 +19,9 @@ export function TopBar({ view, onPlace, onNotebook }: { view: GameView; onPlace?
         </Text>
         {onPlace ? <Icon name="next" size={12} color={colors.fg.subtle} /> : null}
       </Pressable>
-      <Text accessibilityLabel={view.time.text} className={`font-mono-medium text-panel ${last ? 'text-danger-fg' : 'text-fg-muted'}`}>
-        {view.time.text}
-      </Text>
+      <Text className={`font-mono-medium text-panel ${last ? 'text-danger-fg' : 'text-fg-muted'}`}>{view.time.text}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={view.badge ? `${ko.notebook} ${view.badge}` : ko.notebook}
-        accessibilityState={{ disabled: !onNotebook }} disabled={!onNotebook} onPress={onNotebook} style={pressed}
+        onPress={onNotebook} style={pressed}
         className={`h-9 flex-row items-center gap-2 rounded-full border border-border-default pl-3 ${view.badge ? 'pr-1.5' : 'pr-3'}`}>
         <Icon name="book" size={18} color={colors.fg.muted} width={2} />
         <Text className="font-sans-semibold text-panel text-fg-default">{ko.notebook}</Text>
