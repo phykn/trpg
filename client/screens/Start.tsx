@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { Button, pressed } from '@/components/ui/Button';
 import { control, surface, text } from '@/design/ui';
@@ -35,9 +35,8 @@ export function Start({ view, locked, onStart }: { view: GameView; locked: boole
   return (
     <View className={surface({ kind: 'screen' })}>
       <Text accessibilityRole="header" className={text({ kind: 'hero' })}>{view.story.title}</Text>
-      <ScrollView className="min-h-0 flex-1">
-        <Text className={text({ kind: 'scene' })}>{start.intro}</Text>
-      </ScrollView>
+      {/* The case is told by the first person in the game, not here (docs/game/07-screen.md 1). */}
+      <View className="min-h-0 flex-1" />
       <View className="gap-3">
         <StatRow label={ko.plus2} stats={start.stats} chosen={plus2} taken={plus1} onPick={setPlus2} />
         <StatRow label={ko.plus1} stats={start.stats} chosen={plus1} taken={plus2} onPick={setPlus1} />

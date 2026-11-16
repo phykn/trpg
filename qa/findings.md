@@ -34,9 +34,6 @@ A scene with many new lines now draws only two or three, where the notebook puts
 
 `react-witness-3` turns 4–5: 최두식 got "이곳을 둘러봤다" both in 받은 것 and next to the player's line, and still answered as if nothing happened. Not yet tried with opening a lock or presenting to someone else in front of them.
 
-## A pass flags "할 말" as prompt words
-
-`react-text-2` 넘김 넬: "모르니까 그냥 가. 할 말 없으니." fails `prompt` twice, though "할 말 없다" is ordinary speech.
 
 ## Chat that drifts into a case question
 
@@ -72,3 +69,20 @@ Not bugs; the testers' play raises them and a person should judge them.
 ## The pass check flags 토빈's plain pass
 
 `research5-text-dawn` 넘김 토빈: "무서운 걸 물으시네요, 전 그런 건 잘 몰라요." fails `added` on all three tries though it adds nothing. Seen before this work too (`impress-text-dawn`).
+
+## The narrator's joke ends in "-군요"
+
+`qa_test/runs/opening-fix/text-after2-arena`, 곳 대기실: "도둑이 매너가 아주 좋군요." fails `style` on all three drafts though the voice rule says to end jokes in "-습니다". The play run shows it too (`opening-fix-play` turn 22, "냄새군요"). Try a worked example sentence in the rule.
+
+## A question back reads as added
+
+`opening-fix/text-after2-dawn` 넘김 마렌 and `-skeleton` 넘김 한스: the answer ends on a question back ("무엇을 찾으시는 건가요?") and Kanana's `added` fails it on every draft. Before the question-back rule both passed. Compare the `added` probabilities with and without the last sentence.
+
+## A follow-up may be read as an action
+
+`opening-fix/paired-d.txt`: with the partner's last line in the situation, "그래, 그거." and "아 배고프다. 실장님 밥은 먹었어요?" were read as actions (몰아세운다, 달랜다). Run the whole `evals.yaml` with real last lines to see the false-action rate.
+
+## After a lead, each miss repeats the same lead
+
+`opening-fix-play` turns 4~14 of an all-chat arena run: 최두식 leads 벨트 on every miss and the DM's first help names 벨트 again. Rotate to another untold topic, or let a repeated lead say less.
+

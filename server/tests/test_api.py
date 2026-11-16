@@ -19,12 +19,12 @@ class FakeInterpreter:
     def __init__(self, readings):
         self.readings = readings
 
-    async def read(self, story, state, text):
+    async def read(self, story, state, text, last=None):
         return self.readings[text]
 
 
 class Down:
-    async def read(self, story, state, text):
+    async def read(self, story, state, text, last=None):
         raise ModelUnavailable("down")
 
 
@@ -115,7 +115,9 @@ def test_dawn_is_solved_without_dice_and_no_branch_name_reaches_the_screen(tmp_p
     assert who in player.view["conclude"]["who"]
     ending = player.send(conclude={"who": who, "how": player.find_line("볼 것 검푸른 입술")["id"],
                                    "why": player.find_line("볼 것 가방의 쪽지")["id"]})
-    assert ending["feed"][0]["kind"] == "ending" and player.view["stage"] == "over"
+    # The one named answers first, then the ending (game/07 4절).
+    assert [(f["kind"], f["who"]) for f in ending["feed"][:2]] == [("text", "고드릭"), ("ending", None)]
+    assert player.view["stage"] == "over"
     assert player.view["ending"]["verdict"] == "solved" and set(player.view["ending"]["answers"].values()) == {"hit"}
     assert player.call("get", f"/games/{player.game}") == player.view
     assert len(player.call("get", f"/games/{player.game}/turns?from=1")) == player.view["revision"]
@@ -142,8 +144,8 @@ def test_errors_keep_the_game_as_it_was(tmp_path):
 
 
 def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error(tmp_path):
-    llm = FakeLLM([ModelUnavailable("down"), "사당에 들어섭니다.", "고드릭에게 물어보시지요.", "장부만 걷고 갔소.",
-                   "해 지기 전에 장부만 걷고 떠났소."])
+    llm = FakeLLM([ModelUnavailable("down"), "사당에 들어섭니다.", "고드릭에게 물어보시지요.", "장부만 걷고 갔소. 새벽 종 얘기라면 내가 알지.",
+                   "해 지기 전에 장부만 걷고 떠났소. 새벽 종 얘기라면 내가 알지."])
     player = Player(make_client(tmp_path, FakeInterpreter(HEARD), Narrator(llm, FakeChecks([True, True, False, True]))))
     player.send(do=player.view["start"]["acts"][0]["id"])
     assert [e["type"] for e in player.read_text(1)] == ["start", "error"]
@@ -151,10 +153,10 @@ def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error
                                                          "end", "done"]
     player.send(text=ASK)
     events = player.read_text(2)
-    assert [e["type"] for e in events] == ["start", "delta", "delta", "delta", "replace", "end", "done"]
-    assert events[4] == {"type": "replace", "slot": 0, "text": "해 지기 전에 장부만 걷고 떠났소. "}
+    assert [e["type"] for e in events] == ["start", *["delta"] * 8, "replace", "end", "done"]
+    assert events[9] == {"type": "replace", "slot": 0, "text": "해 지기 전에 장부만 걷고 떠났소. 새벽 종 얘기라면 내가 알지. "}
     assert player.read_text(2) == [{"type": "start", "slot": 0},
-                                   {"type": "delta", "slot": 0, "text": "해 지기 전에 장부만 걷고 떠났소. "},
+                                   {"type": "delta", "slot": 0, "text": "해 지기 전에 장부만 걷고 떠났소. 새벽 종 얘기라면 내가 알지. "},
                                    {"type": "end", "slot": 0}, {"type": "done"}]
     saved = json.loads((tmp_path / f"{player.game}.json").read_text(encoding="utf-8"))["turns"][1]["text"]
     assert [c["failed"] for c in saved[0]["checks"]] == [["added", "meaning"], []]

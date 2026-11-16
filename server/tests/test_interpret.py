@@ -26,6 +26,7 @@ class FakeDecision:
             self.answers["topic"] = {"choice": max(topics, key=topics.get), "probabilities": topics}
 
     async def decide(self, state, questions):
+        self.situation = state
         self.asked.append(questions)
         self.questions = questions
         return {key: self.answers[key] for key in questions}
@@ -154,3 +155,12 @@ def test_a_thing_here_named_while_looking_is_kept_and_things_elsewhere_are_not_o
     offered = decision.questions["thing"]["criteria"]
     assert "볼 것 목 자국" in offered and "볼 것 제단의 초" not in offered
     assert "thing" not in read(FakeDecision("look", place="약초꾼 오두막"), "곳 숲길")
+
+
+def test_what_the_partner_said_last_goes_with_the_sentence_and_nothing_else_of_the_story():
+    decision = FakeDecision("chat", {"징수관": 0.1, "독미나리": 0.1, "_none": 0.8})
+    asyncio.run(Interpreter(decision).read(DAWN, make_state(DAWN, "사람 브람"), "뭐가?", "독미나리 얘기라면 내가 좀 알지요."))
+    assert decision.situation.startswith("말하는 상대: 브람. 브람가 방금 한 말: 독미나리 얘기라면 내가 좀 알지요. (")
+    assert decision.situation.endswith(") 플레이어의 문장: 뭐가?")
+    read(decision)
+    assert decision.situation == "말하는 상대: 브람. 플레이어의 문장: x"

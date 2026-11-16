@@ -44,7 +44,8 @@ class Checker:
     def run(self):
         return [
             self.check_lies(), self.check_holds(), self.check_truth(), self.check_reach(), self.check_time(),
-            self.check_events(), self.check_first(), self.check_unreached(), self.check_intros(), self.check_impressions(),
+            self.check_events(), self.check_first(), self.check_unreached(), self.check_intros(), self.check_mbti(), self.check_opener(),
+            self.check_impressions(),
             *self.alert_size(), *self.alert_long(), *self.alert_asks(), *self.alert_necks(),
         ]
 
@@ -127,6 +128,12 @@ class Checker:
         missing = [f"사람 {p}" for p, person in self.story.people.items() if not person.intro]
         missing += [f"볼 것 {t}" for t, thing in self.story.things.items() if thing.item and not thing.intro]
         return judge("소개", missing)
+
+    def check_mbti(self):
+        return judge("MBTI", [f"사람 {p}" for p, person in self.story.people.items() if not person.mbti])
+
+    def check_opener(self):
+        return judge("첫 사람", [] if self.story.opener else [self.story.head.start])
 
     def check_impressions(self):
         failed = []

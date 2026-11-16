@@ -26,8 +26,19 @@ DM = {
     "look": ("한동안 새로 알아낸 것이 없다.",
              "도입의 기한이 다가오는 기척 하나를 그리고, 당신이 지금까지 듣고 본 것을 하나씩 되짚는다고 쓴다. 어느 것인지는 말하지 않는다"),
     "conclude": ("시간이 다 되었다.", "도입의 기한이 닥쳤음을 그리고, 누가, 어떻게, 왜, 당신의 결론을 들려 달라고 한다"),
+    # Help for a player stuck long (game/07 2절): one thing to do, named outright, never the answer.
+    "hint_topic": ("오래도록 새로 알아낸 것이 없다. 인물은 플레이어 곁에 있다.",
+                   "인물이 짚을 것의 이야기를 꺼내고 싶어 하는 눈치를 몸짓으로 그리고, 짚을 것의 이름을 따옴표 없이 그대로 쓴다"),
+    "hint_line": ("오래도록 새로 알아낸 것이 없다.",
+                  "당신이 수첩에 적어 둔 짚을 것을 문득 다시 떠올린다고 쓴다. 그것을 어디에 쓸지는 말하지 않는다"),
+    "hint_place": ("오래도록 새로 알아낸 것이 없다.", "당신의 머리에 아직 가 보지 않은 짚을 것의 이름이 자꾸 떠오른다고 쓴다"),
+    "ready": ("플레이어가 누가, 어떻게, 왜를 밝힐 조각을 다 모았지만 아직 결론을 내지 않았다.",
+              "조각이 다 모인 것 같은 기분, 이제 한번 따져 볼 때라는 느낌을 당신의 속마음으로 그린다. 무엇이 답인지는 말하지 않는다"),
 }
-PERSON_KEYS = ("open", "meet", "held", "doubt", "ask", "warm", "cold", "shaken")
+PERSON_KEYS = ("open", "meet", "held", "doubt", "ask", "warm", "cold", "shaken", "hint_topic")
+# The narrator's voice: the scene, the DM and the ending (game/07 2절).
+VOICE = ("시각, 소리, 냄새, 맛, 촉감 가운데 하나만 살려 감각적으로 그리고, 건조한 블랙 조크는 문장 끝에 짧게 얹는다. 농담도 "
+         "'-습니다', '-ㅂ니다'로 맺고 '-군요'는 쓰지 않는다. 크게 웃기지 않는다. 비유와 농담에도 받은 것에 없는 사람, 물건, 일은 넣지 않는다.")
 CAUGHT = "남을 속이려다 들켰다"   # 들킴 comes from a deed, so it has no meaning for Kanana in ko.IMPRESSIONS
 RECENT = 3   # turns of talk with a person, and turns of the player's deeds they watched, an answer gets (game/04 3절)
 
@@ -37,9 +48,13 @@ def list_slots(story, turn):
     do = turn["action"]["do"]
     slots = []
     if do == "conclude":
+        who = turn["action"]["who"]
+        slots += [{"kind": "text", "person": who, "job": "confront"}] if who else []
         slots.append({"kind": "ending"})
     elif do not in ("face", "read"):
         slots.append({"kind": "text", "person": find_speaker(story, turn["talk"])})
+    # The opener calls out to the player as the game starts (game/04 5절); older saves have no hook.
+    slots += [{"kind": "text", "person": item["hook"], "job": "hook"} for item in turn["talk"] if "hook" in item]
     for happened in turn["happened"]:
         if happened.get("result") != "prevented":   # it passes quietly; the ending tells it (game/06 2절)
             slots.append({"kind": "omen" if "omen" in happened else "event", "happened": happened})
@@ -57,7 +72,7 @@ def find_speaker(story, talk):
             return story.blocks[value].name
         if kind == "lead":
             return value.split(".")[0]
-        if kind in ("pass", "done", "chat", "unsure") or kind == "try" and value in story.people:
+        if kind in ("case", "pass", "done", "chat", "unsure") or kind == "try" and value in story.people:
             return value
     return None
 
@@ -80,6 +95,10 @@ def make_slot_job(story, before, after, turn, slot, past):
         return make_dm(story, after, slot["guide"])
     if slot["kind"] in ("omen", "event"):
         return make_happening(story, before, after, slot["happened"])
+    if slot.get("job") == "hook":
+        return make_hook(story, before, after, turn, slot["person"], past)
+    if slot.get("job") == "confront":
+        return make_confront(story, before, after, turn, slot["person"], past)
     if slot["person"]:
         return make_answer(story, before, after, turn, slot["person"], past)
     return make_scene(story, before, after, turn)
@@ -123,20 +142,48 @@ def list_doing(story, state, people):
     return [f"{ko.eun(show_name(story, '사람', p))} {doing}" for p in people if (doing := find_doing(story, state, p))]
 
 
+def make_hook(story, before, after, turn, person, past):
+    """The opener's first call as the game starts: the case in a cry, no details and no topic names (game/04 5절)."""
+    job = make_answer(story, before, after, turn, person, past)
+    return {**job, "says": ["사건을 한마디로 외치며 당신에게 먼저 말을 건다. 무엇이, 언제까지인지와 자세한 것은 아직 말하지 않는다"],
+            "case": story.head.intro, "quiet": False, "leads": [], "hook": True}
+
+
+def make_confront(story, before, after, turn, person, past):
+    """The one the player named as the culprit answers it (game/07 4절); the ending tells the rest."""
+    job = make_answer(story, before, after, turn, person, past)
+    reaction = ("궁지에 몰린 사람처럼 반응한다. 발뺌하다 무너지거나, 뻔뻔하게 버틴다" if person == story.head.truth.who
+                else "억울해서 펄쩍 뛴다")
+    # Kanana took the accusation itself for told case content (opening-fix text-after 대면 한스), so it is not asked.
+    return {**job, "says": [f"당신이 자기를 범인으로 지목했다. {reaction}. 사건의 내용은 말하지 않는다"], "quiet": False,
+            "said": f"(당신이 {ko.eul(show_name(story, '사람', person))} 범인으로 지목한다)"}
+
+
 def make_answer(story, before, after, turn, person, past):
-    says = [say for item in turn["talk"] if (say := tell_item(story, turn, item))]
+    says, case, leads, named = [], None, [], []
+    for item in turn["talk"]:
+        if "case" in item:   # the first talk with the opener tells the case and ends naming topics (game/04 5절)
+            case = story.head.intro
+            says.append("당신이 처음 말을 걸어왔으니 사건을 들려준다. 사건에 적힌 무엇이 어떻게 됐고 기한이 언제인지만 말한다")
+            named = item["leads"]
+        elif say := tell_item(story, turn, item):
+            says.append(say)
+            leads += [item["lead"].split(".", 1)[1]] if "lead" in item else []
+            if item.get("point"):   # gemma4 left the place out (qa_test/runs/opening-fix-play 7턴), so it is checked too
+                line = story.lines[item["point"]]
+                leads.append(show_name(story, line.kind, line.name))
+    says += [tell_lead(t) for t in named]
+    leads += named
     lines = [story.lines[item["say"]].text for item in turn["talk"] if "say" in item]
     attitude = after["attitudes"][person]
-    clock = story.head.clock
     told = [story.lines[a].text for a in before["notebook"]
             if story.lines[a].kind == "말" and story.lines[a].name == person and a not in before["struck"]]
     return {"kind": "answer", "person": show_name(story, "사람", person), "bio": story.people[person].bio,
+            "mbti": story.people[person].mbti, "case": case,
             "attitude": f"믿음 {LEVELS[attitude['trust']]}, 두려움 {LEVELS[attitude['fear']]}",
-            "said": find_said(story, turn), "says": says, "lines": lines, "quiet": not lines and bool(says),
-            "leads": [item["lead"].split(".", 1)[1] for item in turn["talk"] if "lead" in item],
-            "bet": turn["action"]["do"] == "bet",
-            "where": ", ".join(filter(None, [show_name(story, "곳", after["place"]),
-                                             ko.clock(clock.start + after["spent"] * clock.step) if clock else None])),
+            "said": find_said(story, turn), "says": says, "lines": lines, "quiet": not lines and bool(says) and not case,
+            "leads": leads, "bet": turn["action"]["do"] == "bet",
+            "where": show_name(story, "곳", after["place"]),
             "doing": find_doing(story, after, person),
             "recent": list_recent(story, person, past), "told": told, "saw": list_seen(story, person, past),
             "impressions": list_impressions(story, after, person),
@@ -153,6 +200,15 @@ def list_impressions(story, state, person):
 def spoke(story, person, turn):
     slots = list_slots(story, turn)
     return bool(slots) and slots[0]["kind"] == "text" and slots[0]["person"] == person
+
+
+def find_last_said(story, person, turns):
+    """The last text the person said on screen, or None before it is written."""
+    for turn in reversed(turns):
+        said = [i for i, slot in enumerate(list_slots(story, turn)) if slot["kind"] == "text" and slot["person"] == person]
+        if said and turn["text"]:
+            return turn["text"][said[-1]]["text"]
+    return None
 
 
 def list_recent(story, person, past):
@@ -199,6 +255,10 @@ def tell_item(story, turn, item):
         return f"무엇을 묻는지 되묻는다: {' / '.join(item['topics'])}"
     if kind == "try":   # a guessed action only offers buttons; the answer is the reading's
         return None if item.get("guess") else f"{ko.TRIES[item['method']]}. 그 행동에 반응한다"
+    if kind == "done" and item.get("point"):
+        kind_, name = story.lines[item["point"]].kind, story.lines[item["point"]].name
+        return (f"더 말할 것은 없다. 대신 {ko.eul(show_name(story, kind_, name))} 제 짐작처럼 넌지시 입에 올린다. "
+                "가 보라거나 만나 보라고 시키지는 않고, 그곳이나 그 사람에 관해 지어내지 않는다")
     return {"withhold": "이 화제는 얼버무리며 말해 주지 않는다. 말하지 않는 까닭은 지어내지 않는다",
             "done": "더 말할 것이 없다"}.get(kind)
 
@@ -234,8 +294,10 @@ def make_scene(story, before, after, turn):
         if "try" in item and not item.get("guess"):
             happening.append(ko.try_lock(item["method"], show_name(story, "볼 것", story.blocks[item["try"]].name)))
     clock, people = story.head.clock, list_people_here(story, after)
-    return {"kind": "scene", "intro": story.head.intro if turn["action"]["do"] == "stats" else None,
-            "time": ko.clock(clock.start + after["spent"] * clock.step) if clock else None,
+    # The bar shows the time; the scene tells it only at the start and when the deadline draws near (game/07 2절).
+    timed = clock and (turn["action"]["do"] == "stats" or story.head.cells - after["spent"] <= 3)
+    return {"kind": "scene",
+            "time": ko.clock(clock.start + after["spent"] * clock.step) if timed else None,
             "place": show_name(story, "곳", place), "desc": story.places[place].desc, "again": not first,
             "written": [show_line(story, a) for a in writes if story.lines[a].kind == "볼 것"], "happening": happening,
             "people": [show_name(story, "사람", p) for p in people], "doing": list_doing(story, after, people)}
@@ -267,18 +329,26 @@ def make_dm(story, after, guide):
         situation, cue = "판이 막 시작되었다. 곁에 아무도 없다.", "이곳의 모습에서 눈길을 끄는 것 하나를 그린다"
     place = after["place"]
     job = {"kind": "dm", "key": key, "situation": situation, "cue": cue, "person": None, "far": None,
-           "here": None, "intro": None, "time": None}
-    if key in ("open", "around", "unvisited"):
+           "here": None, "intro": None, "time": None, "point": None, "leads": []}
+    # The ready cue drew the waiting room from the intro while the player stood in the arena (opening-fix-play 29턴).
+    if key in ("open", "around", "unvisited", "ready"):
         job["here"] = f"{show_name(story, '곳', place)}. 모습: {story.places[place].desc}"
     if key == "unvisited":
         job["far"] = f"{show_name(story, '곳', name)}. 모습: {story.places[name].desc}"
-    if key in ("look", "conclude"):
+    if key == "hint_topic":
+        job["point"], job["leads"] = guide["topic"], [guide["topic"]]
+    if key == "hint_line":
+        job["point"] = show_line(story, guide["line"])
+    if key == "hint_place":
+        job["point"] = show_name(story, "곳", name)
+    if key in ("look", "conclude", "ready"):
         clock = story.head.clock
         job["intro"] = story.head.intro
         job["time"] = ko.clock(clock.start + after["spent"] * clock.step) if clock else None
     if key in PERSON_KEYS and name:
         attitude = after["attitudes"][name]
         job["person"] = {"name": show_name(story, "사람", name), "bio": story.people[name].bio,
+                         "mbti": story.people[name].mbti,
                          "doing": find_doing(story, after, name),
                          "attitude": f"믿음 {LEVELS[attitude['trust']]}, 두려움 {LEVELS[attitude['fear']]}"}
     return job

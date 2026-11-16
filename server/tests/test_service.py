@@ -14,7 +14,7 @@ HEARD = {"kind": "topics", "topics": ["밤"]}
 
 
 class FakeInterpreter:
-    async def read(self, story, state, text):
+    async def read(self, story, state, text, last=None):
         return HEARD
 
 

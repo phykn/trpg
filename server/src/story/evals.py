@@ -15,8 +15,9 @@ from ..models.decision import DecisionClient
 from ..models.llm import LLMClient
 from ..names import show_line, show_name
 from ..narrate import Narrator
+from ..rules.act import act, list_untold
 from ..rules.state import start_state
-from ..slots import LEVELS, list_doing, tell_lead
+from ..slots import LEVELS, list_doing, make_job, make_jobs, tell_lead
 from .load import StoryError, load_story, parse_address
 
 GOAL_RIGHT = 0.85
@@ -57,7 +58,8 @@ def read_cases(folder, story, held=False):
             if not known:
                 raise StoryError(f"{path.name}: {where}: {expect}")
             cases += [(where, expect, text) for text in texts]
-    return cases
+    # A case may carry what the person said just before it: {말: …, 앞의 말: …} (engine/01 5절).
+    return [(where, expect, *((t["말"], t["앞의 말"]) if isinstance(t, dict) else (t, None))) for where, expect, t in cases]
 
 
 def make_state(story, where):
@@ -105,13 +107,13 @@ def grade(expect, heard):
 async def run_evals(folder, interpreter, held=False):
     story = load_story(folder)
     results = []
-    for where, expect, text in read_cases(folder, story, held):
+    for where, expect, text, before in read_cases(folder, story, held):
         began = time.monotonic()
-        heard = await interpreter.read(story, make_state(story, where), text)
+        heard = await interpreter.read(story, make_state(story, where), text, before)
         got = f"인상 {heard.get('impression') or NO_IMPRESSION}" if expect.startswith("인상 ") else show_heard(heard)
         if heard.get("guess"):
             got += f" (단추 {show_action(heard['guess'])})"
-        results.append({"where": where, "text": text, "expect": expect, "got": got,
+        results.append({"where": where, "text": text, "before": before, "expect": expect, "got": got,
                         "grade": grade(expect, heard), "seconds": round(time.monotonic() - began, 2), "heard": heard})
     return results
 
@@ -148,7 +150,8 @@ def list_text_jobs(story):
     jobs = []
     for name, person in story.people.items():
         mood = person.attitude
-        base = {"kind": "answer", "person": show_name(story, "사람", name), "bio": person.bio, "doing": person.doing.get(0),
+        base = {"kind": "answer", "person": show_name(story, "사람", name), "bio": person.bio, "mbti": person.mbti,
+                "doing": person.doing.get(0),
                 "attitude": f"믿음 {LEVELS[mood.trust]}, 두려움 {LEVELS[mood.fear]}"}
         for topic, entry in person.topics.items():
             said = entry.asks[0] if entry.asks else f"{topic}에 관해 묻습니다."
@@ -172,7 +175,41 @@ def list_text_jobs(story):
         jobs.append((f"곳 {name}", {"kind": "scene", "place": show_name(story, "곳", name), "desc": place.desc,
                                     "written": written, "happening": [], "people": [show_name(story, "사람", p) for p in here],
                                     "doing": list_doing(story, {"spent": 0}, here), "mood": story.head.mood}))
+    return jobs + list_flow_jobs(story)
+
+
+def list_flow_jobs(story):
+    """The jobs of the game's flow, made by the rules: the start, the case, pointing on, help and the end (game/04 5절)."""
+    opener, truth = story.opener, story.head.truth
+    state = start_state(story, 0)
+    stats = {"do": "stats", "plus2": "charm", "plus1": "wit"}
+    started = played(story, state, stats)
+    scene, hook = make_jobs(story, state, started["state"], started["turn"])
+    asked = played(story, started["state"], {"do": "ask", "text": "무슨 일인데요?"}, {"kind": "chat"})
+    after = asked["state"]
+    jobs = [("시작 장면", scene), (f"운 떼기 {opener}", hook),
+            (f"상황 {opener}", make_jobs(story, started["state"], after, asked["turn"])[0])]
+    place = next(a for a in after["notebook"] if a.startswith("곳 ") and a[2:] not in after["visited"])
+    more = {"action": {"do": "ask", "text": "더 아는 건 없어요?"}, "talk": [{"done": opener, "point": place}],
+            "dice": None, "changes": [], "happened": []}
+    jobs.append((f"이끌기 {opener}", make_job(story, after, after, more, {"kind": "text", "person": opener}, ())))
+    topic = list_untold(story, after, opener)[0]
+    for guide in ({"key": "hint_topic", "name": opener, "topic": topic}, {"key": "hint_place", "name": place[2:]},
+                  {"key": "ready"}, {"key": "held", "name": opener}):
+        jobs.append((f"DM {guide['key']}", make_job(story, after, after, asked["turn"], {"kind": "guide", "guide": guide}, ())))
+    other = next(p for p in story.people if p != truth.who)
+    for who in (truth.who, other):
+        end = {"action": {"do": "conclude", "who": who, "how": None, "why": None}, "talk": [], "dice": None,
+               "changes": [], "happened": []}
+        jobs.append((f"대면 {who}", make_job(story, after, after, end, {"kind": "text", "person": who, "job": "confront"}, ())))
+    ended = {**after, "conclusion": {"who": truth.who, "how": None, "why": None}}
+    jobs.append(("결말", make_job(story, after, ended, end, {"kind": "ending"}, ())))
     return jobs
+
+
+def played(story, state, action, heard=None):
+    result = act(story, state, action, heard)
+    return {"state": result["state"], "turn": {"action": action, **{k: result[k] for k in ("dice", "changes", "happened", "talk")}}}
 
 
 async def run_text_evals(folder, narrator):

@@ -1,7 +1,10 @@
 from .locale import ko
+from .story.load import CASE
 
 
 def show_name(story, kind, name):
+    if kind == CASE:
+        return CASE
     entry = {"곳": story.places, "사람": story.people, "볼 것": story.things}[kind][name]
     return entry.display or name
 

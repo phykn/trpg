@@ -12,8 +12,9 @@ from .rules.act import (
 )
 from .rules.state import STATS, judge_ending, list_people_here
 from .slots import list_slots
+from .story.load import CASE
 
-GROUPS = {"곳": "places", "사람": "people", "물건": "items", "본 것": "seen", "들은 말": "heard"}
+GROUPS = {"곳": "places", "사람": "people", "물건": "items", "본 것": "seen", "들은 말": "heard", CASE: "heard"}
 
 
 def make_view(story, state, last=None):
@@ -128,8 +129,8 @@ class ViewMaker:
                 "acts": self.list_acts(addr) if self.stage == "play" else []})
             if group == "heard":
                 speakers.append(line.name)
-        # What each person said stays together, people in the order they first spoke.
-        order = list(dict.fromkeys(speakers))
+        # The case heads what was heard; what each person said stays together, people in the order they first spoke.
+        order = [CASE, *dict.fromkeys(speakers)]
         book["heard"] = [x for _, x in sorted(zip(speakers, book["heard"], strict=True), key=lambda p: order.index(p[0]))]
         return book
 
@@ -137,6 +138,8 @@ class ViewMaker:
         """The lines a line's sheet gathers: what a person said, what was seen at a place, where a clue was
         found or who said it, and the places and people it told of (game/03 1절)."""
         line, book, lines = self.story.lines[addr], self.state["notebook"], self.story.lines
+        if line.kind == CASE:
+            return []
         if line.kind == "사람":
             about = [a for a in book if lines[a].kind == "말" and lines[a].name == line.name]
         elif line.kind == "곳":
@@ -146,6 +149,8 @@ class ViewMaker:
         return [self.ids[a] for a in dict.fromkeys(about) if a in self.ids and a != addr]
 
     def find_intro(self, line):
+        if line.kind == CASE:
+            return line.text
         if line.kind == "곳":
             return self.story.places[line.name].desc if line.name in self.state["visited"] else None
         if line.kind == "사람":
@@ -254,7 +259,8 @@ def make_feed(story, turn, ids, opening=(), after=None):
     if dice:
         feed.append({"kind": "roll", "text": ko.roll(dice["method"], dice["eyes"], dice["total"], NEED), "won": dice["won"]})
     texts = [{"kind": s["kind"], "who": s.get("person") and show_name(story, "사람", s["person"]), "slot": i,
-              **({"topics": list_unheard(story, after, s["person"])} if after and s.get("person") else {})}
+              **({"topics": list_unheard(story, after, s["person"])} if after and s.get("person") else {}),
+              **({"topics": [s["guide"]["topic"]]} if s["kind"] == "guide" and "topic" in s["guide"] else {})}
              for i, s in enumerate(list_slots(story, turn))]
     lead = [t for t in texts if t["kind"] in ("text", "ending")]
     return feed + lead + make_notes(story, changes, ids) + texts[len(lead):]

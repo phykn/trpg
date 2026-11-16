@@ -1,5 +1,6 @@
 import hashlib
 
+from ..story.load import CASE
 from .state import (
     IMPRESSIONS,
     STATS,
@@ -58,6 +59,12 @@ def find_said_line(story, state, person, topic):
     if stance == "꺼린다":
         return f"말 {person}.{topic}.풀린 뒤" if opened else None
     return f"말 {person}.{topic}.{'깨진 뒤' if opened else '거짓말'}"
+
+
+def list_untold(story, state, person):
+    """The shown topics a person would lead to: not held back and not yet heard (game/04 5절)."""
+    return [t for t in list_topics(story, state, person) if find_stance(story, state, person, t) != "꺼린다"
+            and find_said_line(story, state, person, t) not in state["notebook"]]
 
 
 def list_topics(story, state, person):
@@ -158,7 +165,30 @@ class Turn:
         listener = find_listener(self.story, self.state, action)
         if listener and heard and heard.get("impression"):
             self.impress(listener, heard["impression"])
+        opener = self.story.opener
+        telling = CASE not in self.state["notebook"] and opener in self.list_addressed(action, heard)
+        if telling:
+            self.change("write", line=CASE)
         steps[action["do"]]()
+        if telling:
+            self.tell_case(opener)
+
+    def list_addressed(self, action, heard):
+        """Who this action speaks to, before it is done; moving and looking speak to no one."""
+        do, partner = action["do"], self.state["partner"]
+        if do == "present":
+            return [action["target"]]
+        if do != "ask" or partner is None or heard["kind"] in ("move", "look"):
+            return []
+        return [] if heard["kind"] == "action" and heard["method"] in LOCK_METHODS else [partner]
+
+    def tell_case(self, person):
+        """The first talk with the opener tells the case and names topics; it is no miss (game/04 5절)."""
+        # One topic: with two beside the case gemma4 dropped one every time (opening-fix text-after 상황 최두식).
+        leads = list_untold(self.story, self.state, person)[:1]
+        self.talk.insert(0, {"case": person, "leads": leads})
+        if self.state["talks"][person]["passes"]:
+            self.change("count", person=person, topic=None, value=0)
 
     def impress(self, person, name):
         """An impression builds up, may move the attitude, and spreads as a rumor (game/04 4절)."""
@@ -183,6 +213,8 @@ class Turn:
         if plus2 == plus1 or plus2 not in STATS or plus1 not in STATS:
             raise Refused("two different stats")
         self.change("set_stats", stats={s: 2 if s == plus2 else 1 if s == plus1 else 0 for s in STATS})
+        if self.story.opener:
+            self.talk.append({"hook": self.story.opener})
 
     def do_ask(self, heard):
         kind = heard["kind"]
@@ -284,15 +316,23 @@ class Turn:
             self.lead(person, None)
 
     def lead(self, person, asked):
-        for topic in list_topics(self.story, self.state, person):
-            if topic != asked and find_stance(self.story, self.state, person, topic) != "꺼린다" and \
-                    find_said_line(self.story, self.state, person, topic) not in self.state["notebook"]:
+        for topic in list_untold(self.story, self.state, person):
+            if topic != asked:
                 self.talk.append({"lead": f"{person}.{topic}"})
                 return
-        self.talk.append({"done": person})
+        point = None if self.state["talks"][person]["done"] or person != self.story.opener else self.find_next()
+        self.talk.append({"done": person, **({"point": point} if point else {})})
         if not self.state["talks"][person]["done"]:
             self.change("done", person=person)
         self.mark_held(person)
+
+    def find_next(self):
+        """Where the opener points once out of topics: a place not yet visited, else a person not yet talked to."""
+        book, talks = self.state["notebook"], self.state["talks"]
+        places = [a for a in book if a.startswith("곳 ") and a[2:] not in self.state["visited"]]
+        people = [a for a in book if a.startswith("사람 ") and a[3:] != self.story.opener
+                  and not talks[a[3:]]["topics"] and not talks[a[3:]]["passes"]]
+        return next(iter(places + people), None)
 
     def talk_to(self, person):
         # Held topics that appeared after the person was done are marked the next time you talk.

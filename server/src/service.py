@@ -8,7 +8,7 @@ from .models import ModelUnavailable
 from .rules.act import Refused, act, find_listener
 from .rules.guide import make_guide
 from .save import SaveError, make_save, read_save, write_save
-from .slots import make_jobs
+from .slots import find_last_said, make_jobs
 from .view import make_feed, make_view
 
 
@@ -97,7 +97,7 @@ class GameService:
             raise Conflict(view)
         try:
             action = read_request(story, state, acts, body)
-            heard = await self.interpret(story, state, action)
+            heard = await self.interpret(game, story, state, action)
             result = act(story, state, action, heard)
         except Refused as exc:
             return {"kind": "refused", "code": exc.code, "turn": None, "said": None, "feed": [], "text": False,
@@ -113,12 +113,13 @@ class GameService:
         self.games[game] = (data, story, [*states, after])
         return self.make_result(story, after, turn)
 
-    async def interpret(self, story, state, action):
+    async def interpret(self, game, story, state, action):
         playing = state["stats"] is not None and state["conclusion"] is None and state["spent"] < story.head.cells
         if not playing:
             return None
         if action["do"] == "ask":
-            return await self.interpreter.read(story, state, action["text"])
+            last = find_last_said(story, state["partner"], self.load(game)[0]["turns"]) if state["partner"] else None
+            return await self.interpreter.read(story, state, action["text"], last)
         listener = find_listener(story, state, action) if action.get("text") else None
         return await self.interpreter.read_impression(story, listener, action["text"]) if listener else None
 

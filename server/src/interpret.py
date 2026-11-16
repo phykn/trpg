@@ -23,11 +23,14 @@ class Interpreter:
     def __init__(self, decision):
         self.decision = decision
 
-    async def read(self, story, state, text):
+    async def read(self, story, state, text, last=None):
+        """`last` is what the partner said last, so a follow-up like "뭐가?" is read against it (engine/01 1절)."""
         person = state["partner"]
         questions = make_questions(story, state)
         partner = show_name(story, "사람", person) if person else "없음"
-        situation = f"말하는 상대: {partner}. 플레이어의 문장: {text}"
+        said = (f" {partner}가 방금 한 말: {last} (플레이어의 문장이 무엇을 가리키는지 없이 짧게 되묻거나 재촉하면 이 말을 받는 것이다. "
+                f"새 이야기를 꺼내면 이 말과 상관없다.)" if person and last else "")
+        situation = f"말하는 상대: {partner}.{said} 플레이어의 문장: {text}"
         answers = await self.decision.decide(situation, questions)
         try:
             answers = settle_kind(answers, questions)

@@ -19,6 +19,7 @@ STANCE_NEEDS = {
     "꺼린다": {"opened", "wants", "hint"},
     "거짓말한다": {"lie", "broken", "breaks"},
 }
+CASE = "사건"   # the line the opener's telling of the case leaves (game/04 5절)
 ADDRESS_PARTS = {"곳": 1, "사람": 1, "볼 것": 1, "말": 3, "거짓말": 2, "꺼림": 2, "잠김": 1}
 
 
@@ -103,6 +104,7 @@ class Attitude(Shape):
 
 class Person(Shape):
     bio: str = Field(alias="신상")
+    mbti: str | None = Field(None, alias="MBTI", pattern=r"^[EI][SN][TF][JP]$")   # the check asks for it, like 소개
     intro: str | None = Field(None, alias="소개")   # the check asks for it; saves made before it have none
     place: str = Field(alias="있는 곳")
     attitude: Attitude = Field(Attitude(), alias="처음 태도")
@@ -471,6 +473,8 @@ class Story:
                       for name, p in raw.people.items()}
         self.locked_in = {inner: format_address("잠김", [name])
                           for name, thing in raw.things.items() if thing.lock for inner in thing.lock.contents}
+        # The first person at the start opens the game and tells the case (game/04 5절).
+        self.opener = next((name for name, p in raw.people.items() if p.place == raw.head.start), None)
         self.lines = {}
         self.blocks = {}
         self.build_lines()
@@ -492,6 +496,8 @@ class Story:
                 for branch, b in t.list_branches().items():
                     self.add_line("말", [name, topic, branch], topic=topic, branch=branch, text=b.text,
                                   shows=b.shows, tells=self.list_told(b.tells), cond=t.cond, place=person.place)
+        # Not in the story file, so the copies older saves keep still open (data/02 4절).
+        self.lines[CASE] = Line(addr=CASE, kind=CASE, name=CASE, text=self.head.intro, place=self.head.start)
 
     def add_line(self, kind, parts, cond=None, **fields):
         addr = format_address(kind, parts)

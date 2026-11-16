@@ -20,13 +20,24 @@ function Typing() {
   );
 }
 
-function Speaker({ who, met, children }: { who: string; met: string[]; children: ReactNode }) {
+export function Speaker({ who, met, children }: { who: string; met: string[]; children: ReactNode }) {
   const hue = findHue(met, who);
   return (
     <View className={`gap-0.5 border-l-2 pl-3 ${hue.border}`}>
       <Text className={`font-sans-semibold text-chip ${hue.text}`}>{who}</Text>
       {children}
     </View>
+  );
+}
+
+// The unheard topic names a text names are underlined in blue (docs/game/04-talk.md 5).
+export function Spoken({ text: words, topics, className }: { text: string; topics?: string[]; className: string }) {
+  return (
+    <Text className={className}>
+      {splitTopics(words, topics).map((part, i) => (
+        part.topic ? <Text key={i} className={text({ kind: 'topic' })}>{part.text}</Text> : part.text
+      ))}
+    </Text>
   );
 }
 
@@ -55,13 +66,7 @@ function Line({ entry, met, typing, onNote }: {
   if (entry.who) {
     return (
       <Speaker who={entry.who} met={met}>
-        {typing ? <Typing /> : (
-          <Text className={text()}>
-            {splitTopics(entry.text, entry.topics).map((part, i) => (
-              part.topic ? <Text key={i} className={text({ kind: 'topic' })}>{part.text}</Text> : part.text
-            ))}
-          </Text>
-        )}
+        {typing ? <Typing /> : <Spoken text={entry.text} topics={entry.topics} className={text()} />}
       </Speaker>
     );
   }
@@ -69,7 +74,7 @@ function Line({ entry, met, typing, onNote }: {
   if (!entry.text) return null;
   const happening = entry.kind === 'omen' || entry.kind === 'event';
   return (
-    <Text className={text({ kind: 'scene' }, happening && 'border-l-2 border-danger-fg pl-3')}>{entry.text}</Text>
+    <Spoken text={entry.text} topics={entry.topics} className={text({ kind: 'scene' }, happening && 'border-l-2 border-danger-fg pl-3')} />
   );
 }
 

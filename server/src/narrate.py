@@ -1,11 +1,14 @@
 import re
 from difflib import SequenceMatcher
 
+from .slots import VOICE
+
 MEANING = 0.5
 ADDED = 0.15
 QUIET = 0.5
 REWRITES = 2
-MAX_SENTENCES = {"answer": 3, "scene": 4, "ending": 8, "dm": 3}
+# An answer may end on a question back and the DM on a dry joke (game/04 3절, game/07 2절), a sentence each.
+MAX_SENTENCES = {"answer": 4, "scene": 4, "ending": 8, "dm": 4}
 MAX_TOKENS = {"answer": 200, "scene": 300, "ending": 700, "dm": 200}
 # Kanana's meaning check passes answers that drop the line (qa/findings.md); the share of each line's Hangul
 # syllables found in the answer catches them. On the AI testers' games (qa_test/runs/qa-1 to qa-6) answers that kept
@@ -14,7 +17,8 @@ COVER = 0.5
 # An answer this close to one the person already gave says the same thing again; gemma4 did so even when told not to.
 REPEAT = 0.8
 # Words of the prompt itself; a text that names them is talking about its instructions, not to the player.
-PROMPT_WORDS = ("할 말", "받은 것", "지침", "지킬 것", "질문자", "신상", "그릴 기척", "지켜본 일", "앞서 나눈 말", "받은 인상")
+# "할 말" alone is everyday speech ("더 할 말 있나?"), so only the label with its colon counts.
+PROMPT_WORDS = ("할 말:", "받은 것", "지침", "지킬 것", "질문자", "신상", "그릴 기척", "지켜본 일", "앞서 나눈 말", "받은 인상")
 # The narrator and the DM speak 합니다체 (CLAUDE.md); quoted speech inside a scene keeps its own.
 HAEYO = re.compile(r"(세요|어요|아요|해요|예요|에요|죠|군요|네요)[.?!…~]*(\s|$)")
 # The DM shows a sign instead of advising (game/07 2절); these endings tell the player what to do.
@@ -90,8 +94,10 @@ def list_given(job):
     if job["kind"] == "dm":
         return list_dm_given(job)
     if job["kind"] == "answer":
-        given = [f"신상: {job['bio']}", f"태도: {job['attitude']}"]
-        given += [f"곳과 때: {job['where']}"] if job.get("where") else []
+        given = [f"신상: {job['bio']}"] + ([f"성격 유형(MBTI): {job['mbti']}"] if job.get("mbti") else [])
+        given += [f"태도: {job['attitude']}"]
+        given += [f"사건(글의 '당신'은 플레이어다): {job['case']}"] if job.get("case") else []
+        given += [f"곳: {job['where']}"] if job.get("where") else []
         given += [f"지금 하는 일: {job['doing']}"] if job.get("doing") else []
         if job.get("recent"):
             given.append("앞서 나눈 말:\n" + "\n".join(f"  플레이어: {r['said'] or '(말없이 기다렸다)'}\n  {job['person']}: {r['answer']}"
@@ -101,7 +107,7 @@ def list_given(job):
         given += [f"플레이어에게 받은 인상: {' / '.join(job['impressions'])}"] if job.get("impressions") else []
         given += [f"플레이어에 관한 소문: {' / '.join(job['rumors'])}"] if job.get("rumors") else []
         return given + [f"할 말: {' / '.join(job['says']) or '없다'}", f"플레이어의 말: {job['said'] or '없다'}"]
-    given = [f"도입: {job['intro']}"] if job.get("intro") else []
+    given = [f"분위기: {job['mood']}"] if job.get("mood") else []
     given += [f"시각: {job['time']}"] if job.get("time") else []
     if job.get("place"):
         given.append(f"곳: {job['place']}" + (f". 모습: {job['desc']}" if job.get("desc") else ""))
@@ -116,41 +122,52 @@ def list_given(job):
 
 def list_dm_given(job):
     given = [f"상황: {job['situation']}"]
+    given += [f"분위기: {job['mood']}"] if job.get("mood") else []
     given += [f"도입: {job['intro']}"] if job["intro"] else []
     given += [f"시각: {job['time']}"] if job["time"] else []
     given += [f"이곳: {job['here']}"] if job["here"] else []
     if job["person"]:
         person = job["person"]
         doing = f" 지금 하는 일: {person['doing']}." if person.get("doing") else ""
-        given.append(f"인물: {person['name']}. 신상: {person['bio']}{doing} 플레이어를 대하는 태도: {person['attitude']}")
+        mbti = f" 성격 유형(MBTI): {person['mbti']}." if person.get("mbti") else ""
+        given.append(f"인물: {person['name']}. 신상: {person['bio']}{mbti}{doing} 플레이어를 대하는 태도: {person['attitude']}")
     given += [f"가 보지 않은 곳: {job['far']}"] if job["far"] else []
+    given += [f"짚을 것: {job['point']}"] if job.get("point") else []
     return given + [f"그릴 기척: {job['cue']}"]
 
 
 def make_dm_prompt(job):
-    rules = ["플레이어를 \"당신\"이라 부르고 합니다체로 한두 문장만 쓴다. '-세요', '-군요' 같은 해요체는 쓰지 않는다.",
+    rules = ["플레이어를 \"당신\"이라 부르고 합니다체로 두세 문장만 쓴다. '-세요', '-군요' 같은 해요체는 쓰지 않는다.",
              "플레이어를 이름이나 3인칭으로 부르지 않는다.",
              ("진행자는 세계의 기척을 보여 줄 뿐이고, 무엇을 할지는 플레이어가 고른다. 가 보라, 물어보라, 살펴보라처럼 "
               "권하거나 시키지 않는다." if job["key"] != "conclude" else "결론을 들려 달라는 말만 직접 한다."),
              "지어내는 것은 소리, 빛, 냄새, 몸짓뿐이다. 받은 것에 없는 사람, 물건, 흔적, 벌어진 일은 더하지 않는다.",
-             "인물의 몸짓은 신상, 지금 하는 일, 태도에서만 짐작한다. 사건의 진실, 단서, 누가 거짓말하는지는 말하지 않는다.",
+             ("인물의 몸짓은 신상, 성격 유형, 지금 하는 일, 태도에서만 짐작한다. 사건의 진실, 단서, 누가 거짓말하는지는 "
+              "말하지 않는다."),
+             VOICE,
              "인물의 대사를 지어내지 않는다. 따옴표를 쓰지 않는다.",
              "화면, 단추, 누르는 법은 말하지 않는다.",
              "신상이 플레이어를 이름으로 가리켜도 플레이어는 \"당신\"이라 부른다.",
              "한 문단으로 쓴다."]
+    if job.get("point"):
+        rules.append("짚을 것은 받은 그대로 쓴다. 따옴표는 쓰지 않는다.")
     return "당신은 추리 TRPG 판을 이끄는 진행자(DM)다.", rules + mood_rule(job), "진행자로서 한마디 한다."
 
 
 def mood_rule(job):
-    # Kept out of the given list, so the check still fails things the mood names but nothing gave
+    # The mood is given too, so the sounds and smells it names pass the check (game/08 5절).
     if not job.get("mood"):
         return []
-    return [f"문체: {job['mood']} 이 문체만 따르고, 여기 나온 물건, 소리, 일을 글에 들이지 않는다. 문장 수는 위의 규칙대로다."]
+    # gemma4 put the mood's smell into every scene and DM line (qa_test/runs/opening-fix-play 10~15턴).
+    return [("문체는 분위기를 따른다. 분위기에 나온 냄새와 소리는 바탕일 뿐 글에 옮겨 쓰지 않고, 감각은 이곳의 모습과 일어난 일에서 "
+             "고른다. 문장 수는 위의 규칙대로다.")]
 
 
 def make_answer_prompt(job):
     rules = [f"{job['person']}의 대사만 쓴다. 할 말 하나에 한두 문장이다. 이름, 따옴표, 설명은 붙이지 않는다.",
-             "신상의 말투를 따르되 문법에 맞는 한국어로 쓰고, 태도에 맞게 플레이어의 말을 받아친다.",
+             "몸짓, 표정, 행동은 묘사하지 않는다. 입으로 하는 말만 쓴다.",
+             "신상의 말투와 성격 유형의 결을 따르되 문법에 맞는 한국어로 쓰고, 태도에 맞게 플레이어의 말을 받아친다.",
+             "대답 끝에 플레이어에게 되묻거나 재촉하는 짧은 한마디를 붙여도 된다. 받은 것 밖의 일은 묻지도 말하지도 않는다.",
              "플레이어는 지금 마주 보고 말을 건 사람이다. 플레이어에게 직접 말하고, '저 사람', '얘'처럼 남을 가리키듯 부르지 않는다.",
              "할 말이 있으면 그 내용을 빠짐없이 말한다. 태도는 말투에만 드러내고, 모른다고 하거나 피하지 않는다.",
              "할 말의 뜻을 바꾸지 않는다. 할 말에 없는 사람, 물건, 때, 곳을 더하지 않는다.",
@@ -168,10 +185,14 @@ def make_answer_prompt(job):
     if job.get("leads"):
         rules.append("운을 떼는 화제의 이름(" + ", ".join(f'"{n}"' for n in job["leads"]) + ")은 대사에 그대로 넣는다.")
     if job.get("doing"):
-        rules.append("지금 하는 일은 말투와 반응에만 묻어나게 하고, 몸짓을 따로 적지 않는다.")
+        rules.append("지금 하는 일은 말투와 반응에만 묻어나게 한다.")
+    if job.get("case"):
+        rules.append("사건은 당신도 함께 겪는 일처럼 당신의 말로 옮긴다. 사건 글의 '당신'은 플레이어다.")
     if job["lines"] and not set(job["lines"]) & set(job.get("told", [])):
         rules.append("할 말은 처음 하는 말이다. 아까 말했다고 하지 않는다.")
     user = f"플레이어: {job['said']}" if job["said"] else "플레이어: (말없이 기다린다)"
+    if job.get("hook"):   # the opener calls out as the player comes in
+        user = "플레이어: (방금 당신 앞에 왔다)"
     if job.get("saw"):   # in the system prompt alone gemma4 let it pass; next to the line it reacts
         user = f"(플레이어가 방금 {job['person']} 앞에서 한 일: {' / '.join(job['saw'])})\n{user}"
     if job.get("bet") and job["lines"]:   # after a typed action gemma4 copied that answer over the line it was given
@@ -183,7 +204,8 @@ def make_scene_prompt(job):
     rules = ["플레이어를 \"당신\"이라 부르고 합니다체로 쓴다.",
              "받은 대목과 진실 풀이를 모두 담되 여덟 문장을 넘지 않는다." if job["kind"] == "ending"
              else "두세 문장으로 쓴다.",
-             "지어내는 것은 날씨, 소리, 빛 같은 분위기뿐이다. 받은 것에 없는 사람, 물건, 흔적은 그리지 않는다.",
+             "지어내는 것은 날씨, 소리, 빛, 냄새 같은 분위기뿐이다. 받은 것에 없는 사람, 물건, 흔적은 그리지 않는다.",
+             VOICE,
              "분위기는 곳의 모습과 어긋나지 않게 쓴다. '적막', '정적', '어둠' 같은 말을 버릇처럼 넣지 않는다.",
              "한 문단으로 쓴다.",
              ("이번에 눈에 띈 것이 많으면 두드러진 두세 가지만 그린다. 그린 것은 받은 자리와 모양 그대로 쓰고, "
@@ -197,7 +219,8 @@ def make_scene_prompt(job):
     if job.get("people"):
         rules.append("마지막 문장에서 이곳에 있는 사람을 이름으로 알린다."
                      + (" 사람이 하는 일은 그 일을 하고 있는 모습으로 그린다." if job.get("doing") else ""))
-    return "당신은 추리 게임의 서술자다.", rules + mood_rule(job), "장면을 들려준다."
+    head = "당신은 추리 TRPG 판을 이끄는 진행자다." if job["kind"] == "ending" else "당신은 추리 게임의 서술자다."
+    return head, rules + mood_rule(job), "결말을 들려준다." if job["kind"] == "ending" else "장면을 들려준다."
 
 
 def make_checks(job):
@@ -238,11 +261,11 @@ def list_faults(job, text):
         faults.append("bracket")
     if kind != "answer" and (HAEYO.search(unquoted) or PLAIN.search(unquoted)):
         faults.append("style")
-    if kind == "dm" and job.get("key") != "conclude" and PUSH.search(unquoted):
+    if kind == "dm" and job.get("key") not in ("conclude", "ready") and PUSH.search(unquoted):
         faults.append("push")
     if kind == "dm" and re.search("[\"“”‘’]", text):
         faults.append("speech")
-    if kind == "answer" and any(name.replace(" ", "") not in text.replace(" ", "") for name in job.get("leads", [])):
+    if any(name.replace(" ", "") not in text.replace(" ", "") for name in job.get("leads", [])):
         faults.append("lead")
     if any(SequenceMatcher(None, r["answer"], text).ratio() >= REPEAT for r in job.get("recent", [])):
         faults.append("repeat")

@@ -10,7 +10,9 @@ SCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"
 
 
 class Echo:
-    async def read(self, story, state, text):
+    async def read(self, story, state, text, last=None):
+        if last:   # a case paired with what the person said just before reaches the interpreter with it
+            return {"kind": "topics", "topics": ["씨앗"]} if "씨앗" in last else {"kind": "chat"}
         return {"kind": "topics", "topics": ["밤"]} if state["partner"] == "오토" else {"kind": "chat"}
 
 

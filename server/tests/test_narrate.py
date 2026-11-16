@@ -7,7 +7,7 @@ def test_a_text_fails_on_low_checks_and_on_length():
     assert set(make_checks(job)) == {"added", "meaning"}
     assert judge(job, {"added": {"noul": 0.2}, "meaning": {"noul": 0.8}}, "한 말.") == (
         [], {"added": 0.2, "meaning": 0.8})
-    assert judge(job, {"added": {"noul": 0.9}, "meaning": {"noul": 0.4}}, "하나. 둘! 셋? 넷.")[0] == [
+    assert judge(job, {"added": {"noul": 0.9}, "meaning": {"noul": 0.4}}, "하나. 둘! 셋? 넷. 다섯.")[0] == [
         "added", "meaning", "length"]
     assert count_sentences("……알았소, 그렇다면 말하리다. 해 지기 전에 떠났소") == 2
     assert count_sentences("그... 그래요. 미... 미안하면 됐어요.") == 2   # research2-text-skeleton 인상 리사
@@ -39,6 +39,11 @@ def test_the_dm_shows_a_sign_in_합니다체_without_advice_or_invented_speech()
     assert judge(dm, low, "아직 가 보지 않은 경기장으로 가 보길 권합니다.")[0] == ["push"]
     assert judge(dm, low, "경기장 쪽에서 함성이 한 차례 터져 나옵니다.")[0] == []
     assert judge({"kind": "dm", "key": "conclude"}, low, "공이 울립니다. 당신의 결론을 들려주십시오.")[0] == []
+    # Help names what it points at; only the ready cue may say it is time to weigh things up (game/07 2절).
+    hint = {"kind": "dm", "key": "hint_topic", "leads": ["6시 반"]}
+    assert judge(hint, low, "최두식이 자꾸 시계를 봅니다.")[0] == ["lead"]
+    assert judge(hint, low, "최두식이 6시 반 이야기를 꺼내고 싶은 눈치입니다.")[0] == []
+    assert judge({"kind": "dm", "key": "ready"}, low, "조각이 다 모인 듯합니다. 이제 따져 보는 게 좋겠습니다.")[0] == []
 
 
 def test_narration_in_해라체_is_written_again():

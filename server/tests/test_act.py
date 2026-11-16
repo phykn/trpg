@@ -55,9 +55,12 @@ def test_stats_come_first():
 
 def test_asking_writes_once_then_leads_and_passes_lead_to_done():
     state, rs = play(1, [STATS, ask("밤"), ask("밤"), ask("밤")])
-    assert [r["talk"] for r in rs[1:]] == [[{"say": CREW}], [{"say": CREW}], [{"say": CREW}, {"lead": "오토.씨앗"}]]
-    assert ops(rs[2]) == ["count", "count"]
+    assert [r["talk"] for r in rs[1:]] == [[{"case": "오토", "leads": ["씨앗"]}, {"say": CREW}], [{"say": CREW}],
+                                           [{"say": CREW}, {"lead": "오토.씨앗"}]]
+    assert ops(rs[1])[0] == "write" and rs[1]["changes"][0]["line"] == "사건" and ops(rs[2]) == ["count", "count"]
     state, rs = play(1, [STATS, ask("밤", "씨앗"), PASS, PASS, PASS])
+    # The opener, out of topics the first time, points at a place not yet visited; after that only says so.
+    assert rs[3]["talk"] == [{"pass": "오토"}, {"done": "오토", "point": "곳 곡물 창고"}]
     assert rs[4]["talk"] == [{"pass": "오토"}, {"done": "오토"}]
     assert state["talks"]["오토"] == {"topics": {"밤": 1, "씨앗": 1}, "passes": 3, "done": True}
 
@@ -175,7 +178,7 @@ def said(impression, *topics):
 
 def test_two_impressions_of_one_lean_move_the_attitude_and_close_people_hear_later():
     state, rs = play(0, [STATS, said("다정"), said("칭찬")])
-    assert ops(rs[1]) == ["impress", "rumor", "count"] and ops(rs[2]) == ["impress", "shift", "rumor", "count"]
+    assert ops(rs[1]) == ["impress", "rumor", "write", "count", "count"] and ops(rs[2]) == ["impress", "shift", "rumor", "count"]
     assert state["impressions"]["오토"] == {"다정": 1, "칭찬": 1} and state["attitudes"]["오토"]["trust"] == 1
     assert [(r["to"], r["impression"], r["at"], r["seen"]) for r in state["rumors"]] == [
         ("한스", "다정", 2, False), ("한스", "칭찬", 2, False)]
@@ -206,7 +209,7 @@ def doing(method, target=None):
 def test_a_typed_action_costs_no_cell_and_pressing_leaves_a_threat():
     state, rs = play(0, [STATS, doing("press")])
     assert state["spent"] == 0 and state["impressions"]["오토"] == {"위협": 1}
-    assert rs[1]["talk"] == [{"try": "오토", "method": "press"}]
+    assert rs[1]["talk"][1:] == [{"try": "오토", "method": "press"}]
     soft, _ = play(0, [STATS, doing("soothe")])
     assert soft["impressions"]["오토"] == {}
     with pytest.raises(Refused):
@@ -218,10 +221,15 @@ def test_a_typed_action_costs_no_cell_and_pressing_leaves_a_threat():
 def test_chat_and_actions_that_go_nowhere_lead_on_the_second_miss():
     chat = ({"do": "ask"}, {"kind": "chat"})
     press = ({"do": "ask"}, {"kind": "action", "method": "press"})
-    _, rs = play(1, [STATS, chat, press, ask("밤"), chat])
-    assert rs[1]["talk"] == [{"chat": "오토"}]
-    assert rs[2]["talk"][-1] == {"lead": "오토.밤"}
-    assert not any("lead" in t for t in rs[4]["talk"])   # asking a topic starts the count again
+    _, rs = play(1, [STATS, chat, chat, press, ask("밤"), chat])
+    # The first talk with the opener tells the case and names a topic; it is no miss.
+    assert rs[1]["talk"] == [{"case": "오토", "leads": ["밤"]}, {"chat": "오토"}]
+    assert rs[1]["state"]["talks"]["오토"]["passes"] == 0 and "사건" in rs[1]["state"]["notebook"]
+    assert rs[2]["talk"] == [{"chat": "오토"}]
+    assert rs[3]["talk"][-1] == {"lead": "오토.밤"}
+    assert not any("lead" in t for t in rs[5]["talk"])   # asking a topic starts the count again
+    _, rs = play(1, [STATS, go("곡물 창고"), go("광장"), chat])
+    assert rs[0]["talk"] == [{"hook": "오토"}] and rs[3]["talk"][0]["case"] == "오토"   # leaving first is the player's call
 
 
 def test_a_thing_looked_at_by_name_is_looked_around_and_kept_for_the_scene():
