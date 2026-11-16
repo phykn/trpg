@@ -58,3 +58,10 @@ def test_a_typed_action_offers_the_dice_it_could_bet_and_nothing_else_does():
     assert make_view(SKELETON, state)[0]["offers"] == []
     state, rs = play_skeleton(0, [STATS, go("곡물 창고"), LOOK, doing("sneak", LOCK)])
     assert [o["label"].split(" · ")[0] for o in make_view(SKELETON, state, rs[-1])[0]["offers"]] == ["몰래 연다"]
+
+
+def test_a_guessed_action_offers_its_dice_but_the_answer_and_impressions_are_the_readings():
+    guess = {"do": "ask", "text": "x"}, {"kind": "chat", "guess": {"method": "press", "target": None}}
+    state, rs = play_skeleton(0, [STATS, ask("밤"), guess])
+    assert [o["label"].split(" · ")[0] for o in make_view(SKELETON, state, rs[-1])[0]["offers"]] == ["오토를 몰아세운다"]
+    assert state["impressions"]["오토"] == {} and rs[-1]["talk"][0] == {"chat": "오토"}

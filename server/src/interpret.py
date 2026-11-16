@@ -2,6 +2,7 @@ from .locale import ko
 from .models import ModelUnavailable
 from .names import show_name
 from .rules.act import find_path, list_blocks_here, list_topics
+from .rules.state import list_people_here
 
 THRESHOLD = 0.75
 TWO_THRESHOLD = 0.85
@@ -10,7 +11,12 @@ NO_TOPIC = "_none"
 IMPRESSION_THRESHOLD = 0.5
 # A weaker impression still counts when "none" is unlikely; set by the evals of 2026-11-16 (engine/01 1절).
 IMPRESSION_LOW, IMPRESSION_NONE_CEILING = 0.35, 0.2
+# A threat that also accuses is a threat: 위협 this high outranks a top 의심 (engine/01 1절).
+THREAT_OVER_SUSPICION = 0.3
 DEED_THRESHOLD = 0.8
+SURE_ACTION = 0.5   # an action pick under half the vote, with no told deed, is only guessed (engine/01 1절)
+# A reading that passes as nothing yet looks like an action offers that action's dice (engine/01 1절).
+GUESS_ACTION = 0.25
 
 
 class Interpreter:
@@ -24,18 +30,21 @@ class Interpreter:
         situation = f"말하는 상대: {partner}. 플레이어의 문장: {text}"
         answers = await self.decision.decide(situation, questions)
         try:
+            answers = settle_kind(answers, questions)
             second = ask_second(answers, questions)
             if second:
                 questions = {**questions, "second": second}
                 answers = {**answers, **await self.decision.decide(situation, {"second": second})}
             locks = list(list_locks(story, state))
-            if answers["kind"]["choice"] == "action" or is_told_deed(answers, questions):
+            heard = None if answers["kind"]["choice"] == "action" else pick(answers, questions, locks)
+            deed = judge_deed(answers, questions, heard)
+            if deed:
                 how = ask_how(story, state)
                 questions = {**questions, **how}
                 answers = {**answers, **await self.decision.decide(situation, how)}
-                heard = pick_deed("action", answers, questions, locks)
-            else:
-                heard = pick(answers, questions, locks)
+                action = pick_deed("action", answers, questions, locks)
+                heard = action if deed == "action" or action["kind"] != "action" else {
+                    **heard, "guess": {k: action[k] for k in ("method", "target")}}
             heard = {**heard, "impression": pick_impression(answers, questions)}
             probs = {key: answers[key]["probabilities"] if q["type"] == "choice" else {"true": answers[key]["noul"]}
                      for key, q in questions.items()}
@@ -66,11 +75,13 @@ def make_questions(story, state):
                  "look": "누구에게 묻지 않고 주위를 둘러보거나 이곳을 살펴본다"}
     else:
         kinds = {"look": "이곳에 머물며 둘러보거나 혼잣말을 한다"}
-    locks = list(list_locks(story, state).values())
-    deeds = ([f"{ko.eul(name)} 때리거나 멱살을 잡거나 겁주기", "'~하고' 다독이거나 사정하기", "'~라고' 거짓말하거나 넘겨짚어 떠보기"]
-             if person else []) + ([f"{ko.eul(', '.join(locks))} 비틀거나 부수거나 따서 열기"] if locks else [])
-    if deeds:
+    locks = ", ".join(list_locks(story, state).values())
+    if person:
+        deeds = [f"{ko.eul(name)} 때리거나 멱살을 잡거나 겁주기", "'~하고' 다독이거나 사정하기", "'~라고' 거짓말하거나 넘겨짚어 떠보기"]
+        deeds += [f"{ko.eul(locks)} 비틀거나 부수거나 따서 열기"] if locks else []
         kinds["action"] = "묻는 말을 그대로 옮기지 않고 하는 짓을 '~한다'로 적는다. " + ", ".join(deeds)
+    elif locks:
+        kinds["action"] = f"{ko.eul(locks)} 비틀거나 부수거나 따서 연다"
     questions = {}
     if places:
         kinds["move"] = "다른 곳으로 가려 한다"
@@ -96,19 +107,43 @@ def list_locks(story, state):
     return {b.addr: show_name(story, "볼 것", b.name) for b in list_blocks_here(story, state) if b.kind == "잠김"}
 
 
-def is_told_deed(answers, questions):
-    """A deed told in words ("…하고 사정한다") that would otherwise pass as nothing is an action (engine/01 1절)."""
-    return "deed" in questions and answers["deed"]["noul"] >= DEED_THRESHOLD and pick(answers, questions)["kind"] in (
-        "none", "chat", "unsure")
+def settle_kind(answers, questions):
+    """An action picked by under half the vote, with no told deed, is read as the runner-up kind (engine/01 1절)."""
+    kind = answers["kind"]
+    probs = kind["probabilities"]
+    if (kind["choice"] != "action" or "deed" not in questions or probs["action"] >= SURE_ACTION
+            or answers["deed"]["noul"] >= DEED_THRESHOLD):
+        return answers
+    return {**answers, "kind": {**kind, "choice": max((k for k in probs if k != "action"), key=probs.get)}}
+
+
+def judge_deed(answers, questions, heard):
+    """"action" for an action, "guess" for a reading that only looks like one, else None (engine/01 1절).
+
+    A deed told in words ("…하고 사정한다") that would otherwise pass as nothing is an action."""
+    if heard is None:
+        return "action"
+    if "deed" not in questions or heard["kind"] not in ("none", "chat", "unsure"):
+        return None
+    if answers["deed"]["noul"] >= DEED_THRESHOLD:
+        return "action"
+    # Kanana says yes to "하는 짓을 서술하는가" for plain questions too (0.6 to 0.74), so it alone guesses nothing
+    return "guess" if answers["kind"]["probabilities"].get("action", 0.0) >= GUESS_ACTION else None
 
 
 def ask_how(story, state):
-    """An action is asked apart which method it is, and which lock when there are several (engine/01 1절)."""
+    """An action is asked apart which method it is, and which lock when there are several (engine/01 1절).
+
+    With no one chosen it is also asked whether it is done to a lock or to someone here: the option of a lock alone
+    drew deeds like grabbing a person's arm."""
     locks = list_locks(story, state)
     things = ", ".join(locks.values())
     methods = {**(ko.TRY_METHODS if state["partner"] else {}),
                **({m: f"{ko.eul(things)} {how}" for m, how in ko.OPEN_METHODS.items()} if locks else {})}
     how = {"method": choice("어떤 행동인가", methods)}
+    people = {} if state["partner"] else {p: f"{show_name(story, '사람', p)}에게 한다" for p in list_people_here(story, state)}
+    if people:
+        return {**how, "on": choice("무엇에 하는 짓인가", {**{a: f"{ko.eul(n)} 연다" for a, n in locks.items()}, **people})}
     return {**how, "lock": choice("어느 것을 열려 하는가", locks)} if len(locks) > 1 else how
 
 
@@ -128,9 +163,9 @@ def pick_impression(answers, questions):
     if top is None:
         return None
     none = probs.get(NO_TOPIC, 0.0)
-    if probs[top] >= IMPRESSION_THRESHOLD or probs[top] >= IMPRESSION_LOW and none <= IMPRESSION_NONE_CEILING:
-        return top
-    return None
+    if not (probs[top] >= IMPRESSION_THRESHOLD or probs[top] >= IMPRESSION_LOW and none <= IMPRESSION_NONE_CEILING):
+        return None
+    return "위협" if top == "의심" and probs.get("위협", 0.0) >= THREAT_OVER_SUSPICION else top
 
 
 def choice(instructions, criteria):
@@ -160,9 +195,11 @@ def pick_deed(kind, answers, questions, locks):
         return {"kind": "move", "place": answers["place"]["choice"]}
     if kind == "look":
         return {"kind": "look"}
+    on = next((answers[key]["choice"] for key in ("on", "lock") if key in questions), None)
+    if "on" in questions and on not in locks:
+        return {"kind": "look"}   # done to someone not chosen: writing to no one looks around (game/07 2절)
     method = answers["method"]["choice"]
-    lock = None if method in ko.TRY_METHODS else answers["lock"]["choice"] if "lock" in questions else locks[0]
-    return {"kind": "action", "method": method, "target": lock}
+    return {"kind": "action", "method": method, "target": None if method in ko.TRY_METHODS else on or locks[0]}
 
 
 def pick(answers, questions, locks=()):

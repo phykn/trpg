@@ -73,7 +73,7 @@ TRIES = {"press": "플레이어가 거칠게 몰아붙이려 든다", "soothe": 
 
 
 # The options of "어떤 행동인가" (engine/01 1절).
-TRY_METHODS = {"press": "몰아세운다: 때리거나 붙잡거나 으른다", "soothe": "달랜다: 다독이거나 사정한다",
+TRY_METHODS = {"press": "몰아세운다: 때리거나 붙잡거나 으르거나 윽박지른다", "soothe": "달랜다: 다독이거나 사정하거나 부탁한다",
                "trick": "속인다: 거짓으로 꾀거나 떠본다"}
 OPEN_METHODS = {"force": "힘으로 비틀거나 부수거나 들이받아 연다", "sneak": "자물쇠를 몰래 따서 연다"}
 

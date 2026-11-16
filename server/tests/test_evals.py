@@ -25,6 +25,7 @@ def test_every_story_has_cases_and_the_report_grades_them():
     assert grade("행동 몰아세운다", pressed) == "맞힘" and grade("행동 달랜다", pressed) == "틀린 행동"
     assert grade("행동 잠김", {"kind": "action", "method": "sneak", "target": "잠김 잠긴 뒷문"}) == "맞힘"
     assert grade("행동 속인다", {"kind": "chat"}) == "놓침" and grade("밤", pressed) == "행동으로 읽음"
+    assert grade("행동 속인다", {"kind": "chat", "guess": {"method": "trick", "target": None}}) == "맞힘"
 
 
 def test_an_unknown_expectation_is_refused(tmp_path):

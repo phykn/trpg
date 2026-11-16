@@ -203,6 +203,8 @@ class Turn:
             self.talk.append({kind: person, **({"topics": heard["topics"]} if kind == "unsure" else {})})
         else:
             raise Refused(f"unknown reading {kind!r}")
+        if heard.get("guess") and kind in ("none", "chat", "unsure") and person:
+            self.guess_action(person, heard["guess"]["method"], heard["guess"].get("target"))
 
     def try_action(self, person, method, target):
         """A typed action costs no cell; the dice it could bet on are offered as buttons (game/05 3절)."""
@@ -218,6 +220,13 @@ class Turn:
         if method == "press" and "위협" not in [c.get("impression") for c in self.changes if c["op"] == "impress"]:
             self.impress(person, "위협")
         self.talk.append({"try": person, "method": method})
+
+    def guess_action(self, person, method, target):
+        """What only looks like an action leaves no impression; the turn keeps it so the view offers its dice."""
+        if method in LOCK_METHODS and target in [b.addr for b in list_blocks_here(self.story, self.state)]:
+            self.talk.append({"try": target, "method": method, "guess": True})
+        elif method in TALK_METHODS:
+            self.talk.append({"try": person, "method": method, "guess": True})
 
     def ask_topics(self, person, topics):
         shown = list_topics(self.story, self.state, person)

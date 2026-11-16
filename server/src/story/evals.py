@@ -42,7 +42,7 @@ def read_cases(folder, story, held=False):
         for expect, texts in groups.items():
             topics = expect.split(" + ")
             if expect.startswith("행동 "):
-                if kind != "사람" or expect[3:] not in ACTIONS:
+                if expect[3:] not in ACTIONS or kind != "사람" and expect != "행동 잠김":   # alone, only a lock
                     raise StoryError(f"{path.name}: {where}: {expect}")
                 cases += [(where, expect, text) for text in texts]
                 continue
@@ -76,16 +76,21 @@ def show_heard(heard):
     if heard["kind"] == "unsure":
         return f"되물음 {' / '.join(heard['topics'])}"
     if heard["kind"] == "action":
-        return "행동 잠김" if heard["target"] else f"행동 {ko.METHODS[heard['method']]}"
+        return show_action(heard)
     return {"chat": "잡담", "none": "넘김", "look": "둘러봄"}[heard["kind"]]
+
+
+def show_action(action):
+    return "행동 잠김" if action["target"] else f"행동 {ko.METHODS[action['method']]}"
 
 
 def grade(expect, heard):
     if expect.startswith("인상 "):   # only the impression counts here; the same sentence may also ask a topic
         want, got = expect[3:], heard.get("impression") or NO_IMPRESSION
         return "맞힘" if got == want else "놓침" if got == NO_IMPRESSION else "틀린 인상"
-    if expect.startswith("행동 "):
-        return "맞힘" if show_heard(heard) == expect else "틀린 행동" if heard["kind"] == "action" else "놓침"
+    if expect.startswith("행동 "):   # a guessed action counts when its button is the right one (engine/01 5절)
+        action = heard if heard["kind"] == "action" else heard.get("guess")
+        return "놓침" if not action else "맞힘" if show_action(action) == expect else "틀린 행동"
     if heard["kind"] == "action":
         return "행동으로 읽음"
     if heard["kind"] == "topics" and set(heard["topics"]) == set(expect.split(" + ")):
@@ -104,6 +109,8 @@ async def run_evals(folder, interpreter, held=False):
         began = time.monotonic()
         heard = await interpreter.read(story, make_state(story, where), text)
         got = f"인상 {heard.get('impression') or NO_IMPRESSION}" if expect.startswith("인상 ") else show_heard(heard)
+        if heard.get("guess"):
+            got += f" (단추 {show_action(heard['guess'])})"
         results.append({"where": where, "text": text, "expect": expect, "got": got,
                         "grade": grade(expect, heard), "seconds": round(time.monotonic() - began, 2), "heard": heard})
     return results
@@ -132,7 +139,8 @@ def summarize(results):
     if asked:
         false = sum(r["grade"] == "행동으로 읽음" for r in asked) / len(asked)
         passed = passed and false <= GOAL_FALSE_ACTION
-        lines.append(f"{'통과' if false <= GOAL_FALSE_ACTION else '떨어짐'}  행동으로 읽음 {false:.0%} (≤ {GOAL_FALSE_ACTION:.0%})")
+        lines.append(f"{'통과' if false <= GOAL_FALSE_ACTION else '떨어짐'}  행동으로 읽음 {false:.0%} (≤ {GOAL_FALSE_ACTION:.0%}), "
+                     f"단추만 뜸 {sum(bool(r['heard'].get('guess')) for r in asked)}/{len(asked)}")
     return "\n".join(lines), passed
 
 

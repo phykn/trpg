@@ -11,11 +11,14 @@ DAWN = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
 
 
 class FakeDecision:
-    def __init__(self, kind, topics=None, two=0.1, place="숲길", second="_none", impression=None, method="press", deed=0.1):
+    def __init__(self, kind, topics=None, two=0.1, place="숲길", second="_none", impression=None, method="press", deed=0.1,
+                 kinds=None, on="잠김 장부 궤짝"):
         impression = impression or {"_none": 0.9}
-        self.answers = {"kind": {"choice": kind, "probabilities": {kind: 0.9}}, "two": {"noul": two}, "deed": {"noul": deed},
+        self.answers = {"kind": {"choice": kind, "probabilities": kinds or {kind: 0.9}}, "two": {"noul": two},
+                        "deed": {"noul": deed},
                         "place": {"choice": place, "probabilities": {}}, "second": {"choice": second, "probabilities": {}},
                         "method": {"choice": method, "probabilities": {method: 0.9}},
+                        "on": {"choice": on, "probabilities": {on: 0.9}},
                         "impression": {"choice": max(impression, key=impression.get), "probabilities": impression}}
         self.asked = []
         if topics:
@@ -86,6 +89,15 @@ def test_an_impression_is_taken_from_the_common_ones_and_the_persons_own_above_i
     assert read(unsure)["impression"] is None
     alone = FakeDecision("look", place="마을 사당")
     assert read(alone, "곳 숲길")["impression"] is None and "impression" not in alone.questions
+
+
+@pytest.mark.parametrize(("impression", "got"), [
+    ({"의심": 0.6, "위협": 0.35, "_none": 0.05}, "위협"),   # "계속 거짓말하면 나 무슨 짓 할지 몰라" in research2-evals-arena
+    ({"의심": 0.7, "위협": 0.05, "_none": 0.25}, "의심"),
+    ({"의심": 0.32, "위협": 0.3, "_none": 0.38}, None),   # a suspicion too weak to stand turns into no threat
+])
+def test_a_threat_that_also_accuses_is_a_threat(impression, got):
+    assert read(FakeDecision("chat", {"징수관": 0.1, "_none": 0.9}, impression=impression))["impression"] == got
     given = FakeDecision("chat", impression={"눈감기": 0.8, "_none": 0.2})
     assert asyncio.run(Interpreter(given).read_impression(DAWN, "브람", "밀주 건은 못 본 걸로 하지"))["impression"] == "눈감기"
 
@@ -105,3 +117,31 @@ def test_an_action_is_asked_apart_which_method_it_is_and_a_lock_here_can_be_open
     assert {k: read(told)[k] for k in ("kind", "method")} == {"kind": "action", "method": "soothe"}
     asked = FakeDecision("topic", {"징수관": 0.9, "_none": 0.1}, deed=0.9)
     assert read(asked)["kind"] == "topics"   # a told deed that asks a topic still asks it
+
+
+def test_a_reading_that_only_looks_like_an_action_keeps_the_reading_and_guesses_the_method():
+    looks = FakeDecision("chat", {"징수관": 0.1, "_none": 0.9}, method="soothe", kinds={"chat": 0.6, "action": 0.3})
+    got = read(looks)
+    assert got["kind"] == "chat" and got["guess"] == {"method": "soothe", "target": None}
+    asked = FakeDecision("topic", {"징수관": 0.9, "_none": 0.1}, kinds={"topic": 0.6, "action": 0.3})
+    assert "guess" not in read(asked)   # a topic that is asked offers nothing
+    question = FakeDecision("topic", {"징수관": 0.1, "_none": 0.9}, deed=0.7, kinds={"topic": 0.9, "action": 0.05})
+    assert "guess" not in read(question)   # "창문은 누가 열었어요?" in research-held-arena
+
+
+def test_with_no_one_chosen_a_deed_to_someone_here_looks_around_and_one_to_a_lock_opens_it():
+    grab = FakeDecision("action", method="force", on="마렌")   # "마렌의 팔을 거칠게 붙잡는다" went to the lock
+    assert read(grab, "곳 촌장 집")["kind"] == "look"
+    assert set(grab.asked[1]["on"]["criteria"]) == {"잠김 장부 궤짝", "마렌"}
+    smash = FakeDecision("action", method="force")
+    assert {k: read(smash, "곳 촌장 집")[k] for k in ("kind", "method", "target")} == {
+        "kind": "action", "method": "force", "target": "잠김 장부 궤짝"}
+
+
+def test_an_action_under_half_the_vote_is_read_as_the_runner_up_unless_a_deed_is_told():
+    kinds = {"action": 0.46, "chat": 0.25, "topic": 0.24}
+    weak = FakeDecision("action", {"징수관": 0.1, "_none": 0.9}, deed=0.59, kinds=kinds)   # "두식아 담배하나 꽂아봐라"
+    got = read(weak)
+    assert got["kind"] == "chat" and got["guess"] == {"method": "press", "target": None}
+    told = FakeDecision("action", {"징수관": 0.1, "_none": 0.9}, deed=0.83, kinds=kinds)   # "태오야, 제발 도와줘, 하고 사정한다"
+    assert read(told)["kind"] == "action"
