@@ -16,7 +16,7 @@ Each with its evidence (`qa_test/runs/<run>`, turn numbers).
 
 ## Back-questions between two near topics
 
-`qa_test/runs/evals-arena`: 83% against the 85% bar. Both misses are back-questions between 최두식's 벨트 and 그 시각 ("누가 가져간 것 같아요?", "벨트 없어질 때 실장님은 뭐 하고 계셨어요?"); none went to a wrong topic. Before the asks were widened, `qa-3` turns 14 and 16 ("어디 계셨어요?") fell through to no topic, so the lie could not be heard. In `qa-1` turns 25–27 토빈 asked "숲길에서 본 것인가요, 사당에서 본 것인가요?" again after the player picked one. Try a back-question that remembers the pick, or clearer topic names.
+After the 0.3 margin rule and wider asks (`qa_test/runs/evals-margin-*`): 프롤로그 93%, 챕터 1 94%, no wrong topics. Left are true near-ties ("벨트 없어질 때 실장님은 뭐 하고 계셨어요?" 0.57 against 0.41; "징수관이 댁을 나선 뒤에" between 징수관 and 그 뒤의 일) and 넬's 독미나리 for "약초를 사 갔습니까" (an added ask made a two-topic question pick 독미나리 wrongly, so it was taken out). Dev is at 82% on 11 cases: one two-topic question read as one, one question about another person read as chat. In `qa-1` turns 25–27 토빈 asked the same back-question after the player picked one; a back-question that remembers the pick is still open.
 
 ## Narration places things where the notebook does not
 

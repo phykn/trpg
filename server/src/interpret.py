@@ -4,6 +4,7 @@ from .view import show_name
 
 THRESHOLD = 0.75
 TWO_THRESHOLD = 0.85
+MARGIN = 0.3   # a topic this far ahead of every other option is taken even under THRESHOLD (engine/01 1절)
 NO_TOPIC = "_none"
 
 
@@ -59,7 +60,8 @@ def pick(answers, questions):
     no_topic = probs.get(NO_TOPIC, 0.0)
     if "two" in questions and answers["two"]["noul"] >= TWO_THRESHOLD and probs[ranked[1]] > no_topic:
         return {"kind": "topics", "topics": ranked[:2]}
-    if probs[ranked[0]] >= THRESHOLD:
+    rest = max([probs[t] for t in ranked[1:]] + [no_topic])
+    if probs[ranked[0]] >= THRESHOLD or probs[ranked[0]] - rest >= MARGIN:
         return {"kind": "topics", "topics": ranked[:1]}
     if kind == "chat":
         return {"kind": "chat"}

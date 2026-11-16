@@ -45,6 +45,7 @@ def test_the_questions_offer_shown_topics_with_their_asks_and_reachable_places()
     (FakeDecision("topic", {"징수관": 0.9, "독미나리": 0.0, "_none": 0.1}, two=0.9), {"kind": "topics", "topics": ["징수관"]}),
     (FakeDecision("topic", {"징수관": 0.4, "독미나리": 0.1, "_none": 0.5}), {"kind": "none"}),
     (FakeDecision("topic", {"징수관": 0.5, "독미나리": 0.3, "_none": 0.2}), {"kind": "unsure", "topics": ["징수관", "독미나리"]}),
+    (FakeDecision("topic", {"징수관": 0.6, "독미나리": 0.1, "_none": 0.3}), {"kind": "topics", "topics": ["징수관"]}),   # 0.3 ahead
 ])
 def test_the_answers_become_one_reading(decision, heard):
     got = read(decision)
