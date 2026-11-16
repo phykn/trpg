@@ -1,5 +1,5 @@
 import {
-  BookOpen, ChevronRight, Clock, Dumbbell, Eye, Heart, Lightbulb, MapPin, MessageCircle, Package, Play, RotateCcw, Scale,
+  BookOpen, ChevronRight, Clock, Dices, Dumbbell, Eye, Heart, Lightbulb, MapPin, MessageCircle, Package, Play, RotateCcw, Scale,
   Send, Settings, User, Wrench, X,
 } from 'lucide-react-native';
 
@@ -19,7 +19,8 @@ const ICONS = {
   close: X,
   next: ChevronRight,
   retry: RotateCcw, // asking again, and a new game
-  step: Play, // a filled triangle; turned around it steps down
+  step: Play, // a filled triangle; turned around it steps down, and it resumes a game
+  dice: Dices, // the brand
   charm: Heart, // the four stats
   might: Dumbbell,
   wit: Lightbulb,
