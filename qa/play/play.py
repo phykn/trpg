@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / "server"))
 
 from src.config import local_settings
 
-MAX_TEXT = 200   # client/components/game/InputBar.tsx maxLength
+MAX_TEXT = 200   # client/components/play/InputBar.tsx maxLength
 QUESTIONS = (("who", "누가"), ("how", "어떻게"), ("why", "왜"))
 GROUPS = {"places": "곳", "people": "사람", "items": "물건", "seen": "본 것", "heard": "들은 말"}
 VERDICTS = {"solved": "다 밝혔다", "who_only": "누구인지는 밝혔다", "wrong": "엉뚱한 사람을 짚었다", "unsolved": "밝히지 못했다"}
