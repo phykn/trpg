@@ -72,8 +72,15 @@ TRIES = {"press": "플레이어가 거칠게 몰아붙이려 든다", "soothe": 
          "trick": "플레이어가 거짓으로 꾀어 떠보려 든다"}
 
 
+# The options of "어떤 행동인가" (engine/01 1절).
+TRY_METHODS = {"press": "몰아세운다: 때리거나 붙잡거나 으른다", "soothe": "달랜다: 다독이거나 사정한다",
+               "trick": "속인다: 거짓으로 꾀거나 떠본다"}
+OPEN_METHODS = {"force": "힘으로 비틀거나 부수거나 들이받아 연다", "sneak": "자물쇠를 몰래 따서 연다"}
+
+
 def try_lock(method, thing):
-    return f"당신이 {eul(thing)} {'억지로 비틀어 열려' if method == 'force' else '몰래 따려'} 든다"
+    how = "힘으로 비틀어 열어 보려" if method == "force" else "몰래 따 보려"
+    return f"당신이 {eul(thing)} {how} 손을 댄다. 아직 열리지 않았고 잠긴 그대로다"
 
 
 def bet(method, chance, topic=None, person=None):

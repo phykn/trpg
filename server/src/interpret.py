@@ -1,7 +1,7 @@
 from .locale import ko
 from .models import ModelUnavailable
 from .names import show_name
-from .rules.act import find_path, list_topics
+from .rules.act import find_path, list_blocks_here, list_topics
 
 THRESHOLD = 0.75
 TWO_THRESHOLD = 0.85
@@ -10,6 +10,7 @@ NO_TOPIC = "_none"
 IMPRESSION_THRESHOLD = 0.5
 # A weaker impression still counts when "none" is unlikely; set by the evals of 2026-11-16 (engine/01 1절).
 IMPRESSION_LOW, IMPRESSION_NONE_CEILING = 0.35, 0.2
+DEED_THRESHOLD = 0.8
 
 
 class Interpreter:
@@ -27,7 +28,15 @@ class Interpreter:
             if second:
                 questions = {**questions, "second": second}
                 answers = {**answers, **await self.decision.decide(situation, {"second": second})}
-            heard = {**pick(answers, questions), "impression": pick_impression(answers, questions)}
+            locks = list(list_locks(story, state))
+            if answers["kind"]["choice"] == "action" or is_told_deed(answers, questions):
+                how = ask_how(story, state)
+                questions = {**questions, **how}
+                answers = {**answers, **await self.decision.decide(situation, how)}
+                heard = pick_deed("action", answers, questions, locks)
+            else:
+                heard = pick(answers, questions, locks)
+            heard = {**heard, "impression": pick_impression(answers, questions)}
             probs = {key: answers[key]["probabilities"] if q["type"] == "choice" else {"true": answers[key]["noul"]}
                      for key, q in questions.items()}
         except (KeyError, TypeError, AttributeError) as exc:
@@ -57,6 +66,11 @@ def make_questions(story, state):
                  "look": "누구에게 묻지 않고 주위를 둘러보거나 이곳을 살펴본다"}
     else:
         kinds = {"look": "이곳에 머물며 둘러보거나 혼잣말을 한다"}
+    locks = list(list_locks(story, state).values())
+    deeds = ([f"{ko.eul(name)} 때리거나 멱살을 잡거나 겁주기", "'~하고' 다독이거나 사정하기", "'~라고' 거짓말하거나 넘겨짚어 떠보기"]
+             if person else []) + ([f"{ko.eul(', '.join(locks))} 비틀거나 부수거나 따서 열기"] if locks else [])
+    if deeds:
+        kinds["action"] = "묻는 말을 그대로 옮기지 않고 하는 짓을 '~한다'로 적는다. " + ", ".join(deeds)
     questions = {}
     if places:
         kinds["move"] = "다른 곳으로 가려 한다"
@@ -67,11 +81,35 @@ def make_questions(story, state):
         questions["topic"] = choice("어느 화제를 묻는가", {**topics, NO_TOPIC: "위의 어느 화제도 아니다"})
     if person:
         questions["impression"] = ask_impression(story, person)
+        questions["deed"] = {"type": "noul", "instructions": "이 문장이 상대에게 하는 말이 아니라 플레이어가 하는 짓을 서술하는가",
+                             "criteria": {"true": "따옴표 없이 하는 짓을 '~한다'로 서술한다. 예: ~하고 사정한다, ~라고 거짓말한다, "
+                                                  "다독인다, 안아 준다, 떠본다",
+                                          "false": "상대에게 직접 건네는 말이다. 묻거나 부탁하거나 말을 붙인다"}}
     if len(topics) > 1:
         questions["two"] = {"type": "noul", "instructions": "이 문장이 서로 다른 두 화제를 한꺼번에 묻는가",
                             "criteria": {"true": "서로 다른 두 가지를 묻는다",
                                          "false": "한 가지를 묻거나, 같은 것을 말을 바꿔 거듭 묻는다"}}
     return questions
+
+
+def list_locks(story, state):
+    return {b.addr: show_name(story, "볼 것", b.name) for b in list_blocks_here(story, state) if b.kind == "잠김"}
+
+
+def is_told_deed(answers, questions):
+    """A deed told in words ("…하고 사정한다") that would otherwise pass as nothing is an action (engine/01 1절)."""
+    return "deed" in questions and answers["deed"]["noul"] >= DEED_THRESHOLD and pick(answers, questions)["kind"] in (
+        "none", "chat", "unsure")
+
+
+def ask_how(story, state):
+    """An action is asked apart which method it is, and which lock when there are several (engine/01 1절)."""
+    locks = list_locks(story, state)
+    things = ", ".join(locks.values())
+    methods = {**(ko.TRY_METHODS if state["partner"] else {}),
+               **({m: f"{ko.eul(things)} {how}" for m, how in ko.OPEN_METHODS.items()} if locks else {})}
+    how = {"method": choice("어떤 행동인가", methods)}
+    return {**how, "lock": choice("어느 것을 열려 하는가", locks)} if len(locks) > 1 else how
 
 
 def ask_impression(story, person):
@@ -107,7 +145,7 @@ def describe_topic(story, person, topic):
 def ask_second(answers, questions):
     # One topic's probabilities say nothing about a second, so a sentence that asks two things is asked again which
     # other topic it asks (engine/01 1절).
-    if "two" not in questions or answers["kind"]["choice"] in ("move", "look") or (
+    if "two" not in questions or answers["kind"]["choice"] in ("move", "look", "action") or (
             answers["two"]["noul"] < TWO_THRESHOLD):
         return None
     probs = answers["topic"]["probabilities"]
@@ -117,15 +155,23 @@ def ask_second(answers, questions):
                   {**rest, NO_TOPIC: "다른 화제는 묻지 않는다. 같은 것을 말을 바꿔 거듭 묻는다"})
 
 
-def pick(answers, questions):
-    for key, question in questions.items():
-        if question["type"] == "choice" and answers[key]["choice"] not in question["criteria"]:
-            raise ModelUnavailable(f"decision: {key} answered outside its options")
-    kind = answers["kind"]["choice"]
+def pick_deed(kind, answers, questions, locks):
     if kind == "move":
         return {"kind": "move", "place": answers["place"]["choice"]}
     if kind == "look":
         return {"kind": "look"}
+    method = answers["method"]["choice"]
+    lock = None if method in ko.TRY_METHODS else answers["lock"]["choice"] if "lock" in questions else locks[0]
+    return {"kind": "action", "method": method, "target": lock}
+
+
+def pick(answers, questions, locks=()):
+    for key, question in questions.items():
+        if question["type"] == "choice" and answers[key]["choice"] not in question["criteria"]:
+            raise ModelUnavailable(f"decision: {key} answered outside its options")
+    kind = answers["kind"]["choice"]
+    if kind in ("move", "look", "action"):
+        return pick_deed(kind, answers, questions, locks)
     if "topic" not in questions:
         return {"kind": "chat" if kind == "chat" else "none"}
     probs = answers["topic"]["probabilities"]

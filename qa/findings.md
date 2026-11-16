@@ -52,3 +52,11 @@ Not bugs; the testers' play raises them and a person should judge them.
 - The omen comes three cells early, but the walk there can take two or three (`qa-5` turns 37–38: the smoke led to ashes). Is three cells enough to act on?
 - A failed roll closes that way and lowers the others with no reason shown (`qa-5` turns 63, 66).
 - The ending is told at the hour the cells run out, not when the player concluded (`qa-5`, `qa-6`: "새벽 4시").
+
+## A failed bet after a typed action repeats the action's answer
+
+`qa_test/runs/action-arena`, turns 4–5: "멱살을 잡는다" got "봉식아, 너 미쳤어? 제발 좀 그만해, …"; the 몰아세운다 bet that followed failed and its answer was the same sentence, word for word. The repeat and meaning checks failed all three tries, and gemma4 wrote it unchanged each time, despite the note that quotes it. The bet's job gives "이 말을 짧게 되풀이한다: <벨트 line>" and the recent exchange; gemma4 copies the recent answer instead. Try leaving the try turn's answer out of the recent exchanges of the bet right after it, or naming the line to repeat in the user message.
+
+## Told lies and pleas still pass as nothing
+
+`qa_test/runs/action-evals4-*`: typed actions hit 63/72 (dawn 81%, under the 85% goal). The misses are deeds told without quotes, "브람이 촌장님 얘기를 다 했다고 거짓말한다", "부탁이오, 하고 넬에게 고개를 숙인다": read as 넘김 or a topic, with the action option at 0.14–0.44 and the told-deed question under 0.8. Topic sentences reach 0.46 on the action option, so no threshold on it separates them. Topic accuracy fell by one sentence in arena ("두식아 담배하나 꽂아봐라" read as 속인다) and dawn ("촌장 집에 가 봐야겠소", topic 0.42 against move 0.40).

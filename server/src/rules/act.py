@@ -188,6 +188,8 @@ class Turn:
         person = self.state["partner"]
         if kind == "move":
             self.do_move(heard["place"])
+        elif kind == "action" and (person or heard["method"] in LOCK_METHODS):
+            self.try_action(person, heard["method"], heard.get("target"))
         elif person is None or kind == "look":
             self.do_look()
         elif kind == "topics":
@@ -196,8 +198,6 @@ class Turn:
         elif kind == "none":
             self.talk_to(person)
             self.pass_on(person)
-        elif kind == "action":
-            self.try_action(person, heard["method"], heard.get("target"))
         elif kind in ("chat", "unsure"):
             self.talk_to(person)
             self.talk.append({kind: person, **({"topics": heard["topics"]} if kind == "unsure" else {})})

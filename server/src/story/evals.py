@@ -23,6 +23,9 @@ GOAL_RIGHT = 0.85
 GOAL_WRONG_TOPIC = 0.02
 GOAL_IMPRESSION = 0.8
 GOAL_WRONG_IMPRESSION = 0.05
+GOAL_ACTION = 0.85
+GOAL_FALSE_ACTION = 0.03
+ACTIONS = {"몰아세운다": "press", "달랜다": "soothe", "속인다": "trick", "잠김": None}
 NO_IMPRESSION = "없음"
 
 
@@ -38,6 +41,11 @@ def read_cases(folder, story, held=False):
             raise StoryError(f"{path.name}: {where}")
         for expect, texts in groups.items():
             topics = expect.split(" + ")
+            if expect.startswith("행동 "):
+                if kind != "사람" or expect[3:] not in ACTIONS:
+                    raise StoryError(f"{path.name}: {where}: {expect}")
+                cases += [(where, expect, text) for text in texts]
+                continue
             if expect.startswith("인상 "):
                 known = kind == "사람" and expect[3:] in (NO_IMPRESSION, *ko.IMPRESSIONS, *story.people[name].impressions)
                 if not known:
@@ -67,6 +75,8 @@ def show_heard(heard):
         return f"곳 {heard['place']}"
     if heard["kind"] == "unsure":
         return f"되물음 {' / '.join(heard['topics'])}"
+    if heard["kind"] == "action":
+        return "행동 잠김" if heard["target"] else f"행동 {ko.METHODS[heard['method']]}"
     return {"chat": "잡담", "none": "넘김", "look": "둘러봄"}[heard["kind"]]
 
 
@@ -74,6 +84,10 @@ def grade(expect, heard):
     if expect.startswith("인상 "):   # only the impression counts here; the same sentence may also ask a topic
         want, got = expect[3:], heard.get("impression") or NO_IMPRESSION
         return "맞힘" if got == want else "놓침" if got == NO_IMPRESSION else "틀린 인상"
+    if expect.startswith("행동 "):
+        return "맞힘" if show_heard(heard) == expect else "틀린 행동" if heard["kind"] == "action" else "놓침"
+    if heard["kind"] == "action":
+        return "행동으로 읽음"
     if heard["kind"] == "topics" and set(heard["topics"]) == set(expect.split(" + ")):
         return "맞힘"
     if heard["kind"] == "topics":
@@ -99,8 +113,10 @@ def summarize(results):
     lines = [f"{'O' if r['grade'] == '맞힘' else 'X'} {r['grade']:<5} {r['where']}: {r['text']}  기대={r['expect']}"
              f"  얻음={r['got']}" for r in results]
     passed = True
-    parts = (([r for r in results if not r["expect"].startswith("인상 ")], ("맞힘", "되물음", "모자람", "틀림", "틀린 화제"),
-              "틀린 화제", GOAL_RIGHT, GOAL_WRONG_TOPIC),
+    asked = [r for r in results if not r["expect"].startswith(("인상 ", "행동 "))]
+    parts = ((asked, ("맞힘", "되물음", "모자람", "틀림", "틀린 화제", "행동으로 읽음"), "틀린 화제", GOAL_RIGHT, GOAL_WRONG_TOPIC),
+             ([r for r in results if r["expect"].startswith("행동 ")], ("맞힘", "놓침", "틀린 행동"), "틀린 행동",
+              GOAL_ACTION, 1.0),
              ([r for r in results if r["expect"].startswith("인상 ")], ("맞힘", "놓침", "틀린 인상"),
               "틀린 인상", GOAL_IMPRESSION, GOAL_WRONG_IMPRESSION))
     for part, grades, worst, goal_right, goal_wrong in parts:
@@ -113,6 +129,10 @@ def summarize(results):
         lines.append(" · ".join(f"{g} {counts[g]}" for g in grades) + f" / {total}")
         lines.append(f"{'통과' if ok else '떨어짐'}  맞힘 {right:.0%} (≥ {goal_right:.0%}), "
                      f"{worst} {wrong:.0%} (≤ {goal_wrong:.0%})")
+    if asked:
+        false = sum(r["grade"] == "행동으로 읽음" for r in asked) / len(asked)
+        passed = passed and false <= GOAL_FALSE_ACTION
+        lines.append(f"{'통과' if false <= GOAL_FALSE_ACTION else '떨어짐'}  행동으로 읽음 {false:.0%} (≤ {GOAL_FALSE_ACTION:.0%})")
     return "\n".join(lines), passed
 
 

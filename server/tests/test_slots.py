@@ -122,4 +122,4 @@ def test_a_typed_action_is_answered_by_the_person_or_told_as_a_scene_at_a_lock()
     job = make_jobs(STORY, *pressed)[0]
     assert job["kind"] == "answer" and job["says"] == ["플레이어가 거칠게 몰아붙이려 든다. 그 행동에 반응한다"] and job["quiet"]
     forced = play(STORY, [STATS, do("move", place="곡물 창고"), do("look"), doing("force", LOCK)])[-1]
-    assert make_jobs(STORY, *forced)[0]["happening"] == ["당신이 잠긴 뒷문을 억지로 비틀어 열려 든다"]
+    assert make_jobs(STORY, *forced)[0]["happening"] == ["당신이 잠긴 뒷문을 힘으로 비틀어 열어 보려 손을 댄다. 아직 열리지 않았고 잠긴 그대로다"]

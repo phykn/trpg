@@ -11,10 +11,11 @@ DAWN = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
 
 
 class FakeDecision:
-    def __init__(self, kind, topics=None, two=0.1, place="숲길", second="_none", impression=None):
+    def __init__(self, kind, topics=None, two=0.1, place="숲길", second="_none", impression=None, method="press", deed=0.1):
         impression = impression or {"_none": 0.9}
-        self.answers = {"kind": {"choice": kind, "probabilities": {kind: 0.9}}, "two": {"noul": two},
+        self.answers = {"kind": {"choice": kind, "probabilities": {kind: 0.9}}, "two": {"noul": two}, "deed": {"noul": deed},
                         "place": {"choice": place, "probabilities": {}}, "second": {"choice": second, "probabilities": {}},
+                        "method": {"choice": method, "probabilities": {method: 0.9}},
                         "impression": {"choice": max(impression, key=impression.get), "probabilities": impression}}
         self.asked = []
         if topics:
@@ -87,3 +88,20 @@ def test_an_impression_is_taken_from_the_common_ones_and_the_persons_own_above_i
     assert read(alone, "곳 숲길")["impression"] is None and "impression" not in alone.questions
     given = FakeDecision("chat", impression={"눈감기": 0.8, "_none": 0.2})
     assert asyncio.run(Interpreter(given).read_impression(DAWN, "브람", "밀주 건은 못 본 걸로 하지"))["impression"] == "눈감기"
+
+
+def test_an_action_is_asked_apart_which_method_it_is_and_a_lock_here_can_be_opened():
+    pressed = FakeDecision("action", {"징수관": 0.1, "_none": 0.9})
+    assert {k: read(pressed)[k] for k in ("kind", "method", "target")} == {"kind": "action", "method": "press", "target": None}
+    assert set(pressed.asked[1]["method"]["criteria"]) == {"press", "soothe", "trick"}
+    forced = FakeDecision("action", {"_none": 0.9}, method="force")
+    assert {k: read(forced, "사람 마렌")[k] for k in ("kind", "method", "target")} == {
+        "kind": "action", "method": "force", "target": "잠김 장부 궤짝"}
+    assert set(forced.asked[1]["method"]["criteria"]) == {"press", "soothe", "trick", "force", "sneak"}
+    chat = FakeDecision("chat", {"징수관": 0.1, "_none": 0.9})
+    read(chat)
+    assert len(chat.asked) == 1
+    told = FakeDecision("topic", {"징수관": 0.1, "_none": 0.9}, method="soothe", deed=0.9)
+    assert {k: read(told)[k] for k in ("kind", "method")} == {"kind": "action", "method": "soothe"}
+    asked = FakeDecision("topic", {"징수관": 0.9, "_none": 0.1}, deed=0.9)
+    assert read(asked)["kind"] == "topics"   # a told deed that asks a topic still asks it
