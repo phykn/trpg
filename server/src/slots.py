@@ -1,6 +1,6 @@
 from .locale import ko
 from .names import show_line, show_name
-from .rules.state import judge_ending, list_people_here
+from .rules.state import judge_ending, list_people_here, list_rumors
 
 LEVELS = {-1: "낮음", 0: "보통", 1: "높음"}
 # The DM shows signs in the world and leaves the choice to the player (game/07 2절): a sound, a light, a smell or a
@@ -20,11 +20,15 @@ DM = {
                   ("당신은 이곳에 그대로 있다. 가 보지 않은 곳 쪽에서 이곳까지 닿는 기척 하나를 그린다. 그곳의 모습에 나온 것에서 "
                    "나는 소리, 빛, 냄새만 쓰고, 그곳에서 무슨 일이 벌어졌다고 쓰지 않는다")),
     "ask": ("한동안 새로 알아낸 것이 없다. 인물은 플레이어 곁에 있다.", "인물이 무언가 더 말할 듯 머뭇거리는 몸짓 하나를 그린다"),
+    "warm": ("플레이어가 거듭 남긴 인상에 인물의 마음이 조금 풀렸다.", "인물이 누그러진 기색을 보이는 몸짓 하나를 그린다"),
+    "cold": ("플레이어가 거듭 남긴 인상에 인물이 마음을 닫았다.", "인물이 굳은 기색을 보이는 몸짓 하나를 그린다"),
+    "shaken": ("플레이어가 거듭 남긴 인상에 인물이 겁을 먹었다.", "인물이 움츠러드는 몸짓 하나를 그린다"),
     "look": ("한동안 새로 알아낸 것이 없다.",
              "도입의 기한이 다가오는 기척 하나를 그리고, 당신이 지금까지 듣고 본 것을 하나씩 되짚는다고 쓴다. 어느 것인지는 말하지 않는다"),
     "conclude": ("시간이 다 되었다.", "도입의 기한이 닥쳤음을 그리고, 누가, 어떻게, 왜, 당신의 결론을 들려 달라고 한다"),
 }
-PERSON_KEYS = ("open", "meet", "held", "doubt", "ask")
+PERSON_KEYS = ("open", "meet", "held", "doubt", "ask", "warm", "cold", "shaken")
+CAUGHT = "남을 속이려다 들켰다"   # 들킴 comes from a deed, so it has no meaning for Kanana in ko.IMPRESSIONS
 RECENT = 3   # turns of talk with a person, and turns of the player's deeds they watched, an answer gets (game/04 3절)
 
 
@@ -114,7 +118,16 @@ def make_answer(story, before, after, turn, person, past):
             "said": find_said(story, turn), "says": says, "lines": lines, "quiet": not lines and bool(says),
             "where": ", ".join(filter(None, [show_name(story, "곳", after["place"]),
                                              ko.clock(clock.start + after["spent"] * clock.step) if clock else None])),
-            "recent": list_recent(story, person, past), "told": told, "saw": list_seen(story, person, past)}
+            "recent": list_recent(story, person, past), "told": told, "saw": list_seen(story, person, past),
+            "impressions": list_impressions(story, after, person),
+            "rumors": [f"{show_name(story, '사람', r['about'])}에게 {r['impression']}({'직접 봄' if r['seen'] else '전해 들음'})"
+                       for r in list_rumors(after, person)]}
+
+
+def list_impressions(story, state, person):
+    meanings = {**ko.IMPRESSIONS, "들킴": CAUGHT, **story.people[person].impressions}
+    return [f"{name}({meanings[name]}): {'한 번' if n == 1 else '여러 번'}"
+            for name, n in state["impressions"][person].items()]
 
 
 def spoke(story, person, turn):

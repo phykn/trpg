@@ -25,6 +25,12 @@ def find_remark(story, before, after, changes, past):
     held = [story.blocks[c["block"]].name for c in changes if c["op"] == "withhold"]
     if held and not before["withheld"] and not any(b.startswith("꺼림 ") for b in before["opened"]):
         return {"key": "held", "name": held[0]}
+    here = list_people_here(story, after)
+    moved = [c for c in changes if c["op"] == "shift" and c.get("why") == "impression" and c["person"] in here]
+    if moved:   # an attitude that impressions turned shows in a gesture (game/07 2절)
+        c = moved[-1]
+        return {"key": "warm" if c["axis"] == "trust" and c["by"] > 0 else "cold" if c["axis"] == "trust" else "shaken",
+                "name": c["person"]}
     if not any(c["op"] == "move" for c in changes):
         return None
     talked = {p for p, talk in before["talks"].items() if talk["topics"] or talk["passes"]}

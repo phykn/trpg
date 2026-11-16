@@ -8,6 +8,7 @@ from src.rules.state import start_state
 from src.slots import is_here, make_jobs
 from src.story.load import load_story
 from src.view import make_feed
+from tests.test_act import STORY, said
 
 SCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"
 DAWN = load_story(SCENARIOS / "dawn")
@@ -105,3 +106,12 @@ def test_an_answer_knows_the_talk_so_far_what_the_person_said_and_what_they_watc
     assert job["told"] == [DAWN.lines["말 고드릭.징수관.거짓말"].text]
     assert job["saw"] == ["이곳을 둘러봤다"] and job["lines"] == [] and job["where"].startswith("마을 사당")
     assert "앞서 나눈 말" in make_messages(job)[0]["content"]
+
+
+def test_an_answer_knows_its_impressions_and_the_rumors_it_heard():
+    turns = play(STORY, [STATS, said("무례"), said("무례"), do("move", place="곡물 창고"), do("move", place="광장"),
+                         do("move", place="곡물 창고"), ({"do": "ask", "text": "x"}, {"kind": "chat"})])
+    oto, hans = (make_jobs(STORY, *turns[i])[0] for i in (2, 6))
+    assert oto["impressions"] == ["무례(깔보거나 하인처럼 부리거나 욕한다): 여러 번"]
+    assert hans["rumors"] == ["오토에게 무례(전해 들음)"] and not hans["impressions"]
+    assert "플레이어에 관한 소문" in make_messages(hans)[0]["content"]

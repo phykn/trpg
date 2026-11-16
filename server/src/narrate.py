@@ -14,7 +14,7 @@ COVER = 0.5
 # An answer this close to one the person already gave says the same thing again; gemma4 did so even when told not to.
 REPEAT = 0.8
 # Words of the prompt itself; a text that names them is talking about its instructions, not to the player.
-PROMPT_WORDS = ("할 말", "받은 것", "지침", "지킬 것", "질문자", "신상", "그릴 기척", "지켜본 일", "앞서 나눈 말")
+PROMPT_WORDS = ("할 말", "받은 것", "지침", "지킬 것", "질문자", "신상", "그릴 기척", "지켜본 일", "앞서 나눈 말", "받은 인상")
 # The narrator and the DM speak 합니다체 (CLAUDE.md); quoted speech inside a scene keeps its own.
 HAEYO = re.compile(r"(세요|어요|아요|해요|예요|에요|죠|군요|네요)[.?!…~]*(\s|$)")
 # The DM shows a sign instead of advising (game/07 2절); these endings tell the player what to do.
@@ -77,6 +77,8 @@ def list_given(job):
                                                    for r in job["recent"]))
         given += [f"이미 한 말: {' / '.join(job['told'])}"] if job.get("told") else []
         given += [f"지켜본 일(플레이어가 한 일): {' / '.join(job['saw'])}"] if job.get("saw") else []
+        given += [f"플레이어에게 받은 인상: {' / '.join(job['impressions'])}"] if job.get("impressions") else []
+        given += [f"플레이어에 관한 소문: {' / '.join(job['rumors'])}"] if job.get("rumors") else []
         return given + [f"할 말: {' / '.join(job['says']) or '없다'}", f"플레이어의 말: {job['said'] or '없다'}"]
     given = [f"도입: {job['intro']}"] if job.get("intro") else []
     given += [f"시각: {job['time']}"] if job.get("time") else []
@@ -127,6 +129,8 @@ def make_answer_prompt(job):
              "앞서 나눈 말이 있으면 그 흐름을 이어 받고, 앞서 한 대답을 같은 말로 되풀이하지 않는다.",
              "이미 한 말을 다시 물으면 아까 말했다는 투로 짧게 다시 말한다.",
              "지켜본 일이 있으면 그 일을 보고 한마디 얹는다. 곳과 때, 지켜본 일에 없는 일은 더하지 않는다.",
+             ("받은 인상과 소문은 말투와 반응에 드러낸다. 여러 번 받은 인상일수록 짙게 드러낸다. 그 일이 언제, 어디서, "
+              "어떻게 있었는지는 지어내지 않는다."),
              ("플레이어가 \"~했다면서요?\"처럼 할 말에 없는 일을 사실로 깔고 물으면, 했다고도 안 했다고도 하지 않는다. "
               "그 일을 이어 말하지 말고 누가 그러더냐고 되묻거나 말을 돌린다.")]
     if job["quiet"]:

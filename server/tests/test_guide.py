@@ -1,7 +1,7 @@
 from src.rules.act import act
 from src.rules.guide import make_guide
 from src.rules.state import start_state
-from tests.test_act import CREW, LOOK, PASS, STATS, STORY, ask, go, present
+from tests.test_act import CREW, LOOK, PASS, STATS, STORY, ask, go, present, said
 
 
 def guides(steps, seed=1):
@@ -59,3 +59,7 @@ def test_arriving_somewhere_not_looked_around_gets_a_remark_once():
                    go("광장"), *back, go("곡물 창고")]) == [
         "open 오토", None, None, None, "meet 한스", None, None, None, None, "around 광장", None, None, None,
         "around 곡물 창고", None, None, None, "unvisited 방앗간", None]
+
+
+def test_the_dm_shows_an_attitude_that_impressions_turned():
+    assert guides([STATS, PASS, PASS, PASS, said("무례"), said("의심")])[-1] == "cold 오토"

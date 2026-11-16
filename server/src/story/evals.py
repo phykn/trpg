@@ -131,6 +131,8 @@ def list_text_jobs(story):
                                                         "quiet": True}))
         jobs.append((f"넘김 {name}", {**base, "said": "이 마을에서 수상한 사람을 본 적 있습니까?", "says": ["답할 것이 없다"], "lines": [],
                                      "quiet": True}))
+        jobs.append((f"인상 {name}", {**base, "said": "아까는 내가 좀 심했소.", "says": [], "lines": [], "quiet": False,
+                                     "impressions": [f"무례({ko.IMPRESSIONS['무례']}): 여러 번"]}))
     for name, place in story.places.items():
         written = [show_line(story, a) for a, line in story.lines.items()
                    if line.kind == "볼 것" and line.place == name and not line.cond and not line.lock]
