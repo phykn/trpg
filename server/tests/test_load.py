@@ -79,7 +79,7 @@ def test_a_key_written_twice_stops_reading(tmp_path):
 
 def test_a_lie_can_fall_to_any_of_several_facts():
     dawn = load_story(SCENARIOS / "dawn")
-    block = dawn.blocks["거짓말 고드릭.그 뒤의 일"]
+    block = dawn.blocks["거짓말 고드릭.술자리"]
     assert block.wants == ("밤에 나간 수레", "옮겨진 시신")
     assert does_fit(dawn, "볼 것 마른 장화", block) and not does_fit(dawn, "볼 것 제단의 초", block)
 

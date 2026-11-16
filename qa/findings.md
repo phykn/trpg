@@ -16,7 +16,7 @@ Each with its evidence (`qa_test/runs/<run>`, turn numbers).
 
 ## Interpretation misses on the held-out set
 
-After the asks rules and the new kind, two and second questions (engine/01 1절; `qa_test/runs/evals-tks-*`): working 90%, 92%, 93% with no wrong topics; held-out 프롤로그 87%, 챕터 1 81%, no wrong topics, unchanged by the fixes. Left, all needing knowledge of the story: a name heard in the intro ("에드윈에 대해 아는 것을…" to 고드릭), "여기" meaning the topic's place (토빈 "여기서 뭘 봤어?", 윤소라 "최 실장님이 오늘 여기 왔었나요?"), near topics (넬's 독미나리 and 시신, 마렌's 마당 and 아버지의 저녁), and chat against 넘김. Putting the place or the intro in the situation, and adding asks by name, each did worse. The repeated back-question of `qa-1` turns 25–27 no longer happens: those sentences now read as 사당 with no context.
+After the asks rules and the new kind, two and second questions (engine/01 1절; `qa_test/runs/evals-tks-*`): working 90%, 92%, 93% with no wrong topics; held-out 프롤로그 87%, 챕터 1 81%, no wrong topics, unchanged by the fixes. Left, all needing knowledge of the story: a name heard in the intro ("에드윈에 대해 아는 것을…" to 고드릭), "여기" meaning the topic's place (토빈 "여기서 뭘 봤어?", 윤소라 "최 실장님이 오늘 여기 왔었나요?"), near topics (넬's 독미나리 and 시신, 마렌's 마당 and 아버지), and chat against 넘김. Putting the place or the intro in the situation, and adding asks by name, each did worse. The repeated back-question of `qa-1` turns 25–27 no longer happens: those sentences now read as 사당 with no context.
 
 ## Narration places things where the notebook does not
 
