@@ -11,7 +11,7 @@ import type { GameView } from '@/services/types';
 export function TopBar({ view, onNotebook, onSettings }: { view: GameView; onNotebook: () => void; onSettings: () => void }) {
   const { last } = view.time;
   return (
-    <View className={`min-h-12 flex-row items-center gap-1.5 border-b pl-4 pr-1 ${last ? 'border-danger-fg bg-canvas-subtle' : 'border-border-default'}`}>
+    <View className={`min-h-12 flex-row items-center gap-1 border-b pl-3 pr-1 ${last ? 'border-danger-fg bg-canvas-subtle' : 'border-border-default'}`}>
       <Icon name="place" size={icon.md} color={colors.gold.fg} width={2.2} />
       <Text accessibilityRole="header" numberOfLines={1} className={text({ kind: 'title' }, 'min-w-0 shrink font-serif')}>
         {view.place.name}
@@ -20,13 +20,11 @@ export function TopBar({ view, onNotebook, onSettings }: { view: GameView; onNot
       <Icon name="clock" size={icon.sm} color={last ? colors.danger.fg : colors.fg.muted} width={2} />
       <Text numberOfLines={1} className={text({ kind: 'mono' }, 'shrink-0', last && 'text-danger-fg')}>{view.time.text}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={view.badge ? `${ko.notebook} ${view.badge}` : ko.notebook}
-        onPress={onNotebook} style={pressed} className={control({ kind: 'icon', tone: 'quiet' }, 'ml-1')}>
-        <Icon name="book" size={icon.lg} color={colors.fg.default} width={2} />
-        {view.badge ? (
-          <View className="absolute -right-0.5 -top-0.5 h-5 min-w-5 items-center justify-center rounded-full bg-gold-fg px-1">
-            <Text className={text({ kind: 'small', on: true }, 'font-sans-semibold')}>{view.badge}</Text>
-          </View>
-        ) : null}
+        onPress={onNotebook} style={pressed}
+        className={control({ kind: 'pill', tone: view.badge ? 'offer' : 'quiet' }, 'h-10 gap-1 px-2.5')}>
+        <Icon name="book" size={icon.lg} color={view.badge ? colors.gold.fg : colors.fg.default} width={2} />
+        {/* What is unread matters, so its count stands as large as the icon beside it. */}
+        {view.badge ? <Text className={text({ kind: 'title' }, 'font-mono-medium text-gold-fg')}>{view.badge}</Text> : null}
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={ko.settings} onPress={onSettings} style={pressed}
         className={control({ kind: 'icon', tone: 'plain' })}>
