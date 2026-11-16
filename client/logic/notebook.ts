@@ -10,7 +10,6 @@ export function findLine(view: GameView, id: number): { group: Group; line: Line
   return null;
 }
 
-// An act offered anywhere on the screen: after a typed action or on a notebook line.
 export function findAct(view: GameView, id: string): Act | null {
   return [...view.offers, ...GROUPS.flatMap((g) => view.notebook[g].flatMap((l) => l.acts))].find((a) => a.id === id) ?? null;
 }

@@ -2,7 +2,6 @@
 
 export type Story = { story: string; title: string; intro: string };
 
-// What the dice sheet shows before the roll (engine/02 4절).
 export type Roll = { title: string; aim: string | null; need: number; adds: { name: string; value: number }[]; chance: number };
 
 export type Act = { id: string; label: string; roll?: Roll; now?: boolean };

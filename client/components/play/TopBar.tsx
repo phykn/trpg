@@ -8,7 +8,6 @@ import { control, text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 
-// An icon with its words beside it; every group on the bar is one of these, the same size.
 function Item({ name, color, children }: { name: IconName; color: string; children?: ReactNode }) {
   return (
     <View className="min-w-0 flex-row items-center gap-1">
@@ -18,8 +17,6 @@ function Item({ name, color, children }: { name: IconName; color: string; childr
   );
 }
 
-// Five groups on one level, spread evenly: where you are, the time, the turns left (red in the last turns),
-// the notebook with what is unread, and settings.
 export function TopBar({ view, onNotebook, onSettings }: { view: GameView; onNotebook: () => void; onSettings: () => void }) {
   const { last } = view.time;
   const tone = last ? colors.danger.fg : colors.fg.muted;

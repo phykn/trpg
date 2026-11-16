@@ -5,7 +5,6 @@ import { control, text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import type { Act } from '@/services/types';
 
-// The bets a typed action could lead to, offered right after it; each label says all it does.
 export function OffersRow({ offers, locked, onAct }: { offers: Act[]; locked: boolean; onAct: (act: string) => void }) {
   if (!offers.length) return null;
   return (

@@ -11,7 +11,6 @@ import type { Answer, GameView } from '@/services/types';
 
 const TONE: Record<Answer, string> = { hit: 'text-health-fg', miss: 'text-danger-fg', blank: 'text-fg-muted' };
 
-// The verdict, the accused's answer and the ending told in the last turn's text, then the answers and what was left closed once it is told.
 export function Ending({ view, log, phase, onRetryText, onLeave }: {
   view: GameView; log: Entry[]; phase: Phase; onRetryText: () => void; onLeave: () => void;
 }) {

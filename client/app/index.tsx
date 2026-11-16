@@ -8,7 +8,6 @@ import { Play } from '@/screens/Play';
 import { Start } from '@/screens/Start';
 import { Title } from '@/screens/Title';
 
-// The game state picks the screen (docs/game/07-screen.md 1).
 export default function Index() {
   const g = useGame();
   const { view, phase } = g;

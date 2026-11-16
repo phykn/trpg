@@ -13,7 +13,6 @@ function otherFace(face: number) {
   return next >= face ? next + 1 : next;
 }
 
-// One die. While `rolling` it tumbles, hops and flicks through faces; when it stops it drops onto `face` with a bounce.
 // `spin` sets which way it turns, so two dice do not move as one.
 export function Die({ face, rolling, spin = 1, size = 64 }: { face: number; rolling: boolean; spin?: 1 | -1; size?: number }) {
   const [shown, setShown] = useState(face);

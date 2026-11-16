@@ -4,10 +4,8 @@ import { colors, icon as iconSize } from '@/design/tokens';
 import { cn, control, text } from '@/design/ui';
 import { Icon, type IconName } from './Icon';
 
-// Every tappable part dims the same way while held.
 export const pressed = ({ pressed: p }: { pressed: boolean }) => ({ opacity: p ? 0.7 : 1 });
 
-// Primary is the one next step on a screen; secondary is any other choice.
 export function Button({ label, icon, tone = 'primary', disabled, onPress }: {
   label: string; icon?: IconName; tone?: 'primary' | 'secondary'; disabled?: boolean; onPress: () => void;
 }) {

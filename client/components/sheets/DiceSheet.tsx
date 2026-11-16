@@ -18,8 +18,7 @@ const LINGER = 1800;   // the verdict stays this long before the sheet slides aw
 
 type Stage = 'ready' | 'rolling' | 'landing' | 'landed' | 'done';
 
-// The player rolls here (game/07 2절): what is aimed at, the number to reach and what adds to it, then two dice.
-// The server decides the eyes when the roll is sent; the dice tumble until they come and land on them.
+// The server decides the eyes when the roll is sent (game/05 3절); the dice tumble until they come and land on them.
 export function DiceSheet({ roll, result, locked, onRoll, onClose }: {
   roll: Roll; result: RollResult | null; locked: boolean; onRoll: () => void; onClose: () => void;
 }) {

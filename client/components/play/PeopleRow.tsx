@@ -18,7 +18,6 @@ function Move({ label, name, locked, onPress }: { label: string; name: IconName;
   );
 }
 
-// What can be done here without words: looking, going elsewhere, and whom to talk to.
 export function PeopleRow({ people, met, look, locked, onAct, onMoves }: {
   people: GameView['people']; met: string[]; look: GameView['place']['look']; locked: boolean; onAct: (act: string) => void;
   onMoves?: () => void;

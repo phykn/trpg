@@ -20,15 +20,14 @@ type Pending =
   | { kind: 'create'; requestId: string; story: string }
   | { kind: 'command'; requestId: string; revision: number; body: CommandBody };
 
-const makeRequestId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+const makeRequestId = () => crypto.randomUUID();
 
 function makeEntries(turn: number, said: string | null, feed: FeedItem[]): Entry[] {
-  const entries: Entry[] = said ? [{ key: `${turn}-said`, turn, kind: 'said', text: said }] : [];
-  feed.forEach((item, i) => {
+  const lines = feed.map((item, i): Entry => {
     const key = `${turn}-${i}`;
-    entries.push('slot' in item ? { ...item, key, turn, text: '' } : { ...item, key, turn });
+    return 'slot' in item ? { ...item, key, turn, text: '' } : { ...item, key, turn };
   });
-  return entries;
+  return said ? [{ key: `${turn}-said`, turn, kind: 'said', text: said }, ...lines] : lines;
 }
 
 export function useGame() {
@@ -154,19 +153,10 @@ export function useGame() {
     void readTexts(unread.current);
   }
 
-  // Back to the title for a new game; the game in progress stays saved, so it can be picked up again.
-  function home() {
-    setSaved(game.current);
-    game.current = null;
-    setView(null);
-    setLog([]);
-    setPhase('title');
-  }
-
-  // After the ending the finished game is not offered again.
-  function leave() {
-    clearGameId();
-    setSaved(null);
+  // A new game keeps the one in progress saved to pick up again; after the ending it is not offered again.
+  function toTitle(keep: boolean) {
+    if (!keep) clearGameId();
+    setSaved(keep ? game.current : null);
     game.current = null;
     setView(null);
     setLog([]);
@@ -178,5 +168,8 @@ export function useGame() {
   const outgoing: Entry | null = phase === 'sending' && p?.kind === 'command' && 'text' in p.body && p.body.text
     ? { key: 'outgoing', turn: p.revision + 1, kind: 'said', text: p.body.text } : null;
 
-  return { phase, stories, saved, view, log, outgoing, start, resume, send, resend, retryText, home, leave };
+  return {
+    phase, stories, saved, view, log, outgoing, start, resume, send, resend, retryText,
+    home: () => toTitle(true), leave: () => toTitle(false),
+  };
 }

@@ -35,7 +35,6 @@ function Intro({ words, open, onCut }: { words: string; open: boolean; onCut: (c
   );
 }
 
-// One card. It opens in place when it holds more than it shows: the rest of the intro, gathered lines, acts.
 function NotebookLine({ line, view, open, locked, onToggle, onLine, onAct, onLayout }: {
   line: Line; view: GameView; open: boolean; locked: boolean; onToggle: () => void; onLine: (id: number) => void;
   onAct: (act: string) => void; onLayout: (y: number) => void;

@@ -6,7 +6,6 @@ import { ko } from '@/locale/ko';
 import { IconButton, pressed } from './Button';
 import { Icon } from './Icon';
 
-// The title and the close button, the same on every sheet.
 export function SheetHeader({ title, onClose }: { title?: string; onClose?: () => void }) {
   return (
     <View className="min-h-9 flex-row items-center gap-2">
@@ -18,7 +17,6 @@ export function SheetHeader({ title, onClose }: { title?: string; onClose?: () =
   );
 }
 
-// One row per answer: the same height, the same left edge, a chevron that says it goes on.
 export function Choice({ label, sub, primary, onPress }: {
   label: string; sub?: string; primary?: boolean; onPress: () => void;
 }) {

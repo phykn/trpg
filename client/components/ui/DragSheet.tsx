@@ -11,10 +11,8 @@ import { useDialog } from './useDialog';
 
 const SNAPS = ['50%', '100%'];
 
-// Every sheet (@gorhom/bottom-sheet). A long one opens halfway, so the chat above stays in view, and is pulled up to
-// fill the screen; a short one (`fit`) is as tall as what it holds. Either is pulled down to close. The footer stays on
-// the visible bottom edge. A list inside scrolls with BottomSheetScrollView, so dragging it first pulls the sheet up.
-// Without onClose the sheet stays until something else replaces it. `shut` closes it from outside, sliding down.
+// A long sheet opens halfway so the chat above stays in view; a short one (`fit`) is as tall as what it holds.
+// Without onClose it stays until something else replaces it; `shut` closes it from outside, sliding down.
 export function DragSheet({ title, footer, full, fit, shut, onClose, children }: {
   title: string; footer?: ReactNode; full?: boolean; fit?: boolean; shut?: boolean; onClose?: () => void; children: ReactNode;
 }) {

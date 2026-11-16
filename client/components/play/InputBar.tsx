@@ -15,7 +15,6 @@ const WEB_ONE_ROW = { rows: 1 } as object;
 type KeyEvent = NativeSyntheticEvent<TextInputKeyPressEventData & { shiftKey?: boolean; isComposing?: boolean; keyCode?: number }>
   & { shiftKey?: boolean; preventDefault?: () => void };
 
-// One rounded box under the chat: the words, which grow from one line to four, and send inside it.
 // Enter sends and keeps the keyboard up; Shift+Enter is a new line; never while a Korean syllable is being put together.
 export function InputBar({ partner, locked, text, onText, onSend }: {
   partner: string | null; locked: boolean; text: string; onText: (text: string) => void; onSend: (text: string) => void;

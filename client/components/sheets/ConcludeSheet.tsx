@@ -33,7 +33,6 @@ export function ConcludeSheet({ view, picks, locked, onPick, onSubmit, onClose, 
   );
 }
 
-// "Who" offers the people in the notebook; "how" and "why" offer what was seen and heard.
 export function PickSheet({ view, question, chosen, onPick, onClose }: {
   view: GameView; question: Question; chosen: number | null; onPick: (id: number | null) => void; onClose: () => void;
 }) {

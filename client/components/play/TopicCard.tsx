@@ -10,7 +10,6 @@ import { findHue } from './speaker';
 
 export type Topic = { name: string; who: string | null };
 
-// What an underlined name is: a topic, who brought it up, and that it is not heard yet. No way to ask from here.
 export function TopicCard({ topic, met, onClose }: { topic: Topic; met: string[]; onClose: () => void }) {
   return (
     <Popover at="bottom-3 left-3 right-3" label={topic.name} onClose={onClose}>

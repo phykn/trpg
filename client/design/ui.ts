@@ -1,6 +1,5 @@
-// The shared looks, built only from the tokens in tokens.js; components take these instead of spelling classes out.
-// cva picks a look by its variants and tailwind-merge settles any class that fights another (two paddings, two colors),
-// so the last one wins. Literal class names so Tailwind keeps them.
+// Components take these looks instead of spelling classes out; tailwind-merge lets the last of two fighting classes win.
+// Literal class names so Tailwind keeps them.
 import { cva, cx } from 'class-variance-authority';
 import { extendTailwindMerge } from 'tailwind-merge';
 

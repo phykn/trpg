@@ -69,7 +69,6 @@ function Line({ entry, met, typing, onNote, onTopic }: {
       </Pressable>
     );
   }
-  // Text slots: a person's answer under their name, happenings marked in red, every other narration in one voice.
   if (entry.who) {
     return (
       <Speaker who={entry.who} met={met}>

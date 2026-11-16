@@ -15,9 +15,8 @@ import { TopicCard, type Topic } from '@/components/play/TopicCard';
 import { Resend } from '@/components/ui/Resend';
 import { findAct, findLine } from '@/logic/notebook';
 import type { Entry, Phase } from '@/logic/useGame';
-import type { Act, CommandBody, GameView, Group, RollResult } from '@/services/types';
+import type { CommandBody, GameView, Group, Roll, RollResult } from '@/services/types';
 
-// Which sheet is open; the notebook may have one line unfolded.
 type Open =
   | { kind: 'notebook'; group: Group; line?: number }
   | { kind: 'moves' }
@@ -26,7 +25,7 @@ type Open =
   | { kind: 'topic'; topic: Topic }
   | { kind: 'settings' }
   // A roll: `from` is where the log stood when it was sent, so its result is the first roll after it.
-  | { kind: 'dice'; act: Act & { roll: NonNullable<Act['roll']> }; from: number | null }
+  | { kind: 'dice'; id: string; roll: Roll; from: number | null }
   | null;
 
 export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, onHome }: {
@@ -52,21 +51,24 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
   }, [readable, unread.join(',')]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // What is typed in the box goes along with an act, as what the player says while doing it.
-  function act(id: string) {
-    const found = findAct(view, id);
-    if (found?.roll) {   // dice are rolled by the player on their sheet
-      setOpen({ kind: 'dice', act: { ...found, roll: found.roll }, from: null });
-      return;
-    }
+  function sendAct(id: string) {
     send(draft.trim() ? { do: id, text: draft.trim() } : { do: id });
     setDraft('');
+  }
+
+  function act(id: string) {
+    const roll = findAct(view, id)?.roll;
+    if (roll) {
+      setOpen({ kind: 'dice', id, roll, from: null });
+      return;
+    }
+    sendAct(id);
     setOpen(null);
   }
 
   function roll() {
     if (open?.kind !== 'dice') return;
-    send(draft.trim() ? { do: open.act.id, text: draft.trim() } : { do: open.act.id });
-    setDraft('');
+    sendAct(open.id);
     setOpen({ ...open, from: log.length });
   }
 
@@ -85,10 +87,9 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
     const key = `${view.revision}:${now?.id}`;
     if (!now?.roll || open || opened.current === key) return;
     opened.current = key;
-    setOpen({ kind: 'dice', act: { ...now, roll: now.roll }, from: null });
+    setOpen({ kind: 'dice', id: now.id, roll: now.roll, from: null });
   }, [now, open, view.revision]);
 
-  // A line opens unfolded in its group; several lines open their group.
   function openLine(id: number | undefined, lines = id === undefined ? [] : [id]) {
     const first = lines.length ? findLine(view, lines[0]) : null;
     if (first) setOpen({ kind: 'notebook', group: first.group, line: lines.length === 1 ? lines[0] : undefined });
@@ -119,7 +120,7 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
         )}
       </View>
       {dice ? (
-        <DiceSheet roll={dice.act.roll} result={rolled} locked={locked && dice.from === null}
+        <DiceSheet roll={dice.roll} result={rolled} locked={locked && dice.from === null}
           onRoll={roll} onClose={() => setOpen(null)} />
       ) : null}
       {open?.kind === 'settings' ? <SettingsMenu onNewGame={onHome} onClose={() => setOpen(null)} /> : null}

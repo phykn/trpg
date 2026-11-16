@@ -5,7 +5,6 @@ import { ko } from '@/locale/ko';
 import { cn, surface } from '@/design/ui';
 import { useDialog } from './useDialog';
 
-// A small card over the screen: a tap anywhere else or Escape closes it, and focus goes back to what opened it.
 export function Popover({ at, label, onClose, children }: { at: string; label: string; onClose: () => void; children: ReactNode }) {
   const dialog = useDialog(onClose);
   return (

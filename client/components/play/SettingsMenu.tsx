@@ -7,7 +7,6 @@ import { colors, icon } from '@/design/tokens';
 import { control, text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 
-// For now only a way back to the title, where a new game starts and this one can still be picked up.
 export function SettingsMenu({ onNewGame, onClose }: { onNewGame: () => void; onClose: () => void }) {
   return (
     <Popover at="right-2 top-12 p-1.5" label={ko.settings} onClose={onClose}>
