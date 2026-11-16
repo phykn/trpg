@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 // Text arrives a poll at a time, a dozen words at once; the screen lets it out a few letters every TICK instead,
 // spreading what is waiting over about one poll, so it reads as typed and catches up when it falls behind.
-export const TICK = 30;
+export const TICK = 100;
 const SPREAD = 12;
 
 export function nextShown(shown: string, full: string): string {
