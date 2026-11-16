@@ -7,7 +7,6 @@ import { InputBar } from '@/components/game/InputBar';
 import { OffersRow } from '@/components/game/OffersRow';
 import { MovesSheet } from '@/components/game/MovesSheet';
 import { NotebookSheet } from '@/components/game/NotebookSheet';
-import { Overlay } from '@/components/game/Overlay';
 import { PeopleRow } from '@/components/game/PeopleRow';
 import { TopBar } from '@/components/game/TopBar';
 import { Resend } from '@/components/ui/Resend';
@@ -79,23 +78,17 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
         )}
       </View>
       {open?.kind === 'moves' ? (
-        <Overlay onClose={() => setOpen(null)}>
-          <MovesSheet moves={view.place.moves} locked={locked} onMove={act} onClose={() => setOpen(null)} />
-        </Overlay>
+        <MovesSheet moves={view.place.moves} locked={locked} onMove={act} onClose={() => setOpen(null)} />
       ) : null}
       {concluding ? (
-        <Overlay onClose={closing ? () => undefined : () => setOpen(null)}>
-          <ConcludeSheet view={view} picks={picks} locked={phase !== 'ready'} onSubmit={() => { send({ conclude: picks }); setOpen(null); }}
-            onPick={(question) => setOpen({ kind: 'pick', question })} onMore={closing ? undefined : () => setOpen(null)}
-            onNotebook={openNotebook} />
-        </Overlay>
+        <ConcludeSheet view={view} picks={picks} locked={phase !== 'ready'} onSubmit={() => { send({ conclude: picks }); setOpen(null); }}
+          onPick={(question) => setOpen({ kind: 'pick', question })} onClose={closing ? undefined : () => setOpen(null)}
+          onNotebook={openNotebook} />
       ) : null}
       {open?.kind === 'pick' ? (
-        <Overlay full onClose={() => setOpen({ kind: 'conclude' })}>
-          <PickSheet view={view} question={open.question} chosen={picks[open.question]}
-            onPick={(id) => { setPicks({ ...picks, [open.question]: id }); setOpen({ kind: 'conclude' }); }}
-            onClose={() => setOpen({ kind: 'conclude' })} />
-        </Overlay>
+        <PickSheet view={view} question={open.question} chosen={picks[open.question]}
+          onPick={(id) => { setPicks({ ...picks, [open.question]: id }); setOpen({ kind: 'conclude' }); }}
+          onClose={() => setOpen((o) => (o?.kind === 'pick' ? { kind: 'conclude' } : o))} />
       ) : null}
       {group ? (
         <NotebookSheet view={view} group={group} line={open?.kind === 'notebook' ? open.line : undefined} locked={locked}

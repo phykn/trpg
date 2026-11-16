@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 
-import { Choice, Sheet } from '@/components/ui/Sheet';
+import { DragSheet } from '@/components/ui/DragSheet';
+import { Choice } from '@/components/ui/Sheet';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 
@@ -8,13 +9,13 @@ export function MovesSheet({ moves, locked, onMove, onClose }: {
   moves: GameView['place']['moves']; locked: boolean; onMove: (act: string) => void; onClose: () => void;
 }) {
   return (
-    <Sheet title={ko.moves} onClose={onClose}>
+    <DragSheet fit title={ko.moves} onClose={onClose}>
       <View className="gap-2">
         {moves.map((m) => (
           <Choice key={m.id} label={m.name} sub={m.unvisited ? `${ko.cells(m.cells)} · ${ko.unvisited}` : ko.cells(m.cells)}
             onPress={() => !locked && onMove(m.id)} />
         ))}
       </View>
-    </Sheet>
+    </DragSheet>
   );
 }

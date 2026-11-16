@@ -13,5 +13,4 @@ export const radius: Record<string, number>;
 export const fontFamily: Record<string, string[]>;
 export const fontSize: Record<string, [string, { lineHeight: string }]>;
 export const layout: { mobile: number };
-export const motion: { enter: number };
 export const icon: { sm: number; md: number; lg: number };

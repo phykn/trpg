@@ -1,35 +1,10 @@
-import { type ReactNode, useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { colors, icon as iconSize, motion } from '@/design/tokens';
-import { control, surface, text } from '@/design/ui';
+import { colors, icon as iconSize } from '@/design/tokens';
+import { control, text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import { IconButton, pressed } from './Button';
 import { Icon } from './Icon';
-import { useDialog } from './useDialog';
-
-// A card that rises from the bottom and covers only its own height, so the scene above stays readable; `full` fills its parent.
-export function Sheet({ title, full, onClose, children }: {
-  title?: string; full?: boolean; onClose?: () => void; children: ReactNode;
-}) {
-  const ref = useDialog(onClose);
-  const reduced = useReducedMotion();
-  const shown = useSharedValue(reduced ? 1 : 0);
-  useEffect(() => {
-    if (!reduced) shown.value = withTiming(1, { duration: motion.enter, easing: Easing.out(Easing.cubic) });
-  }, [reduced, shown]);
-  const enter = useAnimatedStyle(() => ({ opacity: shown.value, transform: [{ translateY: (1 - shown.value) * 24 }] }));
-  return (
-    <Animated.View style={[enter, full ? { flex: 1, minHeight: 0 } : null]}>
-      <View ref={ref} accessibilityRole={'dialog' as never} aria-modal
-        className={surface({ kind: 'sheet' }, 'gap-3', full && 'min-h-0 flex-1')}>
-        <SheetHeader title={title} onClose={onClose} />
-        {children}
-      </View>
-    </Animated.View>
-  );
-}
 
 // The title and the close button, the same on every sheet.
 export function SheetHeader({ title, onClose }: { title?: string; onClose?: () => void }) {

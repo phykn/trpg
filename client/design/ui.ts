@@ -44,13 +44,12 @@ export const text = withMerge(cva('text-fg-default', {
   defaultVariants: { kind: 'body' },
 }));
 
-// Surfaces: a card on the page, a well inside a card, a sheet over the screen.
+// Surfaces: a card on the page, a well inside a card, a whole screen.
 export const surface = withMerge(cva('', {
   variants: {
     kind: {
       card: 'rounded-xl border border-border-default bg-canvas-default px-3 py-2.5',
       well: 'rounded-xl bg-canvas-subtle px-3 py-2',
-      sheet: 'rounded-t-2xl border-x border-t border-border-strong bg-canvas-floating px-4 pb-4 pt-3',
       screen: 'min-h-0 flex-1 gap-4 px-4 py-6',
     },
   },

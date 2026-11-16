@@ -23,7 +23,6 @@ export const ko = {
   questions: { who: '누가', how: '어떻게', why: '왜' },
   blank: '비움',
   submit: '낸다',
-  more: '더 살핀다',
   verdicts: { solved: '다 밝혔다', who_only: '누구인지는 밝혔다', wrong: '엉뚱한 사람을 짚었다', unsolved: '밝히지 못했다' },
   answers: { hit: '맞힘', miss: '틀림', blank: '비움' },
   missed: { lies: '깨지 못한 거짓말', held: '풀지 못한 꺼림', locks: '열지 못한 잠김' },

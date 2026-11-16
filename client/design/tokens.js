@@ -41,6 +41,5 @@ const fontSize = {
   display: ['40px', { lineHeight: '48px' }],
 };
 const layout = { mobile: 412 };
-const motion = { enter: 220 };
 const icon = { sm: 14, md: 16, lg: 18 };
-module.exports = { colors, spacing, radius, fontFamily, fontSize, layout, motion, icon };
+module.exports = { colors, spacing, radius, fontFamily, fontSize, layout, icon };
