@@ -44,7 +44,7 @@ A scene with many new lines now draws only two or three, where the notebook puts
 
 ## Impressions that overlap
 
-`impress-held-dawn`: "독초를 다룰 줄 아십니까?" to 넬 gave her own 약초 (an unlock) though it asks about poison; `impress-evals-dawn`: "할멈, 약초 다루는 솜씨가 대단하다고 들었소" gave the common 칭찬 instead of 약초. Threats that accuse now leave 위협 (위협 ≥ 0.3 outranks a top 의심; arena wrong impressions 2 → 0, `research5-evals-arena`). Dawn still misses the 5% goal by one sentence: "징수관이 해 질 녘에 여기 왔소?" reads as 의심 (0.51), and 넬's own 약초 loses to the common 칭찬 (0.79 against 0.15) because 칭찬 already covers praising a skill. Rewording 약초 twice changed nothing; the story should give 넬 an impression the common ones do not cover, or open 시신 with 칭찬.
+`impress-held-dawn`: "독초를 다룰 줄 아십니까?" to 넬 gave her own 약초 (an unlock) though it asks about poison; `impress-evals-dawn`: "할멈, 약초 다루는 솜씨가 대단하다고 들었소" gave the common 칭찬 instead of 약초. Threats that accuse now leave 위협 (위협 ≥ 0.3 outranks a top 의심; arena wrong impressions 2 → 0, `research5-evals-arena`). Dawn still misses the 5% goal by one sentence: "징수관이 해 질 녘에 여기 왔소?" reads as 의심 (0.51), and 넬's own 약초 loses to the common 칭찬 (0.79 against 0.15) because 칭찬 already covers praising a skill. Rewording 약초 twice changed nothing, so 넬's own 약초 is gone and 시신 opens with 칭찬.
 
 ## Questions for the playtest (T16, T17)
 
