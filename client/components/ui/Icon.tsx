@@ -1,5 +1,5 @@
 import {
-  BookOpen, ChevronRight, Clock, Dices, Dumbbell, Eye, Heart, Lightbulb, MapPin, MessageCircle, Package, Play, RotateCcw, Scale,
+  BookOpen, ChevronRight, Clock, Dices, Dumbbell, Eye, Heart, Hourglass, Lightbulb, MapPin, MessageCircle, Package, Play, RotateCcw, Scale,
   Send, Settings, User, Wrench, X,
 } from 'lucide-react-native';
 
@@ -13,6 +13,7 @@ const ICONS = {
   heard: MessageCircle, // what people said, and a topic
   book: BookOpen, // the notebook
   clock: Clock,
+  turns: Hourglass, // the turns left
   conclude: Scale,
   settings: Settings,
   send: Send,

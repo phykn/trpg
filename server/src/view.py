@@ -89,7 +89,8 @@ class ViewMaker:
         clock = self.story.head.clock
         left = self.story.head.cells - self.state["spent"]
         clock_text = ko.clock(clock.start + self.state["spent"] * clock.step) if clock else None
-        return {"text": ko.time_bar(clock_text, left), "left": left, "last": left <= 3}
+        # The bar shows the clock and the turns left apart, each by its icon; `text` keeps both for older screens.
+        return {"text": ko.time_bar(clock_text, left), "clock": clock_text, "left": left, "last": left <= 3}
 
     def make_people(self):
         partner = self.state["partner"]

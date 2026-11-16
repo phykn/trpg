@@ -27,7 +27,7 @@ export type GameView = {
     look: { id: string } | null;
     looked: boolean;
   };
-  time: { text: string; left: number; last: boolean };
+  time: { text: string; clock: string | null; left: number; last: boolean };
   people: { name: string; partner: boolean; act: string | null }[];
   offers: Act[];
   notebook: Record<Group, Line[]>;

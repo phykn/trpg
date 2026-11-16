@@ -17,8 +17,17 @@ export function TopBar({ view, onNotebook, onSettings }: { view: GameView; onNot
         {view.place.name}
       </Text>
       <View className="min-w-0 flex-1" />
-      <Icon name="clock" size={icon.md} color={last ? colors.danger.fg : colors.fg.muted} width={2} />
-      <Text numberOfLines={1} className={text({ kind: 'bar' }, 'shrink-0', last && 'text-danger-fg')}>{view.time.text}</Text>
+      {view.time.clock ? (
+        <>
+          <Icon name="clock" size={icon.md} color={last ? colors.danger.fg : colors.fg.muted} width={2} />
+          <Text numberOfLines={1} className={text({ kind: 'bar' }, 'shrink-0', last && 'text-danger-fg')}>{view.time.clock}</Text>
+        </>
+      ) : null}
+      <View className="w-1.5" />
+      <Icon name="turns" size={icon.md} color={last ? colors.danger.fg : colors.fg.muted} width={2} />
+      <Text accessibilityLabel={ko.cells(view.time.left)} className={text({ kind: 'bar' }, last && 'text-danger-fg')}>
+        {view.time.left}
+      </Text>
       <Pressable accessibilityRole="button" accessibilityLabel={view.badge ? `${ko.notebook} ${view.badge}` : ko.notebook}
         onPress={onNotebook} style={pressed}
         className={control({ kind: 'pill', tone: 'plain' }, 'h-10 gap-1 px-2')}>
