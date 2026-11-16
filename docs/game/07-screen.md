@@ -99,7 +99,7 @@ DM은 일반적인 TRPG에서 탁자 앞에 앉아 판을 이끄는 진행자다
 
 - **드물게 말한다.** 시작과 끝 말고는, DM이 말한 뒤 네 마디가 지나야 다시 말한다. 그 사이의 일은 넘어간다. 한 마디에 많아야 한 줄이다.
 - **기척만 보이고 권하지 않는다.** "경기장으로 가 보십시오"가 아니라 "경기장 쪽 문틈으로 하얀 조명이 번뜩입니다"다. 권하면 답을 일러 주는 것이 되고, 플레이어가 고르는 재미가 없어진다. 기척은 그곳의 모습에 나온 것에서 나는 소리, 빛, 냄새와 사람의 몸짓뿐이다. 없는 사람이나 물건, 벌어진 일을 지어내지 않고, 사람의 대사도 지어내지 않는다.
-- **몸짓은 신상과 태도에서만 짐작한다.** 사건의 진실, 단서, 누가 거짓말하는지는 말하지 않는다. 무엇을 내밀면 되는지, 화제의 이름도 말하지 않는다.
+- **몸짓은 신상, 하는 일, 태도에서만 짐작한다.** 사건의 진실, 단서, 누가 거짓말하는지는 말하지 않는다. 무엇을 내밀면 되는지, 화제의 이름도 말하지 않는다.
 - **화면을 설명하지 않는다.** 무엇을 누르는지, 화면의 어디에 있는지는 말하지 않는다.
 - 흔한 TRPG 진행의 원칙을 따랐다. 단서가 플레이어를 찾아오게 하고([The Alexandrian, Three Clue Rule](https://thealexandrian.net/wordpress/1118/roleplaying-games/three-clue-rule)), 위협의 조짐을 보여 주되 어떻게 할지는 플레이어에게 맡기며([Apocalypse World의 GM 행동, "show signs of an approaching threat"](https://magpiegames.com/blogs/news/picking-the-right-gm-move-in-pbta-part-one)), 막혔을 때는 가장 덜 끼어드는 것부터 쓰고 답은 주지 않는다([Gnome Stew, Getting Out of the Ditch](https://gnomestew.com/getting-out-of-the-ditch/)). 막힌 플레이어에게는 답보다 할 거리가 필요하다([The Alexandrian](https://thealexandrian.net/?p=44589)).
 - 읽기, 상대 고르기, 결론은 DM을 부르지 않는다. 여럿이 겹치면 표의 위에 있는 것 하나만 말한다. 칸이 다 된 때가 가장 앞선다.
