@@ -80,3 +80,16 @@ def test_a_guessed_action_offers_its_dice_but_the_answer_and_impressions_are_the
     [offer] = make_view(SKELETON, state, rs[-1])[0]["offers"]
     assert offer["label"].split(" · ")[0] == "오토를 몰아세운다" and not offer["now"]
     assert state["impressions"]["오토"] == {} and rs[-1]["talk"][0] == {"chat": "오토"}
+
+
+def test_suggestions_offer_next_steps_without_naming_a_topic():
+    state, _ = play_skeleton(0, [STATS])
+    view, acts = make_view(SKELETON, state)
+    labels = [c["label"] for c in view["suggest"]]
+    assert labels[0] == "주위를 둘러본다" and acts[view["suggest"][0]["id"]] == LOOK
+    topics = {t for p in SKELETON.people.values() for t in p.topics}
+    assert len(labels) <= 3 and not any(t in label for label in labels for t in topics)
+    asked = [c for c in view["suggest"] if c["id"] is None]
+    assert all(c["text"] == c["label"] for c in asked)
+    state, _ = play_skeleton(0, [STATS, LOOK])
+    assert "주위를 둘러본다" not in [c["label"] for c in make_view(SKELETON, state)[0]["suggest"]]

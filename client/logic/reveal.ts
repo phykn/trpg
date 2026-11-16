@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 
-// Text arrives a poll at a time, a dozen words at once; the screen lets it out a few letters every TICK instead,
-// spreading what is waiting over about one poll, so it reads as typed and catches up when it falls behind.
+// A text arrives whole once checked; the screen lets it out a couple of letters every TICK so it reads as typed,
+// and faster when much is waiting, so a long ending does not keep the commands locked for long.
 export const TICK = 100;
-const SPREAD = 12;
+const STEP = 2;
+const SPREAD = 40;
 
 export function nextShown(shown: string, full: string): string {
   if (!full.startsWith(shown)) return full;   // rewritten or cleared: show it as it is
   const waiting = full.length - shown.length;
-  return waiting ? full.slice(0, shown.length + Math.max(1, Math.ceil(waiting / SPREAD))) : shown;
+  return waiting ? full.slice(0, shown.length + Math.max(STEP, Math.ceil(waiting / SPREAD))) : shown;
 }
 
 // A line mounted with its text (an earlier turn) shows at once; one that fills while on screen is let out.

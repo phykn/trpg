@@ -9,6 +9,7 @@ from ..rules.act import (
     find_path,
     list_blocks_here,
     list_topics,
+    list_untold,
     was_tried,
 )
 from ..rules.state import STATS, judge_ending, list_people_here
@@ -56,6 +57,7 @@ class ViewMaker:
             "people": self.make_people(),
             "notebook": self.make_notebook(),
             "offers": self.make_offers(),
+            "suggest": self.make_suggestions(),
             "badge": len([a for a in book if a not in self.state["read"]]),
             "conclude": {"who": [self.ids[a] for a in book if self.story.lines[a].kind == "사람"],
                          "clues": [self.ids[a] for a in book if self.story.lines[a].kind in ("볼 것", "말")]}
@@ -111,6 +113,24 @@ class ViewMaker:
             bets = []
         # A sure action opens the dice at once; a guessed one only offers them (game/07 2절)
         return [{**bet, "now": not tried[0].get("guess")} for bet in bets]
+
+    def make_suggestions(self):
+        """Up to three next steps a stuck player can take with one press, naming no topic (game/07 2절)."""
+        if self.stage != "play":
+            return []
+        story, state = self.story, self.state
+        cards = []
+        if state["place"] not in state["looked"]:
+            cards.append(self.add_act({"do": "look"}, label=ko.LOOK_AROUND))
+        talked = {p for p, talk in state["talks"].items() if talk["topics"] or talk["passes"]}
+        cards += [self.add_act({"do": "face", "person": p}, label=ko.talk_to(show_name(story, "사람", p)))
+                  for p in self.here if p != state["partner"] and p not in talked][:1]
+        if state["partner"] and list_untold(story, state, state["partner"]):
+            cards.append({"id": None, "label": ko.ASK_MORE, "text": ko.ASK_MORE})
+        places = [a[2:] for a in state["notebook"] if a.startswith("곳 ") and a[2:] not in state["visited"]
+                  and find_path(story, state, a[2:])]
+        cards += [self.add_act({"do": "move", "place": p}, label=ko.go_to(show_name(story, "곳", p))) for p in places][:1]
+        return cards[:3]
 
     def find_aim(self, person, method):
         """What an action at a person bets on: what they hold back, else the last thing they said (game/05 3절)."""

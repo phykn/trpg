@@ -3,6 +3,7 @@ import BottomSheet, {
 } from '@gorhom/bottom-sheet';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { colors, radius } from '@/design/tokens';
 import { cn } from '@/design/ui';
@@ -36,20 +37,25 @@ export function DragSheet({ title, footer, full, fit, shut, onClose, children }:
       <View className="bg-canvas-floating px-4 pb-4 pt-2">{footer}</View>
     </BottomSheetFooter>
   ), [footer]);
+  // A long sheet's body ends at the screen's edge whatever the snap, so its list scrolls to the last line;
+  // the sheet sits `position` below the top, and that much of it is below the screen.
+  const position = useSharedValue(0);
+  const visible = useAnimatedStyle(() => ({ flex: 1, paddingBottom: position.value }));
+  const body = (
+    <View ref={dialog} accessibilityRole={'dialog' as never} aria-modal
+      className={fit ? cn('gap-3 px-4 pb-4', !moves && 'pt-3') : 'min-h-0 flex-1 gap-3 px-4'}>
+      <SheetHeader title={title} onClose={closes ? close : undefined} />
+      {children}
+    </View>
+  );
   return (
     <BottomSheet ref={sheet} index={fit ? 0 : start} snapPoints={fit ? undefined : SNAPS} enableDynamicSizing={fit === true}
       enablePanDownToClose={closes} enableContentPanningGesture={moves} enableHandlePanningGesture={moves}
       handleComponent={moves ? undefined : null}
-      onClose={onClose} backdropComponent={backdrop} footerComponent={footer ? foot : undefined}
+      animatedPosition={position} onClose={onClose} backdropComponent={backdrop} footerComponent={footer ? foot : undefined}
       backgroundStyle={{ backgroundColor: colors.canvas.floating, borderRadius: radius['2xl'], borderWidth: 1, borderColor: colors.border.strong }}
       handleIndicatorStyle={{ backgroundColor: colors.border.strong }}>
-      <BottomSheetView style={fit ? undefined : { flex: 1 }}>
-        <View ref={dialog} accessibilityRole={'dialog' as never} aria-modal
-          className={fit ? cn('gap-3 px-4 pb-4', !moves && 'pt-3') : 'min-h-0 flex-1 gap-3 px-4'}>
-          <SheetHeader title={title} onClose={closes ? close : undefined} />
-          {children}
-        </View>
-      </BottomSheetView>
+      {fit ? <BottomSheetView>{body}</BottomSheetView> : <Animated.View style={visible}>{body}</Animated.View>}
     </BottomSheet>
   );
 }

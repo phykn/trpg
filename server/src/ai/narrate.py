@@ -9,8 +9,12 @@ QUIET = 0.5
 OUTCOME = 0.5
 REWRITES = 2
 # An answer may end on a question back and the DM on a dry joke (game/04 3절, game/07 2절), a sentence each.
-MAX_SENTENCES = {"answer": 4, "scene": 4, "ending": 8, "dm": 4}
+MAX_SENTENCES = {"answer": 5, "scene": 7, "ending": 12, "dm": 6}
 MAX_TOKENS = {"answer": 200, "scene": 300, "ending": 700, "dm": 200}
+# Players found long, ornate sentences hard to follow; 60 letters is past nine in ten of the sentences written before.
+LONG = 60
+SHORT = ("문장은 짧게 쓴다. 한 문장에 한 가지만 말하고 '-고', '-며', '-는데'로 길게 잇지 않는다. 어려운 한자말이나 글말 대신 "
+         "누구나 바로 알아듣는 일상의 말을 쓴다.")
 # Kanana's meaning check passes answers that drop the line; the share of the line's Hangul syllables in the answer
 # catches them (kept lines scored 0.69 and up, dropped or bent ones 0.44 and below).
 COVER = 0.5
@@ -38,7 +42,8 @@ REASONS = {"added": "받은 것에 없는 사람, 물건, 때, 곳을 더했다"
            "repeat": "앞서 한 대답을 되풀이했다. 플레이어가 방금 한 말에 맞춰 다르게 받아친다",
            "again": "처음 하는 말인데 아까 말했다고 했다. 처음 말하듯 쓴다",
            "bracket": "괄호를 썼다. 괄호 없이 글로만 쓴다",
-           "lead": "운을 떼야 할 화제의 이름을 그대로 말하지 않았다"}
+           "lead": "운을 떼야 할 화제의 이름을 그대로 말하지 않았다",
+           "long": "문장이 길다. 한 문장에 한 가지만 담아 짧게 끊어 쓴다"}
 
 
 class Narrator:
@@ -46,12 +51,10 @@ class Narrator:
         self.llm = llm
         self.decision = decision
 
+    # The screen gets only the checked text, so what the player is reading never changes under them.
     async def write(self, job):
         messages = make_messages(job)
-        text = ""
-        async for chunk in self.llm.stream(messages, MAX_TOKENS[job["kind"]]):
-            text += chunk
-            yield {"type": "delta", "text": chunk}
+        text = "".join([chunk async for chunk in self.llm.stream(messages, MAX_TOKENS[job["kind"]])])
         checks = []
         for attempt in range(REWRITES + 1):
             failed, probs = await self.check(job, text)
@@ -65,11 +68,8 @@ class Narrator:
                 note += " " + ", ".join(f'"{name}"' for name in job["leads"]) + "라는 말을 그대로 넣는다."
             messages = [*messages, {"role": "assistant", "content": text}, {"role": "user", "content": note}]
             text = "".join([chunk async for chunk in self.llm.stream(messages, MAX_TOKENS[job["kind"]])])
-            yield {"type": "replace", "text": text}
-        best = pick_best(checks)
-        if best != text:
-            text = best
-            yield {"type": "replace", "text": text}
+        text = pick_best(checks)
+        yield {"type": "delta", "text": text}
         yield {"type": "result", "text": text, "checks": checks}
 
     async def check(self, job, text):
@@ -143,7 +143,7 @@ def list_dm_given(job):
 
 
 def make_dm_prompt(job):
-    rules = ["플레이어를 \"당신\"이라 부르고 합니다체로 두세 문장만 쓴다. '-세요', '-군요' 같은 해요체는 쓰지 않는다.",
+    rules = ["플레이어를 \"당신\"이라 부르고 합니다체로 짧은 문장 서너 개만 쓴다. '-세요', '-군요' 같은 해요체는 쓰지 않는다.",
              "플레이어를 이름이나 3인칭으로 부르지 않는다.",
              ("진행자는 세계의 기척을 보여 줄 뿐이고, 무엇을 할지는 플레이어가 고른다. 가 보라, 물어보라, 살펴보라처럼 "
               "권하거나 시키지 않는다." if job["key"] != "conclude" else "결론을 들려 달라는 말만 직접 한다."),
@@ -151,6 +151,7 @@ def make_dm_prompt(job):
              ("인물의 몸짓은 신상, 성격 유형, 지금 하는 일, 태도에서만 짐작한다. 사건의 진실, 단서, 누가 거짓말하는지는 "
               "말하지 않는다."),
              VOICE,
+             SHORT,
              "인물의 대사를 지어내지 않는다. 따옴표를 쓰지 않는다.",
              "화면, 단추, 누르는 법은 말하지 않는다.",
              "신상이 플레이어를 이름으로 가리켜도 플레이어는 \"당신\"이라 부른다.",
@@ -171,6 +172,7 @@ def mood_rule(job):
 
 def make_answer_prompt(job):
     rules = [f"{job['person']}의 대사만 쓴다. 할 말 하나에 한두 문장이다. 이름, 따옴표, 설명은 붙이지 않는다.",
+             SHORT,
              "몸짓, 표정, 행동은 묘사하지 않는다. 입으로 하는 말만 쓴다.",
              "신상의 말투와 성격 유형의 결을 따르되 문법에 맞는 한국어로 쓰고, 태도에 맞게 플레이어의 말을 받아친다.",
              "대답 끝에 플레이어에게 되묻거나 재촉하는 짧은 한마디를 붙여도 된다. 받은 것 밖의 일은 묻지도 말하지도 않는다.",
@@ -208,10 +210,11 @@ def make_answer_prompt(job):
 
 def make_scene_prompt(job):
     rules = ["플레이어를 \"당신\"이라 부르고 합니다체로 쓴다.",
-             "받은 대목과 진실 풀이를 모두 담되 여덟 문장을 넘지 않는다." if job["kind"] == "ending"
-             else "두세 문장으로 쓴다.",
+             "받은 대목과 진실 풀이를 모두 담되 열두 문장을 넘지 않는다." if job["kind"] == "ending"
+             else "짧은 문장 너덧 개로 쓴다.",
              "지어내는 것은 날씨, 소리, 빛, 냄새 같은 분위기뿐이다. 받은 것에 없는 사람, 물건, 흔적은 그리지 않는다.",
              VOICE,
+             SHORT,
              "분위기는 곳의 모습과 어긋나지 않게 쓴다. '적막', '정적', '어둠' 같은 말을 버릇처럼 넣지 않는다.",
              "한 문단으로 쓴다.",
              ("이번에 눈에 띈 것이 많으면 두드러진 두세 가지만 그린다. 그린 것은 받은 자리와 모양 그대로 쓰고, "
@@ -259,29 +262,24 @@ def cover(say, text):
 
 
 def list_faults(job, text):
-    kind, unquoted = job["kind"], QUOTED.sub("", text)
-    faults = []
-    if count_sentences(text) > MAX_SENTENCES[kind] + 2 * max(0, len(job.get("lines", [])) - 1):
-        faults.append("length")
-    if any(word in text for word in PROMPT_WORDS):
-        faults.append("prompt")
-    if BRACKET.search(text):
-        faults.append("bracket")
-    if kind != "answer" and (HAEYO.search(unquoted) or PLAIN.search(unquoted)):
-        faults.append("style")
-    if kind == "dm" and job.get("key") not in ("conclude", "ready") and PUSH.search(unquoted):
-        faults.append("push")
-    if kind == "dm" and re.search("[\"“”‘’]", text):
-        faults.append("speech")
-    if any(name.replace(" ", "") not in text.replace(" ", "") for name in job.get("leads", [])):
-        faults.append("lead")
-    if any(SequenceMatcher(None, r["answer"], text).ratio() >= REPEAT for r in job.get("recent", [])):
-        faults.append("repeat")
-    if kind == "answer" and job.get("lines") and not set(job["lines"]) & set(job.get("told", [])) and AGAIN.search(text):
-        faults.append("again")
-    return faults
+    kind, unquoted, sentences = job["kind"], QUOTED.sub("", text), split_sentences(text)
+    told_first = kind == "answer" and job.get("lines") and not set(job["lines"]) & set(job.get("told", []))
+    faults = {
+        "length": len(sentences) > MAX_SENTENCES[kind] + 2 * max(0, len(job.get("lines", [])) - 1),
+        "long": any(len(s) > LONG for s in sentences),
+        "prompt": any(word in text for word in PROMPT_WORDS),
+        "bracket": BRACKET.search(text),
+        "style": kind != "answer" and (HAEYO.search(unquoted) or PLAIN.search(unquoted)),
+        "push": kind == "dm" and job.get("key") not in ("conclude", "ready") and PUSH.search(unquoted),
+        "speech": kind == "dm" and re.search("[\"“”‘’]", text),
+        "lead": any(name.replace(" ", "") not in text.replace(" ", "") for name in job.get("leads", [])),
+        "repeat": any(SequenceMatcher(None, r["answer"], text).ratio() >= REPEAT for r in job.get("recent", [])),
+        "again": told_first and AGAIN.search(text),
+    }
+    return [name for name, found in faults.items() if found]
 
 
-def count_sentences(text):
+def split_sentences(text):
     # A trailing-off "그... 그래요" is one sentence, so an ellipsis ends none
-    return len([s for s in re.split(r"(?<=[^.…][.!?])\s+", text.strip()) if s])
+    return [s for s in re.split(r"(?<=[^.…][.!?])\s+", text.strip()) if s]
+

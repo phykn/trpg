@@ -99,6 +99,19 @@ def bet(method, topic=None, person=None):
     return f"{topic} 이야기로 {act}" if topic else act
 
 
+# The cards above the input: next steps in plain words, never a topic's name (game/07 2절).
+LOOK_AROUND = "주위를 둘러본다"
+ASK_MORE = "더 아시는 게 있습니까?"
+
+
+def talk_to(person):
+    return f"{person}에게 말을 건다"
+
+
+def go_to(place):
+    return f"{ro(place)} 간다"
+
+
 def divider(place, cells):
     return f"── {place} · {cells}턴 ──"
 

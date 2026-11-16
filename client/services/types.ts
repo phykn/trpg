@@ -34,6 +34,8 @@ export type GameView = {
   time: { text: string; clock: string | null; left: number; last: boolean };
   people: { name: string; partner: boolean; act: string | null }[];
   offers: Act[];
+  // A next step in one press: an act id, or (id null) a sentence said to the partner.
+  suggest: { id: string | null; label: string; text?: string }[];
   notebook: Record<Group, Line[]>;
   badge: number;
   conclude: { who: number[]; clues: number[] } | null;
@@ -67,5 +69,5 @@ export type CommandBody =
 
 export type TextEvent =
   | { type: 'start' | 'end'; slot: number }
-  | { type: 'delta' | 'replace'; slot: number; text: string }
+  | { type: 'delta'; slot: number; text: string }
   | { type: 'done' | 'error' };

@@ -143,7 +143,7 @@ def test_errors_keep_the_game_as_it_was(tmp_path):
     assert asked.status_code == 503 and client.get(f"/games/{game}").json() == first["view"]
 
 
-def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error(tmp_path):
+def test_text_shows_only_once_checked_and_is_retried_after_an_error(tmp_path):
     llm = FakeLLM([ModelUnavailable("down"), "장부만 걷고 갔소. 새벽 종 얘기라면 내가 알지.",
                    "해 지기 전에 장부만 걷고 떠났소. 새벽 종 얘기라면 내가 알지."])
     player = Player(make_client(tmp_path, FakeInterpreter(HEARD), Narrator(llm, FakeChecks([False, True]))))
@@ -156,9 +156,8 @@ def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error
     player.send(text=ASK)
     assert [e["type"] for e in player.read_text(2)] == ["start", "error"]
     events = player.read_text(2)
-    assert [e["type"] for e in events] == ["start", *["delta"] * 8, "replace", "end", "done"]
-    assert events[9] == {"type": "replace", "slot": 0, "text": "해 지기 전에 장부만 걷고 떠났소. 새벽 종 얘기라면 내가 알지. "}
-    assert player.read_text(2) == [{"type": "start", "slot": 0},
+    # Only the text that passed reaches the screen: the failed first draft is never shown.
+    assert events == player.read_text(2) == [{"type": "start", "slot": 0},
                                    {"type": "delta", "slot": 0, "text": "해 지기 전에 장부만 걷고 떠났소. 새벽 종 얘기라면 내가 알지. "},
                                    {"type": "end", "slot": 0}, {"type": "done"}]
     saved = json.loads((tmp_path / f"{player.game}.json").read_text(encoding="utf-8"))["turns"][1]["text"]
@@ -175,7 +174,7 @@ def test_text_can_be_polled_for_a_tunnel_that_holds_streams_back(tmp_path):
     while not events or events[-1]["type"] not in ("done", "error"):
         polled = player.client.get(f"/games/{player.game}/turns/2/text/poll", params={"after": after}).json()
         events, after = events + polled["events"], polled["next"]
-    assert [e["type"] for e in events] == ["start", *["delta"] * 8, "replace", "end", "done"]
+    assert [e["type"] for e in events] == ["start", "delta", "end", "done"]
     # Once saved, every poll gets the whole text again, so a screen that saw part of it still ends whole.
     again = player.client.get(f"/games/{player.game}/turns/2/text/poll", params={"after": 3}).json()
     assert again["events"] == player.read_text(2) and again["next"] == len(again["events"])

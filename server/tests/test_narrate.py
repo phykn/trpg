@@ -1,4 +1,4 @@
-from src.ai.narrate import count_sentences, judge, make_checks, pick_best
+from src.ai.narrate import judge, make_checks, pick_best, split_sentences
 
 
 def test_a_text_fails_on_low_checks_and_on_length():
@@ -7,10 +7,12 @@ def test_a_text_fails_on_low_checks_and_on_length():
     assert set(make_checks(job)) == {"added", "meaning"}
     assert judge(job, {"added": {"noul": 0.2}, "meaning": {"noul": 0.8}}, "한 말.") == (
         [], {"added": 0.2, "meaning": 0.8})
-    assert judge(job, {"added": {"noul": 0.9}, "meaning": {"noul": 0.4}}, "하나. 둘! 셋? 넷. 다섯.")[0] == [
+    assert judge(job, {"added": {"noul": 0.9}, "meaning": {"noul": 0.4}}, "하나. 둘! 셋? 넷. 다섯. 여섯.")[0] == [
         "added", "meaning", "length"]
-    assert count_sentences("……알았소, 그렇다면 말하리다. 해 지기 전에 떠났소") == 2
-    assert count_sentences("그... 그래요. 미... 미안하면 됐어요.") == 2   # research2-text-skeleton 인상 리사
+    assert len(split_sentences("……알았소, 그렇다면 말하리다. 해 지기 전에 떠났소")) == 2
+    assert len(split_sentences("그... 그래요. 미... 미안하면 됐어요.")) == 2   # research2-text-skeleton 인상 리사
+    long = "낮게 깔린 새벽 안개 사이로 차가운 습기가 느껴지는 가운데, 우물 한가운데에 박힌 장대가 안개 속에서 희미하게 윤곽을 드러냅니다."
+    assert "long" in judge(job, {"added": {"noul": 0.2}, "meaning": {"noul": 0.8}}, f"한 말. {long}")[0]
     assert judge(job, {"added": {"noul": 0.2}, "meaning": {"noul": 0.8}}, "말 모르겠어요.")[0] == []   # a person keeps their own speech
 
 

@@ -59,7 +59,6 @@ export function useGame() {
       await streamText(game.current!, turn, (e) => {
         if (e.type === 'start') changeText(turn, e.slot, () => '');
         else if (e.type === 'delta') changeText(turn, e.slot, (t) => t + e.text);
-        else if (e.type === 'replace') changeText(turn, e.slot, () => e.text);
         else if (e.type === 'done') done = true;
       });
       if (!done) {
