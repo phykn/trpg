@@ -44,7 +44,7 @@ class Checker:
     def run(self):
         return [
             self.check_lies(), self.check_holds(), self.check_truth(), self.check_reach(), self.check_time(),
-            self.check_events(), self.check_first(), self.check_unreached(),
+            self.check_events(), self.check_first(), self.check_unreached(), self.check_intros(),
             *self.alert_size(), *self.alert_long(), *self.alert_asks(), *self.alert_necks(),
         ]
 
@@ -122,6 +122,11 @@ class Checker:
         missing += [f"화제 {p}.{t}" for p, person in self.story.people.items() for t in person.topics
                     if not any(a.startswith(f"말 {p}.{t}.") for a in book)]
         return judge("닿지 않는 것", missing)
+
+    def check_intros(self):
+        missing = [f"사람 {p}" for p, person in self.story.people.items() if not person.intro]
+        missing += [f"볼 것 {t}" for t, thing in self.story.things.items() if thing.item and not thing.intro]
+        return judge("소개", missing)
 
     def alert_size(self):
         counts = {"막힘": len(self.story.blocks), "사람": len(self.story.people), "곳": len(self.story.places)}

@@ -97,7 +97,7 @@ class Attitude(Shape):
 
 class Person(Shape):
     bio: str = Field(alias="신상")
-    intro: str = Field(alias="소개")
+    intro: str | None = Field(None, alias="소개")   # the check asks for it; saves made before it have none
     place: str = Field(alias="있는 곳")
     attitude: Attitude = Field(Attitude(), alias="처음 태도")
     topics: dict[str, Topic] = Field({}, alias="화제")
@@ -130,8 +130,6 @@ class Thing(Shape):
             raise ValueError("줄 is required unless 물건인가 is 예")
         if (self.props or self.intro) and not self.item:
             raise ValueError("only an item (물건인가: 예) has 성질 and 소개")
-        if self.item and not self.intro:
-            raise ValueError("an item needs 소개")
         if self.item and self.lock:
             raise ValueError("a locked thing is not an item")
         return self

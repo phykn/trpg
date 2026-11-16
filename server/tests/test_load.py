@@ -80,3 +80,13 @@ def test_a_lie_can_fall_to_any_of_several_facts():
     block = dawn.blocks["거짓말 고드릭.그 뒤의 일"]
     assert block.wants == ("밤에 나간 수레", "옮겨진 시신")
     assert does_fit(dawn, "볼 것 마른 장화", block) and not does_fit(dawn, "볼 것 제단의 초", block)
+
+
+def test_a_story_without_소개_still_reads_for_old_saves_but_fails_the_check():
+    from src.story.check import check_story
+    data = skeleton_data()
+    for section in ("사람", "볼 것"):
+        for entry in data[section].values():
+            entry.pop("소개", None)
+    results, _ = check_story(StoryFile.model_validate(data))
+    assert ("떨어짐", "소개", "사람 오토; 사람 한스; 사람 리사; 볼 것 쇠 지렛대") in results
