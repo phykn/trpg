@@ -11,13 +11,15 @@ DAWN = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
 
 
 class FakeDecision:
-    def __init__(self, kind, topics=None, two=0.1, place="숲길"):
-        self.answers = {"kind": {"choice": kind, "probabilities": {kind: 0.9}},
-                        "two": {"noul": two}, "place": {"choice": place, "probabilities": {}}}
+    def __init__(self, kind, topics=None, two=0.1, place="숲길", second="_none"):
+        self.answers = {"kind": {"choice": kind, "probabilities": {kind: 0.9}}, "two": {"noul": two},
+                        "place": {"choice": place, "probabilities": {}}, "second": {"choice": second, "probabilities": {}}}
+        self.asked = []
         if topics:
             self.answers["topic"] = {"choice": max(topics, key=topics.get), "probabilities": topics}
 
     async def decide(self, state, questions):
+        self.asked.append(questions)
         self.questions = questions
         return {key: self.answers[key] for key in questions}
 
@@ -40,9 +42,9 @@ def test_the_questions_offer_shown_topics_with_their_asks_and_reachable_places()
     (FakeDecision("move", {"징수관": 0.9, "_none": 0.1}, place="촌장 집"), {"kind": "move", "place": "촌장 집"}),
     (FakeDecision("look", {"징수관": 0.9, "_none": 0.1}), {"kind": "look"}),
     (FakeDecision("chat", {"징수관": 0.8, "독미나리": 0.1, "_none": 0.1}), {"kind": "topics", "topics": ["징수관"]}),
-    (FakeDecision("topic", {"징수관": 0.6, "독미나리": 0.3, "_none": 0.1}, two=0.9),
+    (FakeDecision("topic", {"징수관": 0.9, "독미나리": 0.0, "_none": 0.1}, two=0.9, second="독미나리"),
      {"kind": "topics", "topics": ["징수관", "독미나리"]}),
-    (FakeDecision("topic", {"징수관": 0.9, "독미나리": 0.0, "_none": 0.1}, two=0.9), {"kind": "topics", "topics": ["징수관"]}),
+    (FakeDecision("topic", {"징수관": 0.6, "독미나리": 0.3, "_none": 0.1}, two=0.9), {"kind": "topics", "topics": ["징수관"]}),
     (FakeDecision("topic", {"징수관": 0.4, "독미나리": 0.1, "_none": 0.5}), {"kind": "none"}),
     (FakeDecision("topic", {"징수관": 0.5, "독미나리": 0.3, "_none": 0.2}), {"kind": "unsure", "topics": ["징수관", "독미나리"]}),
     (FakeDecision("topic", {"징수관": 0.6, "독미나리": 0.1, "_none": 0.3}), {"kind": "topics", "topics": ["징수관"]}),   # 0.3 ahead
@@ -50,6 +52,21 @@ def test_the_questions_offer_shown_topics_with_their_asks_and_reachable_places()
 def test_the_answers_become_one_reading(decision, heard):
     got = read(decision)
     assert {k: v for k, v in got.items() if k != "probs"} == heard and "topic" in got["probs"]
+
+
+def test_a_second_topic_is_asked_apart_only_when_two_things_are_asked():
+    once = FakeDecision("topic", {"징수관": 0.9, "독미나리": 0.1, "_none": 0.0})
+    read(once)
+    twice = FakeDecision("topic", {"징수관": 0.9, "독미나리": 0.1, "_none": 0.0}, two=0.9)
+    read(twice)
+    assert len(once.asked) == 1 and list(twice.asked[1]) == ["second"]
+    assert set(twice.asked[1]["second"]["criteria"]) == {"독미나리", "_none"}
+
+
+def test_the_kinds_name_the_other_people_in_the_notebook():
+    decision = FakeDecision("chat", {"징수관": 0.1, "독미나리": 0.1, "_none": 0.8})
+    read(decision)
+    assert decision.questions["kind"]["criteria"]["topic"] == "브람에게 사건이나 고드릭, 마렌, 넬, 토빈에 관해 묻는다"
 
 
 def test_an_answer_outside_the_options_is_no_answer():

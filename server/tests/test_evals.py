@@ -18,7 +18,7 @@ def test_every_story_has_cases_and_the_report_grades_them():
     for folder in ("dawn", "skeleton"):
         assert len(read_cases(SCENARIOS / folder, load_story(SCENARIOS / folder))) >= 10
     report, passed = summarize(asyncio.run(run_evals(SCENARIOS / "skeleton", Echo())))
-    assert not passed and "틀린 화제 3" in report
+    assert not passed and "틀린 화제 4" in report
     assert grade("밤 + 씨앗", {"kind": "topics", "topics": ["씨앗"]}) == "모자람"
     assert grade("넘김", {"kind": "unsure", "topics": ["밤", "씨앗"]}) == "되물음"
 
