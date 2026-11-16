@@ -34,6 +34,7 @@ export const text = withMerge(cva('text-fg-default', {
       small: 'font-sans text-chip', // a line gathered under another
       head: 'font-sans-semibold text-chip text-fg-muted', // a group's heading
       mono: 'font-mono-medium text-panel text-fg-muted', // the clock
+      bar: 'font-mono-medium text-body text-fg-muted', // the top bar's time and notebook count, one size
       value: 'w-9 text-center font-mono-medium text-title', // a number set with steppers
       notice: 'font-sans text-chip italic text-gold-fg', // a notebook notice in the chat
       mark: 'rounded-full bg-gold-muted px-2 font-sans text-chip text-gold-fg', // a mark on a line

@@ -17,18 +17,18 @@ export function TopBar({ view, onNotebook, onSettings }: { view: GameView; onNot
         {view.place.name}
       </Text>
       <View className="min-w-0 flex-1" />
-      <Icon name="clock" size={icon.sm} color={last ? colors.danger.fg : colors.fg.muted} width={2} />
-      <Text numberOfLines={1} className={text({ kind: 'mono' }, 'shrink-0', last && 'text-danger-fg')}>{view.time.text}</Text>
+      <Icon name="clock" size={icon.md} color={last ? colors.danger.fg : colors.fg.muted} width={2} />
+      <Text numberOfLines={1} className={text({ kind: 'bar' }, 'shrink-0', last && 'text-danger-fg')}>{view.time.text}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={view.badge ? `${ko.notebook} ${view.badge}` : ko.notebook}
         onPress={onNotebook} style={pressed}
         className={control({ kind: 'pill', tone: 'plain' }, 'h-10 gap-1 px-2')}>
-        <Icon name="book" size={icon.lg} color={colors.fg.muted} width={2} />
-        {/* What is unread matters, so its count stands as large as the icon beside it. */}
-        {view.badge ? <Text className={text({ kind: 'title' }, 'font-mono-medium text-gold-fg')}>{view.badge}</Text> : null}
+        <Icon name="book" size={icon.md} color={colors.fg.muted} width={2} />
+        {/* The count reads in the same size as the time beside it. */}
+        {view.badge ? <Text className={text({ kind: 'bar' }, 'text-gold-fg')}>{view.badge}</Text> : null}
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={ko.settings} onPress={onSettings} style={pressed}
         className={control({ kind: 'icon', tone: 'plain' })}>
-        <Icon name="settings" size={icon.lg} color={colors.fg.muted} width={2} />
+        <Icon name="settings" size={icon.md} color={colors.fg.muted} width={2} />
       </Pressable>
     </View>
   );
