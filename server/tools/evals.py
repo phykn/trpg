@@ -43,7 +43,7 @@ def read_cases(folder, story, held=False):
         for expect, texts in groups.items():
             topics = expect.split(" + ")
             if expect.startswith("행동 "):
-                if expect[3:] not in ACTIONS or kind != "사람" and expect != "행동 잠김":   # alone, only a lock
+                if expect[3:] not in ACTIONS or (kind != "사람" and expect != "행동 잠김"):   # alone, only a lock
                     raise StoryError(f"{path.name}: {where}: {expect}")
                 cases += [(where, expect, text) for text in texts]
                 continue
@@ -53,7 +53,7 @@ def read_cases(folder, story, held=False):
                     raise StoryError(f"{path.name}: {where}: {expect}")
                 cases += [(where, expect, text) for text in texts]
                 continue
-            known = expect in ("잡담", "넘김", "둘러봄") or expect.startswith("곳 ") and expect[2:] in story.places or (
+            known = expect in ("잡담", "넘김", "둘러봄") or (expect.startswith("곳 ") and expect[2:] in story.places) or (
                 kind == "사람" and all(t in story.people[name].topics for t in topics))
             if not known:
                 raise StoryError(f"{path.name}: {where}: {expect}")

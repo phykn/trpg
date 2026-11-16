@@ -1,4 +1,5 @@
 import hashlib
+from collections import deque
 
 from ..story.load import CASE
 from .state import (
@@ -77,9 +78,9 @@ def find_path(story, state, place):
     if f"곳 {place}" not in book or place == state["place"] or not is_shown(story, state, f"곳 {place}"):
         return None
     paths = {state["place"]: []}
-    queue = [state["place"]]
+    queue = deque([state["place"]])
     while queue:
-        here = queue.pop(0)
+        here = queue.popleft()
         for nxt in story.links[here]:
             if nxt not in paths and f"곳 {nxt}" in book and is_shown(story, state, f"곳 {nxt}"):
                 paths[nxt] = paths[here] + [nxt]
@@ -89,7 +90,7 @@ def find_path(story, state, place):
 
 def was_tried(story, state, line, target):
     # A present that failed fails again while the target holds nothing it did not hold then.
-    here = [b.addr for b in list_blocks_here(story, state) if b.addr == target or b.name == target and b.kind != "잠김"]
+    here = [b.addr for b in list_blocks_here(story, state) if b.addr == target or (b.name == target and b.kind != "잠김")]
     return any(t["line"] == line and t["target"] == target and set(here) <= set(t["blocks"]) for t in state["tried"])
 
 
@@ -108,7 +109,7 @@ def list_blocks_here(story, state):
 
 def does_fit(story, addr, block):
     line = story.lines[addr]
-    if line.branch == "거짓말" or block.kind == "꺼림" and line.kind == "말" and line.name == block.name:
+    if line.branch == "거짓말" or (block.kind == "꺼림" and line.kind == "말" and line.name == block.name):
         return False
     return any(want == line.shows or want in line.props for want in block.wants)
 
@@ -174,7 +175,6 @@ class Turn:
             self.tell_case(opener)
 
     def list_addressed(self, action, heard):
-        """Who this action speaks to, before it is done; moving and looking speak to no one."""
         do, partner = action["do"], self.state["partner"]
         if do == "present":
             return [action["target"]]
@@ -183,8 +183,8 @@ class Turn:
         return [] if heard["kind"] == "action" and heard["method"] in LOCK_METHODS else [partner]
 
     def tell_case(self, person):
-        """The first talk with the opener tells the case and names topics; it is no miss (game/04 5절)."""
-        # One topic: with two beside the case gemma4 dropped one every time (opening-fix text-after 상황 최두식).
+        """The first talk with the opener tells the case and names a topic; it is no miss (game/04 5절)."""
+        # One topic: given two beside the case, gemma4 dropped one.
         leads = list_untold(self.story, self.state, person)[:1]
         self.talk.insert(0, {"case": person, "leads": leads})
         if self.state["talks"][person]["passes"]:
@@ -444,7 +444,7 @@ class Turn:
     def impress_watchers(self, person, block, method, won):
         """Deeds leave impressions on whoever watched them and was not their target (game/04 4절)."""
         here = list_people_here(self.story, self.state)
-        if method == "press" or method == "trick" and not won:
+        if method == "press" or (method == "trick" and not won):
             for other in [p for p in here if p != person]:
                 self.impress(other, "위협" if method == "press" else "들킴")
         elif method in LOCK_METHODS and block.owner in here:
@@ -488,7 +488,7 @@ class Turn:
 
     def do_conclude(self, who, how, why):
         book = self.state["notebook"]
-        if who is not None and f"사람 {who}" not in book or any(
+        if (who is not None and f"사람 {who}" not in book) or any(
                 a is not None and (a not in book or self.story.lines[a].kind not in ("볼 것", "말")) for a in (how, why)):
             raise Refused("answer from the notebook")
         self.change("conclude", who=who, how=how, why=why)

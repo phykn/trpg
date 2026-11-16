@@ -8,7 +8,7 @@ HELPS = ("hint_topic", "hint_line", "hint_place")
 
 
 def make_guide(story, before, after, turn, past):
-    """When the DM speaks after a turn (game/07 2절). `past` holds what the DM said before, each with its turn."""
+    """`past` holds what the DM said before, each with its turn (game/07 2절)."""
     do = turn["action"]["do"]
     if do in ("read", "face", "conclude", "stats"):
         return None
@@ -18,13 +18,12 @@ def make_guide(story, before, after, turn, past):
     if sign:
         return sign
     remarks = [g["turn"] for g in past if g["key"] not in SIGNS]
-    if after["turn"] - max(remarks, default=0) < 4:   # four turns between remarks
+    if after["turn"] - max(remarks, default=0) < 4:
         return None
     return find_remark(story, before, after, turn["changes"], past) or find_nudge(story, after, turn["changes"], past)
 
 
 def find_sign(story, after, turn):
-    """A gesture the DM draws because something showed in the person: a lie a roll caught, a dodge, a turned mood."""
     changes, here = turn["changes"], list_people_here(story, after)
     lying = [c["line"] for c in changes if c["op"] == "judge" and c["verdict"] == "lying"]
     if lying:
@@ -77,14 +76,12 @@ def find_nudge(story, after, changes, past):
 
 
 def is_ready(story, state):
-    """Whether the notebook holds who, how and why of the truth, so the player could conclude (game/07 2절)."""
     truth, book = story.head.truth, state["notebook"]
     return f"사람 {truth.who}" in book and all(any(story.lines[a].shows == fact for a in book)
                                                  for fact in (truth.how, truth.why))
 
 
 def find_help(story, state, key):
-    """One thing to do for a player stuck long, never the answer (game/07 2절)."""
     book = state["notebook"]
     if key == "hint_topic":
         here = list_people_here(story, state)

@@ -192,7 +192,7 @@ class Checker:
                     turn.ask_topic(person, topic)
             turn.write_up()
             for block in list_blocks_here(self.story, turn.state):
-                if block.addr not in blocked and (free and block.kind != "거짓말" or self.list_clues(turn.state, block)):
+                if block.addr not in blocked and ((free and block.kind != "거짓말") or self.list_clues(turn.state, block)):
                     turn.open_block(block)
                     turn.write_up()
             if (len(turn.state["notebook"]), len(turn.state["opened"])) == size:

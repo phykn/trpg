@@ -535,7 +535,7 @@ class Story:
                 kinds = ["볼 것" if inner in self.things else "곳" for inner in thing.lock.contents]
                 self.add_block("잠김", [name], wants=(thing.lock.weak,), hint=thing.lock.hint, hard=thing.lock.hard,
                                owner=thing.lock.owner, cond=thing.cond,
-                               opens=[format_address(k, [i]) for k, i in zip(kinds, thing.lock.contents)])
+                               opens=[format_address(k, [i]) for k, i in zip(kinds, thing.lock.contents, strict=False)])
 
     def add_block(self, kind, parts, cond=None, **fields):
         addr = format_address(kind, parts)

@@ -87,11 +87,7 @@ def list_writes(story, state, fresh):
     people = [f"사람 {p}" for p in list_people_here(story, state)]
     places = [f"곳 {place}"] + [f"곳 {p}" for p in story.links[place]]
     told = [t for a in fresh for t in story.lines[a].tells]
-    writes = []
-    for addr in things + people + places + told:
-        if addr not in state["notebook"] and addr not in writes and is_shown(story, state, addr):
-            writes.append(addr)
-    return writes
+    return [a for a in dict.fromkeys(things + people + places + told) if a not in state["notebook"] and is_shown(story, state, a)]
 
 
 def apply_turn(story, state, changes):
@@ -142,7 +138,6 @@ def spread(state, change):
 
 
 def list_rumors(state, person):
-    """The rumors a person knows by now (data/03 2절)."""
     return [r for r in state["rumors"] if r["to"] == person and r["at"] <= state["spent"] and person not in state["gone"]]
 
 
@@ -191,13 +186,9 @@ class Invariants:
         self.book = new["notebook"]
 
     def find_broken(self):
-        checks = (("final", self.breaks_final), ("ended", self.breaks_ended), ("notebook", self.breaks_notebook),
-                  ("shown", self.breaks_shown), ("struck", self.breaks_struck), ("after", self.breaks_after),
-                  ("gone", self.breaks_gone), ("withheld", self.breaks_withheld), ("hint", self.breaks_hint),
-                  ("judged", self.breaks_judged), ("closed", self.breaks_closed), ("stats", self.breaks_stats),
-                  ("place", self.breaks_place), ("partner", self.breaks_partner), ("spent", self.breaks_spent),
-                  ("events", self.breaks_events), ("conclusion", self.breaks_conclusion))
-        return next((name for name, breaks in checks if breaks()), None)
+        names = ("final", "ended", "notebook", "shown", "struck", "after", "gone", "withheld", "hint", "judged", "closed",
+                 "stats", "place", "partner", "spent", "events", "conclusion")
+        return next((name for name in names if getattr(self, f"breaks_{name}")()), None)
 
     def breaks_final(self):
         return self.old["conclusion"] is not None and bool(self.changes)
@@ -265,5 +256,5 @@ class Invariants:
         if not end:
             return False
         clues = [end[k] for k in ("how", "why") if end[k]]
-        return bool(end["who"] and f"사람 {end['who']}" not in self.book or any(
+        return bool((end["who"] and f"사람 {end['who']}" not in self.book) or any(
             a not in self.book or self.story.lines[a].kind not in ("볼 것", "말") for a in clues))

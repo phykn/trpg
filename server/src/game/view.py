@@ -13,7 +13,7 @@ from ..rules.act import (
 )
 from ..rules.state import STATS, judge_ending, list_people_here
 from ..story.load import CASE
-from .names import show_line, show_name
+from .names import show_clock, show_line, show_name
 
 GROUPS = {"곳": "places", "사람": "people", "물건": "items", "본 것": "seen", "들은 말": "heard", CASE: "heard"}
 
@@ -87,9 +87,8 @@ class ViewMaker:
                 "looked": self.state["place"] in self.state["looked"]}
 
     def make_time(self):
-        clock = self.story.head.clock
         left = self.story.head.cells - self.state["spent"]
-        clock_text = ko.clock(clock.start + self.state["spent"] * clock.step) if clock else None
+        clock_text = show_clock(self.story, self.state["spent"])
         # The bar shows the clock and the turns left apart, each by its icon; `text` keeps both for older screens.
         return {"text": ko.time_bar(clock_text, left), "clock": clock_text, "left": left, "last": left <= 3}
 
@@ -314,7 +313,7 @@ def make_notes(story, changes, ids):
                 add(("broke", line.name), ko.broke(show_name(story, "사람", line.name)), ids[line.addr])
             else:
                 add(("heard", line.name), ko.heard(show_name(story, "사람", line.name)), ids[line.addr])
-        elif op in ("withhold", "hint") or op == "open" and change["block"].startswith("잠김 "):
+        elif op in ("withhold", "hint") or (op == "open" and change["block"].startswith("잠김 ")):
             block = story.blocks[change["block"]]
             kind = "볼 것" if block.kind == "잠김" else "사람"
             name = show_name(story, kind, block.name)

@@ -9,6 +9,11 @@ def show_name(story, kind, name):
     return entry.display or name
 
 
+def show_clock(story, spent):
+    clock = story.head.clock
+    return ko.clock(clock.start + spent * clock.step) if clock else None
+
+
 def show_line(story, addr):
     line = story.lines[addr]
     if line.kind == "말":

@@ -11,9 +11,8 @@ REWRITES = 2
 # An answer may end on a question back and the DM on a dry joke (game/04 3절, game/07 2절), a sentence each.
 MAX_SENTENCES = {"answer": 4, "scene": 4, "ending": 8, "dm": 4}
 MAX_TOKENS = {"answer": 200, "scene": 300, "ending": 700, "dm": 200}
-# Kanana's meaning check passes answers that drop the line (qa/findings.md); the share of each line's Hangul
-# syllables found in the answer catches them. On the AI testers' games (qa_test/runs/qa-1 to qa-6) answers that kept
-# their lines scored 0.69 and up, answers that dropped or bent one 0.44 and below.
+# Kanana's meaning check passes answers that drop the line; the share of the line's Hangul syllables in the answer
+# catches them (kept lines scored 0.69 and up, dropped or bent ones 0.44 and below).
 COVER = 0.5
 # An answer this close to one the person already gave says the same thing again; gemma4 did so even when told not to.
 REPEAT = 0.8
@@ -165,7 +164,7 @@ def mood_rule(job):
     # The mood is given too, so the sounds and smells it names pass the check (game/08 5절).
     if not job.get("mood"):
         return []
-    # gemma4 put the mood's smell into every scene and DM line (qa_test/runs/opening-fix-play 10~15턴).
+    # Otherwise gemma4 put the mood's smell into every scene and DM line.
     return [("문체는 분위기를 따른다. 분위기에 나온 냄새와 소리는 바탕일 뿐 글에 옮겨 쓰지 않고, 감각은 이곳의 모습과 일어난 일에서 "
              "고른다. 문장 수는 위의 규칙대로다.")]
 

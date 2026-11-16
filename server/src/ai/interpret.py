@@ -9,7 +9,7 @@ TWO_THRESHOLD = 0.85
 MARGIN = 0.3   # a topic this far ahead of every other option is taken even under THRESHOLD (engine/01 1절)
 NO_TOPIC = "_none"
 IMPRESSION_THRESHOLD = 0.5
-# A weaker impression still counts when "none" is unlikely; set by the evals of 2026-11-16 (engine/01 1절).
+# A weaker impression still counts when "none" is unlikely (engine/01 1절).
 IMPRESSION_LOW, IMPRESSION_NONE_CEILING = 0.35, 0.2
 # A threat that also accuses is a threat: 위협 this high outranks a top 의심 (engine/01 1절).
 THREAT_OVER_SUSPICION = 0.3
@@ -175,7 +175,7 @@ def pick_impression(answers, questions):
     if top is None:
         return None
     none = probs.get(NO_TOPIC, 0.0)
-    if not (probs[top] >= IMPRESSION_THRESHOLD or probs[top] >= IMPRESSION_LOW and none <= IMPRESSION_NONE_CEILING):
+    if not (probs[top] >= IMPRESSION_THRESHOLD or (probs[top] >= IMPRESSION_LOW and none <= IMPRESSION_NONE_CEILING)):
         return None
     return "위협" if top == "의심" and probs.get("위협", 0.0) >= THREAT_OVER_SUSPICION else top
 
