@@ -18,24 +18,24 @@ export function Ending({ view, log, phase, onRetryText, onLeave }: {
   const texts = log.filter((e) => e.turn === ending.turn && 'slot' in e && e.text);
   const busy = phase === 'sending' || phase === 'streaming';
   return (
-    <View className={surface.screen}>
-      <Text accessibilityRole="header" className={text.hero}>{ko.verdicts[ending.verdict]}</Text>
+    <View className={surface({ kind: 'screen' })}>
+      <Text accessibilityRole="header" className={text({ kind: 'hero' })}>{ko.verdicts[ending.verdict]}</Text>
       <ScrollView className="min-h-0 flex-1" contentContainerClassName="gap-5">
-        {texts.map((e) => <Text key={e.key} className={text.scene}>{e.text}</Text>)}
+        {texts.map((e) => <Text key={e.key} className={text({ kind: 'scene' })}>{e.text}</Text>)}
         {busy || phase === 'text_error' ? null : (
           <>
             <View className="gap-1.5">
               {QUESTIONS.map((q) => (
-                <View key={q} className={`flex-row items-center justify-between ${surface.card}`}>
-                  <Text className={text.strong}>{ko.questions[q]}</Text>
-                  <Text className={`font-sans-semibold text-body ${TONE[ending.answers[q]]}`}>{ko.answers[ending.answers[q]]}</Text>
+                <View key={q} className={surface({ kind: 'card' }, 'flex-row items-center justify-between')}>
+                  <Text className={text({ kind: 'strong' })}>{ko.questions[q]}</Text>
+                  <Text className={text({ kind: 'strong' }, TONE[ending.answers[q]])}>{ko.answers[ending.answers[q]]}</Text>
                 </View>
               ))}
             </View>
             {(['lies', 'held', 'locks'] as const).filter((k) => ending.missed[k].length).map((k) => (
               <View key={k} className="gap-1.5">
-                <Text className={text.head}>{ko.missed[k]}</Text>
-                {ending.missed[k].map((t) => <Text key={t} className={text.panel}>{t}</Text>)}
+                <Text className={text({ kind: 'head' })}>{ko.missed[k]}</Text>
+                {ending.missed[k].map((t) => <Text key={t} className={text({ kind: 'panel' })}>{t}</Text>)}
               </View>
             ))}
           </>

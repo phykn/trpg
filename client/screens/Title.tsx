@@ -10,7 +10,7 @@ export function Title({ stories, saved, onStart, onResume }: {
 }) {
   return (
     <View className="min-h-0 flex-1 px-4 py-8">
-      <Text accessibilityRole="header" className={`py-12 text-center ${text.display}`}>
+      <Text accessibilityRole="header" className={text({ kind: 'display' }, 'py-12 text-center')}>
         {ko.brand}
       </Text>
       <ScrollView contentContainerClassName="gap-3">

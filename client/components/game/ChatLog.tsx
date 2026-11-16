@@ -35,7 +35,7 @@ function Line({ entry, met, typing, onNote }: {
   if (entry.kind === 'said') {
     return (
       <View className="max-w-[85%] self-end rounded-2xl rounded-br-sm bg-gold-muted px-3 py-2">
-        <Text className={text.body}>{entry.text}</Text>
+        <Text className={text()}>{entry.text}</Text>
       </View>
     );
   }
@@ -46,7 +46,7 @@ function Line({ entry, met, typing, onNote }: {
   if (entry.kind === 'note') {
     return (
       <Pressable accessibilityRole="button" onPress={() => onNote(entry.lines)} style={pressed} className="self-start">
-        <Text className={text.notice}>{entry.text}</Text>
+        <Text className={text({ kind: 'notice' })}>{entry.text}</Text>
       </Pressable>
     );
   }
@@ -54,7 +54,7 @@ function Line({ entry, met, typing, onNote }: {
   if (entry.who) {
     return (
       <Speaker who={entry.who} met={met}>
-        {typing ? <Typing /> : <Text className={text.body}>{entry.text}</Text>}
+        {typing ? <Typing /> : <Text className={text()}>{entry.text}</Text>}
       </Speaker>
     );
   }
@@ -62,7 +62,7 @@ function Line({ entry, met, typing, onNote }: {
   if (!entry.text) return null;
   const happening = entry.kind === 'omen' || entry.kind === 'event';
   return (
-    <Text className={`${text.scene} ${happening ? 'border-l-2 border-danger-fg pl-3' : ''}`}>{entry.text}</Text>
+    <Text className={text({ kind: 'scene' }, happening && 'border-l-2 border-danger-fg pl-3')}>{entry.text}</Text>
   );
 }
 

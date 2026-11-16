@@ -39,7 +39,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-test('the dialog takes focus, Escape closes it, and focus returns to its opener', () => {
+test('the dialog takes focus, Escape closes it, and focus returns to its opener', async () => {
   const opener = document.createElement('button');
   document.body.appendChild(opener);
   opener.focus();
@@ -49,6 +49,8 @@ test('the dialog takes focus, Escape closes it, and focus returns to its opener'
   press('Escape');
   expect(onClose).toHaveBeenCalledTimes(1);
   render(null);
+  // focus-trap hands focus back on the next tick.
+  await act(() => new Promise((resolve) => { setTimeout(resolve, 0); }));
   expect(document.activeElement).toBe(opener);
 });
 

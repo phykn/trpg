@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { pressed } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { colors, icon } from '@/design/tokens';
-import { control, off, text, tone } from '@/design/ui';
+import { control, text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 import { findHue } from './speaker';
@@ -18,18 +18,18 @@ export function PeopleRow({ people, met, look, locked, onAct }: {
       {look ? (
         <Pressable accessibilityRole="button" accessibilityLabel={ko.look} accessibilityState={{ disabled: locked }}
           disabled={locked} onPress={() => onAct(look.id)} style={pressed}
-          className={`${control.pill} ${tone.dashed} ${locked ? off : ''}`}>
+          className={control({ kind: 'pill', tone: 'dashed', off: locked })}>
           <Icon name="eye" size={icon.md} color={colors.fg.muted} />
-          <Text className={text.labelQuiet}>{ko.look}</Text>
+          <Text className={text({ kind: 'label', quiet: true })}>{ko.look}</Text>
         </Pressable>
       ) : null}
       {people.map(({ name, partner, act }) => (
         <Pressable key={name} accessibilityRole="button" accessibilityLabel={name}
           accessibilityState={{ selected: partner, disabled: locked || !act }} disabled={locked || !act}
           onPress={() => act && onAct(act)} style={pressed}
-          className={`${control.pill} ${partner ? tone.active : tone.idle} ${locked ? off : ''}`}>
+          className={control({ kind: 'pill', tone: partner ? 'active' : 'idle', off: locked })}>
           <View className={`h-2 w-2 rounded-full ${findHue(met, name).bg}`} />
-          <Text className={partner ? text.labelOn : text.label}>{name}</Text>
+          <Text className={text({ kind: 'label', on: partner })}>{name}</Text>
         </Pressable>
       ))}
     </View>

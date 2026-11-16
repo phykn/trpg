@@ -8,7 +8,7 @@ import { Button } from './Button';
 export function Resend({ onResend }: { onResend: () => void }) {
   return (
     <View className="w-full flex-row items-center gap-3">
-      <Text className={`min-w-0 flex-1 ${text.sub}`}>{ko.stuck}</Text>
+      <Text className={text({ kind: 'sub' }, 'min-w-0 flex-1')}>{ko.stuck}</Text>
       <Button icon="retry" label={ko.resend} onPress={onResend} />
     </View>
   );

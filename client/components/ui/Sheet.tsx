@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { colors, icon as iconSize, motion } from '@/design/tokens';
-import { control, surface, text, tone } from '@/design/ui';
+import { control, surface, text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import { IconButton, pressed } from './Button';
 import { Icon, type IconName } from './Icon';
@@ -23,11 +23,11 @@ export function Sheet({ title, icon, full, onClose, children }: {
   return (
     <Animated.View style={[enter, full ? { flex: 1, minHeight: 0 } : null]}>
       <View ref={ref} accessibilityRole={'dialog' as never} aria-modal
-        className={`gap-3 ${surface.sheet} ${full ? 'min-h-0 flex-1' : ''}`}>
+        className={surface({ kind: 'sheet' }, 'gap-3', full && 'min-h-0 flex-1')}>
         <View className="min-h-9 flex-row items-center gap-2">
           {icon ? <Icon name={icon} size={iconSize.lg} color={colors.gold.fg} /> : null}
           {title ? (
-            <Text accessibilityRole="header" className={`min-w-0 flex-1 ${text.title}`}>{title}</Text>
+            <Text accessibilityRole="header" className={text({ kind: 'title' }, 'min-w-0 flex-1')}>{title}</Text>
           ) : <View className="flex-1" />}
           {onClose ? <IconButton icon="close" label={ko.close} onPress={onClose} /> : null}
         </View>
@@ -44,10 +44,10 @@ export function Choice({ label, sub, primary, onPress }: {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={sub ? `${label}, ${sub}` : label} onPress={onPress}
       style={pressed}
-      className={`${control.row} ${primary ? tone.picked : tone.quiet}`}>
+      className={control({ kind: 'row', tone: primary ? 'picked' : 'quiet' })}>
       <View className="min-w-0 flex-1">
-        <Text className={primary ? text.strongOn : text.strong}>{label}</Text>
-        {sub ? <Text className={primary ? text.subOn : text.sub}>{sub}</Text> : null}
+        <Text className={text({ kind: 'strong', on: primary })}>{label}</Text>
+        {sub ? <Text className={text({ kind: 'sub', on: primary })}>{sub}</Text> : null}
       </View>
       <Icon name="next" size={iconSize.sm} color={primary ? colors.fg['on-emphasis'] : colors.fg.subtle} />
     </Pressable>

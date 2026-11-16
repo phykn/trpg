@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { pressed } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { colors, icon } from '@/design/tokens';
-import { text, tone } from '@/design/ui';
+import { control, text } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 
@@ -15,17 +15,17 @@ export function TopBar({ view, onPlace, onNotebook }: { view: GameView; onPlace?
       <Pressable accessibilityRole="button" accessibilityLabel={`${view.place.name}, ${ko.moves}`}
         accessibilityState={{ disabled: !onPlace }} disabled={!onPlace} onPress={onPlace} style={pressed}
         className="min-w-0 flex-1 flex-row items-center gap-1">
-        <Text accessibilityRole="header" numberOfLines={1} className={`min-w-0 shrink ${text.title}`}>
+        <Text accessibilityRole="header" numberOfLines={1} className={text({ kind: 'title' }, 'min-w-0 shrink')}>
           {view.place.name}
         </Text>
         {onPlace ? <Icon name="next" size={icon.sm} color={colors.fg.subtle} /> : null}
       </Pressable>
-      <Text className={last ? 'font-mono-medium text-panel text-danger-fg' : text.mono}>{view.time.text}</Text>
+      <Text className={text({ kind: 'mono' }, last && 'text-danger-fg')}>{view.time.text}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={view.badge ? `${ko.notebook} ${view.badge}` : ko.notebook}
         onPress={onNotebook} style={pressed}
-        className={`h-9 flex-row items-center gap-2 rounded-full ${tone.idle} pl-3 ${view.badge ? 'pr-1.5' : 'pr-3'}`}>
+        className={control({ kind: 'pill' }, 'pl-3', view.badge ? 'pr-1.5' : 'pr-3')}>
         <Icon name="book" size={icon.lg} color={colors.fg.muted} width={2} />
-        <Text className={text.label}>{ko.notebook}</Text>
+        <Text className={text({ kind: 'label' })}>{ko.notebook}</Text>
         {view.badge ? (
           <View className="h-6 min-w-6 items-center justify-center rounded-full bg-gold-muted px-1.5">
             <Text className="font-mono-medium text-chip text-gold-fg">{view.badge}</Text>
