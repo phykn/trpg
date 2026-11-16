@@ -21,8 +21,8 @@ export function TopBar({ view, onNotebook, onSettings }: { view: GameView; onNot
       <Text numberOfLines={1} className={text({ kind: 'mono' }, 'shrink-0', last && 'text-danger-fg')}>{view.time.text}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={view.badge ? `${ko.notebook} ${view.badge}` : ko.notebook}
         onPress={onNotebook} style={pressed}
-        className={control({ kind: 'pill', tone: view.badge ? 'offer' : 'quiet' }, 'h-10 gap-1 px-2.5')}>
-        <Icon name="book" size={icon.lg} color={view.badge ? colors.gold.fg : colors.fg.default} width={2} />
+        className={control({ kind: 'pill', tone: 'plain' }, 'h-10 gap-1 px-2')}>
+        <Icon name="book" size={icon.lg} color={colors.fg.muted} width={2} />
         {/* What is unread matters, so its count stands as large as the icon beside it. */}
         {view.badge ? <Text className={text({ kind: 'title' }, 'font-mono-medium text-gold-fg')}>{view.badge}</Text> : null}
       </Pressable>
