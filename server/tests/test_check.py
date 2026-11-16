@@ -2,14 +2,20 @@ from pathlib import Path
 
 import pytest
 import yaml
+from src.story import check
 from src.story.check import check_story, load_stories, report_checks
-from src.story.load import StoryError, StoryFile
+from src.story.load import Story, StoryError, StoryFile
 
 SCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"
 
 
 def story_data(folder):
     return yaml.safe_load((SCENARIOS / folder / "story.yaml").read_text(encoding="utf-8"))
+
+
+def run_checks(data):
+    results, _ = check_story(StoryFile.model_validate(data))
+    return results
 
 
 def test_both_stories_pass_and_the_first_takes_three_cells(capsys):
@@ -44,7 +50,7 @@ def drop_event_and_shrink(d):
 def test_each_broken_copy_fails_its_check(folder, edit, name, detail):
     data = story_data(folder)
     edit(data)
-    results = {n: (v, d) for v, n, d in check_story(StoryFile.model_validate(data))}
+    results = {n: (v, d) for v, n, d in run_checks(data)}
     assert results[name][0] == "떨어짐" and detail in results[name][1]
 
 
@@ -52,12 +58,14 @@ def test_alerts_name_long_lines_and_necks():
     data = story_data("skeleton")
     data["사람"]["오토"]["화제"]["씨앗"]["참말"] = "하나다. 둘이다. 셋이다."
     data["볼 것"]["빚 문서"].pop("보여 주는 사실")
-    alerts = [(n, d) for v, n, d in check_story(StoryFile.model_validate(data)) if v == "알림"]
+    alerts = [(n, d) for v, n, d in run_checks(data) if v == "알림"]
     assert ("긴 할 말", "말 오토.씨앗.참말") in alerts and ("한 막힘의 목", "거짓말 한스.그날 밤") in alerts
 
 
-def test_loading_stops_at_a_broken_story(tmp_path):
-    assert sorted(load_stories(SCENARIOS)) == ["arena", "dawn", "skeleton"]
+def test_loading_builds_each_story_once_and_stops_at_a_broken_one(tmp_path, monkeypatch):
+    built = []
+    monkeypatch.setattr(check, "Story", lambda raw: built.append(raw.head.name) or Story(raw))
+    assert sorted(load_stories(SCENARIOS)) == sorted(built) == ["arena", "dawn", "skeleton"]
     data = story_data("skeleton")
     data["곳"]["외딴 집"] = {"모습": "x"}
     (tmp_path / "bad").mkdir()

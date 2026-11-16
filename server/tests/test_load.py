@@ -5,7 +5,8 @@ import yaml
 from src.rules.act import does_fit
 from src.story.load import StoryError, StoryFile, find_missing, load_story, read_story
 
-SKELETON = Path(__file__).resolve().parents[2] / "scenarios" / "skeleton"
+SCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"
+SKELETON = SCENARIOS / "skeleton"
 
 
 def skeleton_data():
@@ -33,8 +34,7 @@ def test_skeleton_compiles_addresses_and_reverse_indexes():
 def test_the_mark_changes_with_one_letter(tmp_path):
     data = skeleton_data()
     data["머리"]["제목"] += "!"
-    changed = load_story(write_story(tmp_path / "copy", data))
-    assert changed.mark != load_story(SKELETON).mark
+    assert load_story(write_story(tmp_path / "copy", data)).mark != load_story(SKELETON).mark
 
 
 def test_each_pointer_to_nothing_is_named():
@@ -76,7 +76,7 @@ def test_a_key_written_twice_stops_reading(tmp_path):
 
 
 def test_a_lie_can_fall_to_any_of_several_facts():
-    dawn = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
+    dawn = load_story(SCENARIOS / "dawn")
     block = dawn.blocks["거짓말 고드릭.그 뒤의 일"]
     assert block.wants == ("밤에 나간 수레", "옮겨진 시신")
     assert does_fit(dawn, "볼 것 마른 장화", block) and not does_fit(dawn, "볼 것 제단의 초", block)

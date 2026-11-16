@@ -45,7 +45,7 @@ def find_said_line(story, state, person, topic):
 
 def list_topics(story, state, person):
     return [t for t, topic in story.people[person].topics.items()
-            if is_shown(story, state, f"말 {person}.{t}.{next(iter(topic.branches()))}")]
+            if is_shown(story, state, f"말 {person}.{t}.{next(iter(topic.list_branches()))}")]
 
 
 def find_path(story, state, place):

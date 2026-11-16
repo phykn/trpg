@@ -43,6 +43,7 @@ def to_minutes(value):
 YesNo = Annotated[bool, BeforeValidator(to_bool), PlainSerializer(lambda value: "예" if value else "아니오")]
 
 
+# A save keeps the story as these models dump it and checks it by the dump's hash, so the fields keep their order.
 class Shape(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
 
@@ -81,9 +82,12 @@ class Topic(Shape):
             raise ValueError("거짓말 shows no fact")
         return self
 
-    def branches(self):
+    def list_branches(self):
         pairs = (("참말", self.truth), ("풀린 뒤", self.opened), ("거짓말", self.lie), ("깨진 뒤", self.broken))
         return {name: branch for name, branch in pairs if branch}
+
+    def list_breaks(self):
+        return [self.breaks] if isinstance(self.breaks, str) else list(self.breaks or [])
 
 
 class Attitude(Shape):
@@ -142,7 +146,7 @@ class Act(Shape):
     vanish: str | None = Field(None, alias="없어진다")
 
     @model_validator(mode="after")
-    def one_kind(self):
+    def fit_one(self):
         if len(self.model_fields_set) != 1:
             raise ValueError("an act is one of 떠난다, 옮긴다, 없어진다")
         return self
@@ -205,7 +209,7 @@ class StoryFile(Shape):
     endings: Endings = Field(alias="결말")
 
     @model_validator(mode="after")
-    def name_once(self):
+    def fit_names(self):
         seen = {}
         groups = (("사실", self.facts), ("성질", self.props), ("곳", self.places), ("볼 것", self.things),
                   ("사람", self.people))
@@ -235,6 +239,14 @@ class UniqueKeyLoader(yaml.SafeLoader):
         return super().construct_mapping(node, deep)
 
 
+def load_story(folder):
+    raw = read_story(folder)
+    missing = find_missing(raw)
+    if missing:
+        raise StoryError(f"{folder}: " + "; ".join(missing))
+    return Story(raw)
+
+
 def read_story(folder):
     path = Path(folder) / "story.yaml"
     try:
@@ -260,103 +272,132 @@ def format_address(kind, parts):
     return f"{kind} {'.'.join(parts)}"
 
 
-def list_lines(raw):
-    yield from (format_address("곳", [p]) for p in raw.places)
-    yield from (format_address("사람", [p]) for p in raw.people)
-    yield from (format_address("볼 것", [t]) for t in raw.things)
-    for person, p in raw.people.items():
-        for topic, t in p.topics.items():
-            yield from (format_address("말", [person, topic, b]) for b in t.branches())
-
-
-def list_blocks(raw):
-    for person, p in raw.people.items():
-        for topic, t in p.topics.items():
-            if t.stance != "숨기지 않는다":
-                yield format_address("거짓말" if t.stance == "거짓말한다" else "꺼림", [person, topic])
-    yield from (format_address("잠김", [t]) for t, thing in raw.things.items() if thing.lock)
-
-
 def find_missing(raw):
-    groups = {"사실": raw.facts, "성질": raw.props, "곳": raw.places, "볼 것": raw.things, "사람": raw.people}
-    lines = set(list_lines(raw))
-    blocks = set(list_blocks(raw))
-    missing = []
+    refs = References(raw)
+    refs.check_head()
+    for name, place in raw.places.items():
+        refs.check_place(name, place)
+    for name, thing in raw.things.items():
+        refs.check_thing(name, thing)
+    refs.check_holders()
+    for name, person in raw.people.items():
+        refs.check_person(name, person)
+    for event in raw.events:
+        refs.check_event(event)
+    return refs.missing
 
-    def need(where, name, *kinds):
-        if not any(name in groups[k] for k in kinds):
-            missing.append(f"{where}: {name}")
 
-    def need_address(where, text, known):
+class References:
+    def __init__(self, raw):
+        self.raw = raw
+        self.groups = {"사실": raw.facts, "성질": raw.props, "곳": raw.places, "볼 것": raw.things, "사람": raw.people}
+        self.lines = set(self.list_lines())
+        self.blocks = set(self.list_blocks())
+        self.holders = {}
+        self.missing = []
+
+    def list_lines(self):
+        raw = self.raw
+        yield from (format_address("곳", [p]) for p in raw.places)
+        yield from (format_address("사람", [p]) for p in raw.people)
+        yield from (format_address("볼 것", [t]) for t in raw.things)
+        for person, p in raw.people.items():
+            for topic, t in p.topics.items():
+                yield from (format_address("말", [person, topic, b]) for b in t.list_branches())
+
+    def list_blocks(self):
+        for person, p in self.raw.people.items():
+            for topic, t in p.topics.items():
+                if t.stance != "숨기지 않는다":
+                    yield format_address("거짓말" if t.stance == "거짓말한다" else "꺼림", [person, topic])
+        yield from (format_address("잠김", [t]) for t, thing in self.raw.things.items() if thing.lock)
+
+    def need(self, where, name, *kinds):
+        if not any(name in self.groups[k] for k in kinds):
+            self.missing.append(f"{where}: {name}")
+
+    def need_address(self, where, text, known):
         kind, parts = parse_address(text)
         if format_address(kind, parts) not in known:
-            missing.append(f"{where}: {text}")
+            self.missing.append(f"{where}: {text}")
         elif kind == "말" and parts[2] == "거짓말":
-            missing.append(f"{where}: {text} (거짓말 갈래)")
+            self.missing.append(f"{where}: {text} (거짓말 갈래)")
 
-    head = raw.head
-    need("머리의 시작하는 곳", head.start, "곳")
-    need("머리의 누가", head.truth.who, "사람")
-    need("머리의 어떻게", head.truth.how, "사실")
-    need("머리의 왜", head.truth.why, "사실")
-    for name, place in raw.places.items():
+    def check_head(self):
+        head = self.raw.head
+        self.need("머리의 시작하는 곳", head.start, "곳")
+        self.need("머리의 누가", head.truth.who, "사람")
+        self.need("머리의 어떻게", head.truth.how, "사실")
+        self.need("머리의 왜", head.truth.why, "사실")
+
+    def check_place(self, name, place):
         for link in place.links:
-            need(f"곳 {name}의 이어진 곳", link, "곳")
+            self.need(f"곳 {name}의 이어진 곳", link, "곳")
         if place.cond:
-            need_address(f"곳 {name}의 나오는 조건", place.cond, lines)
-    holders = {}
-    for name, thing in raw.things.items():
+            self.need_address(f"곳 {name}의 나오는 조건", place.cond, self.lines)
+
+    def check_thing(self, name, thing):
+        where = f"볼 것 {name}"
         if thing.place:
-            need(f"볼 것 {name}의 곳", thing.place, "곳")
+            self.need(f"{where}의 곳", thing.place, "곳")
         for prop in thing.props:
-            need(f"볼 것 {name}의 성질", prop, "성질")
+            self.need(f"{where}의 성질", prop, "성질")
         if thing.shows:
-            need(f"볼 것 {name}의 보여 주는 사실", thing.shows, "사실")
+            self.need(f"{where}의 보여 주는 사실", thing.shows, "사실")
         for told in thing.tells:
-            need(f"볼 것 {name}의 알리는 것", told, "곳", "사람")
+            self.need(f"{where}의 알리는 것", told, "곳", "사람")
         if thing.cond:
-            need_address(f"볼 것 {name}의 나오는 조건", thing.cond, lines)
+            self.need_address(f"{where}의 나오는 조건", thing.cond, self.lines)
         if thing.lock:
-            need(f"잠김 {name}의 약점", thing.lock.weak, "성질")
-            if thing.lock.owner:
-                need(f"잠김 {name}의 주인", thing.lock.owner, "사람")
-            for inner in thing.lock.contents:
-                need(f"잠김 {name}의 안에 든 것", inner, "볼 것", "곳")
-                holders.setdefault(inner, []).append(name)
-    for inner, locks in holders.items():
-        if len(locks) > 1:
-            missing.append(f"{inner}: 잠긴 것 여럿 안에 들어 있다 ({', '.join(locks)})")
-    for name, thing in raw.things.items():
-        if (thing.place is None) == (name not in holders):
-            missing.append(f"볼 것 {name}의 곳: 놓인 곳과 잠긴 것 가운데 하나만 있어야 한다")
-    for name, person in raw.people.items():
-        need(f"사람 {name}의 있는 곳", person.place, "곳")
+            self.check_lock(name, thing.lock)
+
+    def check_lock(self, name, lock):
+        self.need(f"잠김 {name}의 약점", lock.weak, "성질")
+        if lock.owner:
+            self.need(f"잠김 {name}의 주인", lock.owner, "사람")
+        for inner in lock.contents:
+            self.need(f"잠김 {name}의 안에 든 것", inner, "볼 것", "곳")
+            self.holders.setdefault(inner, []).append(name)
+
+    def check_holders(self):
+        for inner, locks in self.holders.items():
+            if len(locks) > 1:
+                self.missing.append(f"{inner}: 잠긴 것 여럿 안에 들어 있다 ({', '.join(locks)})")
+        for name, thing in self.raw.things.items():
+            if (thing.place is None) == (name not in self.holders):
+                self.missing.append(f"볼 것 {name}의 곳: 놓인 곳과 잠긴 것 가운데 하나만 있어야 한다")
+
+    def check_person(self, name, person):
+        self.need(f"사람 {name}의 있는 곳", person.place, "곳")
         for topic, t in person.topics.items():
-            where = f"화제 {name}.{topic}"
-            for branch, b in t.branches().items():
-                if b.shows:
-                    need(f"말 {name}.{topic}.{branch}의 보여 주는 사실", b.shows, "사실")
-                for told in b.tells:
-                    need(f"말 {name}.{topic}.{branch}의 알리는 것", told, "곳", "사람")
-            for fact in [t.breaks] if isinstance(t.breaks, str) else t.breaks or []:
-                need(f"{where}의 깨는 사실", fact, "사실")
-            if t.wants:
-                need(f"{where}의 바라는 것", t.wants, "사실", "성질")
-            if t.cond:
-                need_address(f"{where}의 나오는 조건", t.cond, lines)
-    for event in raw.events:
+            self.check_topic(name, topic, t)
+
+    def check_topic(self, name, topic, t):
+        where = f"화제 {name}.{topic}"
+        for branch, b in t.list_branches().items():
+            if b.shows:
+                self.need(f"말 {name}.{topic}.{branch}의 보여 주는 사실", b.shows, "사실")
+            for told in b.tells:
+                self.need(f"말 {name}.{topic}.{branch}의 알리는 것", told, "곳", "사람")
+        for fact in t.list_breaks():
+            self.need(f"{where}의 깨는 사실", fact, "사실")
+        if t.wants:
+            self.need(f"{where}의 바라는 것", t.wants, "사실", "성질")
+        if t.cond:
+            self.need_address(f"{where}의 나오는 조건", t.cond, self.lines)
+
+    def check_event(self, event):
         where = f"번진 일 {event.at}칸째"
         for act in event.acts:
             if act.leave:
-                need(f"{where}의 떠난다", act.leave, "사람")
+                self.need(f"{where}의 떠난다", act.leave, "사람")
             if act.move:
-                need(f"{where}의 옮긴다", act.move[0], "사람")
-                need(f"{where}의 옮긴다", act.move[1], "곳")
+                self.need(f"{where}의 옮긴다", act.move[0], "사람")
+                self.need(f"{where}의 옮긴다", act.move[1], "곳")
             if act.vanish:
-                need(f"{where}의 없어진다", act.vanish, "볼 것")
+                self.need(f"{where}의 없어진다", act.vanish, "볼 것")
         if event.guard:
-            need_address(f"{where}의 막는 조건", event.guard, blocks)
-    return missing
+            self.need_address(f"{where}의 막는 조건", event.guard, self.blocks)
 
 
 class Record(BaseModel):
@@ -419,23 +460,23 @@ class Story:
             self.add_line("사람", [name], place=person.place)
         for name, thing in self.things.items():
             self.add_line("볼 것", [name], text=thing.text, shows=thing.shows, props=thing.props,
-                          tells=self.tell(thing.tells), cond=thing.cond, lock=self.locked_in.get(name),
-                          place=self.home(name))
+                          tells=self.list_told(thing.tells), cond=thing.cond, lock=self.locked_in.get(name),
+                          place=self.find_home(name))
         for name, person in self.people.items():
             for topic, t in person.topics.items():
-                for branch, b in t.branches().items():
+                for branch, b in t.list_branches().items():
                     self.add_line("말", [name, topic, branch], topic=topic, branch=branch, text=b.text,
-                                  shows=b.shows, tells=self.tell(b.tells), cond=t.cond, place=person.place)
+                                  shows=b.shows, tells=self.list_told(b.tells), cond=t.cond, place=person.place)
 
     def add_line(self, kind, parts, cond=None, **fields):
         addr = format_address(kind, parts)
         cond = format_address(*parse_address(cond)) if cond else None
         self.lines[addr] = Line(addr=addr, kind=kind, name=parts[0], cond=cond, **fields)
 
-    def tell(self, names):
+    def list_told(self, names):
         return [format_address("곳" if n in self.places else "사람", [n]) for n in names]
 
-    def home(self, name):
+    def find_home(self, name):
         while self.things[name].place is None:
             name = self.locked_in[name].removeprefix("잠김 ")
         return self.things[name].place
@@ -444,8 +485,7 @@ class Story:
         for name, person in self.people.items():
             for topic, t in person.topics.items():
                 if t.stance == "거짓말한다":
-                    self.add_block("거짓말", [name, topic], topic=topic,
-                                   wants=(t.breaks,) if isinstance(t.breaks, str) else tuple(t.breaks),
+                    self.add_block("거짓말", [name, topic], topic=topic, wants=tuple(t.list_breaks()),
                                    opens=[format_address("말", [name, topic, "깨진 뒤"])], cond=t.cond)
                 elif t.stance == "꺼린다":
                     self.add_block("꺼림", [name, topic], topic=topic, wants=(t.wants,), hint=t.hint,
@@ -461,11 +501,3 @@ class Story:
         addr = format_address(kind, parts)
         cond = format_address(*parse_address(cond)) if cond else None
         self.blocks[addr] = Block(addr=addr, kind=kind, name=parts[0], cond=cond, **fields)
-
-
-def load_story(folder):
-    raw = read_story(folder)
-    missing = find_missing(raw)
-    if missing:
-        raise StoryError(f"{folder}: " + "; ".join(missing))
-    return Story(raw)
