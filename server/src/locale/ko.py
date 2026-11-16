@@ -67,6 +67,15 @@ def use_on(lock, tried=False):
     return f"{lock}에 쓴다 · {cost(tried)}"
 
 
+# What a typed action tries, as the person's answer or the scene is told it (game/04 2절).
+TRIES = {"press": "플레이어가 거칠게 몰아붙이려 든다", "soothe": "플레이어가 다독이며 마음을 열려 든다",
+         "trick": "플레이어가 거짓으로 꾀어 떠보려 든다"}
+
+
+def try_lock(method, thing):
+    return f"당신이 {eul(thing)} {'억지로 비틀어 열려' if method == 'force' else '몰래 따려'} 든다"
+
+
 def bet(method, chance, topic=None, person=None):
     act = f"{eul(person)} {METHODS[method]}" if person else METHODS[method]
     return f"{topic + ' · ' if topic else ''}{act} · {chance}% · 1턴"

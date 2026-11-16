@@ -196,11 +196,28 @@ class Turn:
         elif kind == "none":
             self.talk_to(person)
             self.pass_on(person)
+        elif kind == "action":
+            self.try_action(person, heard["method"], heard.get("target"))
         elif kind in ("chat", "unsure"):
             self.talk_to(person)
             self.talk.append({kind: person, **({"topics": heard["topics"]} if kind == "unsure" else {})})
         else:
             raise Refused(f"unknown reading {kind!r}")
+
+    def try_action(self, person, method, target):
+        """A typed action costs no cell; the dice it could bet on are offered as buttons (game/05 3절)."""
+        if method in LOCK_METHODS:
+            locks = [b.addr for b in list_blocks_here(self.story, self.state) if b.kind == "잠김"]
+            if target not in locks:
+                raise Refused("no such lock here")
+            self.talk.append({"try": target, "method": method})
+            return
+        if method not in TALK_METHODS:
+            raise Refused(f"unknown method {method!r}")
+        self.talk_to(person)
+        if method == "press" and "위협" not in [c.get("impression") for c in self.changes if c["op"] == "impress"]:
+            self.impress(person, "위협")
+        self.talk.append({"try": person, "method": method})
 
     def ask_topics(self, person, topics):
         shown = list_topics(self.story, self.state, person)

@@ -197,3 +197,19 @@ def test_a_deed_impresses_the_owner_who_watched_and_an_unknown_impression_is_ref
     assert state["impressions"]["한스"] == {"무례": 1}
     with pytest.raises(Refused):
         play(0, [STATS, said("사탕")])   # 리사's own impression, not 오토's
+
+
+def doing(method, target=None):
+    return {"do": "ask", "text": "x"}, {"kind": "action", "method": method, "target": target}
+
+
+def test_a_typed_action_costs_no_cell_and_pressing_leaves_a_threat():
+    state, rs = play(0, [STATS, doing("press")])
+    assert state["spent"] == 0 and state["impressions"]["오토"] == {"위협": 1}
+    assert rs[1]["talk"] == [{"try": "오토", "method": "press"}]
+    soft, _ = play(0, [STATS, doing("soothe")])
+    assert soft["impressions"]["오토"] == {}
+    with pytest.raises(Refused):
+        play(0, [STATS, doing("force", LOCK)])   # the lock is not here
+    _, rs = play(0, [STATS, go("곡물 창고"), LOOK, doing("force", LOCK)])
+    assert rs[3]["talk"] == [{"try": LOCK, "method": "force"}] and not rs[3]["changes"]

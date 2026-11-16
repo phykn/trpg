@@ -8,7 +8,7 @@ from src.rules.state import start_state
 from src.slots import is_here, make_jobs
 from src.story.load import load_story
 from src.view import make_feed
-from tests.test_act import STORY, said
+from tests.test_act import LOCK, STORY, doing, said
 
 SCENARIOS = Path(__file__).resolve().parents[2] / "scenarios"
 DAWN = load_story(SCENARIOS / "dawn")
@@ -115,3 +115,11 @@ def test_an_answer_knows_its_impressions_and_the_rumors_it_heard():
     assert oto["impressions"] == ["무례(깔보거나 하인처럼 부리거나 욕한다): 여러 번"]
     assert hans["rumors"] == ["오토에게 무례(전해 들음)"] and not hans["impressions"]
     assert "플레이어에 관한 소문" in make_messages(hans)[0]["content"]
+
+
+def test_a_typed_action_is_answered_by_the_person_or_told_as_a_scene_at_a_lock():
+    pressed = play(STORY, [STATS, doing("press")])[-1]
+    job = make_jobs(STORY, *pressed)[0]
+    assert job["kind"] == "answer" and job["says"] == ["플레이어가 거칠게 몰아붙이려 든다. 그 행동에 반응한다"] and job["quiet"]
+    forced = play(STORY, [STATS, do("move", place="곡물 창고"), do("look"), doing("force", LOCK)])[-1]
+    assert make_jobs(STORY, *forced)[0]["happening"] == ["당신이 잠긴 뒷문을 억지로 비틀어 열려 든다"]

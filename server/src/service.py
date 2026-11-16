@@ -48,8 +48,8 @@ class GameService:
         if (self.save_dir / f"{game}.json").exists():
             data, story, states = self.load(game)
             if data["head"]["story"] != story_name:
-                raise Conflict(make_view(story, states[-1])[0])
-            return game, make_view(story, states[-1])[0]
+                raise Conflict(make_view(story, states[-1], last_turn(data))[0])
+            return game, make_view(story, states[-1], last_turn(data))[0]
         if story_name not in self.stories:
             raise Missing(f"no story {story_name!r}")
         story = self.stories[story_name]
@@ -70,8 +70,8 @@ class GameService:
         return self.games[game]
 
     def show(self, game):
-        _, story, states = self.load(game)
-        return make_view(story, states[-1])[0]
+        data, story, states = self.load(game)
+        return make_view(story, states[-1], last_turn(data))[0]
 
     def list_turns(self, game, start):
         data, story, states = self.load(game)
@@ -86,7 +86,7 @@ class GameService:
         data, story, states = self.load(game)
         state = states[-1]
         request = {k: v for k, v in body.items() if k != "request_id"}
-        view, acts = make_view(story, state)
+        view, acts = make_view(story, state, last_turn(data))
         for turn in data["turns"]:
             if turn["receipt"] == body["request_id"]:
                 if turn["request"] != request:
@@ -126,7 +126,7 @@ class GameService:
         feed = make_feed(story, turn, ids, [a for a, t in state["notebook"].items() if t == 0])
         result = {"kind": "turn", "turn": turn["turn"], "said": turn["action"].get("text"), "feed": feed,
                   "text": any("slot" in f for f in feed)}
-        return {**result, "view": make_view(story, state)[0]} if with_view else result
+        return {**result, "view": make_view(story, state, turn)[0]} if with_view else result
 
     def stream_text(self, game, n):
         data, _, _ = self.load(game)
@@ -178,6 +178,10 @@ class GameService:
                 raise
         finally:
             self.texts.pop((game, n), None)
+
+
+def last_turn(data):
+    return data["turns"][-1] if data["turns"] else None
 
 
 def read_request(story, state, acts, body):

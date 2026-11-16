@@ -57,7 +57,7 @@ def find_speaker(story, talk):
             return story.blocks[value].name
         if kind == "lead":
             return value.split(".")[0]
-        if kind in ("pass", "done", "chat", "unsure"):
+        if kind in ("pass", "done", "chat", "unsure") or kind == "try" and value in story.people:
             return value
     return None
 
@@ -177,6 +177,8 @@ def tell_item(story, turn, item):
         return f'"{value.split(".", 1)[1]}"에 관해서라면 할 말이 있다는 듯 운을 뗀다'
     if kind == "unsure":
         return f"무엇을 묻는지 되묻는다: {' / '.join(item['topics'])}"
+    if kind == "try":
+        return f"{ko.TRIES[item['method']]}. 그 행동에 반응한다"
     return {"withhold": "이 화제는 얼버무리며 말해 주지 않는다. 말하지 않는 까닭은 지어내지 않는다",
             "done": "더 말할 것이 없다"}.get(kind)
 
@@ -201,6 +203,8 @@ def make_scene(story, before, after, turn):
     happening = ["당신이 주위를 찬찬히 둘러본다"] if looking else []
     for item in turn["talk"]:
         happening += tell_lock(story, turn, after, item)
+        if "try" in item:
+            happening.append(ko.try_lock(item["method"], show_name(story, "볼 것", story.blocks[item["try"]].name)))
     clock = story.head.clock
     return {"kind": "scene", "intro": story.head.intro if turn["action"]["do"] == "stats" else None,
             "time": ko.clock(clock.start + after["spent"] * clock.step) if clock else None,

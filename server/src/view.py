@@ -15,17 +15,19 @@ from .slots import list_slots
 GROUPS = {"곳": "places", "사람": "people", "물건": "items", "본 것": "seen", "들은 말": "heard"}
 
 
-def make_view(story, state):
-    maker = ViewMaker(story, state)
+def make_view(story, state, last=None):
+    """`last` is the turn just played, whose typed action may offer dice (engine/02 `offers`)."""
+    maker = ViewMaker(story, state, last)
     return maker.make(), maker.acts
 
 
 class ViewMaker:
     """Builds the view and numbers every act it offers; a command names an act by its id (engine/02 3절)."""
 
-    def __init__(self, story, state):
+    def __init__(self, story, state, last=None):
         self.story = story
         self.state = state
+        self.last = last
         if state["conclusion"] is not None:
             self.stage = "over"
         elif state["stats"] is None:
@@ -50,6 +52,7 @@ class ViewMaker:
             "time": self.make_time(),
             "people": self.make_people(),
             "notebook": self.make_notebook(),
+            "offers": self.make_offers(),
             "badge": len([a for a in book if a not in self.state["read"]]),
             "conclude": {"who": [self.ids[a] for a in book if self.story.lines[a].kind == "사람"],
                          "clues": [self.ids[a] for a in book if self.story.lines[a].kind in ("볼 것", "말")]}
@@ -91,6 +94,22 @@ class ViewMaker:
         return [{"name": show_name(self.story, "사람", p), "partner": p == partner,
                  "act": self.add_act({"do": "face", "person": None if p == partner else p})["id"]
                  if self.stage == "play" else None} for p in self.here]
+
+    def make_offers(self):
+        tried = [item for item in (self.last or {}).get("talk", []) if "try" in item]
+        if self.stage != "play" or not tried:
+            return []
+        target, method = tried[0]["try"], tried[0]["method"]
+        if target in self.story.blocks:
+            return self.list_bets(target, (method,)) if self.story.blocks[target] in self.locks else []
+        if target not in self.here:
+            return []
+        state, name = self.state, show_name(self.story, "사람", target)
+        held = [b for b in self.story.blocks.values() if b.name == target and b.addr in state["withheld"]]
+        offers = [bet for b in held for bet in self.list_bets(b.addr, (method,), b.topic)]
+        said = [a for a in state["notebook"] if self.story.lines[a].kind == "말" and self.story.lines[a].name == target
+                and a not in state["struck"] and a not in state["judged"]]
+        return offers + [bet for a in said for bet in self.list_bets(a, (method,), person=name)]
 
     def make_notebook(self):
         book = {group: [] for group in GROUPS.values()}

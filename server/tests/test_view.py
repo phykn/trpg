@@ -4,6 +4,9 @@ from src.rules.act import act
 from src.rules.state import start_state
 from src.story.load import load_story
 from src.view import make_feed, make_view
+from tests.test_act import LOCK, LOOK, STATS, ask, doing, go
+from tests.test_act import STORY as SKELETON
+from tests.test_act import play as play_skeleton
 
 DAWN = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
 
@@ -46,3 +49,12 @@ def test_the_ending_lists_what_was_met_before_what_never_was():
     assert missed["lies"][0].startswith("브람") and "듣지 못함" not in missed["lies"][0]
     assert all(text.endswith("· 듣지 못함") for text in missed["lies"][1:])
     assert missed["held"][0] == "토빈 — 숲길에서 본 것" and missed["held"][1].endswith("· 꺼내지 못함")
+
+
+
+def test_a_typed_action_offers_the_dice_it_could_bet_and_nothing_else_does():
+    state, rs = play_skeleton(0, [STATS, ask("밤"), doing("press")])
+    assert [o["label"].split(" · ")[0] for o in make_view(SKELETON, state, rs[-1])[0]["offers"]] == ["오토를 몰아세운다"]
+    assert make_view(SKELETON, state)[0]["offers"] == []
+    state, rs = play_skeleton(0, [STATS, go("곡물 창고"), LOOK, doing("sneak", LOCK)])
+    assert [o["label"].split(" · ")[0] for o in make_view(SKELETON, state, rs[-1])[0]["offers"]] == ["몰래 연다"]
