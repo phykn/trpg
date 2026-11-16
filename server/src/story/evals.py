@@ -20,8 +20,10 @@ GOAL_RIGHT = 0.85
 GOAL_WRONG_TOPIC = 0.02
 
 
-def read_cases(folder, story):
-    path = Path(folder) / "evals.yaml"
+def read_cases(folder, story, held=False):
+    """`evals.yaml` is the set to work from; `evals-held.yaml` holds sentences players really typed, kept apart so that
+    asks and prompts are never fitted to them (engine/01 5절)."""
+    path = Path(folder) / ("evals-held.yaml" if held else "evals.yaml")
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     cases = []
     for where, groups in raw.items():
@@ -66,10 +68,10 @@ def grade(expect, heard):
     return "맞힘" if show_heard(heard) == expect else "틀림"
 
 
-async def run_evals(folder, interpreter):
+async def run_evals(folder, interpreter, held=False):
     story = load_story(folder)
     results = []
-    for where, expect, text in read_cases(folder, story):
+    for where, expect, text in read_cases(folder, story, held):
         began = time.monotonic()
         heard = await interpreter.read(story, make_state(story, where), text)
         results.append({"where": where, "text": text, "expect": expect, "got": show_heard(heard),
@@ -152,6 +154,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run a story's interpretation or text evals against the models.")
     parser.add_argument("folder", type=Path)
     parser.add_argument("--text", action="store_true", help="write and check every answer and scene instead")
+    parser.add_argument("--held", action="store_true", help="the held-out sentences players typed, not the working set")
     parser.add_argument("--out", type=Path, help="a run folder under qa_test/runs/ for the report and the answers")
     args = parser.parse_args()
     cfg = local_settings()
@@ -160,7 +163,7 @@ def main():
         report, passed = summarize_text(results), True
     else:
         decision = DecisionClient(cfg.decision_base_url, cfg.decision_model)
-        results = asyncio.run(run_evals(args.folder, Interpreter(decision)))
+        results = asyncio.run(run_evals(args.folder, Interpreter(decision), args.held))
         report, passed = summarize(results)
     print(report)
     if args.out:

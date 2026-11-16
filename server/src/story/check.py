@@ -6,6 +6,7 @@ from ..rules.state import is_shown, list_people_here, start_state
 from .load import Story, StoryError, find_missing, read_story
 
 SIZES = {"막힘": (7, 9), "사람": (4, 5), "곳": (4, 6)}
+MIN_ASKS = 3   # ways to ask one topic (game/09)
 
 
 def check_story(raw):
@@ -46,7 +47,7 @@ class Checker:
         return [
             self.check_lies(), self.check_holds(), self.check_truth(), self.check_reach(), self.check_time(),
             self.check_events(), self.check_first(), self.check_unreached(),
-            *self.alert_size(), *self.alert_long(), *self.alert_necks(),
+            *self.alert_size(), *self.alert_long(), *self.alert_asks(), *self.alert_necks(),
         ]
 
     def sweep(self, state, blocked=(), free=False):
@@ -199,6 +200,13 @@ class Checker:
     def alert_long(self):
         return [("알림", "긴 할 말", a) for a, line in self.story.lines.items() if line.kind == "말"
                 and len([s for s in re.split(r"[.?!]", line.text) if s.strip()]) >= 3]
+
+    def alert_asks(self):
+        """A topic is understood from its asks (engine/01 1절): too few, or all built on its own name, miss the other ways
+        a player puts the same question (game/09)."""
+        return [("알림", "묻는 말", f"{p}.{t}") for p, person in self.story.people.items()
+                for t, topic in person.topics.items()
+                if len(topic.asks) < MIN_ASKS or all(t in ask for ask in topic.asks)]
 
     def alert_necks(self):
         return [("알림", "한 막힘의 목", b) for b in self.story.blocks

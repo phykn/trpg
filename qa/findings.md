@@ -14,9 +14,9 @@ Each with its evidence (`qa_test/runs/<run>`, turn numbers).
 
 `qa_test/runs/ui-t14-1`: at 412, turn 27, the passage says "당신이 짚은 사람이 끌려가고" and gemma4 wrote "당신이 지목한 남자가" for 넬, a woman. At desktop, turn 11, the truth says the neck mark came from the cart rope; the ending calls it "범행의 흔적일 뿐". In `qa_test/runs/play-t15-1`, turn 9, it called 고드릭 "탐욕스러운 영주"; he is the village head. The ending is checked like a scene, so none was caught. Try naming the accused in the ending job, and a check against the truth text.
 
-## Back-questions between two near topics
+## Interpretation misses on the held-out set
 
-After the 0.3 margin rule and wider asks (`qa_test/runs/evals-margin-*`): 프롤로그 93%, 챕터 1 94%, no wrong topics. Left are true near-ties ("벨트 없어질 때 실장님은 뭐 하고 계셨어요?" 0.57 against 0.41; "징수관이 댁을 나선 뒤에" between 징수관 and 그 뒤의 일) and 넬's 독미나리 for "약초를 사 갔습니까" (an added ask made a two-topic question pick 독미나리 wrongly, so it was taken out). Dev is at 82% on 11 cases: one two-topic question read as one, one question about another person read as chat. In `qa-1` turns 25–27 토빈 asked the same back-question after the player picked one; a back-question that remembers the pick is still open.
+Asks are now written by the rules of game/08 4절, and players' sentences sit apart in `evals-held.yaml` (`qa_test/runs/evals-rule-*`). Working and held-out: 프롤로그 87% and 87%, 챕터 1 93% and 81%, Dev 82% on 11 working cases. Only the 프롤로그 working set has a wrong topic: "어디 계셨어요? 매표소에 계셨어요?" read as two topics, the second at 0.05. Left on 챕터 1's held-out set: a name the model cannot tie to its topic ("에드윈" for 징수관), back-questions between near topics (마렌's 마당 and 아버지의 저녁, 넬's 독미나리 and 시신), and chat or a plain question read as 넘김. Do not fit asks to these sentences; a fix has to be a rule that holds for every story. In `qa-1` turns 25–27 토빈 asked the same back-question after the player picked one; a back-question that remembers the pick is still open.
 
 ## Narration places things where the notebook does not
 
