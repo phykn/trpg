@@ -112,7 +112,7 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
           onAct={(id) => send({ do: id })}
           onMoves={playing && view.place.moves.length ? () => setOpen({ kind: 'moves' }) : undefined} />
         <OffersRow offers={playing ? view.offers : []} suggest={playing ? view.suggest : []} locked={locked} onAct={act}
-          onSay={(text) => send({ text })} />
+          onSay={(text) => send({ text })} onNotebook={openNotebook} />
         {phase === 'stuck' || phase === 'text_error' ? (
           <View className="px-3 py-2"><Resend onResend={phase === 'stuck' ? onResend : onRetryText} /></View>
         ) : (

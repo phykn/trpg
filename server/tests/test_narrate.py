@@ -1,4 +1,7 @@
-from src.ai.narrate import judge, make_checks, pick_best, split_sentences
+from itertools import product
+
+from src.ai.mbti import MBTI
+from src.ai.narrate import judge, make_checks, make_messages, pick_best, split_sentences
 
 
 def test_a_text_fails_on_low_checks_and_on_length():
@@ -94,3 +97,19 @@ def test_the_text_kept_is_never_a_repeat_when_another_draft_is_not():
               {"text": "같은 말", "failed": ["repeat"]}]
     assert pick_best(checks) == "다른 말"
     assert pick_best([{"text": "첫 글", "failed": []}]) == "첫 글"
+
+
+def test_a_person_is_played_from_what_their_type_means_not_its_four_letters():
+    assert set(MBTI) == {"".join(t) for t in product("EI", "SN", "TF", "JP")}
+    job = {"kind": "answer", "person": "브람", "bio": "여관 주인", "mbti": "ISTP", "attitude": "", "said": "누구요?",
+           "says": [], "lines": [], "quiet": False}
+    assert MBTI["ISTP"] in make_messages(job)[0]["content"]
+
+
+def test_a_text_naming_someone_the_player_has_not_met_and_was_not_given_fails():
+    job = {"kind": "answer", "person": "브람", "bio": "여관 주인", "attitude": "", "said": "누구요?", "says": [], "lines": [],
+           "quiet": False, "unknown": ["고드릭", "약초꾼 오두막"]}
+    low = {"added": {"noul": 0.1}}
+    assert judge(job, low, "고드릭 나리라면 알지도 모르지.")[0] == ["unknown"]
+    assert judge(job, low, "난 모르오.")[0] == []
+    assert judge({**job, "said": "고드릭은 어디 있소?"}, low, "고드릭 나리라면 집에 있소.")[0] == []

@@ -93,3 +93,15 @@ def test_suggestions_offer_next_steps_without_naming_a_topic():
     assert all(c["text"] == c["label"] for c in asked)
     state, _ = play_skeleton(0, [STATS, LOOK])
     assert "주위를 둘러본다" not in [c["label"] for c in make_view(SKELETON, state)[0]["suggest"]]
+
+
+def test_a_card_says_a_clue_in_hand_opens_something_here_without_naming_it():
+    from src.rules.act import does_fit
+    state, _ = play_skeleton(0, [STATS])
+    assert "수첩에서 내밀 것을 찾는다" not in [c["label"] for c in make_view(SKELETON, state)[0]["suggest"]]
+    block, clue = next((b, a) for b in SKELETON.blocks.values() if b.kind != "잠김"
+                       for a, line in SKELETON.lines.items() if line.kind in ("볼 것", "말") and does_fit(SKELETON, a, b))
+    lines = [f"사람 {block.name}", *([block.cond] if block.cond else []), clue]
+    state = {**state, "place": state["where"][block.name], "notebook": {**state["notebook"], **dict.fromkeys(lines, 1)}}
+    [card] = [c for c in make_view(SKELETON, state)[0]["suggest"] if c.get("open") == "notebook"]
+    assert card["label"] == "수첩에서 내밀 것을 찾는다" and SKELETON.lines[clue].text not in card["label"]

@@ -102,6 +102,7 @@ def bet(method, topic=None, person=None):
 # The cards above the input: next steps in plain words, never a topic's name (game/07 2절).
 LOOK_AROUND = "주위를 둘러본다"
 ASK_MORE = "더 아시는 게 있습니까?"
+SEARCH_NOTEBOOK = "수첩에서 내밀 것을 찾는다"
 
 
 def talk_to(person):

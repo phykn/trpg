@@ -5,6 +5,7 @@ from ..rules.act import (
     METHOD_STATS,
     NEED,
     TALK_METHODS,
+    does_fit,
     find_bet_bonus,
     find_path,
     list_blocks_here,
@@ -120,6 +121,10 @@ class ViewMaker:
             return []
         story, state = self.story, self.state
         cards = []
+        # The ontology knows a clue in hand would open something here; the card says so, not which clue.
+        clues = [a for a in state["notebook"] if story.lines[a].kind in ("볼 것", "말") and a not in state["struck"]]
+        if any(does_fit(story, a, b) for b in list_blocks_here(story, state) for a in clues):
+            cards.append({"id": None, "label": ko.SEARCH_NOTEBOOK, "open": "notebook"})
         if state["place"] not in state["looked"]:
             cards.append(self.add_act({"do": "look"}, label=ko.LOOK_AROUND))
         talked = {p for p, talk in state["talks"].items() if talk["topics"] or talk["passes"]}

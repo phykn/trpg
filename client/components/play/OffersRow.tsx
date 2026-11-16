@@ -8,8 +8,9 @@ import { ko } from '@/locale/ko';
 import type { Act, GameView } from '@/services/types';
 
 // The dice a typed action could bet, then the next steps the player can take in one press.
-export function OffersRow({ offers, suggest, locked, onAct, onSay }: {
+export function OffersRow({ offers, suggest, locked, onAct, onSay, onNotebook }: {
   offers: Act[]; suggest: GameView['suggest']; locked: boolean; onAct: (act: string) => void; onSay: (text: string) => void;
+  onNotebook: () => void;
 }) {
   if (!offers.length && !suggest.length) return null;
   return (
@@ -25,7 +26,7 @@ export function OffersRow({ offers, suggest, locked, onAct, onSay }: {
       ))}
       {suggest.map((s) => (
         <Pressable key={s.label} accessibilityRole="button" accessibilityState={{ disabled: locked }} disabled={locked}
-          onPress={() => (s.id ? onAct(s.id) : onSay(s.text ?? s.label))} style={pressed}
+          onPress={() => (s.id ? onAct(s.id) : s.open ? onNotebook() : onSay(s.text ?? s.label))} style={pressed}
           className={control({ kind: 'pill', tone: 'quiet', off: locked })}>
           <Text className={text({ kind: 'label' })}>{s.label}</Text>
         </Pressable>

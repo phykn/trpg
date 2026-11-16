@@ -91,11 +91,20 @@ def make_job(story, before, after, turn, slot, past):
     if opening and turn["action"]["do"] == "stats" and slot["kind"] == "text":
         # The author wrote the first turn, so the game opens without waiting on a model (game/08 2절).
         return {"kind": "written", "text": opening.first if slot.get("job") == "hook" else opening.scene}
-    job = make_slot_job(story, before, after, turn, slot, past)
+    job = {**make_slot_job(story, before, after, turn, slot, past), "unknown": list_unknown(story, after)}
     if job["kind"] == "answer":
         return job
     # The story's voice for the narrator alone; people speak in their own (game/08 2절)
     return {**job, **({"mood": story.head.mood} if story.head.mood else {}), "narrated": list_narrated(story, past)}
+
+
+def list_unknown(story, state):
+    """The story's people, places and things the player has not met: a text naming one it was not given made it up
+    or gave it away (engine/01 4절). One-letter names are left out, being everyday words too, and so are names in the
+    case the player was told at the start."""
+    entries = (("사람", story.people), ("곳", story.places), ("볼 것", story.things))
+    return [shown for kind, names in entries for name in names if f"{kind} {name}" not in state["notebook"]
+            and len(shown := show_name(story, kind, name)) > 1 and shown not in story.head.intro]
 
 
 def is_narrator(slot):
@@ -212,9 +221,25 @@ def make_answer(story, before, after, turn, person, past):
             "where": show_name(story, "곳", after["place"]),
             "doing": find_doing(story, after, person),
             "recent": list_recent(story, person, past), "told": told, "saw": list_seen(story, person, past),
-            "impressions": list_impressions(story, after, person),
+            "impressions": list_impressions(story, after, person), "inner": list_inner(story, after, person),
             "rumors": [f"{show_name(story, '사람', r['about'])}에게 {r['impression']}({'직접 봄' if r['seen'] else '전해 들음'})"
                        for r in list_rumors(after, person)]}
+
+
+# What a person carries under their words, from the story's blocks and truth, naming no topic or fact, so the
+# answer can be played from it without giving it away (engine/01 3절).
+INNER = {("거짓말", False): "덮어 둔 거짓말이 있어 들킬까 봐 말을 고른다",
+         ("거짓말", True): "거짓말이 들통나 기가 꺾였다",
+         ("꺼림", False): "입에 올리기 싫은 일이 있다",
+         ("꺼림", True): "꺼리던 일을 이미 털어놓았다"}
+
+
+def list_inner(story, state, person):
+    inner = [INNER[b.kind, b.addr in state["opened"]] for b in story.blocks.values()
+             if b.name == person and b.kind in ("거짓말", "꺼림")]
+    if person == story.head.truth.who:
+        inner.append("들키면 끝장인 일을 감추고 있어 속으로 불안하다")
+    return list(dict.fromkeys(inner))
 
 
 def list_impressions(story, state, person):

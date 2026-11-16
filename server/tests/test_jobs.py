@@ -211,3 +211,17 @@ def test_a_bet_on_a_line_shows_in_the_answer_whether_the_person_gave_way():
         job = make_jobs(STORY, *turns[-1])[0]
         assert job["says"][0].startswith(say) and job["outcome"].startswith(outcome)
         assert bool(job["lines"]) == win and job["quiet"] != win
+
+
+def test_a_person_carries_what_the_ontology_says_they_hide_but_no_topic_or_fact():
+    from src.ai.jobs import INNER, list_inner, list_unknown
+    from src.rules.state import start_state
+    from tests.test_act import STORY
+    state = start_state(STORY, 0)
+    liar = next(b.name for b in STORY.blocks.values() if b.kind == "거짓말")
+    inner = list_inner(STORY, state, liar)
+    assert INNER["거짓말", False] in inner
+    assert not any(t in line for line in inner for t in STORY.people[liar].topics)
+    assert ("들키면" in " ".join(list_inner(STORY, state, STORY.head.truth.who)))
+    unknown = list_unknown(STORY, state)
+    assert all(f"사람 {p}" not in state["notebook"] for p in STORY.people if p in unknown)

@@ -2,6 +2,7 @@ import re
 from difflib import SequenceMatcher
 
 from .jobs import VOICE
+from .mbti import MBTI
 
 MEANING = 0.5
 ADDED = 0.15
@@ -22,7 +23,7 @@ COVER = 0.5
 REPEAT = 0.8
 # Words of the prompt itself; a text that names them is talking about its instructions, not to the player.
 # "할 말" alone is everyday speech ("더 할 말 있나?"), so only the label with its colon counts.
-PROMPT_WORDS = ("할 말:", "받은 것", "앞서 들려준 글", "지침", "지킬 것", "질문자", "신상", "그릴 기척", "지켜본 일", "앞서 나눈 말", "받은 인상")
+PROMPT_WORDS = ("할 말:", "받은 것", "앞서 들려준 글", "지침", "지킬 것", "질문자", "신상", "속사정", "그릴 기척", "지켜본 일", "앞서 나눈 말", "받은 인상")
 # The narrator and the DM speak 합니다체 (CLAUDE.md); quoted speech inside a scene keeps its own.
 HAEYO = re.compile(r"(세요|어요|아요|해요|예요|에요|죠|군요|네요)[.?!…~]*(\s|$)")
 # The DM shows a sign instead of advising (game/07 2절); these endings tell the player what to do.
@@ -43,7 +44,8 @@ REASONS = {"added": "받은 것에 없는 사람, 물건, 때, 곳을 더했다"
            "again": "처음 하는 말인데 아까 말했다고 했다. 처음 말하듯 쓴다",
            "bracket": "괄호를 썼다. 괄호 없이 글로만 쓴다",
            "lead": "운을 떼야 할 화제의 이름을 그대로 말하지 않았다",
-           "long": "문장이 길다. 한 문장에 한 가지만 담아 짧게 끊어 쓴다"}
+           "long": "문장이 길다. 한 문장에 한 가지만 담아 짧게 끊어 쓴다",
+           "unknown": "받은 것에 없는 이 이야기의 사람, 곳, 물건을 말했다. 받은 것에 나온 것만 쓴다"}
 
 
 class Narrator:
@@ -100,7 +102,7 @@ def list_given(job):
     if job["kind"] == "dm":
         return list_dm_given(job)
     if job["kind"] == "answer":
-        given = [f"신상: {job['bio']}"] + ([f"성격 유형(MBTI): {job['mbti']}"] if job.get("mbti") else [])
+        given = [f"신상: {job['bio']}"] + ([show_mbti(job["mbti"])] if job.get("mbti") else [])
         given += [f"태도: {job['attitude']}"]
         given += [f"사건(글의 '당신'은 플레이어다): {job['case']}"] if job.get("case") else []
         given += [f"곳: {job['where']}"] if job.get("where") else []
@@ -112,6 +114,7 @@ def list_given(job):
         given += [f"지켜본 일(플레이어가 한 일): {' / '.join(job['saw'])}"] if job.get("saw") else []
         given += [f"플레이어에게 받은 인상: {' / '.join(job['impressions'])}"] if job.get("impressions") else []
         given += [f"플레이어에 관한 소문: {' / '.join(job['rumors'])}"] if job.get("rumors") else []
+        given += [f"속사정: {' / '.join(job['inner'])}"] if job.get("inner") else []
         return given + [f"할 말: {' / '.join(job['says']) or '없다'}", f"플레이어의 말: {job['said'] or '없다'}"]
     given = [f"분위기: {job['mood']}"] if job.get("mood") else []
     given += [f"시각: {job['time']}"] if job.get("time") else []
@@ -126,6 +129,10 @@ def list_given(job):
     return given
 
 
+def show_mbti(mbti):
+    return f"성격 유형(MBTI): {mbti}. {MBTI[mbti]}"
+
+
 def list_dm_given(job):
     given = [f"상황: {job['situation']}"]
     given += [f"분위기: {job['mood']}"] if job.get("mood") else []
@@ -135,7 +142,7 @@ def list_dm_given(job):
     if job["person"]:
         person = job["person"]
         doing = f" 지금 하는 일: {person['doing']}." if person.get("doing") else ""
-        mbti = f" 성격 유형(MBTI): {person['mbti']}." if person.get("mbti") else ""
+        mbti = f" {show_mbti(person['mbti'])}" if person.get("mbti") else ""
         given.append(f"인물: {person['name']}. 신상: {person['bio']}{mbti}{doing} 플레이어를 대하는 태도: {person['attitude']}")
     given += [f"가 보지 않은 곳: {job['far']}"] if job["far"] else []
     given += [f"짚을 것: {job['point']}"] if job.get("point") else []
@@ -174,7 +181,8 @@ def make_answer_prompt(job):
     rules = [f"{job['person']}의 대사만 쓴다. 할 말 하나에 한두 문장이다. 이름, 따옴표, 설명은 붙이지 않는다.",
              SHORT,
              "몸짓, 표정, 행동은 묘사하지 않는다. 입으로 하는 말만 쓴다.",
-             "신상의 말투와 성격 유형의 결을 따르되 문법에 맞는 한국어로 쓰고, 태도에 맞게 플레이어의 말을 받아친다.",
+             ("신상의 말투를 따르고, 성격 유형의 풀이대로 말하는 품과 받아치는 방식을 고른다. 다그치면 어떻게 나오는지, 낯선 사람에게 "
+              "얼마나 여는지도 그 풀이를 따른다. 문법에 맞는 한국어로 쓰고, 태도에 맞게 플레이어의 말을 받아친다."),
              "대답 끝에 플레이어에게 되묻거나 재촉하는 짧은 한마디를 붙여도 된다. 받은 것 밖의 일은 묻지도 말하지도 않는다.",
              "플레이어는 지금 마주 보고 말을 건 사람이다. 플레이어에게 직접 말하고, '저 사람', '얘'처럼 남을 가리키듯 부르지 않는다.",
              "할 말이 있으면 그 내용을 빠짐없이 말한다. 태도는 말투에만 드러내고, 모른다고 하거나 피하지 않는다.",
@@ -190,6 +198,8 @@ def make_answer_prompt(job):
               "그 일을 이어 말하지 말고 누가 그러더냐고 되묻거나 말을 돌린다.")]
     if job["quiet"]:
         rules.append("화제의 내용은 한 마디도 말하지 않는다.")
+    if job.get("inner"):
+        rules.append("속사정은 말투와 반응에만 묻어나게 한다. 무엇을 감추는지, 거짓말인지는 말하지 않는다.")
     if job.get("leads"):
         rules.append("운을 떼는 화제의 이름(" + ", ".join(f'"{n}"' for n in job["leads"]) + ")은 대사에 그대로 넣는다.")
     if job.get("doing"):
@@ -275,8 +285,15 @@ def list_faults(job, text):
         "lead": any(name.replace(" ", "") not in text.replace(" ", "") for name in job.get("leads", [])),
         "repeat": any(SequenceMatcher(None, r["answer"], text).ratio() >= REPEAT for r in job.get("recent", [])),
         "again": told_first and AGAIN.search(text),
+        "unknown": names_unknown(job, text),
     }
     return [name for name, found in faults.items() if found]
+
+
+def names_unknown(job, text):
+    named = [name for name in job.get("unknown", []) if name in text]
+    given = "\n".join(list_given(job)) + (job.get("said") or "") if named else ""
+    return any(name not in given for name in named)
 
 
 def split_sentences(text):
