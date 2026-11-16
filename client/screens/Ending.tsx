@@ -18,6 +18,8 @@ export function Ending({ view, log, phase, onRetryText, onLeave }: {
   const texts = log.filter((e): e is Extract<Entry, { slot: number }> => e.turn === ending.turn && 'slot' in e && !!e.text);
   const busy = phase === 'sending' || phase === 'streaming';
   const met = view.notebook.people.map((l) => l.text);
+  const proof = ending.answers.who === 'hit' && ending.proved !== null
+    ? ` · ${ending.proved ? ko.proof.proved : ko.proof.guessed}` : '';
   return (
     <View className={surface({ kind: 'screen' })}>
       <Text accessibilityRole="header" className={text({ kind: 'hero' })}>{ko.verdicts[ending.verdict]}</Text>
@@ -31,7 +33,7 @@ export function Ending({ view, log, phase, onRetryText, onLeave }: {
               {QUESTIONS.map((q) => (
                 <View key={q} className={surface({ kind: 'card' }, 'flex-row items-center justify-between')}>
                   <Text className={text({ kind: 'strong' })}>{ko.questions[q]}</Text>
-                  <Text className={text({ kind: 'strong' }, TONE[ending.answers[q]])}>{ko.answers[ending.answers[q]]}</Text>
+                  <Text className={text({ kind: 'strong' }, TONE[ending.answers[q]])}>{ko.answers[ending.answers[q]]}{q === 'who' ? proof : ''}</Text>
                 </View>
               ))}
             </View>

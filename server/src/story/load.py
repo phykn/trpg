@@ -73,6 +73,8 @@ class Topic(Shape):
     cond: str | None = Field(None, alias="나오는 조건")
     unlock: str | None = Field(None, alias="풀리는 인상")
     unlock_count: int | None = Field(None, alias="풀리는 횟수", ge=1)
+    hides: str | None = Field(None, alias="감추는 까닭")   # given to narration only (data/01 2절)
+    assist: list[str] = Field([], alias="거드는 것")
 
     @model_validator(mode="after")
     def fit_stance(self):
@@ -87,6 +89,10 @@ class Topic(Shape):
             raise ValueError("풀리는 인상 is for 꺼린다 or 거짓말한다")
         if self.unlock_count and not self.unlock:
             raise ValueError("풀리는 횟수 needs 풀리는 인상")
+        if self.hides and self.stance != "거짓말한다":
+            raise ValueError("감추는 까닭 is for 거짓말한다")
+        if self.assist and self.stance == "숨기지 않는다":
+            raise ValueError("거드는 것 is for 꺼린다 or 거짓말한다")
         return self
 
     def list_branches(self):
@@ -113,6 +119,8 @@ class Person(Shape):
     impressions: dict[str, str] = Field({}, alias="인상")   # the person's own, beside the common ones
     close: list[str] = Field([], alias="가까운 사람")
     doing: dict[int, str] = Field({}, alias="하는 일")   # from which spent cell each holds (game/08 2절)
+    props: list[str] = Field([], alias="성질")   # seen on meeting, so suspects are ruled out by matching
+    knows: list[str] = Field([], alias="안다")   # facts known beyond those the person's own words show
 
 
 class Lock(Shape):
@@ -121,6 +129,7 @@ class Lock(Shape):
     owner: str | None = Field(None, alias="주인")
     hint: str = Field(alias="실마리")
     contents: list[str] = Field(alias="안에 든 것", min_length=1)
+    assist: list[str] = Field([], alias="거드는 것")
 
 
 class Thing(Shape):
@@ -172,9 +181,13 @@ class Event(Shape):
     omen: str | None = Field(None, alias="조짐")
     happened: str = Field(alias="벌어졌을 때")
     prevented: str | None = Field(None, alias="막았을 때")
+    call: str | None = Field(None, alias="부르는 것")   # a line written or a block opened brings it on early
+    after: int | None = Field(None, alias="뒤", ge=1)
 
     @model_validator(mode="after")
     def fit_time(self):
+        if (self.call is None) != (self.after is None):
+            raise ValueError("뒤 goes with 부르는 것")
         if (self.omen is None) == (self.at >= 4):
             raise ValueError("조짐 is required from 때 4 on and absent before it")
         if (self.prevented is None) != (self.guard is None):
@@ -187,10 +200,28 @@ class Clock(Shape):
     step: int = Field(alias="한 칸", ge=1)
 
 
+class Fact(Shape):
+    text: str = Field(alias="문장")
+    when: str | None = Field(None, alias="때")
+    points: str | None = Field(None, alias="가리킨다")   # a person it casts suspicion on
+    clears: str | None = Field(None, alias="벗긴다")   # a person it rules out
+    has: str | None = Field(None, alias="범인은 가진다")   # a property the culprit has
+    lacks: str | None = Field(None, alias="범인은 갖지 않았다")   # a property the culprit lacks
+
+    def rules_out(self, person, props):
+        """Whether it rules a person out: it clears them, or the culprit's property it tells is unlike theirs."""
+        return self.clears == person or (self.has is not None and self.has not in props) or (
+            self.lacks is not None and self.lacks in props)
+
+
+def as_list(value):
+    return [value] if isinstance(value, str) else list(value)
+
+
 class Truth(Shape):
     who: str = Field(alias="누가")
-    how: str = Field(alias="어떻게")
-    why: str = Field(alias="왜")
+    how: str | list[str] = Field(alias="어떻게")   # any of them answers
+    why: str | list[str] = Field(alias="왜")
 
 
 class Opening(Shape):
@@ -221,7 +252,7 @@ class Endings(Shape):
 
 class StoryFile(Shape):
     head: Head = Field(alias="머리")
-    facts: dict[str, str] = Field(alias="사실", min_length=1)
+    facts: dict[str, str | Fact] = Field(alias="사실", min_length=1)   # a bare sentence, or one with relations
     props: list[str] = Field([], alias="성질")
     places: dict[str, Place] = Field(alias="곳", min_length=1)
     things: dict[str, Thing] = Field({}, alias="볼 것")
@@ -303,6 +334,8 @@ def format_address(kind, parts):
 def find_missing(raw):
     refs = References(raw)
     refs.check_head()
+    for name, fact in raw.facts.items():
+        refs.check_fact(name, fact)
     for name, place in raw.places.items():
         refs.check_place(name, place)
     for name, thing in raw.things.items():
@@ -355,8 +388,17 @@ class References:
         head = self.raw.head
         self.need("머리의 시작하는 곳", head.start, "곳")
         self.need("머리의 누가", head.truth.who, "사람")
-        self.need("머리의 어떻게", head.truth.how, "사실")
-        self.need("머리의 왜", head.truth.why, "사실")
+        for fact in as_list(head.truth.how):
+            self.need("머리의 어떻게", fact, "사실")
+        for fact in as_list(head.truth.why):
+            self.need("머리의 왜", fact, "사실")
+
+    def check_fact(self, name, fact):
+        if isinstance(fact, str):
+            return
+        for field, kind in (("points", "사람"), ("clears", "사람"), ("has", "성질"), ("lacks", "성질")):
+            if getattr(fact, field):
+                self.need(f"사실 {name}의 {Fact.model_fields[field].alias}", getattr(fact, field), kind)
 
     def check_place(self, name, place):
         for link in place.links:
@@ -383,6 +425,8 @@ class References:
         self.need(f"잠김 {name}의 약점", lock.weak, "성질")
         if lock.owner:
             self.need(f"잠김 {name}의 주인", lock.owner, "사람")
+        for want in lock.assist:
+            self.need(f"잠김 {name}의 거드는 것", want, "사실", "성질")
         for inner in lock.contents:
             self.need(f"잠김 {name}의 안에 든 것", inner, "볼 것", "곳")
             self.holders.setdefault(inner, []).append(name)
@@ -399,6 +443,10 @@ class References:
         self.need(f"사람 {name}의 있는 곳", person.place, "곳")
         for other in person.close:
             self.need(f"사람 {name}의 가까운 사람", other, "사람")
+        for prop in person.props:
+            self.need(f"사람 {name}의 성질", prop, "성질")
+        for fact in person.knows:
+            self.need(f"사람 {name}의 안다", fact, "사실")
         for topic, t in person.topics.items():
             self.check_topic(name, topic, t)
 
@@ -413,6 +461,8 @@ class References:
             self.need(f"{where}의 깨는 사실", fact, "사실")
         if t.wants:
             self.need(f"{where}의 바라는 것", t.wants, "사실", "성질")
+        for want in t.assist:
+            self.need(f"{where}의 거드는 것", want, "사실", "성질")
         if t.cond:
             self.need_address(f"{where}의 나오는 조건", t.cond, self.lines)
 
@@ -428,6 +478,8 @@ class References:
                 self.need(f"{where}의 없어진다", act.vanish, "볼 것")
         if event.guard:
             self.need_address(f"{where}의 막는 조건", event.guard, self.blocks)
+        if event.call and format_address(*parse_address(event.call)) not in self.lines | self.blocks:
+            self.missing.append(f"{where}의 부르는 것: {event.call}")
 
 
 class Record(BaseModel):
@@ -455,6 +507,7 @@ class Block(Record):
     name: str
     topic: str | None = None
     wants: tuple[str, ...]   # any one of them opens it
+    assist: tuple[str, ...] = ()   # in the notebook, any of them adds to a bet on it (game/05 3절)
     unlock: str | None = None   # an impression that opens it once it has built up to unlock_count
     unlock_count: int = 1
     hint: str | None = None
@@ -470,6 +523,9 @@ class Story:
         self.mark = hashlib.sha256(json.dumps(self.copy, ensure_ascii=False).encode()).hexdigest()
         self.head, self.places, self.things, self.people = raw.head, raw.places, raw.things, raw.people
         self.events, self.endings = raw.events, raw.endings
+        self.facts = {name: Fact(문장=f) if isinstance(f, str) else f for name, f in raw.facts.items()}
+        self.answers = {"how": as_list(raw.head.truth.how), "why": as_list(raw.head.truth.why)}
+        self.calls = [format_address(*parse_address(e.call)) if e.call else None for e in raw.events]
         self.links = {name: [] for name in raw.places}
         for name, place in raw.places.items():
             for link in place.links:
@@ -487,13 +543,23 @@ class Story:
         self.build_lines()
         self.build_blocks()
         self.shows = {fact: [a for a, line in self.lines.items() if line.shows == fact] for fact in raw.facts}
-        self.holders = {prop: [a for a, line in self.lines.items() if prop in line.props] for prop in raw.props}
+        self.holders = {prop: [a for a, line in self.lines.items() if prop in line.props and line.kind == "볼 것"]
+                        for prop in raw.props}
+        self.suspects = list(dict.fromkeys(f.points for f in self.facts.values() if f.points))
+        self.knows = {name: self.list_known(name) for name in raw.people}
+
+    def list_known(self, person):
+        """What a person knows: what their own words show, what their lie covers, and what the author adds."""
+        topics = self.people[person].topics.values()
+        shown = [b.shows for t in topics for b in t.list_branches().values() if b.shows]
+        covered = [f for t in topics for f in t.list_breaks()]
+        return list(dict.fromkeys(shown + covered + self.people[person].knows))
 
     def build_lines(self):
         for name, place in self.places.items():
             self.add_line("곳", [name], cond=place.cond, lock=self.locked_in.get(name), place=name)
         for name, person in self.people.items():
-            self.add_line("사람", [name], place=person.place)
+            self.add_line("사람", [name], place=person.place, props=person.props)
         for name, thing in self.things.items():
             self.add_line("볼 것", [name], text=thing.text, shows=thing.shows, props=thing.props,
                           tells=self.list_told(thing.tells), cond=thing.cond, lock=self.locked_in.get(name),
@@ -525,16 +591,16 @@ class Story:
                 if t.stance == "거짓말한다":
                     self.add_block("거짓말", [name, topic], topic=topic, wants=tuple(t.list_breaks()),
                                    opens=[format_address("말", [name, topic, "깨진 뒤"])], cond=t.cond,
-                                   unlock=t.unlock, unlock_count=t.unlock_count or 1)
+                                   unlock=t.unlock, unlock_count=t.unlock_count or 1, assist=tuple(t.assist))
                 elif t.stance == "꺼린다":
                     self.add_block("꺼림", [name, topic], topic=topic, wants=(t.wants,), hint=t.hint,
                                    opens=[format_address("말", [name, topic, "풀린 뒤"])], cond=t.cond,
-                                   unlock=t.unlock, unlock_count=t.unlock_count or 1)
+                                   unlock=t.unlock, unlock_count=t.unlock_count or 1, assist=tuple(t.assist))
         for name, thing in self.things.items():
             if thing.lock:
                 kinds = ["볼 것" if inner in self.things else "곳" for inner in thing.lock.contents]
                 self.add_block("잠김", [name], wants=(thing.lock.weak,), hint=thing.lock.hint, hard=thing.lock.hard,
-                               owner=thing.lock.owner, cond=thing.cond,
+                               owner=thing.lock.owner, cond=thing.cond, assist=tuple(thing.lock.assist),
                                opens=[format_address(k, [i]) for k, i in zip(kinds, thing.lock.contents, strict=False)])
 
     def add_block(self, kind, parts, cond=None, **fields):

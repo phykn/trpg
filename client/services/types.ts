@@ -42,6 +42,8 @@ export type GameView = {
   ending: {
     verdict: 'solved' | 'who_only' | 'wrong' | 'unsolved';
     answers: { who: Answer; how: Answer; why: Answer };
+    // Whether a right culprit was proven or only guessed; null for a story that names no suspects.
+    proved: boolean | null;
     turn: number;
     missed: { lies: string[]; held: string[]; locks: string[] };
   } | null;

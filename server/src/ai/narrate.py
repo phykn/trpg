@@ -111,6 +111,7 @@ def list_given(job):
             given.append("앞서 나눈 말:\n" + "\n".join(f"  플레이어: {r['said'] or '(말없이 기다렸다)'}\n  {job['person']}: {r['answer']}"
                                                    for r in job["recent"]))
         given += [f"이미 한 말: {' / '.join(job['told'])}"] if job.get("told") else []
+        given += [f"플레이어도 아는 일: {' / '.join(job['knows'])}"] if job.get("knows") else []
         given += [f"지켜본 일(플레이어가 한 일): {' / '.join(job['saw'])}"] if job.get("saw") else []
         given += [f"플레이어에게 받은 인상: {' / '.join(job['impressions'])}"] if job.get("impressions") else []
         given += [f"플레이어에 관한 소문: {' / '.join(job['rumors'])}"] if job.get("rumors") else []
@@ -196,18 +197,7 @@ def make_answer_prompt(job):
               "어떻게 있었는지는 지어내지 않는다."),
              ("플레이어가 \"~했다면서요?\"처럼 할 말에 없는 일을 사실로 깔고 물으면, 했다고도 안 했다고도 하지 않는다. "
               "그 일을 이어 말하지 말고 누가 그러더냐고 되묻거나 말을 돌린다.")]
-    if job["quiet"]:
-        rules.append("화제의 내용은 한 마디도 말하지 않는다.")
-    if job.get("inner"):
-        rules.append("속사정은 말투와 반응에만 묻어나게 한다. 무엇을 감추는지, 거짓말인지는 말하지 않는다.")
-    if job.get("leads"):
-        rules.append("운을 떼는 화제의 이름(" + ", ".join(f'"{n}"' for n in job["leads"]) + ")은 대사에 그대로 넣는다.")
-    if job.get("doing"):
-        rules.append("지금 하는 일은 말투와 반응에만 묻어나게 한다.")
-    if job.get("case"):
-        rules.append("사건은 당신도 함께 겪는 일처럼 당신의 말로 옮긴다. 사건 글의 '당신'은 플레이어다.")
-    if job["lines"] and not set(job["lines"]) & set(job.get("told", [])):
-        rules.append("할 말은 처음 하는 말이다. 아까 말했다고 하지 않는다.")
+    rules += [rule for rule, given in list_answer_rules(job) if given]
     user = f"플레이어: {job['said']}" if job["said"] else "플레이어: (말없이 기다린다)"
     if job.get("hook"):   # the opener calls out as the player comes in
         user = "플레이어: (방금 당신 앞에 왔다)"
@@ -216,6 +206,22 @@ def make_answer_prompt(job):
     if job.get("bet") and job["says"]:   # after a typed action gemma4 copied that answer over the line it was given
         user += f"\n(이번에 할 말: {' / '.join(job['says'])})"
     return f"당신은 추리 게임 속 인물 {job['person']}의 목소리다.", rules, user
+
+
+def list_answer_rules(job):
+    """The rules an answer takes only when its job holds what they speak of."""
+    leads = ", ".join(f'"{n}"' for n in job.get("leads", []))
+    return [
+        ("화제의 내용은 한 마디도 말하지 않는다.", job["quiet"]),
+        ("플레이어도 아는 일은 플레이어가 꺼낼 때만 받아 말한다. 할 말과 아는 일 말고 사건에 관한 것은 지어내지 않는다.",
+         job.get("knows")),
+        ("속사정은 말투와 반응에만 묻어나게 한다. 무엇을 감추는지, 거짓말인지는 말하지 않는다.", job.get("inner")),
+        (f"운을 떼는 화제의 이름({leads})은 대사에 그대로 넣는다.", leads),
+        ("지금 하는 일은 말투와 반응에만 묻어나게 한다.", job.get("doing")),
+        ("사건은 당신도 함께 겪는 일처럼 당신의 말로 옮긴다. 사건 글의 '당신'은 플레이어다.", job.get("case")),
+        ("할 말은 처음 하는 말이다. 아까 말했다고 하지 않는다.",
+         job["lines"] and not set(job["lines"]) & set(job.get("told", []))),
+    ]
 
 
 def make_scene_prompt(job):
@@ -232,7 +238,8 @@ def make_scene_prompt(job):
     if job.get("far"):
         rules.append("진행자가 \"그 사이\"로 시작해 다른 곳의 소식을 전하듯 쓴다. 당신은 그 자리에 없으므로 보고 듣는 것처럼 쓰지 않는다.")
     if job["kind"] == "ending":
-        rules.append("플레이어의 결론에서 맞힌 것과 틀리거나 비운 것을 바꿔 말하지 않는다. 플레이어를 이름으로 부르지 않는다.")
+        rules.append("플레이어의 결론에서 맞힌 것과 틀리거나 비운 것, 증명인지 짐작인지를 바꿔 말하지 않는다. "
+                     "플레이어를 이름으로 부르지 않는다.")
     if job.get("again"):
         rules.append("이미 와 본 곳이다. 모습은 그리지 않거나 한마디로 줄이되, 모습과 어긋나게 쓰지 않는다.")
     if job.get("people"):

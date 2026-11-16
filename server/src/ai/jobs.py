@@ -1,6 +1,6 @@
 from ..game.names import show_clock, show_line, show_name
 from ..locale import ko
-from ..rules.state import judge_ending, list_people_here, list_rumors
+from ..rules.state import judge_ending, list_known, list_people_here, list_rumors
 
 LEVELS = {-1: "낮음", 0: "보통", 1: "높음"}
 # The DM shows signs in the world and leaves the choice to the player (game/07 2절): a sound, a light, a smell or a
@@ -91,7 +91,9 @@ def make_job(story, before, after, turn, slot, past):
     if opening and turn["action"]["do"] == "stats" and slot["kind"] == "text":
         # The author wrote the first turn, so the game opens without waiting on a model (game/08 2절).
         return {"kind": "written", "text": opening.first if slot.get("job") == "hook" else opening.scene}
-    job = {**make_slot_job(story, before, after, turn, slot, past), "unknown": list_unknown(story, after)}
+    job = make_slot_job(story, before, after, turn, slot, past)
+    if job["kind"] != "ending":   # the ending tells the whole truth, so no name is held back there
+        job["unknown"] = list_unknown(story, after)
     if job["kind"] == "answer":
         return job
     # The story's voice for the narrator alone; people speak in their own (game/08 2절)
@@ -142,9 +144,10 @@ def make_ending(story, after):
     ending = judge_ending(story, after)
     events = [getattr(story.events[i], result) for i, result in ending["events"]]
     marks = {True: "맞혔다", False: "틀렸다", None: "비워 두었다"}
-    return {"kind": "ending", "time": show_clock(story, story.head.cells),
-            "answers": ", ".join(f"{q} {marks[ending['answers'][k]]}" for k, q in
-                                 (("who", "누가"), ("how", "어떻게"), ("why", "왜"))),
+    answers = ", ".join(f"{q} {marks[ending['answers'][k]]}" for k, q in (("who", "누가"), ("how", "어떻게"), ("why", "왜")))
+    if ending["answers"]["who"] and ending["proved"] is not None:   # right but unproven is a guess (data/01 4절)
+        answers += ". " + ("범인을 증명했다" if ending["proved"] else "범인은 맞혔지만 다른 의심받는 사람을 다 지우지 못한 짐작이다")
+    return {"kind": "ending", "time": show_clock(story, story.head.cells), "answers": answers,
             "happening": [getattr(story.endings, ending["verdict"]), *events, story.endings.explain]}
 
 
@@ -211,17 +214,20 @@ def make_answer(story, before, after, turn, person, past):
     attitude = after["attitudes"][person]
     told = [story.lines[a].text for a in before["notebook"]
             if story.lines[a].kind == "말" and story.lines[a].name == person and a not in before["struck"]]
+    quiet = not lines and bool(says) and not case
+    # What they know of what the player has found, so they can speak of it and of nothing else (data/01 2절)
+    knows = [] if quiet else [story.facts[f].text for f in list_known(story, before) if f in story.knows[person]]
     return {"kind": "answer", "person": show_name(story, "사람", person), "bio": story.people[person].bio,
             "mbti": story.people[person].mbti, "case": case,
             "attitude": f"믿음 {LEVELS[attitude['trust']]}, 두려움 {LEVELS[attitude['fear']]}",
-            "said": find_said(story, turn), "says": says, "lines": lines, "quiet": not lines and bool(says) and not case,
+            "said": find_said(story, turn), "says": says, "lines": lines, "quiet": quiet, "knows": knows,
             "leads": leads, "bet": turn["action"]["do"] == "bet",
             # A bet on a person must show in the answer whether they gave way (engine/01 4절)
             **({"outcome": ko.OUTCOMES[turn["dice"]["won"]]} if turn["dice"] else {}),
             "where": show_name(story, "곳", after["place"]),
             "doing": find_doing(story, after, person),
             "recent": list_recent(story, person, past), "told": told, "saw": list_seen(story, person, past),
-            "impressions": list_impressions(story, after, person), "inner": list_inner(story, after, person),
+            "impressions": list_impressions(story, after, person), "inner": list_inner(story, after, person, [i["say"] for i in turn["talk"] if "say" in i]),
             "rumors": [f"{show_name(story, '사람', r['about'])}에게 {r['impression']}({'직접 봄' if r['seen'] else '전해 들음'})"
                        for r in list_rumors(after, person)]}
 
@@ -234,9 +240,14 @@ INNER = {("거짓말", False): "덮어 둔 거짓말이 있어 들킬까 봐 말
          ("꺼림", True): "꺼리던 일을 이미 털어놓았다"}
 
 
-def list_inner(story, state, person):
-    inner = [INNER[b.kind, b.addr in state["opened"]] for b in story.blocks.values()
-             if b.name == person and b.kind in ("거짓말", "꺼림")]
+def list_inner(story, state, person, said=()):
+    """`said` holds the lines said this turn: a lie's reason to hide is given only while it is being told, since
+    given otherwise it coloured every answer and drowned the topic a lead had to name."""
+    inner = []
+    for block in (b for b in story.blocks.values() if b.name == person and b.kind in ("거짓말", "꺼림")):
+        inner.append(INNER[block.kind, block.addr in state["opened"]])
+        hides = story.people[person].topics[block.topic].hides
+        inner += [f"감추는 까닭: {hides}"] if hides and f"말 {person}.{block.topic}.거짓말" in said else []
     if person == story.head.truth.who:
         inner.append("들키면 끝장인 일을 감추고 있어 속으로 불안하다")
     return list(dict.fromkeys(inner))

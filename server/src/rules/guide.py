@@ -76,9 +76,9 @@ def find_nudge(story, after, changes, past):
 
 
 def is_ready(story, state):
-    truth, book = story.head.truth, state["notebook"]
-    return f"사람 {truth.who}" in book and all(any(story.lines[a].shows == fact for a in book)
-                                                 for fact in (truth.how, truth.why))
+    book = state["notebook"]
+    return f"사람 {story.head.truth.who}" in book and all(any(story.lines[a].shows in facts for a in book)
+                                                            for facts in story.answers.values())
 
 
 def find_help(story, state, key):

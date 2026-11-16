@@ -28,8 +28,8 @@ def start_state(story, seed):
 def judge_ending(story, state):
     end, truth = state["conclusion"], story.head.truth
     answers = {"who": None if end["who"] is None else end["who"] == truth.who}
-    for key, fact in (("how", truth.how), ("why", truth.why)):
-        answers[key] = None if end[key] is None else story.lines[end[key]].shows == fact
+    for key in ("how", "why"):
+        answers[key] = None if end[key] is None else story.lines[end[key]].shows in story.answers[key]
     if end["who"] is None:
         verdict = "unsolved"
     elif not answers["who"]:
@@ -41,7 +41,40 @@ def judge_ending(story, state):
         result = state["events"].get(str(i)) or ("prevented" if event.guard in state["opened"] else None)
         if result:
             events.append([i, result])
-    return {"verdict": verdict, "answers": answers, "events": events}
+    return {"verdict": verdict, "answers": answers, "events": events, "proved": is_proved(story, state, end["who"])}
+
+
+def list_known(story, state):
+    return list(dict.fromkeys(story.lines[a].shows for a in state["notebook"] if story.lines[a].shows))
+
+
+def list_cleared(story, state):
+    """Who the notebook rules out: by a fact that clears them, or by a property that does not match the culprit's."""
+    cleared = []
+    met = [story.lines[a] for a in state["notebook"] if story.lines[a].kind == "사람"]
+    for fact in (story.facts[f] for f in list_known(story, state)):
+        cleared += [fact.clears] if fact.clears else []
+        cleared += [p.name for p in met if fact.rules_out(p.name, p.props)]   # a property counts once they are met
+    return list(dict.fromkeys(cleared))
+
+
+def is_proved(story, state, who):
+    """Right and proven: a fact in the notebook points at them and every other suspect is ruled out (data/01 4절).
+
+    None for a story that names no suspects."""
+    if not story.suspects:
+        return None
+    if who != story.head.truth.who:
+        return False
+    cleared = list_cleared(story, state)
+    return any(story.facts[f].points == who for f in list_known(story, state)) and all(
+        s in cleared for s in story.suspects if s != who)
+
+
+def find_due(story, state, i):
+    """The cell an event happens at: its own, or sooner once something has called it (data/04 5절)."""
+    event, called = story.events[i], state.get("called", {}).get(str(i))   # saves from before calls have none
+    return event.at if called is None else min(event.at, called + event.after)
 
 
 def is_shown(story, state, addr):
@@ -166,6 +199,7 @@ WRITES = {
     "close": lambda state, change: {"closed": state["closed"] + [[change["target"], change["method"]]]},
     "shift": shift_attitude,
     "settle": lambda state, change: {"events": {**state["events"], str(change["event"]): change["result"]}},
+    "call": lambda state, change: {"called": {**state.get("called", {}), str(change["event"]): change["at"]}},
     "relocate": lambda state, change: {"where": {**state["where"], change["person"]: change["place"]}},
     "count": count_talk,
     "done": lambda state, change: {"talks": {**state["talks"], change["person"]: {
@@ -248,7 +282,7 @@ class Invariants:
         return not self.old["spent"] <= self.new["spent"] <= self.story.head.cells
 
     def breaks_events(self):
-        return any(self.old["events"].get(k, r) != r or self.story.events[int(k)].at > self.new["spent"]
+        return any(self.old["events"].get(k, r) != r or find_due(self.story, self.new, int(k)) > self.new["spent"]
                    for k, r in self.new["events"].items())
 
     def breaks_conclusion(self):

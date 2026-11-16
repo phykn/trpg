@@ -7,6 +7,7 @@ from .state import (
     STATS,
     apply_change,
     apply_turn,
+    find_due,
     is_block_shown,
     is_shown,
     list_people_here,
@@ -130,8 +131,18 @@ def find_listener(story, state, action):
     return None
 
 
+def is_assisted(story, state, target):
+    """A clue in the notebook that helps with what the bet aims at, though it does not open it (game/05 3절)."""
+    line = story.lines.get(target)
+    block = story.blocks.get(f"거짓말 {line.name}.{line.topic}" if line else target)
+    return bool(block and block.assist) and any(
+        story.lines[a].branch != "거짓말" and (story.lines[a].shows in block.assist or
+                                             set(story.lines[a].props) & set(block.assist))
+        for a in state["notebook"] if story.lines[a].kind in ("볼 것", "말"))
+
+
 def find_bet_bonus(story, state, target, method):
-    bonus = state["stats"][METHOD_STATS[method]]
+    bonus = state["stats"][METHOD_STATS[method]] + is_assisted(story, state, target)
     if method in LOCK_METHODS:
         return bonus - story.blocks[target].hard
     person = story.lines[target].name if target in story.lines else story.blocks[target].name
@@ -173,6 +184,7 @@ class Turn:
         steps[action["do"]]()
         if telling:
             self.tell_case(opener)
+        self.call_events()
 
     def list_addressed(self, action, heard):
         do, partner = action["do"], self.state["partner"]
@@ -494,15 +506,27 @@ class Turn:
         self.change("conclude", who=who, how=how, why=why)
 
     def spend(self):
+        self.call_events()
         self.change("spend")
         cell = self.state["spent"]
         for i, event in enumerate(self.story.events):
-            if event.at == cell:
+            if find_due(self.story, self.state, i) == cell and str(i) not in self.state["events"]:
                 self.settle(i, event)
         for i, event in enumerate(self.story.events):
-            if event.omen and event.at == cell + 3 and event.guard not in self.state["opened"]:
+            if event.omen and find_due(self.story, self.state, i) == cell + 3 and event.guard not in self.state["opened"]:
                 self.happened.append({"omen": i})
         self.write_up()
+
+    def call_events(self):
+        """A line written or a block opened brings its event on; a near one shows its omen at once (data/04 5절)."""
+        for i, (call, event) in enumerate(zip(self.story.calls, self.story.events, strict=True)):
+            state = self.state
+            if call and str(i) not in state["events"] and str(i) not in state.get("called", {}) and (
+                    call in state["notebook"] or call in state["opened"]):
+                self.change("call", event=i, at=state["spent"])
+                if event.omen and event.guard not in state["opened"] and \
+                        find_due(self.story, self.state, i) - state["spent"] <= 3:
+                    self.happened.append({"omen": i})
 
     def settle(self, i, event):
         if event.guard in self.state["opened"] and i not in self.forced:

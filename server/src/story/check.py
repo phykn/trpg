@@ -1,8 +1,15 @@
 import re
 from pathlib import Path
 
+from ..locale.ko import eul
 from ..rules.act import Turn, does_fit, list_blocks_here, list_topics
-from ..rules.state import IMPRESSIONS, is_shown, list_people_here, start_state
+from ..rules.state import (
+    IMPRESSIONS,
+    is_shown,
+    list_cleared,
+    list_people_here,
+    start_state,
+)
 from .load import Story, StoryError, find_missing, read_story
 
 
@@ -43,10 +50,11 @@ class Checker:
 
     def run(self):
         return [
-            self.check_lies(), self.check_holds(), self.check_truth(), self.check_reach(), self.check_time(),
+            self.check_lies(), self.check_holds(), self.check_truth(), self.check_suspects(), self.check_culprit(),
+            self.check_clearing(), self.check_assist(), self.check_reach(), self.check_time(),
             self.check_events(), self.check_first(), self.check_unreached(), self.check_intros(), self.check_mbti(), self.check_opener(),
             self.check_opening(), self.check_impressions(),
-            *self.alert_size(), *self.alert_long(), *self.alert_asks(), *self.alert_necks(),
+            *self.alert_size(), *self.alert_long(), *self.alert_asks(), *self.alert_necks(), *self.alert_one_clear(),
         ]
 
     def check_lies(self):
@@ -67,11 +75,36 @@ class Checker:
     def check_truth(self):
         end = self.sweep_all(self.start)
         failed = []
-        for question, fact in (("어떻게", self.story.head.truth.how), ("왜", self.story.head.truth.why)):
-            found = self.list_showing(end, fact)
+        for question, key in (("어떻게", "how"), ("왜", "why")):
+            found = self.list_showing(end, self.story.answers[key])
             if len(found) < 2:
-                failed.append(f"{question} {fact}: 단서가 {'하나뿐이다 (' + found[0] + ')' if found else '없다'}")
+                failed.append(f"{question} {', '.join(self.story.answers[key])}: 단서가 "
+                              f"{'하나뿐이다 (' + found[0] + ')' if found else '없다'}")
         return judge("진실의 길", failed)
+
+    def check_suspects(self):
+        story, who = self.story, self.story.head.truth.who
+        answers = [f for facts in story.answers.values() for f in facts]
+        failed = [] if any(f.points == who and name not in answers for name, f in story.facts.items()) else [
+            f"{eul(who)} 가리키는 사실이 진실 말고 없다"]
+        failed += [] if set(story.suspects) - {who} else ["의심받는 사람이 범인뿐이다"]
+        return judge("의심", failed)
+
+    def check_culprit(self):
+        who = self.story.head.truth.who
+        props = self.story.people[who].props
+        failed = [f"사실 {name}" for name, f in self.story.facts.items() if f.rules_out(who, props)]
+        return judge("범인이 지워지지 않는다", failed)
+
+    def check_clearing(self):
+        cleared = list_cleared(self.story, self.sweep_all(self.start))
+        return judge("주사위 없이 지운다", [f"사람 {s}" for s in self.story.suspects
+                                         if s != self.story.head.truth.who and s not in cleared])
+
+    def check_assist(self):
+        failed = [f"{b.addr}: {', '.join(set(b.assist) & set(b.wants))}" for b in self.story.blocks.values()
+                  if set(b.assist) & set(b.wants)]
+        return judge("거드는 것", failed)
 
     def check_reach(self):
         return judge("주사위 없이 닿는다", self.list_unanswered(self.sweep_all(self.start)))
@@ -101,8 +134,7 @@ class Checker:
         broken = [b.addr for b in self.story.blocks.values()
                   if (b.kind == "잠김" or b.name not in world["gone"]) and b.name not in world["lost"]
                   and not self.list_clues(self.sweep_all(world, {b.addr}), b)]
-        broken += [q for q, fact in (("어떻게", self.story.head.truth.how), ("왜", self.story.head.truth.why))
-                   if not self.list_showing(end, fact)]
+        broken += [q for q, key in (("어떻게", "how"), ("왜", "why")) if not self.list_showing(end, self.story.answers[key])]
         if self.list_unanswered(end):
             broken.append("주사위 없이 닿는다")
         cells = self.find_shortest(forced)
@@ -165,6 +197,15 @@ class Checker:
         return [("알림", "묻는 말", f"{p}.{t}") for p, person in self.story.people.items()
                 for t, topic in person.topics.items()
                 if len(topic.asks) < 3 or all(t in ask for ask in topic.asks)]
+
+    def alert_one_clear(self):
+        """One fact that rules out every innocent suspect leaves the rest unneeded (Barros 외, data/06 2절)."""
+        story = self.story
+        innocent = set(story.suspects) - {story.head.truth.who}
+        if len(innocent) < 2:
+            return []
+        return [("알림", "한 사실이 모두를 지운다", f"사실 {name}") for name, f in story.facts.items()
+                if innocent <= {p for p, person in story.people.items() if f.rules_out(p, person.props)}]
 
     def alert_necks(self):
         return [("알림", "한 막힘의 목", b) for b in self.story.blocks
@@ -231,13 +272,13 @@ class Checker:
         return [a for a in state["notebook"] if self.story.lines[a].kind in ("볼 것", "말") and a not in block.opens
                 and does_fit(self.story, a, block)]
 
-    def list_showing(self, state, fact):
-        return [a for a in state["notebook"] if self.story.lines[a].shows == fact]
+    def list_showing(self, state, facts):
+        return [a for a in state["notebook"] if self.story.lines[a].shows in facts]
 
     def list_unanswered(self, state):
-        truth = self.story.head.truth
-        asked = (("누가", f"사람 {truth.who}" in state["notebook"]), ("어떻게", self.list_showing(state, truth.how)),
-                 ("왜", self.list_showing(state, truth.why)))
+        answers = self.story.answers
+        asked = (("누가", f"사람 {self.story.head.truth.who}" in state["notebook"]),
+                 ("어떻게", self.list_showing(state, answers["how"])), ("왜", self.list_showing(state, answers["why"])))
         return [q for q, found in asked if not found]
 
 

@@ -8,6 +8,7 @@ from ..rules.act import (
     does_fit,
     find_bet_bonus,
     find_path,
+    is_assisted,
     list_blocks_here,
     list_topics,
     list_untold,
@@ -185,8 +186,9 @@ class ViewMaker:
             return line.text
         if line.kind == "곳":
             return self.story.places[line.name].desc if line.name in self.state["visited"] else None
-        if line.kind == "사람":
-            return self.story.people[line.name].intro
+        if line.kind == "사람":   # what can be seen of them, so suspects can be matched against the culprit
+            person = self.story.people[line.name]
+            return " ".join([person.intro or "", *(f"{p}." for p in person.props)]).strip() or None
         return self.story.things[line.name].intro if line.kind == "볼 것" else None
 
     def list_marks(self, addr):
@@ -262,6 +264,7 @@ class ViewMaker:
             aim = f"“{found.text}”" if target in story.lines else ko.withheld(found.topic)
             feeling = {"soothe": "trust", "press": "fear"}.get(method)
             adds += [{"name": ko.FEELINGS[feeling], "value": state["attitudes"][found.name][feeling]}] if feeling else []
+        adds += [{"name": ko.ASSIST, "value": 1}] if is_assisted(story, state, target) else []
         return {"title": f"{ko.eul(who)} {ko.METHODS[method]}", "aim": aim, "need": NEED, "adds": adds, "chance": chance}
 
     def make_ending(self):
@@ -287,7 +290,7 @@ class ViewMaker:
                 unmet[kind].append(f"{text} · {ko.UNMET[kind]}")
         answers = {k: "blank" if v is None else "hit" if v else "miss" for k, v in ending["answers"].items()}
         # What the player came upon and left closed comes first, then what they never came upon.
-        return {"verdict": ending["verdict"], "answers": answers, "turn": self.state["turn"],
+        return {"verdict": ending["verdict"], "answers": answers, "proved": ending["proved"], "turn": self.state["turn"],
                 "missed": {k: met[k] + unmet[k] for k in met}}
 
 

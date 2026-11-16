@@ -28,6 +28,7 @@ export const ko = {
   submit: '낸다',
   verdicts: { solved: '다 밝혔다', who_only: '누구인지는 밝혔다', wrong: '엉뚱한 사람을 짚었다', unsolved: '밝히지 못했다' },
   answers: { hit: '맞힘', miss: '틀림', blank: '비움' },
+  proof: { proved: '증명', guessed: '짐작' },
   missed: { lies: '깨지 못한 거짓말', held: '풀지 못한 꺼림', locks: '열지 못한 잠김' },
   toTitle: '제목으로',
   need: (n: number) => `${n} 이상`,

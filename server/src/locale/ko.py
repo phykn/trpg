@@ -7,6 +7,7 @@ IMPRESSIONS = {"다정": "다정하게 부르거나 안부를 묻는다", "위�
 METHODS = {"soothe": "달랜다", "press": "몰아세운다", "trick": "속인다", "sneak": "몰래 연다", "force": "힘으로 연다"}
 FEELINGS = {"trust": "믿음", "fear": "두려움"}
 HARD = "단단함"
+ASSIST = "증거"
 JUDGED = {"lying": "숨기는 것이 있다", "true": "거짓이 아니다"}
 UNMET = {"lies": "듣지 못함", "held": "꺼내지 못함", "locks": "찾지 못함"}
 UNVISITED = "안 가 봄"

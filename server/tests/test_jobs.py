@@ -225,3 +225,11 @@ def test_a_person_carries_what_the_ontology_says_they_hide_but_no_topic_or_fact(
     assert ("들키면" in " ".join(list_inner(STORY, state, STORY.head.truth.who)))
     unknown = list_unknown(STORY, state)
     assert all(f"사람 {p}" not in state["notebook"] for p in STORY.people if p in unknown)
+
+
+def test_the_ending_tells_the_whole_truth_so_it_holds_no_name_back():
+    before, after, turn = list(play(SKELETON, SKELETON_GAME))[-1]
+    jobs = make_jobs(SKELETON, before, after, turn)
+    assert [job for job in jobs if job["kind"] == "ending"] and all(
+        "unknown" not in job for job in jobs if job["kind"] == "ending")
+    assert "짐작" in next(job for job in jobs if job["kind"] == "ending")["answers"]
