@@ -22,6 +22,20 @@ class Refused(ValueError):
         self.code = code
 
 
+def act(story, state, action, heard=None):
+    do = action["do"]
+    if state["conclusion"] is not None:
+        raise Refused("the game is over")
+    if (state["stats"] is None) != (do == "stats"):
+        raise Refused("stats come first and once")
+    if state["spent"] >= story.head.cells and do not in ("read", "conclude"):
+        raise Refused("no cells left")
+    turn = Turn(story, state)
+    turn.do(action, heard)
+    return {"state": apply_turn(story, state, turn.changes), "changes": turn.changes, "dice": turn.dice,
+            "happened": turn.happened, "talk": turn.talk}
+
+
 def roll_dice(seed, turn):
     digest = hashlib.sha256(f"{seed}:{turn}".encode()).digest()
     return [digest[0] % 6 + 1, digest[1] % 6 + 1]
@@ -64,7 +78,7 @@ def find_path(story, state, place):
 
 
 def was_tried(story, state, line, target):
-    """Whether this present already failed while the target held nothing it does not hold now, so it fails again."""
+    # A present that failed fails again while the target holds nothing it did not hold then.
     here = [b.addr for b in list_blocks_here(story, state) if b.addr == target or b.name == target and b.kind != "잠김"]
     return any(t["line"] == line and t["target"] == target and set(here) <= set(t["blocks"]) for t in state["tried"])
 
@@ -98,108 +112,64 @@ def find_bet_bonus(story, state, target, method):
         method, 0)
 
 
-def act(story, state, action, heard=None):
-    do = action["do"]
-    if state["conclusion"] is not None:
-        raise Refused("the game is over")
-    if (state["stats"] is None) != (do == "stats"):
-        raise Refused("stats come first and once")
-    if state["spent"] >= story.head.cells and do not in ("read", "conclude"):
-        raise Refused("no cells left")
-    turn = Turn(story, state)
-    getattr(turn, f"do_{do}")(action, heard)
-    return {"state": apply_turn(story, state, turn.changes), "changes": turn.changes, "dice": turn.dice,
-            "happened": turn.happened, "talk": turn.talk}
-
-
 class Turn:
     def __init__(self, story, state):
         self.story = story
         self.state = state
         self.number = state["turn"] + 1
         self.changes = []
-        self.forced = ()
+        self.forced = ()   # events the story check makes happen even when their guard is open
         self.fresh = []
         self.dice = None
         self.happened = []
         self.talk = []
 
-    def change(self, op, **fields):
-        change = {"op": op, **fields}
-        self.state = apply_change(self.story, self.state, change, self.number)
-        self.changes.append(change)
-        if op == "write":
-            self.fresh.append(fields["line"])
+    def do(self, action, heard):
+        steps = {
+            "stats": lambda: self.do_stats(action["plus2"], action["plus1"]),
+            "ask": lambda: self.do_ask(heard),
+            "look": self.do_look,
+            "move": lambda: self.do_move(action["place"]),
+            "present": lambda: self.do_present(action["line"], action["target"]),
+            "bet": lambda: self.do_bet(action["target"], action["method"]),
+            "face": lambda: self.do_face(action["person"]),
+            "read": lambda: self.do_read(action["lines"]),
+            "conclude": lambda: self.do_conclude(action["who"], action["how"], action["why"]),
+        }
+        steps[action["do"]]()
 
-    def write_up(self):
-        self.state, changes = write_up(self.story, self.state, self.fresh, self.number)
-        self.changes += changes
-        self.fresh += [c["line"] for c in changes]
-
-    def write_once(self, line):
-        if line not in self.state["notebook"]:
-            self.change("write", line=line)
-
-    def shift(self, person, axis, by):
-        self.change("shift", person=person, axis=axis, by=by)
-
-    def spend(self):
-        self.change("spend")
-        cell = self.state["spent"]
-        for i, event in enumerate(self.story.events):
-            if event.at == cell:
-                self.settle(i, event)
-        for i, event in enumerate(self.story.events):
-            if event.omen and event.at == cell + 3 and event.guard not in self.state["opened"]:
-                self.happened.append({"omen": i})
-        self.write_up()
-
-    def settle(self, i, event):
-        if event.guard in self.state["opened"] and i not in self.forced:
-            self.change("settle", event=i, result="prevented")
-            self.happened.append({"event": i, "result": "prevented"})
-            return
-        self.change("settle", event=i, result="happened")
-        for a in event.acts:
-            if a.leave:
-                self.change("leave", person=a.leave)
-            if a.move:
-                self.change("relocate", person=a.move[0], place=a.move[1])
-            if a.vanish:
-                self.change("vanish", thing=a.vanish)
-        if self.state["partner"] and self.state["partner"] not in list_people_here(self.story, self.state):
-            self.change("face", person=None)
-        self.happened.append({"event": i, "result": "happened"})
-
-    def do_stats(self, action, heard):
-        plus2, plus1 = action["plus2"], action["plus1"]
+    def do_stats(self, plus2, plus1):
         if plus2 == plus1 or plus2 not in STATS or plus1 not in STATS:
             raise Refused("two different stats")
         self.change("set_stats", stats={s: 2 if s == plus2 else 1 if s == plus1 else 0 for s in STATS})
 
-    def do_ask(self, action, heard):
+    def do_ask(self, heard):
         kind = heard["kind"]
         person = self.state["partner"]
         if kind == "move":
-            return self.do_move({"place": heard["place"]}, None)
-        if person is None or kind == "look":
-            return self.do_look(action, None)
-        self.talk_to(person)
-        if kind == "topics":
-            shown = list_topics(self.story, self.state, person)
-            if not heard["topics"] or any(t not in shown for t in heard["topics"]):
-                raise Refused("a topic that is not shown")
-            for topic in heard["topics"]:
-                self.ask_topic(person, topic)
-            self.change("count", person=person, topic=None, value=0)
-            self.write_up()
+            self.do_move(heard["place"])
+        elif person is None or kind == "look":
+            self.do_look()
+        elif kind == "topics":
+            self.talk_to(person)
+            self.ask_topics(person, heard["topics"])
         elif kind == "none":
+            self.talk_to(person)
             self.pass_on(person)
         elif kind in ("chat", "unsure"):
+            self.talk_to(person)
             self.talk.append({kind: person, **({"topics": heard["topics"]} if kind == "unsure" else {})})
         else:
             raise Refused(f"unknown reading {kind!r}")
-        return None
+
+    def ask_topics(self, person, topics):
+        shown = list_topics(self.story, self.state, person)
+        if not topics or any(t not in shown for t in topics):
+            raise Refused("a topic that is not shown")
+        for topic in topics:
+            self.ask_topic(person, topic)
+        self.change("count", person=person, topic=None, value=0)
+        self.write_up()
 
     def ask_topic(self, person, topic):
         if find_stance(self.story, self.state, person, topic) == "꺼린다":
@@ -235,7 +205,7 @@ class Turn:
         self.mark_held(person)
 
     def talk_to(self, person):
-        """Held topics that appeared after the person said they were done are marked the next time you talk."""
+        # Held topics that appeared after the person was done are marked the next time you talk.
         if self.state["talks"][person]["done"]:
             self.mark_held(person)
 
@@ -245,7 +215,7 @@ class Turn:
             if find_stance(self.story, self.state, person, topic) == "꺼린다" and block not in self.state["withheld"]:
                 self.change("withhold", block=block)
 
-    def do_look(self, action, heard):
+    def do_look(self):
         self.look_around()
         self.talk.append({"look": self.state["place"]})
 
@@ -254,20 +224,19 @@ class Turn:
             self.change("look", place=self.state["place"])
             self.write_up()
 
-    def do_move(self, action, heard):
-        path = find_path(self.story, self.state, action["place"])
+    def do_move(self, place):
+        path = find_path(self.story, self.state, place)
         if not path:
             raise Refused("a place that cannot be reached")
-        for place in path:   # the way takes the cell, so what happens meanwhile is settled before arriving
-            self.change("move", place=place)
+        for step in path:   # the way takes the cell, so what happens meanwhile is settled before arriving
+            self.change("move", place=step)
             self.spend()
             if self.state["spent"] >= self.story.head.cells:
                 break
         here = list_people_here(self.story, self.state)
         self.change("face", person=here[0] if len(here) == 1 else None)
 
-    def do_present(self, action, heard):
-        line, target = action["line"], action["target"]
+    def do_present(self, line, target):
         if line not in self.state["notebook"] or self.story.lines[line].kind not in ("볼 것", "말"):
             raise Refused("present a clue from the notebook")
         blocks = list_blocks_here(self.story, self.state)
@@ -296,40 +265,22 @@ class Turn:
         self.spend()
 
     def open_block(self, block):
-        if block.kind == "거짓말":
-            self.change("open", block=block.addr)
-            lie = f"말 {block.name}.{block.topic}.거짓말"
-            if lie in self.state["notebook"]:
-                self.change("strike", line=lie)
-            self.write_once(block.opens[0])
-            self.shift(block.name, "fear", 1)
-            self.talk.append({"say": block.opens[0]})
-        elif block.kind == "꺼림":
-            if block.addr in self.state["withheld"]:
-                self.change("unwithhold", block=block.addr)
-            self.change("open", block=block.addr)
-            self.write_once(block.opens[0])
-            self.talk.append({"say": block.opens[0]})
-        else:
-            self.change("open", block=block.addr)
+        if block.kind == "꺼림" and block.addr in self.state["withheld"]:
+            self.change("unwithhold", block=block.addr)
+        self.change("open", block=block.addr)
+        lie = f"말 {block.name}.{block.topic}.거짓말"
+        if block.kind == "거짓말" and lie in self.state["notebook"]:
+            self.change("strike", line=lie)
+        if block.kind == "잠김":
             self.talk.append({"open": block.addr})
+            return
+        self.write_once(block.opens[0])
+        if block.kind == "거짓말":
+            self.shift(block.name, "fear", 1)
+        self.talk.append({"say": block.opens[0]})
 
-    def do_bet(self, action, heard):
-        target, method = action["target"], action["method"]
-        here = list_people_here(self.story, self.state)
-        line = self.story.lines.get(target)
-        block = self.story.blocks.get(target)
-        if line and line.kind == "말" and target in self.state["notebook"] and line.name in here and \
-                target not in self.state["struck"] and target not in self.state["judged"] and method in TALK_METHODS:
-            person = line.name
-        elif block and block.kind == "꺼림" and target in self.state["withheld"] and block.name in here and \
-                method in TALK_METHODS:
-            person = block.name
-        elif block and block.kind == "잠김" and block in list_blocks_here(self.story, self.state) and \
-                method in LOCK_METHODS:
-            person = block.owner
-        else:
-            raise Refused("nothing to bet on that way")
+    def do_bet(self, target, method):
+        person, line, block = self.find_bet(target, method)
         if [target, method] in self.state["closed"]:
             raise Refused("that way is closed")
         if not block or block.kind != "잠김":
@@ -350,6 +301,25 @@ class Turn:
                 self.change("hint", block=target)
             self.talk.append({"say": target} if line else {"withhold": target} if block.kind == "꺼림" else
                              {"shut": target})
+        self.shift_after_bet(person, method, won)
+        self.spend()
+
+    def find_bet(self, target, method):
+        state = self.state
+        here = list_people_here(self.story, state)
+        line = self.story.lines.get(target)
+        block = self.story.blocks.get(target)
+        if line and line.kind == "말" and target in state["notebook"] and line.name in here and \
+                target not in state["struck"] and target not in state["judged"] and method in TALK_METHODS:
+            return line.name, line, None
+        if block and block.kind == "꺼림" and target in state["withheld"] and block.name in here and \
+                method in TALK_METHODS:
+            return block.name, None, block
+        if block and block.kind == "잠김" and block in list_blocks_here(self.story, state) and method in LOCK_METHODS:
+            return block.owner, None, block
+        raise Refused("nothing to bet on that way")
+
+    def shift_after_bet(self, person, method, won):
         if method == "soothe":
             self.shift(person, "trust", 1 if won else -1)
         elif method == "press":
@@ -358,24 +328,68 @@ class Turn:
             self.shift(person, "fear", 1 if won else -1)
         elif not won and person:
             self.shift(person, "trust", -1)
-        self.spend()
 
-    def do_face(self, action, heard):
-        person = action["person"]
+    def do_face(self, person):
         if person is not None and person not in list_people_here(self.story, self.state):
             raise Refused("face someone here")
         self.change("face", person=person)
 
-    def do_read(self, action, heard):
-        lines = [a for a in action["lines"] if a in self.state["notebook"] and a not in self.state["read"]]
+    def do_read(self, lines):
+        lines = [a for a in lines if a in self.state["notebook"] and a not in self.state["read"]]
         if not lines:
             raise Refused("nothing new to read")
         self.change("read", lines=lines)
 
-    def do_conclude(self, action, heard):
+    def do_conclude(self, who, how, why):
         book = self.state["notebook"]
-        who, how, why = action["who"], action["how"], action["why"]
         if who is not None and f"사람 {who}" not in book or any(
                 a is not None and (a not in book or self.story.lines[a].kind not in ("볼 것", "말")) for a in (how, why)):
             raise Refused("answer from the notebook")
         self.change("conclude", who=who, how=how, why=why)
+
+    def spend(self):
+        self.change("spend")
+        cell = self.state["spent"]
+        for i, event in enumerate(self.story.events):
+            if event.at == cell:
+                self.settle(i, event)
+        for i, event in enumerate(self.story.events):
+            if event.omen and event.at == cell + 3 and event.guard not in self.state["opened"]:
+                self.happened.append({"omen": i})
+        self.write_up()
+
+    def settle(self, i, event):
+        if event.guard in self.state["opened"] and i not in self.forced:
+            self.change("settle", event=i, result="prevented")
+            self.happened.append({"event": i, "result": "prevented"})
+            return
+        self.change("settle", event=i, result="happened")
+        for a in event.acts:
+            if a.leave:
+                self.change("leave", person=a.leave)
+            if a.move:
+                self.change("relocate", person=a.move[0], place=a.move[1])
+            if a.vanish:
+                self.change("vanish", thing=a.vanish)
+        if self.state["partner"] and self.state["partner"] not in list_people_here(self.story, self.state):
+            self.change("face", person=None)
+        self.happened.append({"event": i, "result": "happened"})
+
+    def change(self, op, **fields):
+        change = {"op": op, **fields}
+        self.state = apply_change(self.state, change, self.number)
+        self.changes.append(change)
+        if op == "write":
+            self.fresh.append(fields["line"])
+
+    def write_up(self):
+        self.state, changes = write_up(self.story, self.state, self.fresh, self.number)
+        self.changes += changes
+        self.fresh += [c["line"] for c in changes]
+
+    def write_once(self, line):
+        if line not in self.state["notebook"]:
+            self.change("write", line=line)
+
+    def shift(self, person, axis, by):
+        self.change("shift", person=person, axis=axis, by=by)

@@ -55,7 +55,7 @@ def test_start_writes_what_the_start_shows():
 def test_each_change_writes_its_part_of_the_state(changes, key, value):
     state = start()
     for change in changes:
-        state = apply_change(STORY, state, change, 1)
+        state = apply_change(state, change, 1)
     assert state[key] == value
 
 

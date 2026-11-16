@@ -1,5 +1,5 @@
-from src.guide import make_guide
 from src.rules.act import act
+from src.rules.guide import make_guide
 from src.rules.state import start_state
 from tests.test_act import CREW, LOOK, PASS, STATS, STORY, ask, go, present
 

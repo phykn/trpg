@@ -34,6 +34,7 @@ def write_save(path, data):
 
 
 def read_save(path):
+    """The save, its story, and the state before the first turn and after each one."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         head = data["head"]
@@ -42,11 +43,11 @@ def read_save(path):
         story = Story(StoryFile.model_validate(data["story"]))
         if story.mark != head["mark"]:
             raise SaveError("the story copy does not match its mark")
-        state = start_state(story, head["seed"])
+        states = [start_state(story, head["seed"])]
         for turn in data["turns"]:
-            state = apply_turn(story, state, turn["changes"])
+            states.append(apply_turn(story, states[-1], turn["changes"]))
     except SaveError:
         raise
     except (OSError, ValueError, KeyError, TypeError) as exc:
         raise SaveError(f"{path.name}: {exc}") from None
-    return data, story, state
+    return data, story, states

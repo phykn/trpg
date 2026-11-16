@@ -4,10 +4,10 @@ import re
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .guide import make_guide
 from .models import ModelUnavailable
 from .narrate import make_jobs
 from .rules.act import Refused, act
+from .rules.guide import make_guide
 from .rules.state import apply_turn, start_state
 from .save import SaveError, make_save, read_save, write_save
 from .view import make_feed, make_view
@@ -88,7 +88,8 @@ class GameService:
             if not re.fullmatch(r"[0-9a-f]{16}", game) or not path.is_file():
                 raise Missing(f"no game {game!r}")
             try:
-                self.games[game] = read_save(path)
+                data, story, states = read_save(path)
+                self.games[game] = (data, story, states[-1])
             except SaveError as exc:
                 raise Broken(exc.reason) from None
         return self.games[game]
