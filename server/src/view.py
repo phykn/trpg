@@ -114,11 +114,6 @@ class ViewMaker:
     def make_notebook(self):
         book = {group: [] for group in GROUPS.values()}
         speakers = []
-        heard = {}
-        for addr in self.state["notebook"]:
-            line = self.story.lines[addr]
-            if line.kind == "말":
-                heard.setdefault(line.name, []).append(self.ids[addr])
         for addr in self.state["notebook"]:
             line = self.story.lines[addr]
             if line.kind == "볼 것":
@@ -128,7 +123,7 @@ class ViewMaker:
             book[group].append({
                 "id": self.ids[addr], "text": show_line(self.story, addr), "marks": self.list_marks(addr),
                 "struck": addr in self.state["struck"], "intro": self.find_intro(line),
-                "about": heard.get(line.name, []) if line.kind == "사람" else [], "new": addr not in self.state["read"],
+                "about": self.list_about(addr), "new": addr not in self.state["read"],
                 "acts": self.list_acts(addr) if self.stage == "play" else []})
             if group == "heard":
                 speakers.append(line.name)
@@ -137,7 +132,21 @@ class ViewMaker:
         book["heard"] = [x for _, x in sorted(zip(speakers, book["heard"], strict=True), key=lambda p: order.index(p[0]))]
         return book
 
+    def list_about(self, addr):
+        """The lines a line's sheet gathers: what a person said, what was seen at a place, where a clue was
+        found or who said it, and the places and people it told of (game/03 1절)."""
+        line, book, lines = self.story.lines[addr], self.state["notebook"], self.story.lines
+        if line.kind == "사람":
+            about = [a for a in book if lines[a].kind == "말" and lines[a].name == line.name]
+        elif line.kind == "곳":
+            about = [a for a in book if lines[a].kind == "볼 것" and lines[a].place == line.name]
+        else:
+            about = [f"사람 {line.name}" if line.kind == "말" else f"곳 {line.place}", *line.tells]
+        return [self.ids[a] for a in dict.fromkeys(about) if a in self.ids and a != addr]
+
     def find_intro(self, line):
+        if line.kind == "곳":
+            return self.story.places[line.name].desc if line.name in self.state["visited"] else None
         if line.kind == "사람":
             return self.story.people[line.name].intro
         return self.story.things[line.name].intro if line.kind == "볼 것" else None

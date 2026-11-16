@@ -27,6 +27,14 @@ def test_a_person_shows_their_intro_and_what_they_said_and_an_item_its_intro():
     assert [x["intro"] for x in book["items"] + book["seen"]] == [DAWN.things["쇠꼬챙이"].intro, None]
 
 
+def test_a_visited_place_shows_its_look_and_what_was_seen_there_and_a_clue_where_and_whom_it_tells_of():
+    lines = ["곳 숲길", "곳 여관 물레방아", "볼 것 여관 나무패", "볼 것 목 자국", "사람 넬", "말 넬.해 질 녘.참말"]
+    book = make_view(DAWN, make_state(lines, visited=["숲길"]))[0]["notebook"]
+    assert [(x["intro"], x["about"]) for x in book["places"]] == [(DAWN.places["숲길"].desc, [3, 4]), (None, [])]
+    assert [x["about"] for x in book["seen"]] == [[1, 2], [1]]
+    assert book["heard"][0]["about"] == [5, 2]
+
+
 def test_the_badge_counts_every_unread_line():
     state = make_state(["곳 숲길", "말 넬.해 질 녘.참말", "볼 것 목 자국"], read=["곳 숲길"])
     assert make_view(DAWN, state)[0]["badge"] == 2
