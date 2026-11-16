@@ -20,6 +20,8 @@ HAEYO = re.compile(r"(세요|어요|아요|해요|예요|에요|죠|군요|네�
 # The DM shows a sign instead of advising (game/07 2절); these endings tell the player what to do.
 PUSH = re.compile(r"권(합니다|해 드립니다|하고 싶습니다)|(보|가|해|물어|살펴|둘러|찾아|내밀어|따져)\s?보(십시오|세요|시죠|시길|길)|"
                   r"(좋|낫)겠습니다|어떻습니까|어떨까|볼 만합니다|하십시오|가십시오|필요해 보입니다")
+# A line said for the first time that the answer calls already said.
+AGAIN = re.compile(r"아까 말했|말했잖|말했다니까|말하지 않았")
 QUOTED = re.compile(r"\"[^\"]*\"|“[^”]*”|'[^']*'|‘[^’]*’")
 REASONS = {"added": "받은 것에 없는 사람, 물건, 때, 곳을 더했다", "meaning": "할 말의 뜻이 빠졌거나 바뀌었다",
            "quiet": "말하지 않아야 할 내용을 말했다", "length": "너무 길다",
@@ -27,7 +29,8 @@ REASONS = {"added": "받은 것에 없는 사람, 물건, 때, 곳을 더했다"
            "style": "해요체로 썼다. 문장을 모두 '-습니다', '-ㅂ니까'로 맺는다",
            "push": "플레이어에게 할 일을 권했다. 권하지 말고 소리, 빛, 냄새, 몸짓 같은 기척만 그린다",
            "speech": "인물의 대사를 지어냈다. 따옴표 없이 몸짓만 그린다",
-           "repeat": "앞서 한 대답을 되풀이했다. 플레이어가 방금 한 말에 맞춰 다르게 받아친다"}
+           "repeat": "앞서 한 대답을 되풀이했다. 플레이어가 방금 한 말에 맞춰 다르게 받아친다",
+           "again": "처음 하는 말인데 아까 말했다고 했다. 처음 말하듯 쓴다"}
 
 
 class Narrator:
@@ -48,6 +51,8 @@ class Narrator:
             if not failed or attempt == REWRITES:
                 break
             note = "이 글은 " + ", ".join(REASONS[f] for f in failed) + ". 지킬 것을 지켜 다시 쓴다."
+            if "repeat" in failed:   # gemma4 wrote the same sentence again three times when only told why
+                note += f' "{text}"와 겹치는 말은 쓰지 않는다.'
             messages = [*messages, {"role": "assistant", "content": text}, {"role": "user", "content": note}]
             text = "".join([chunk async for chunk in self.llm.stream(messages, MAX_TOKENS[job["kind"]])])
             yield {"type": "replace", "text": text}
@@ -204,6 +209,8 @@ def list_faults(job, text):
         faults.append("speech")
     if any(SequenceMatcher(None, r["answer"], text).ratio() >= REPEAT for r in job.get("recent", [])):
         faults.append("repeat")
+    if kind == "answer" and job.get("lines") and not set(job["lines"]) & set(job.get("told", [])) and AGAIN.search(text):
+        faults.append("again")
     return faults
 
 

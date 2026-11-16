@@ -47,3 +47,11 @@ def test_an_answer_that_repeats_an_earlier_one_is_written_again():
     low = {"added": {"noul": 0.1}}
     assert judge(job, low, "봉식아, 갑자기 왜 그래? 옛날 얘기는 이제 그만하고 술이나 한잔하자.")[0] == ["repeat"]   # react-replay 턴 5
     assert judge(job, low, "힘들면 오늘은 내가 링 밖에서 다 막아 줄 테니까 숨 좀 돌려.")[0] == []
+
+
+def test_a_line_said_for_the_first_time_is_not_called_said_before():
+    job = {"kind": "answer", "says": ["벨트는 6시까지 케이스에 있었다."], "lines": ["벨트는 6시까지 케이스에 있었다."],
+           "told": [], "quiet": False}
+    low = {"added": {"noul": 0.1}, "meaning": {"noul": 0.9}}
+    assert judge(job, low, "봉식아, 내가 아까 말했잖아. 벨트는 6시까지 케이스에 있었다니까!")[0] == ["again"]   # react-impress-rude 턴 2
+    assert judge({**job, "told": job["lines"]}, low, "봉식아, 내가 아까 말했잖아. 벨트는 6시까지 케이스에 있었다니까!")[0] == []
