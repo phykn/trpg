@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Button, pressed } from '@/components/ui/Button';
 import { Sheet } from '@/components/ui/Sheet';
+import { control, surface, text, tone } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import { findLine, GROUPS } from '@/logic/notebook';
 import type { GameView, Group, Line } from '@/services/types';
@@ -10,21 +11,20 @@ import { Marks } from './Marks';
 
 const Unread = () => <View className="h-1.5 w-1.5 rounded-full bg-gold-fg" />;
 const struck = (line: Line) => (line.struck ? 'line-through opacity-60' : '');
-const INTRO = 'font-sans text-chip text-fg-muted';
 
 // A folded card shows two lines of the intro; the hidden copy measures whether the rest is cut.
-function Intro({ text, open, onCut }: { text: string; open: boolean; onCut: (cut: boolean) => void }) {
+function Intro({ words, open, onCut }: { words: string; open: boolean; onCut: (cut: boolean) => void }) {
   const [shown, setShown] = useState(0);
   const [full, setFull] = useState(0);
   useEffect(() => { if (shown && full) onCut(full > shown + 1); }, [shown, full]);   // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <View>
-      <Text numberOfLines={open ? undefined : 2} onLayout={(e) => setShown(e.nativeEvent.layout.height)} className={INTRO}>
-        {text}
+      <Text numberOfLines={open ? undefined : 2} onLayout={(e) => setShown(e.nativeEvent.layout.height)} className={text.note}>
+        {words}
       </Text>
       {open ? null : (
         <Text aria-hidden onLayout={(e) => setFull(e.nativeEvent.layout.height)} pointerEvents="none"
-          className={`absolute left-0 right-0 top-0 opacity-0 ${INTRO}`}>{text}</Text>
+          className={`absolute left-0 right-0 top-0 opacity-0 ${text.note}`}>{words}</Text>
       )}
     </View>
   );
@@ -40,22 +40,22 @@ function NotebookLine({ line, view, open, locked, onToggle, onLine, onAct, onLay
   const opens = cut || about.length > 0 || line.acts.length > 0;
   return (
     <View onLayout={(e) => onLayout(e.nativeEvent.layout.y)}
-      className="gap-2 rounded-xl border border-border-default bg-canvas-default px-3 py-2.5">
+      className={`gap-2 ${surface.card}`}>
       <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} disabled={!opens} onPress={onToggle}
         style={pressed} className="gap-1.5">
         <View className="flex-row items-center gap-2">
-          <Text className={`min-w-0 flex-1 font-sans text-body text-fg-default ${struck(line)}`}>{line.text}</Text>
+          <Text className={`min-w-0 flex-1 ${text.body} ${struck(line)}`}>{line.text}</Text>
           {line.new ? <Unread /> : null}
         </View>
-        {line.intro ? <Intro text={line.intro} open={open} onCut={setCut} /> : null}
+        {line.intro ? <Intro words={line.intro} open={open} onCut={setCut} /> : null}
         <Marks marks={line.marks} />
       </Pressable>
       {open && about.length ? (
         <View className="gap-1.5">
           {about.map((l) => (
             <Pressable key={l.id} accessibilityRole="button" onPress={() => onLine(l.id)} style={pressed}
-              className="gap-1 rounded-lg bg-canvas-subtle px-3 py-2">
-              <Text className={`font-sans text-chip text-fg-default ${struck(l)}`}>{l.text}</Text>
+              className={`gap-1 ${surface.well}`}>
+              <Text className={`${text.small} ${struck(l)}`}>{l.text}</Text>
               <Marks marks={l.marks} />
             </Pressable>
           ))}
@@ -103,8 +103,8 @@ export function NotebookSheet({ view, group, line, locked, onGroup, onLine, onAc
         {GROUPS.map((g) => (
           <Pressable key={g} accessibilityRole="tab" accessibilityState={{ selected: g === group }} onPress={() => onGroup(g)}
             style={pressed}
-            className={`h-9 min-w-0 flex-1 flex-row items-center justify-center gap-1 rounded-full ${g === group ? 'bg-fg-default' : 'bg-canvas-subtle'}`}>
-            <Text numberOfLines={1} className={`font-sans-semibold text-chip ${g === group ? 'text-fg-on-emphasis' : 'text-fg-default'}`}>
+            className={`${control.tab} ${g === group ? tone.active : tone.quiet}`}>
+            <Text numberOfLines={1} className={g === group ? text.tabOn : text.tab}>
               {ko.groups[g]}
             </Text>
             {view.notebook[g].some((l) => l.new) ? <Unread /> : null}

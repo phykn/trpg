@@ -1,6 +1,7 @@
 import { Pressable, Text } from 'react-native';
 
-import { colors } from '@/design/tokens';
+import { colors, icon as iconSize } from '@/design/tokens';
+import { control, off, text, tone as tones } from '@/design/ui';
 import { Icon, type IconName } from './Icon';
 
 // Every tappable part dims the same way while held.
@@ -15,9 +16,9 @@ export function Button({ label, icon, tone = 'primary', disabled, onPress }: {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }}
       disabled={disabled} onPress={onPress} style={pressed}
-      className={`h-12 flex-row items-center justify-center gap-2 rounded-full px-5 ${primary ? 'bg-gold-fg' : 'border border-border-strong'} ${disabled ? 'opacity-40' : ''}`}>
-      {icon ? <Icon name={icon} size={16} color={fg} width={2} /> : null}
-      <Text className="font-sans-semibold text-body" style={{ color: fg }}>{label}</Text>
+      className={`${control.button} ${primary ? tones.picked : tones.idle} ${disabled ? off : ''}`}>
+      {icon ? <Icon name={icon} size={iconSize.md} color={fg} width={2} /> : null}
+      <Text className={primary ? text.strongOn : text.strong}>{label}</Text>
     </Pressable>
   );
 }
@@ -29,7 +30,7 @@ export function IconButton({ icon, label, tone = 'plain', size = 36, disabled, o
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }}
       disabled={disabled} onPress={onPress} style={(state) => ({ ...pressed(state), width: size, height: size })}
-      className={`items-center justify-center rounded-full ${gold ? 'bg-gold-fg' : ''} ${disabled ? 'opacity-40' : ''}`}>
+      className={`items-center justify-center rounded-full ${gold ? 'bg-gold-fg' : ''} ${disabled ? off : ''}`}>
       <Icon name={icon} size={Math.round(size * 0.5)} color={gold ? colors.fg['on-emphasis'] : colors.fg.muted} width={2} />
     </Pressable>
   );

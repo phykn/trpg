@@ -2,6 +2,7 @@ import { TextInput, View } from 'react-native';
 
 import { IconButton } from '@/components/ui/Button';
 import { colors } from '@/design/tokens';
+import { control, off, text as type } from '@/design/ui';
 import { ko } from '@/locale/ko';
 
 export function InputBar({ partner, locked, text, onText, onSend }: {
@@ -15,7 +16,7 @@ export function InputBar({ partner, locked, text, onText, onSend }: {
       <TextInput value={text} onChangeText={onText} onSubmitEditing={send} editable={!locked} maxLength={200}
         placeholder={hint} placeholderTextColor={colors.fg.subtle} accessibilityLabel={hint} submitBehavior="submit"
         returnKeyType="send"
-        className={`h-11 min-w-0 flex-1 rounded-full border border-border-strong bg-canvas-floating px-4 font-sans text-body text-fg-default ${locked ? 'opacity-60' : ''}`} />
+        className={`min-w-0 flex-1 ${control.field} ${type.body} ${locked ? off : ''}`} />
       <IconButton icon="send" label={ko.send} tone="gold" size={44} disabled={!ready} onPress={send} />
     </View>
   );

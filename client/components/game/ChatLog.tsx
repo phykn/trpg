@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { pressed } from '@/components/ui/Button';
+import { text } from '@/design/ui';
 import type { Entry } from '@/logic/useGame';
 import { findHue } from './speaker';
 
@@ -34,7 +35,7 @@ function Line({ entry, met, typing, onNote }: {
   if (entry.kind === 'said') {
     return (
       <View className="max-w-[85%] self-end rounded-2xl rounded-br-sm bg-gold-muted px-3 py-2">
-        <Text className="font-sans text-body text-fg-default">{entry.text}</Text>
+        <Text className={text.body}>{entry.text}</Text>
       </View>
     );
   }
@@ -45,7 +46,7 @@ function Line({ entry, met, typing, onNote }: {
   if (entry.kind === 'note') {
     return (
       <Pressable accessibilityRole="button" onPress={() => onNote(entry.lines)} style={pressed} className="self-start">
-        <Text className="font-sans text-chip italic text-gold-fg">{entry.text}</Text>
+        <Text className={text.notice}>{entry.text}</Text>
       </Pressable>
     );
   }
@@ -53,7 +54,7 @@ function Line({ entry, met, typing, onNote }: {
   if (entry.who) {
     return (
       <Speaker who={entry.who} met={met}>
-        {typing ? <Typing /> : <Text className="font-sans text-body text-fg-default">{entry.text}</Text>}
+        {typing ? <Typing /> : <Text className={text.body}>{entry.text}</Text>}
       </Speaker>
     );
   }
@@ -61,7 +62,7 @@ function Line({ entry, met, typing, onNote }: {
   if (!entry.text) return null;
   const happening = entry.kind === 'omen' || entry.kind === 'event';
   return (
-    <Text className={`font-serif-body text-body text-fg-default ${happening ? 'border-l-2 border-danger-fg pl-3' : ''}`}>{entry.text}</Text>
+    <Text className={`${text.scene} ${happening ? 'border-l-2 border-danger-fg pl-3' : ''}`}>{entry.text}</Text>
   );
 }
 

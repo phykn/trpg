@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, Text } from 'react-native';
 
 import { pressed } from '@/components/ui/Button';
+import { control, off, text, tone } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import type { Act } from '@/services/types';
 
@@ -13,8 +14,8 @@ export function OffersRow({ offers, locked, onAct }: { offers: Act[]; locked: bo
       {offers.map((a) => (
         <Pressable key={a.id} accessibilityRole="button" accessibilityLabel={a.label} accessibilityState={{ disabled: locked }}
           disabled={locked} onPress={() => onAct(a.id)} style={pressed}
-          className={`h-9 flex-row items-center justify-center rounded-full border border-gold-fg bg-gold-muted px-4 ${locked ? 'opacity-60' : ''}`}>
-          <Text className="font-sans-semibold text-panel text-fg-default">{a.label}</Text>
+          className={`${control.pill} ${tone.offer} ${locked ? off : ''}`}>
+          <Text className={text.label}>{a.label}</Text>
         </Pressable>
       ))}
     </ScrollView>

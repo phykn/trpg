@@ -2,7 +2,8 @@ import { Pressable, Text, View } from 'react-native';
 
 import { pressed } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { colors } from '@/design/tokens';
+import { colors, icon } from '@/design/tokens';
+import { control, off, text, tone } from '@/design/ui';
 import { ko } from '@/locale/ko';
 import type { GameView } from '@/services/types';
 import { findHue } from './speaker';
@@ -17,18 +18,18 @@ export function PeopleRow({ people, met, look, locked, onAct }: {
       {look ? (
         <Pressable accessibilityRole="button" accessibilityLabel={ko.look} accessibilityState={{ disabled: locked }}
           disabled={locked} onPress={() => onAct(look.id)} style={pressed}
-          className={`h-9 flex-row items-center justify-center gap-2 rounded-full border border-dashed border-border-strong px-4 ${locked ? 'opacity-60' : ''}`}>
-          <Icon name="eye" size={16} color={colors.fg.muted} />
-          <Text className="font-sans-semibold text-panel text-fg-muted">{ko.look}</Text>
+          className={`${control.pill} ${tone.dashed} ${locked ? off : ''}`}>
+          <Icon name="eye" size={icon.md} color={colors.fg.muted} />
+          <Text className={text.labelQuiet}>{ko.look}</Text>
         </Pressable>
       ) : null}
       {people.map(({ name, partner, act }) => (
         <Pressable key={name} accessibilityRole="button" accessibilityLabel={name}
           accessibilityState={{ selected: partner, disabled: locked || !act }} disabled={locked || !act}
           onPress={() => act && onAct(act)} style={pressed}
-          className={`h-9 flex-row items-center justify-center gap-2 rounded-full border px-4 ${partner ? 'border-fg-default bg-fg-default' : 'border-border-strong'} ${locked ? 'opacity-60' : ''}`}>
+          className={`${control.pill} ${partner ? tone.active : tone.idle} ${locked ? off : ''}`}>
           <View className={`h-2 w-2 rounded-full ${findHue(met, name).bg}`} />
-          <Text className={`font-sans-semibold text-panel ${partner ? 'text-fg-on-emphasis' : 'text-fg-default'}`}>{name}</Text>
+          <Text className={partner ? text.labelOn : text.label}>{name}</Text>
         </Pressable>
       ))}
     </View>

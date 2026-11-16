@@ -41,4 +41,5 @@ const fontSize = {
 };
 const layout = { mobile: 412 };
 const motion = { enter: 220 };
-module.exports = { colors, spacing, radius, fontFamily, fontSize, layout, motion };
+const icon = { sm: 14, md: 16, lg: 18 };
+module.exports = { colors, spacing, radius, fontFamily, fontSize, layout, motion, icon };
