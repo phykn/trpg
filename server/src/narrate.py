@@ -51,29 +51,47 @@ def list_shown_happenings(turn):
     return [h for h in turn["happened"] if h.get("result") != "prevented"]
 
 
+# The DM shows signs in the world and leaves the choice to the player (game/07 2절): a sound, a light, a smell or a
+# gesture, never advice. Only "conclude" asks outright, since the game cannot end without the player's answer.
 DM = {
     "open": ("판이 막 시작되었다. 인물은 플레이어 곁에 있다.",
-             "진행자가 본 인물의 첫인상을 한마디 하고, 주위를 둘러보거나 그 사람에게 무엇이든 물어보라고 권한다"),
-    "around": ("플레이어가 아직 주위를 둘러보지 않았다.", "진행자가 주위를 한번 찬찬히 둘러보라고 가볍게 권한다"),
-    "meet": ("플레이어가 아직 말을 나눠 보지 않은 인물 곁에 왔다.", "진행자가 본 인물의 첫인상을 한마디 하고, 말을 걸어 보라고 권한다"),
-    "held": ("인물이 어떤 이야기에 입을 다물었다.", "진행자가 인물의 속내를 짐작하는 한마디를 하고, 마음을 움직일 무언가가 필요해 보인다고 넌지시 말한다"),
-    "doubt": ("인물의 말에 숨기는 것이 있다는 것이 드러났다.", "진행자가 인물의 속내를 짐작하는 한마디를 하고, 그 말과 어긋나는 것을 찾아 내밀어 보라고 넌지시 권한다"),
-    "unvisited": ("한동안 새로 알아낸 것이 없다.", "아직 가 보지 않은 곳에 가 보라고 권한다"),
-    "ask": ("한동안 새로 알아낸 것이 없다. 인물은 플레이어 곁에 있다.", "인물에게 다른 것을 묻거나, 알아낸 것을 내밀어 따져 보라고 권한다"),
-    "look": ("한동안 새로 알아낸 것이 없다.", "수첩을 다시 훑으며 서로 어긋나는 말을 찾아보라고 권한다"),
-    "conclude": ("시간이 다 되었다.", "누가, 어떻게, 왜, 플레이어의 결론을 들려 달라고 한다"),
+             "이곳의 모습에서 눈길을 끄는 것 하나와, 인물이 당신을 두고 보이는 몸짓이나 눈길 하나를 그린다"),
+    "around": ("플레이어가 이곳을 아직 찬찬히 둘러보지 않았다.",
+               ("이곳의 모습에 나온 것 가운데 하나에 당신의 눈길이 머문다고 그린다. 그곳에 무엇이 있는지는 말하지 않고, "
+                "'무언가'로 얼버무리지도 않는다")),
+    "meet": ("플레이어가 아직 말을 나눠 보지 않은 인물 곁에 왔다.", "인물이 당신을 알아채고 보이는 몸짓이나 눈길 하나를 그린다"),
+    "held": ("인물이 어떤 이야기에 입을 다물었다.",
+             "인물이 그 이야기를 꺼리는 기색을 몸짓으로 그린다. 두려움이 높으면 겁먹은 기색, 믿음이 낮으면 경계하는 기색이다"),
+    "doubt": ("인물의 말에 숨기는 것이 있다는 것이 드러났다.",
+              "인물의 말끝이나 눈길에 스친 틈 하나를 그린다. 무엇을 숨기는지는 말하지 않는다"),
+    "unvisited": ("한동안 새로 알아낸 것이 없다.",
+                  ("당신은 이곳에 그대로 있다. 가 보지 않은 곳 쪽에서 이곳까지 닿는 기척 하나를 그린다. 그곳의 모습에 나온 것에서 "
+                   "나는 소리, 빛, 냄새만 쓰고, 그곳에서 무슨 일이 벌어졌다고 쓰지 않는다")),
+    "ask": ("한동안 새로 알아낸 것이 없다. 인물은 플레이어 곁에 있다.", "인물이 무언가 더 말할 듯 머뭇거리는 몸짓 하나를 그린다"),
+    "look": ("한동안 새로 알아낸 것이 없다.",
+             "도입의 기한이 다가오는 기척 하나를 그리고, 당신이 지금까지 듣고 본 것을 하나씩 되짚는다고 쓴다. 어느 것인지는 말하지 않는다"),
+    "conclude": ("시간이 다 되었다.", "도입의 기한이 닥쳤음을 그리고, 누가, 어떻게, 왜, 당신의 결론을 들려 달라고 한다"),
 }
+PERSON_KEYS = ("open", "meet", "held", "doubt", "ask")
 
 
 def make_dm(story, after, guide):
-    situation, suggest = DM[guide["key"]]
-    name = guide.get("name")
-    if guide["key"] == "open" and not name:
-        situation, suggest = "판이 막 시작되었다. 곁에 아무도 없다.", "주위를 둘러보거나 다른 곳으로 가 보라고 권한다"
-    job = {"kind": "dm", "situation": situation, "suggest": suggest, "person": None, "place": None}
-    if guide["key"] == "unvisited":
-        job["place"] = show_name(story, "곳", name)
-    elif name and guide["key"] != "around":
+    key, name = guide["key"], guide.get("name")
+    situation, cue = DM[key]
+    if key == "open" and not name:
+        situation, cue = "판이 막 시작되었다. 곁에 아무도 없다.", "이곳의 모습에서 눈길을 끄는 것 하나를 그린다"
+    place = after["place"]
+    job = {"kind": "dm", "key": key, "situation": situation, "cue": cue, "person": None, "far": None,
+           "here": None, "intro": None, "time": None}
+    if key in ("open", "around", "unvisited"):
+        job["here"] = f"{show_name(story, '곳', place)}. 모습: {story.places[place].desc}"
+    if key == "unvisited":
+        job["far"] = f"{show_name(story, '곳', name)}. 모습: {story.places[name].desc}"
+    if key in ("look", "conclude"):
+        clock = story.head.clock
+        job["intro"] = story.head.intro
+        job["time"] = ko.clock(clock.start + after["spent"] * clock.step) if clock else None
+    if key in PERSON_KEYS and name:
         attitude = after["attitudes"][name]
         job["person"] = {"name": show_name(story, "사람", name), "bio": story.people[name].bio,
                          "attitude": f"믿음 {LEVELS[attitude['trust']]}, 두려움 {LEVELS[attitude['fear']]}"}
@@ -148,11 +166,14 @@ def make_scene(story, before, after, turn):
 def list_given(job):
     if job["kind"] == "dm":
         given = [f"상황: {job['situation']}"]
+        given += [f"도입: {job['intro']}"] if job["intro"] else []
+        given += [f"시각: {job['time']}"] if job["time"] else []
+        given += [f"이곳: {job['here']}"] if job["here"] else []
         if job["person"]:
             person = job["person"]
             given.append(f"인물: {person['name']}. 신상: {person['bio']} 플레이어를 대하는 태도: {person['attitude']}")
-        given += [f"가 보지 않은 곳: {job['place']}"] if job["place"] else []
-        return given + [f"권할 일: {job['suggest']}"]
+        given += [f"가 보지 않은 곳: {job['far']}"] if job["far"] else []
+        return given + [f"그릴 기척: {job['cue']}"]
     if job["kind"] == "answer":
         return [f"신상: {job['bio']}", f"태도: {job['attitude']}", f"할 말: {' / '.join(job['says']) or '없다'}",
                 f"플레이어의 말: {job['said'] or '없다'}"]
@@ -173,10 +194,12 @@ def make_messages(job):
     if job["kind"] == "dm":
         rules = ["플레이어를 \"당신\"이라 부르고 합니다체로 한두 문장만 쓴다. '-세요', '-군요' 같은 해요체는 쓰지 않는다.",
                  "플레이어를 이름이나 3인칭으로 부르지 않는다.",
-                 "탁자 앞에서 판을 이끄는 진행자처럼 가볍게 말을 건넨다. 가르치거나 잔소리하지 않는다.",
-                 "인물의 인상은 신상과 태도에서만 짐작한다. 사건의 진실, 단서, 누가 거짓말하는지는 말하지 않는다.",
-                 "화면, 단추, 누르는 법은 말하지 않는다. 받은 것에 없는 사람, 물건, 때, 곳을 더하지 않는다.",
-                 "권할 일은 진행자인 당신이 플레이어에게 직접 건네는 말로 쓴다. 인물이 권하는 것처럼 쓰지 않는다.",
+                 ("진행자는 세계의 기척을 보여 줄 뿐이고, 무엇을 할지는 플레이어가 고른다. 가 보라, 물어보라, 살펴보라처럼 "
+                  "권하거나 시키지 않는다." if job["key"] != "conclude" else "결론을 들려 달라는 말만 직접 한다."),
+                 "지어내는 것은 소리, 빛, 냄새, 몸짓뿐이다. 받은 것에 없는 사람, 물건, 흔적, 벌어진 일은 더하지 않는다.",
+                 "인물의 몸짓은 신상과 태도에서만 짐작한다. 사건의 진실, 단서, 누가 거짓말하는지는 말하지 않는다.",
+                 "인물의 대사를 지어내지 않는다. 따옴표를 쓰지 않는다.",
+                 "화면, 단추, 누르는 법은 말하지 않는다.",
                  "신상이 플레이어를 이름으로 가리켜도 플레이어는 \"당신\"이라 부른다.",
                  "한 문단으로 쓴다."]
         head = "당신은 추리 TRPG 판을 이끄는 진행자(DM)다."
@@ -260,22 +283,31 @@ def judge(job, answers, text):
         failed.append("prompt")
     if job["kind"] != "answer" and HAEYO.search(QUOTED.sub("", text)):
         failed.append("style")
+    if job["kind"] == "dm" and job.get("key") != "conclude" and PUSH.search(QUOTED.sub("", text)):
+        failed.append("push")
+    if job["kind"] == "dm" and re.search("[\"“”‘’]", text):
+        failed.append("speech")
     return failed, probs
 
 
 # Words of the prompt itself; a text that names them is talking about its instructions, not to the player.
-PROMPT_WORDS = ("할 말", "받은 것", "지침", "지킬 것", "질문자", "신상", "권할 일")
+PROMPT_WORDS = ("할 말", "받은 것", "지침", "지킬 것", "질문자", "신상", "그릴 기척")
 
 
 # The narrator and the DM speak 합니다체 (CLAUDE.md); quoted speech inside a scene keeps its own.
 HAEYO = re.compile(r"(세요|어요|아요|해요|예요|에요|죠|군요|네요)[.?!…~]*(\s|$)")
+# The DM shows a sign instead of advising (game/07 2절); these endings tell the player what to do.
+PUSH = re.compile(r"권(합니다|해 드립니다|하고 싶습니다)|(보|가|해|물어|살펴|둘러|찾아|내밀어|따져)\s?보(십시오|세요|시죠|시길|길)|"
+                  r"(좋|낫)겠습니다|어떻습니까|어떨까|볼 만합니다|하십시오|가십시오|필요해 보입니다")
 QUOTED = re.compile(r"\"[^\"]*\"|“[^”]*”|'[^']*'|‘[^’]*’")
 
 
 REASONS = {"added": "받은 것에 없는 사람, 물건, 때, 곳을 더했다", "meaning": "할 말의 뜻이 빠졌거나 바뀌었다",
            "quiet": "말하지 않아야 할 내용을 말했다", "length": "너무 길다",
            "prompt": "지시문을 두고 말했다. 인물이나 진행자의 말만 쓴다",
-           "style": "해요체로 썼다. 문장을 모두 '-습니다', '-ㅂ니까'로 맺는다"}
+           "style": "해요체로 썼다. 문장을 모두 '-습니다', '-ㅂ니까'로 맺는다",
+           "push": "플레이어에게 할 일을 권했다. 권하지 말고 소리, 빛, 냄새, 몸짓 같은 기척만 그린다",
+           "speech": "인물의 대사를 지어냈다. 따옴표 없이 몸짓만 그린다"}
 
 
 class Narrator:
