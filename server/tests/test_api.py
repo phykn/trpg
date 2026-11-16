@@ -163,6 +163,21 @@ def test_text_is_written_once_rewritten_when_it_fails_and_retried_after_an_error
     assert player.client.get(f"/games/{player.game}/turns/9/text").status_code == 404
 
 
+def test_text_can_be_polled_for_a_tunnel_that_holds_streams_back(tmp_path):
+    llm = FakeLLM(["사당에 들어섭니다.", "고드릭에게 물어보시지요."])
+    player = Player(make_client(tmp_path, FakeInterpreter(HEARD), Narrator(llm, FakeChecks([True, True]))))
+    player.send(do=player.view["start"]["acts"][0]["id"])
+    events, after = [], 0
+    while not events or events[-1]["type"] not in ("done", "error"):
+        polled = player.client.get(f"/games/{player.game}/turns/1/text/poll", params={"after": after}).json()
+        events, after = events + polled["events"], polled["next"]
+    assert [e["type"] for e in events] == ["start", "delta", "delta", "end", "start", "delta", "delta", "end", "done"]
+    # Once saved, every poll gets the whole text again, so a screen that saw part of it still ends whole.
+    again = player.client.get(f"/games/{player.game}/turns/1/text/poll", params={"after": 3}).json()
+    assert again["events"] == player.read_text(1) and again["next"] == len(again["events"])
+    assert player.client.get(f"/games/{player.game}/turns/9/text/poll").status_code == 404
+
+
 def test_health_answers_without_auth():
     response = TestClient(build_app(local_settings(), None)).get("/health")
     assert response.status_code == 200 and response.json() == {"ok": True}

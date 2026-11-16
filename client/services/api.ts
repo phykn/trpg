@@ -38,32 +38,20 @@ export const getTurns = (id: string, from: number) => request<PastTurn[]>(`${gam
 export const sendCommand = (id: string, requestId: string, revision: number, body: CommandBody) =>
   request<TurnResult>(`${gamePath(id)}/commands`, { request_id: requestId, revision, ...body });
 
-// Always ends with done or error; a dropped connection counts as an error, so the caller can ask again.
+// Always ends with done or error; a failed poll counts as an error, so the caller can ask again.
+// It polls rather than reading one stream: the phone's quick tunnel holds a stream back until it ends.
 export async function streamText(id: string, turn: number, onEvent: (event: TextEvent) => void): Promise<void> {
-  let ended = false;
-  const emit = (line: string) => {
-    if (!line.trim()) return;
-    const event = JSON.parse(line) as TextEvent;
-    ended ||= event.type === 'done' || event.type === 'error';
-    onEvent(event);
-  };
+  let after = 0;
   try {
-    const response = await fetch(`${baseUrl}${gamePath(id)}/turns/${turn}/text`, { headers });
-    if (!response.ok || !response.body) throw new ApiError(response.status, null);
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
     for (;;) {
-      const { done, value } = await reader.read();
-      buffer += decoder.decode(value, { stream: !done });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
-      lines.forEach(emit);
-      if (done) break;
+      const response = await fetch(`${baseUrl}${gamePath(id)}/turns/${turn}/text/poll?after=${after}`, { headers });
+      if (!response.ok) throw new ApiError(response.status, null);
+      const polled = (await response.json()) as { events: TextEvent[]; next: number };
+      polled.events.forEach(onEvent);
+      if (polled.events.some((e) => e.type === 'done' || e.type === 'error')) return;
+      after = polled.next;
     }
-    emit(buffer);
   } catch {
-    // ends as an error below
+    onEvent({ type: 'error' });
   }
-  if (!ended) onEvent({ type: 'error' });
 }

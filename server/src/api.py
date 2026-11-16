@@ -117,3 +117,8 @@ def stream_text(request: Request, game: str, n: int):
     events = request.app.state.service.stream_text(game, n)
     lines = (json.dumps(event, ensure_ascii=False) + "\n" async for event in events)
     return StreamingResponse(lines, media_type="application/x-ndjson")
+
+
+@router.get("/games/{game}/turns/{n}/text/poll")
+async def poll_text(request: Request, game: str, n: int, after: Annotated[int, Query(ge=0)] = 0):
+    return await request.app.state.service.poll_text(game, n, after)

@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import hashlib
 import re
 from datetime import UTC, datetime
@@ -10,6 +11,8 @@ from .rules.guide import make_guide
 from .save import SaveError, make_save, read_save, write_save
 from .slots import NARRATED, find_last_said, make_jobs
 from .view import make_feed, make_view
+
+POLL_WAIT = 2   # seconds a poll waits for new text before answering with none
 
 
 class Missing(LookupError):
@@ -139,19 +142,35 @@ class GameService:
     async def follow_text(self, game, n):
         texts = self.load(game)[0]["turns"][n - 1]["text"]
         if texts is not None:
-            for slot, text in enumerate(texts):
-                yield {"type": "start", "slot": slot}
-                yield {"type": "delta", "slot": slot, "text": text["text"]}
-                yield {"type": "end", "slot": slot}
-            yield {"type": "done"}
+            for event in list_written(texts):
+                yield event
             return
+        async for event in self.start_text(game, n).follow():
+            yield event
+
+    async def poll_text(self, game, n, after):
+        """The turn's text events after the first `after`, waiting a moment for new ones (engine/02 5절).
+
+        A quick tunnel holds a stream back until it ends, so the phone asks again and again instead.
+        Once the text is saved every poll gets all of it; start and delta rebuild each slot whatever was seen.
+        """
+        data, _, _ = self.load(game)
+        if not 1 <= n <= len(data["turns"]):
+            raise Missing(f"no turn {n}")
+        texts = data["turns"][n - 1]["text"]
+        if texts is not None:
+            events = list_written(texts)
+            return {"events": events, "next": len(events)}
+        events = await self.start_text(game, n).wait(after, POLL_WAIT)
+        return {"events": events, "next": after + len(events)}
+
+    def start_text(self, game, n):
         if (game, n) not in self.texts:
             self.texts[game, n] = TextJob()
             task = asyncio.create_task(self.write_text(game, n, self.texts[game, n]))
             self.tasks.add(task)
             task.add_done_callback(self.tasks.discard)
-        async for event in self.texts[game, n].follow():
-            yield event
+        return self.texts[game, n]
 
     async def write_text(self, game, n, job):
         try:
@@ -184,6 +203,12 @@ class GameService:
                 raise
         finally:
             self.texts.pop((game, n), None)
+
+
+def list_written(texts):
+    return [*(e for slot, text in enumerate(texts) for e in ({"type": "start", "slot": slot},
+                                                             {"type": "delta", "slot": slot, "text": text["text"]},
+                                                             {"type": "end", "slot": slot})), {"type": "done"}]
 
 
 def last_turn(data):
@@ -222,6 +247,13 @@ class TextJob:
         async with self.changed:
             self.events.append(event)
             self.changed.notify_all()
+
+    async def wait(self, seen, timeout):
+        """The events after the first `seen`, once there are any or the timeout passes."""
+        async with self.changed:
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(self.changed.wait_for(lambda: len(self.events) > seen), timeout)
+            return self.events[seen:]
 
     async def follow(self):
         seen = 0

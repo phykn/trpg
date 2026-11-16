@@ -21,6 +21,7 @@
 | `GET /games/{game}/turns?from={n}` | | 턴 `n`부터의 지난 결과(3절)의 목록. 다시 열 때 대화를 다시 그리는 데 쓴다 |
 | `POST /games/{game}/commands` | 2절 | 3절 |
 | `GET /games/{game}/turns/{n}/text` | | NDJSON(5절) |
+| `GET /games/{game}/turns/{n}/text/poll?after={k}` | | `{events, next}`(5절). 화면은 이것을 쓴다 |
 
 - `story`는 이야기의 이름이다([data/02](../data/02-story.md) 머리). `intro`는 도입 글이다.
 - `game`은 판의 이름이다([data/05](../data/05-save.md)). 화면은 이것 하나만 `trpg.game_id`에 기억한다. 불러오지 못해도 지우지 않는다.
@@ -119,6 +120,12 @@
 - 이미 만든 글이 있으면 `start`, 글 전체를 담은 `delta`, `end`, `done`이 바로 온다.
 - 같은 턴의 글을 동시에 여러 번 청해도 글은 한 번만 만든다. 나머지는 그 결과를 같이 받는다.
 - `error`가 오면 판은 이미 바뀌어 있다. 화면은 같은 길을 다시 청한다. 다시 청할 때 이미 쓴 글은 처음부터 다시 쓴다.
+
+**나눠 받기.** 휴대폰 주소가 거치는 Cloudflare 빠른 터널은 흐르는 응답을 끝날 때까지 모아 두었다가 한꺼번에 보낸다(SSE도 같다, 2026-11-16 확인). 그래서 화면은 `text/poll`을 거듭 청한다.
+
+- `after`는 이미 받은 사건의 수다. 답은 그 뒤의 사건(`events`, 위와 같은 모양)과 다음에 보낼 `after`(`next`)다.
+- 새 사건이 없으면 2초까지 기다렸다가 빈 `events`로 답한다. 화면은 `done`이나 `error`를 받을 때까지 곧바로 다시 청한다.
+- 글이 이미 저장됐으면 `after`와 상관없이 글 전체(`start`, `delta`, `end`, `done`)가 온다. `start`가 자리를 비우고 `delta`가 다시 채우므로 화면은 그대로 받으면 된다.
 
 ## 6. 오류
 
