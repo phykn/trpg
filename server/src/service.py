@@ -75,7 +75,8 @@ class GameService:
 
     def list_turns(self, game, start):
         data, story, states = self.load(game)
-        return [self.make_result(story, states[-1], turn, False) for turn in data["turns"] if turn["turn"] >= start]
+        return [self.make_result(story, states[-1], turn, False, states[turn["turn"]])
+                for turn in data["turns"] if turn["turn"] >= start]
 
     async def command(self, game, body):
         self.load(game)
@@ -121,9 +122,9 @@ class GameService:
         listener = find_listener(story, state, action) if action.get("text") else None
         return await self.interpreter.read_impression(story, listener, action["text"]) if listener else None
 
-    def make_result(self, story, state, turn, with_view=True):
+    def make_result(self, story, state, turn, with_view=True, after=None):
         ids = {addr: i for i, addr in enumerate(state["notebook"], 1)}
-        feed = make_feed(story, turn, ids, [a for a, t in state["notebook"].items() if t == 0])
+        feed = make_feed(story, turn, ids, [a for a, t in state["notebook"].items() if t == 0], after or state)
         result = {"kind": "turn", "turn": turn["turn"], "said": turn["action"].get("text"), "feed": feed,
                   "text": any("slot" in f for f in feed)}
         return {**result, "view": make_view(story, state, turn)[0]} if with_view else result

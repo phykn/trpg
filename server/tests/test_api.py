@@ -102,7 +102,7 @@ def test_dawn_is_solved_without_dice_and_no_branch_name_reaches_the_screen(tmp_p
     assert player.view["stage"] == "start"
     player.send(do=next(a["id"] for a in player.view["start"]["acts"] if (a["plus2"], a["plus1"]) == ("wit", "charm")))
     asked = player.send(text=ASK)
-    assert asked["said"] == ASK and asked["text"] and asked["feed"][0] == {"kind": "text", "who": "고드릭", "slot": 0}
+    assert asked["said"] == ASK and asked["text"] and asked["feed"][0] == {"kind": "text", "who": "고드릭", "slot": 0, "topics": ["새벽 종", "마을 살림"]}
     assert player.move("숲길")["feed"][0]["kind"] == "move" and not player.view["place"]["looked"]
     assert player.look()["feed"][0] == {"kind": "text", "who": None, "slot": 0} and player.view["place"]["looked"]
     player.present("볼 것 쓸린 자국", "토빈")

@@ -33,8 +33,7 @@ def test_the_dm_nudges_after_a_while_without_a_new_line():
 
 
 def test_the_first_held_topic_gets_a_remark():
-    chat = ({"do": "ask"}, {"kind": "chat"})
-    assert guides([STATS, ask("밤"), go("곡물 창고"), LOOK, go("방앗간"), chat, chat, chat, ask("새벽")])[-1] == "held 리사"
+    assert guides([STATS, ask("밤"), go("곡물 창고"), LOOK, go("방앗간"), LOOK, LOOK, LOOK, ask("새벽")])[-1] == "held 리사"
 
 
 def test_someone_who_held_back_is_not_met_again():

@@ -15,6 +15,7 @@ const colors = {
   danger: { fg: '#b3261e' },
   health: { fg: '#256b2c' },
   gold: { fg: '#8a5300', muted: '#eadcbf' },
+  topic: { fg: '#1f4fbf' }, // a topic a person names and has not told yet
   // One per person met, in notebook order, so each speaker keeps a hue through the game.
   speaker: { 1: '#0f5f8c', 2: '#a1401a', 3: '#3d6b12', 4: '#6e3aa6', 5: '#0b6e63', 6: '#a0255a' },
   overlay: 'rgba(31,35,40,0.5)',

@@ -36,6 +36,7 @@ export const text = withMerge(cva('text-fg-default', {
       mono: 'font-mono-medium text-panel text-fg-muted', // the clock
       notice: 'font-sans text-chip italic text-gold-fg', // a notebook notice in the chat
       mark: 'rounded-full bg-gold-muted px-2 font-sans text-chip text-gold-fg', // a mark on a line
+      topic: 'font-sans text-body text-topic-fg underline', // a topic named in what a person says
     },
     on: { true: 'text-fg-on-emphasis' },
     quiet: { true: 'text-fg-muted' },

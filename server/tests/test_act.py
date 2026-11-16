@@ -64,11 +64,11 @@ def test_asking_writes_once_then_leads_and_passes_lead_to_done():
 
 def test_a_held_topic_that_appears_after_done_is_marked_the_next_time_you_talk():
     chat = ({"do": "ask"}, {"kind": "chat"})
-    _, rs = play(1, [STATS, ask("밤"), go("방앗간"), PASS, PASS, PASS, go("곡물 창고"), LOOK,
+    _, rs = play(1, [STATS, ask("밤"), go("방앗간"), PASS, PASS, go("곡물 창고"), LOOK,
                          present("볼 것 꺼진 등잔", "한스"), go("방앗간"), chat])
-    assert rs[5]["talk"] == [{"pass": "리사"}, {"done": "리사"}] and ops(rs[5]) == ["count", "done"]
-    assert "꺼림 리사.새벽" not in rs[9]["state"]["withheld"]   # the topic appeared after she was done
-    assert rs[10]["changes"] == [{"op": "withhold", "block": "꺼림 리사.새벽"}] and rs[10]["talk"] == [{"chat": "리사"}]
+    assert rs[4]["talk"] == [{"pass": "리사"}, {"done": "리사"}] and ops(rs[4]) == ["count", "done"]
+    assert "꺼림 리사.새벽" not in rs[8]["state"]["withheld"]   # the topic appeared after she was done
+    assert rs[9]["changes"][0] == {"op": "withhold", "block": "꺼림 리사.새벽"} and rs[9]["talk"][0] == {"chat": "리사"}
 
 
 def test_a_held_back_topic_is_withheld_then_opened_by_what_it_wants():
@@ -175,7 +175,7 @@ def said(impression, *topics):
 
 def test_two_impressions_of_one_lean_move_the_attitude_and_close_people_hear_later():
     state, rs = play(0, [STATS, said("다정"), said("칭찬")])
-    assert ops(rs[1]) == ["impress", "rumor"] and ops(rs[2]) == ["impress", "shift", "rumor"]
+    assert ops(rs[1]) == ["impress", "rumor", "count"] and ops(rs[2]) == ["impress", "shift", "rumor", "count"]
     assert state["impressions"]["오토"] == {"다정": 1, "칭찬": 1} and state["attitudes"]["오토"]["trust"] == 1
     assert [(r["to"], r["impression"], r["at"], r["seen"]) for r in state["rumors"]] == [
         ("한스", "다정", 2, False), ("한스", "칭찬", 2, False)]
@@ -213,3 +213,18 @@ def test_a_typed_action_costs_no_cell_and_pressing_leaves_a_threat():
         play(0, [STATS, doing("force", LOCK)])   # the lock is not here
     _, rs = play(0, [STATS, go("곡물 창고"), LOOK, doing("force", LOCK)])
     assert rs[3]["talk"] == [{"try": LOCK, "method": "force"}] and not rs[3]["changes"]
+
+
+def test_chat_and_actions_that_go_nowhere_lead_on_the_second_miss():
+    chat = ({"do": "ask"}, {"kind": "chat"})
+    press = ({"do": "ask"}, {"kind": "action", "method": "press"})
+    _, rs = play(1, [STATS, chat, press, ask("밤"), chat])
+    assert rs[1]["talk"] == [{"chat": "오토"}]
+    assert rs[2]["talk"][-1] == {"lead": "오토.밤"}
+    assert not any("lead" in t for t in rs[4]["talk"])   # asking a topic starts the count again
+
+
+def test_a_thing_looked_at_by_name_is_looked_around_and_kept_for_the_scene():
+    at = ({"do": "ask"}, {"kind": "look", "thing": "볼 것 꺼진 등잔"})
+    _, rs = play(1, [STATS, ask("밤"), go("곡물 창고"), LOOK, at])
+    assert rs[4]["talk"] == [{"look": "곡물 창고", "thing": "볼 것 꺼진 등잔"}]

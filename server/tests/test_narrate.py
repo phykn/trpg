@@ -1,4 +1,4 @@
-from src.narrate import count_sentences, judge, make_checks
+from src.narrate import count_sentences, judge, make_checks, pick_best
 
 
 def test_a_text_fails_on_low_checks_and_on_length():
@@ -72,3 +72,18 @@ def test_a_line_said_for_the_first_time_is_not_called_said_before():
     low = {"added": {"noul": 0.1}, "meaning": {"noul": 0.9}}
     assert judge(job, low, "봉식아, 내가 아까 말했잖아. 벨트는 6시까지 케이스에 있었다니까!")[0] == ["again"]   # react-impress-rude 턴 2
     assert judge({**job, "told": job["lines"]}, low, "봉식아, 내가 아까 말했잖아. 벨트는 6시까지 케이스에 있었다니까!")[0] == []
+
+
+def test_a_lead_names_its_topic_word_for_word():
+    job = {"kind": "answer", "says": ["답할 것이 없다"], "lines": [], "quiet": True, "leads": ["벨트"]}
+    low = {"added": {"noul": 0.1}, "quiet": {"noul": 0.9}}
+    # c4aae5 턴 5: the lead was in the job and the answer never named it
+    assert judge(job, low, "봉식아, 내가 지금 제정신이겠냐? 머리만 아파서 죽겠는데.")[0] == ["lead"]
+    assert judge(job, low, "봉식아, 벨트 얘기라면 나도 아는 게 좀 있다.")[0] == []
+
+
+def test_the_text_kept_is_never_a_repeat_when_another_draft_is_not():
+    checks = [{"text": "같은 말", "failed": ["repeat"]}, {"text": "다른 말", "failed": ["added", "length"]},
+              {"text": "같은 말", "failed": ["repeat"]}]
+    assert pick_best(checks) == "다른 말"
+    assert pick_best([{"text": "첫 글", "failed": []}]) == "첫 글"

@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { pressed } from '@/components/ui/Button';
 import { text } from '@/design/ui';
+import { splitTopics } from '@/logic/topics';
 import type { Entry } from '@/logic/useGame';
 import { findHue } from './speaker';
 
@@ -54,7 +55,13 @@ function Line({ entry, met, typing, onNote }: {
   if (entry.who) {
     return (
       <Speaker who={entry.who} met={met}>
-        {typing ? <Typing /> : <Text className={text()}>{entry.text}</Text>}
+        {typing ? <Typing /> : (
+          <Text className={text()}>
+            {splitTopics(entry.text, entry.topics).map((part, i) => (
+              part.topic ? <Text key={i} className={text({ kind: 'topic' })}>{part.text}</Text> : part.text
+            ))}
+          </Text>
+        )}
       </Speaker>
     );
   }

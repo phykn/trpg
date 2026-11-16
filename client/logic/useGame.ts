@@ -13,7 +13,7 @@ export type Entry = { key: string; turn: number } & (
   | { kind: 'move'; text: string }
   | { kind: 'roll'; text: string; won: boolean }
   | { kind: 'note'; text: string; lines: number[] }
-  | { kind: TextKind; slot: number; who: string | null; text: string }
+  | { kind: TextKind; slot: number; who: string | null; text: string; topics?: string[] }
 );
 
 type Pending =

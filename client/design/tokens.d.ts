@@ -5,6 +5,7 @@ export const colors: {
   danger: { fg: string };
   health: { fg: string };
   gold: { fg: string; muted: string };
+  topic: { fg: string };
   speaker: Record<1 | 2 | 3 | 4 | 5 | 6, string>;
   overlay: string;
 };

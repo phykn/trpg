@@ -47,7 +47,7 @@ export type FeedItem =
   | { kind: 'move'; text: string }
   | { kind: 'roll'; text: string; won: boolean }
   | { kind: 'note'; text: string; lines: number[] }
-  | { kind: TextKind; who: string | null; slot: number };
+  | { kind: TextKind; who: string | null; slot: number; topics?: string[] };
 
 export type PastTurn = { kind: 'turn'; turn: number; said: string | null; feed: FeedItem[]; text: boolean };
 

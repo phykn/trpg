@@ -1,6 +1,6 @@
 from .locale import ko
 from .models import ModelUnavailable
-from .names import show_name
+from .names import show_line, show_name
 from .rules.act import find_path, list_blocks_here, list_topics
 from .rules.state import list_people_here
 
@@ -72,7 +72,7 @@ def make_questions(story, state):
         others = [show_name(story, "사람", a[3:]) for a in state["notebook"] if a.startswith("사람 ") and a[3:] != person]
         kinds = {"topic": f"{name}에게 사건이나 {', '.join(others) or '다른 사람'}에 관해 묻는다",
                  "chat": f"인사나 날씨, 부탁, 넋두리, 농담, {name} 자신이나 가족에 관한 잡담처럼 사건과 상관없는 말이다",
-                 "look": "누구에게 묻지 않고 주위를 둘러보거나 이곳을 살펴본다"}
+                 "look": "누구에게 묻지 않고 주위를 둘러보거나, 이곳이나 수첩의 물건을 들여다보거나 살펴본다"}
     else:
         kinds = {"look": "이곳에 머물며 둘러보거나 혼잣말을 한다"}
     locks = ", ".join(list_locks(story, state).values())
@@ -90,6 +90,9 @@ def make_questions(story, state):
     topics = {t: describe_topic(story, person, t) for t in list_topics(story, state, person)} if person else {}
     if topics:
         questions["topic"] = choice("어느 화제를 묻는가", {**topics, NO_TOPIC: "위의 어느 화제도 아니다"})
+    things = list_things(story, state)
+    if things:
+        questions["thing"] = choice("무엇을 들여다보는가", {**things, NO_TOPIC: "어느 것도 아니다. 주위를 둘러보거나 다른 일을 한다"})
     if person:
         questions["impression"] = ask_impression(story, person)
         questions["deed"] = {"type": "noul", "instructions": "이 문장이 상대에게 하는 말이 아니라 플레이어가 하는 짓을 서술하는가",
@@ -101,6 +104,12 @@ def make_questions(story, state):
                             "criteria": {"true": "서로 다른 두 가지를 묻는다",
                                          "false": "한 가지를 묻거나, 같은 것을 말을 바꿔 거듭 묻는다"}}
     return questions
+
+
+def list_things(story, state):
+    """What can be looked at by name: what the notebook has seen here, and the items in hand (game/07 2절)."""
+    return {a: show_line(story, a) for a in state["notebook"] if story.lines[a].kind == "볼 것" and (
+        story.lines[a].place == state["place"] or story.things[story.lines[a].name].item)}
 
 
 def list_locks(story, state):
@@ -194,7 +203,8 @@ def pick_deed(kind, answers, questions, locks):
     if kind == "move":
         return {"kind": "move", "place": answers["place"]["choice"]}
     if kind == "look":
-        return {"kind": "look"}
+        thing = answers["thing"]["choice"] if "thing" in questions else NO_TOPIC
+        return {"kind": "look", **({"thing": thing} if thing != NO_TOPIC else {})}
     on = next((answers[key]["choice"] for key in ("on", "lock") if key in questions), None)
     if "on" in questions and on not in locks:
         return {"kind": "look"}   # done to someone not chosen: writing to no one looks around (game/07 2절)

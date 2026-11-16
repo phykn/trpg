@@ -16,6 +16,7 @@ METHOD_STATS = {"soothe": "charm", "press": "might", "trick": "wit", "sneak": "s
 TALK_METHODS = ("soothe", "press", "trick")
 LOCK_METHODS = ("sneak", "force")
 RUMOR_DELAY = 2   # cells before close people hear of an impression (game/04 4절)
+MISSES = 2   # talk that goes nowhere this many times in a row leads to a topic (game/04 5절)
 
 
 class Refused(ValueError):
@@ -191,16 +192,20 @@ class Turn:
         elif kind == "action" and (person or heard["method"] in LOCK_METHODS):
             self.try_action(person, heard["method"], heard.get("target"))
         elif person is None or kind == "look":
-            self.do_look()
+            self.do_look(heard.get("thing"))
         elif kind == "topics":
             self.talk_to(person)
             self.ask_topics(person, heard["topics"])
         elif kind == "none":
             self.talk_to(person)
             self.pass_on(person)
-        elif kind in ("chat", "unsure"):
+        elif kind == "chat":
             self.talk_to(person)
-            self.talk.append({kind: person, **({"topics": heard["topics"]} if kind == "unsure" else {})})
+            self.talk.append({"chat": person})
+            self.count_miss(person)
+        elif kind == "unsure":
+            self.talk_to(person)
+            self.talk.append({"unsure": person, "topics": heard["topics"]})
         else:
             raise Refused(f"unknown reading {kind!r}")
         if heard.get("guess") and kind in ("none", "chat", "unsure") and person:
@@ -220,6 +225,7 @@ class Turn:
         if method == "press" and "위협" not in [c.get("impression") for c in self.changes if c["op"] == "impress"]:
             self.impress(person, "위협")
         self.talk.append({"try": person, "method": method})
+        self.count_miss(person)
 
     def guess_action(self, person, method, target):
         """What only looks like an action leaves no impression; the turn keeps it so the view offers its dice."""
@@ -267,10 +273,14 @@ class Turn:
         return None
 
     def pass_on(self, person):
-        passes = self.state["talks"][person]["passes"] + 1
-        self.change("count", person=person, topic=None, value=passes)
         self.talk.append({"pass": person})
-        if passes >= 3:
+        self.count_miss(person)
+
+    def count_miss(self, person):
+        """Talk that went nowhere: a pass, chat, an action on the person. The second in a row leads (game/04 5절)."""
+        misses = self.state["talks"][person]["passes"] + 1
+        self.change("count", person=person, topic=None, value=misses)
+        if misses >= MISSES:
             self.lead(person, None)
 
     def lead(self, person, asked):
@@ -295,9 +305,12 @@ class Turn:
             if find_stance(self.story, self.state, person, topic) == "꺼린다" and block not in self.state["withheld"]:
                 self.change("withhold", block=block)
 
-    def do_look(self):
+    def do_look(self, thing=None):
+        """Looking around; a thing named in the notebook is looked at closely too (game/07 2절)."""
+        if thing is not None and thing not in self.state["notebook"]:
+            raise Refused("look at something in the notebook")
         self.look_around()
-        self.talk.append({"look": self.state["place"]})
+        self.talk.append({"look": self.state["place"], **({"thing": thing} if thing else {})})
 
     def look_around(self):
         if self.state["place"] not in self.state["looked"]:

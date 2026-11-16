@@ -12,13 +12,14 @@ DAWN = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
 
 class FakeDecision:
     def __init__(self, kind, topics=None, two=0.1, place="숲길", second="_none", impression=None, method="press", deed=0.1,
-                 kinds=None, on="잠김 장부 궤짝"):
+                 kinds=None, on="잠김 장부 궤짝", thing="_none"):
         impression = impression or {"_none": 0.9}
         self.answers = {"kind": {"choice": kind, "probabilities": kinds or {kind: 0.9}}, "two": {"noul": two},
                         "deed": {"noul": deed},
                         "place": {"choice": place, "probabilities": {}}, "second": {"choice": second, "probabilities": {}},
                         "method": {"choice": method, "probabilities": {method: 0.9}},
                         "on": {"choice": on, "probabilities": {on: 0.9}},
+                        "thing": {"choice": thing, "probabilities": {thing: 0.9}},
                         "impression": {"choice": max(impression, key=impression.get), "probabilities": impression}}
         self.asked = []
         if topics:
@@ -145,3 +146,11 @@ def test_an_action_under_half_the_vote_is_read_as_the_runner_up_unless_a_deed_is
     assert got["kind"] == "chat" and got["guess"] == {"method": "press", "target": None}
     told = FakeDecision("action", {"징수관": 0.1, "_none": 0.9}, deed=0.83, kinds=kinds)   # "태오야, 제발 도와줘, 하고 사정한다"
     assert read(told)["kind"] == "action"
+
+
+def test_a_thing_here_named_while_looking_is_kept_and_things_elsewhere_are_not_offered():
+    decision = FakeDecision("look", thing="볼 것 목 자국", place="약초꾼 오두막")
+    assert read(decision, "곳 숲길") == {**read(decision, "곳 숲길"), "kind": "look", "thing": "볼 것 목 자국"}
+    offered = decision.questions["thing"]["criteria"]
+    assert "볼 것 목 자국" in offered and "볼 것 제단의 초" not in offered
+    assert "thing" not in read(FakeDecision("look", place="약초꾼 오두막"), "곳 숲길")

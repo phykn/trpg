@@ -133,6 +133,7 @@ def make_answer(story, before, after, turn, person, past):
     return {"kind": "answer", "person": show_name(story, "사람", person), "bio": story.people[person].bio,
             "attitude": f"믿음 {LEVELS[attitude['trust']]}, 두려움 {LEVELS[attitude['fear']]}",
             "said": find_said(story, turn), "says": says, "lines": lines, "quiet": not lines and bool(says),
+            "leads": [item["lead"].split(".", 1)[1] for item in turn["talk"] if "lead" in item],
             "bet": turn["action"]["do"] == "bet",
             "where": ", ".join(filter(None, [show_name(story, "곳", after["place"]),
                                              ko.clock(clock.start + after["spent"] * clock.step) if clock else None])),
@@ -193,13 +194,18 @@ def tell_item(story, turn, item):
     if kind == "pass":
         return "내민 것이 자기와 무슨 상관이냐는 듯 받아넘긴다" if turn["action"]["do"] == "present" else "답할 것이 없다"
     if kind == "lead":
-        return f'"{value.split(".", 1)[1]}"에 관해서라면 할 말이 있다는 듯 운을 뗀다'
+        return tell_lead(value.split(".", 1)[1])
     if kind == "unsure":
         return f"무엇을 묻는지 되묻는다: {' / '.join(item['topics'])}"
     if kind == "try":   # a guessed action only offers buttons; the answer is the reading's
         return None if item.get("guess") else f"{ko.TRIES[item['method']]}. 그 행동에 반응한다"
     return {"withhold": "이 화제는 얼버무리며 말해 주지 않는다. 말하지 않는 까닭은 지어내지 않는다",
             "done": "더 말할 것이 없다"}.get(kind)
+
+
+def tell_lead(topic):
+    # Told only to hint, gemma4 dropped the name every time (2026-11-16); the check now asks for it word for word.
+    return f'"{topic}"라는 말을 그대로 넣어, 그 일이라면 아는 게 있다는 듯 운을 뗀다. 내용은 말하지 않는다'
 
 
 def find_said(story, turn):
@@ -221,6 +227,9 @@ def make_scene(story, before, after, turn):
     writes = [c["line"] for c in turn["changes"] if c["op"] == "write"]
     happening = ["당신이 주위를 찬찬히 둘러본다"] if looking else []
     for item in turn["talk"]:
+        if item.get("thing"):
+            happening += tell_thing(story, item["thing"])
+    for item in turn["talk"]:
         happening += tell_lock(story, turn, after, item)
         if "try" in item and not item.get("guess"):
             happening.append(ko.try_lock(item["method"], show_name(story, "볼 것", story.blocks[item["try"]].name)))
@@ -230,6 +239,12 @@ def make_scene(story, before, after, turn):
             "place": show_name(story, "곳", place), "desc": story.places[place].desc, "again": not first,
             "written": [show_line(story, a) for a in writes if story.lines[a].kind == "볼 것"], "happening": happening,
             "people": [show_name(story, "사람", p) for p in people], "doing": list_doing(story, after, people)}
+
+
+def tell_thing(story, addr):
+    line = story.lines[addr]
+    intro = story.things[line.name].intro if line.name in story.things else None
+    return [f"당신이 {ko.eul(show_line(story, addr))} 눈여겨본다", *filter(None, [line.text, intro])]
 
 
 def tell_lock(story, turn, after, item):

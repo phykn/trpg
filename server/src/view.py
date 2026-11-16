@@ -7,6 +7,7 @@ from .rules.act import (
     find_bet_bonus,
     find_path,
     list_blocks_here,
+    list_topics,
     was_tried,
 )
 from .rules.state import STATS, judge_ending, list_people_here
@@ -237,8 +238,11 @@ class ViewMaker:
                 "missed": {k: met[k] + unmet[k] for k in met}}
 
 
-def make_feed(story, turn, ids, opening=()):
-    """`opening` holds the lines written before the first turn; the first turn tells them as its own notes."""
+def make_feed(story, turn, ids, opening=(), after=None):
+    """`opening` holds the lines written before the first turn; the first turn tells them as its own notes.
+
+    With `after`, the state after the turn, a person's text carries the topics of theirs not yet heard, which the
+    screen underlines where the text names them (game/04 5절)."""
     changes = turn["changes"]
     if turn["action"]["do"] == "stats":
         changes = [{"op": "write", "line": a} for a in opening] + changes
@@ -249,7 +253,8 @@ def make_feed(story, turn, ids, opening=()):
     dice = turn["dice"]
     if dice:
         feed.append({"kind": "roll", "text": ko.roll(dice["method"], dice["eyes"], dice["total"], NEED), "won": dice["won"]})
-    texts = [{"kind": s["kind"], "who": s.get("person") and show_name(story, "사람", s["person"]), "slot": i}
+    texts = [{"kind": s["kind"], "who": s.get("person") and show_name(story, "사람", s["person"]), "slot": i,
+              **({"topics": list_unheard(story, after, s["person"])} if after and s.get("person") else {})}
              for i, s in enumerate(list_slots(story, turn))]
     lead = [t for t in texts if t["kind"] in ("text", "ending")]
     return feed + lead + make_notes(story, changes, ids) + texts[len(lead):]
@@ -288,3 +293,9 @@ def make_notes(story, changes, ids):
             line = story.lines[change["line"]]
             add(("judge", line.addr), ko.judged(show_name(story, "사람", line.name), change["verdict"]), ids[line.addr])
     return list(notes.values())
+
+
+def list_unheard(story, state, person):
+    heard = {story.lines[a].topic for a in state["notebook"]
+             if story.lines[a].kind == "말" and story.lines[a].name == person}
+    return [t for t in list_topics(story, state, person) if t not in heard]

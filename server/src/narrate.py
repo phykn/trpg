@@ -33,7 +33,8 @@ REASONS = {"added": "받은 것에 없는 사람, 물건, 때, 곳을 더했다"
            "speech": "인물의 대사를 지어냈다. 따옴표 없이 몸짓만 그린다",
            "repeat": "앞서 한 대답을 되풀이했다. 플레이어가 방금 한 말에 맞춰 다르게 받아친다",
            "again": "처음 하는 말인데 아까 말했다고 했다. 처음 말하듯 쓴다",
-           "bracket": "괄호를 썼다. 괄호 없이 글로만 쓴다"}
+           "bracket": "괄호를 썼다. 괄호 없이 글로만 쓴다",
+           "lead": "운을 떼야 할 화제의 이름을 그대로 말하지 않았다"}
 
 
 class Narrator:
@@ -56,8 +57,14 @@ class Narrator:
             note = "이 글은 " + ", ".join(REASONS[f] for f in failed) + ". 지킬 것을 지켜 다시 쓴다."
             if "repeat" in failed:   # gemma4 wrote the same sentence again three times when only told why
                 note += f' "{text}"와 겹치는 말은 쓰지 않는다.'
+            if "lead" in failed:
+                note += " " + ", ".join(f'"{name}"' for name in job["leads"]) + "라는 말을 그대로 넣는다."
             messages = [*messages, {"role": "assistant", "content": text}, {"role": "user", "content": note}]
             text = "".join([chunk async for chunk in self.llm.stream(messages, MAX_TOKENS[job["kind"]])])
+            yield {"type": "replace", "text": text}
+        best = pick_best(checks)
+        if best != text:
+            text = best
             yield {"type": "replace", "text": text}
         yield {"type": "result", "text": text, "checks": checks}
 
@@ -65,6 +72,11 @@ class Narrator:
         state = "받은 것:\n" + "\n".join(list_given(job)) + f"\n\n쓴 글:\n{text}"
         answers = await self.decision.decide(state, make_checks(job))
         return judge(job, answers, text)
+
+
+def pick_best(checks):
+    """The text to keep: the first that passed, else the least failed, and never one that says the same thing again."""
+    return min(checks, key=lambda c: ("repeat" in c["failed"], "lead" in c["failed"], len(c["failed"])))["text"]
 
 
 def make_messages(job):
@@ -153,6 +165,8 @@ def make_answer_prompt(job):
               "그 일을 이어 말하지 말고 누가 그러더냐고 되묻거나 말을 돌린다.")]
     if job["quiet"]:
         rules.append("화제의 내용은 한 마디도 말하지 않는다.")
+    if job.get("leads"):
+        rules.append("운을 떼는 화제의 이름(" + ", ".join(f'"{n}"' for n in job["leads"]) + ")은 대사에 그대로 넣는다.")
     if job.get("doing"):
         rules.append("지금 하는 일은 말투와 반응에만 묻어나게 하고, 몸짓을 따로 적지 않는다.")
     if job["lines"] and not set(job["lines"]) & set(job.get("told", [])):
@@ -228,6 +242,8 @@ def list_faults(job, text):
         faults.append("push")
     if kind == "dm" and re.search("[\"“”‘’]", text):
         faults.append("speech")
+    if kind == "answer" and any(name.replace(" ", "") not in text.replace(" ", "") for name in job.get("leads", [])):
+        faults.append("lead")
     if any(SequenceMatcher(None, r["answer"], text).ratio() >= REPEAT for r in job.get("recent", [])):
         faults.append("repeat")
     if kind == "answer" and job.get("lines") and not set(job["lines"]) & set(job.get("told", [])) and AGAIN.search(text):

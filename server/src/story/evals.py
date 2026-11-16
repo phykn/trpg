@@ -16,7 +16,7 @@ from ..models.llm import LLMClient
 from ..names import show_line, show_name
 from ..narrate import Narrator
 from ..rules.state import start_state
-from ..slots import LEVELS, list_doing
+from ..slots import LEVELS, list_doing, tell_lead
 from .load import StoryError, load_story, parse_address
 
 GOAL_RIGHT = 0.85
@@ -159,6 +159,10 @@ def list_text_jobs(story):
                                                         "quiet": True}))
         jobs.append((f"넘김 {name}", {**base, "said": "이 마을에서 수상한 사람을 본 적 있습니까?", "says": ["답할 것이 없다"], "lines": [],
                                      "quiet": True}))
+        led = next((t for t, entry in person.topics.items() if entry.stance != "꺼린다"), None)
+        if led:
+            jobs.append((f"운 {name}.{led}", {**base, "said": "그래서 뭐.", "says": ["답할 것이 없다", tell_lead(led)],
+                                                "lines": [], "quiet": True, "leads": [led]}))
         jobs.append((f"인상 {name}", {**base, "said": "아까는 내가 좀 심했소.", "says": [], "lines": [], "quiet": False,
                                      "impressions": [f"무례({ko.IMPRESSIONS['무례']}): 여러 번"]}))
     for name, place in story.places.items():
