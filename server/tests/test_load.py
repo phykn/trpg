@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from src.rules.act import does_fit
 from src.story.load import StoryError, StoryFile, find_missing, load_story, read_story
 
 SKELETON = Path(__file__).resolve().parents[2] / "scenarios" / "skeleton"
@@ -72,3 +73,10 @@ def test_a_key_written_twice_stops_reading(tmp_path):
     (tmp_path / "story.yaml").write_text(text, encoding="utf-8")
     with pytest.raises(StoryError, match="appears twice"):
         read_story(tmp_path)
+
+
+def test_a_lie_can_fall_to_any_of_several_facts():
+    dawn = load_story(Path(__file__).resolve().parents[2] / "scenarios" / "dawn")
+    block = dawn.blocks["거짓말 고드릭.그 뒤의 일"]
+    assert block.wants == ("밤에 나간 수레", "옮겨진 시신")
+    assert does_fit(dawn, "볼 것 마른 장화", block) and not does_fit(dawn, "볼 것 제단의 초", block)

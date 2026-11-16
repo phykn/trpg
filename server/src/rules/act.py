@@ -63,6 +63,12 @@ def find_path(story, state, place):
     return paths.get(place)
 
 
+def was_tried(story, state, line, target):
+    """Whether this present already failed while the target held nothing it does not hold now, so it fails again."""
+    here = [b.addr for b in list_blocks_here(story, state) if b.addr == target or b.name == target and b.kind != "잠김"]
+    return any(t["line"] == line and t["target"] == target and set(here) <= set(t["blocks"]) for t in state["tried"])
+
+
 def list_blocks_here(story, state):
     here = list_people_here(story, state)
     blocks = []
@@ -80,7 +86,7 @@ def does_fit(story, addr, block):
     line = story.lines[addr]
     if line.branch == "거짓말" or block.kind == "꺼림" and line.kind == "말" and line.name == block.name:
         return False
-    return block.wants == line.shows or block.wants in line.props
+    return any(want == line.shows or want in line.props for want in block.wants)
 
 
 def find_bet_bonus(story, state, target, method):
@@ -274,6 +280,7 @@ class Turn:
         if fits:
             self.write_up()
             return
+        self.change("try", line=line, target=target, blocks=sorted(b.addr for b in blocks))
         if target in self.story.people:
             self.pass_on(target)
         else:

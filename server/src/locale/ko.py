@@ -32,16 +32,20 @@ def hint(text):
     return f"실마리: {text}"
 
 
-def present_to(person):
-    return f"{person}에게 내민다 · 틀리면 1턴"
+def cost(tried):
+    return "아까 통하지 않았다 · 1턴" if tried else "틀리면 1턴"
 
 
-def use_item(item):
-    return f"{eul(item)} 쓴다 · 틀리면 1턴"
+def present_to(person, tried=False):
+    return f"{person}에게 내민다 · {cost(tried)}"
 
 
-def use_on(lock):
-    return f"{lock}에 쓴다 · 틀리면 1턴"
+def use_item(item, tried=False):
+    return f"{eul(item)} 쓴다 · {cost(tried)}"
+
+
+def use_on(lock, tried=False):
+    return f"{lock}에 쓴다 · {cost(tried)}"
 
 
 def bet(method, chance, topic=None, person=None):
@@ -105,6 +109,9 @@ def hinted(name):
 
 def opened(name):
     return f"{name} — {OPENED}"
+
+
+UNMET = {"lies": "듣지 못함", "held": "꺼내지 못함", "locks": "찾지 못함"}
 
 
 def missed_topic(person, topic):

@@ -28,3 +28,13 @@ def test_the_badge_counts_every_unread_line():
     lines = ["곳 숲길", "말 넬.해 질 녘.참말", "볼 것 목 자국"]
     state = {**start_state(DAWN, 0), "notebook": dict.fromkeys(lines, 1), "read": ["곳 숲길"]}
     assert make_view(DAWN, state)[0]["badge"] == 2
+
+
+def test_the_ending_marks_what_was_never_met():
+    blank = {"who": None, "how": None, "why": None}
+    state = {**start_state(DAWN, 0), "stats": {}, "conclusion": blank,
+             "notebook": dict.fromkeys(["말 브람.징수관.거짓말"], 1), "withheld": ["꺼림 토빈.숲길에서 본 것"]}
+    missed = make_view(DAWN, state)[0]["ending"]["missed"]
+    assert missed["lies"][0].startswith("브람") and "듣지 못함" not in missed["lies"][0]
+    assert all(t.endswith("· 듣지 못함") for t in missed["lies"][1:])
+    assert missed["held"][0] == "토빈 — 숲길에서 본 것" and missed["held"][1].endswith("· 꺼내지 못함")

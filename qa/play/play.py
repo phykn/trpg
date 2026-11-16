@@ -182,6 +182,7 @@ def main():
     p.add_argument("run")
     for q in ("who", "how", "why"):
         p.add_argument(f"--{q}", type=int)
+    p.add_argument("--blank", action="store_true", help="hand in with all three blank")
     sub.add_parser("retry", help="send again the command or ask again for the text that did not arrive").add_argument("run")
     sub.add_parser("look", help="reload the game and show the screen").add_argument("run")
     args = parser.parse_args()
@@ -212,6 +213,8 @@ def main():
             run.send({"read": new})
         run.show_lines(args.which, new)
     elif args.cmd == "conclude":
+        if not args.blank and all(getattr(args, q) is None for q in ("who", "how", "why")):
+            raise SystemExit("누가, 어떻게, 왜가 모두 비어 있습니다. 이대로 내려면 --blank")   # the phone asks twice too
         run.send({"conclude": {q: getattr(args, q) for q in ("who", "how", "why")}})
     elif args.cmd == "retry":
         if run.state.get("pending"):

@@ -66,7 +66,7 @@ class Topic(Shape):
     broken: Branch | None = Field(None, alias="깨진 뒤")
     wants: str | None = Field(None, alias="바라는 것")
     hint: str | None = Field(None, alias="실마리")
-    breaks: str | None = Field(None, alias="깨는 사실")
+    breaks: str | list[str] | None = Field(None, alias="깨는 사실")
     asks: list[str] = Field([], alias="묻는 말")
     cond: str | None = Field(None, alias="나오는 조건")
 
@@ -338,8 +338,8 @@ def find_missing(raw):
                     need(f"말 {name}.{topic}.{branch}의 보여 주는 사실", b.shows, "사실")
                 for told in b.tells:
                     need(f"말 {name}.{topic}.{branch}의 알리는 것", told, "곳", "사람")
-            if t.breaks:
-                need(f"{where}의 깨는 사실", t.breaks, "사실")
+            for fact in [t.breaks] if isinstance(t.breaks, str) else t.breaks or []:
+                need(f"{where}의 깨는 사실", fact, "사실")
             if t.wants:
                 need(f"{where}의 바라는 것", t.wants, "사실", "성질")
             if t.cond:
@@ -383,7 +383,7 @@ class Block(Record):
     kind: str
     name: str
     topic: str | None = None
-    wants: str
+    wants: tuple[str, ...]   # any one of them opens it
     hint: str | None = None
     hard: bool = False
     owner: str | None = None
@@ -444,15 +444,16 @@ class Story:
         for name, person in self.people.items():
             for topic, t in person.topics.items():
                 if t.stance == "거짓말한다":
-                    self.add_block("거짓말", [name, topic], topic=topic, wants=t.breaks,
+                    self.add_block("거짓말", [name, topic], topic=topic,
+                                   wants=(t.breaks,) if isinstance(t.breaks, str) else tuple(t.breaks),
                                    opens=[format_address("말", [name, topic, "깨진 뒤"])], cond=t.cond)
                 elif t.stance == "꺼린다":
-                    self.add_block("꺼림", [name, topic], topic=topic, wants=t.wants, hint=t.hint,
+                    self.add_block("꺼림", [name, topic], topic=topic, wants=(t.wants,), hint=t.hint,
                                    opens=[format_address("말", [name, topic, "풀린 뒤"])], cond=t.cond)
         for name, thing in self.things.items():
             if thing.lock:
                 kinds = ["볼 것" if inner in self.things else "곳" for inner in thing.lock.contents]
-                self.add_block("잠김", [name], wants=thing.lock.weak, hint=thing.lock.hint, hard=thing.lock.hard,
+                self.add_block("잠김", [name], wants=(thing.lock.weak,), hint=thing.lock.hint, hard=thing.lock.hard,
                                owner=thing.lock.owner, cond=thing.cond,
                                opens=[format_address(k, [i]) for k, i in zip(kinds, thing.lock.contents)])
 

@@ -10,7 +10,7 @@ def start_state(story, seed):
     state = {
         "seed": seed, "turn": 0, "stats": None,
         "notebook": {}, "struck": [], "withheld": [], "hints": [], "judged": {}, "read": [],
-        "opened": [], "closed": [], "partner": None,
+        "opened": [], "closed": [], "tried": [], "partner": None,
         "attitudes": {name: {"trust": p.attitude.trust, "fear": p.attitude.fear} for name, p in story.people.items()},
         "talks": {name: {"topics": {}, "passes": 0, "done": False} for name in story.people},
         "spent": 0, "place": start, "visited": [start],
@@ -144,6 +144,9 @@ def apply_change(story, state, change, turn):
         new["partner"] = change["person"]
     elif op == "read":
         new["read"] = state["read"] + [a for a in change["lines"] if a not in state["read"]]
+    elif op == "try":
+        new["tried"] = [t for t in state["tried"] if (t["line"], t["target"]) != (change["line"], change["target"])] + [
+            {k: change[k] for k in ("line", "target", "blocks")}]
     elif op == "conclude":
         new["conclusion"] = {k: change[k] for k in ("who", "how", "why")}
     else:

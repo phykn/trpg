@@ -6,6 +6,7 @@ from .rules.act import (
     find_bet_bonus,
     find_path,
     list_blocks_here,
+    was_tried,
 )
 from .rules.state import STATS, judge_ending, list_people_here
 
@@ -151,17 +152,20 @@ class ViewMaker:
         partner = state["partner"]
         if line.kind in ("볼 것", "말") and partner:
             acts.append(self.add_act({"do": "present", "line": addr, "target": partner},
-                                     label=ko.present_to(show_name(self.story, "사람", partner))))
+                                     label=ko.present_to(show_name(self.story, "사람", partner),
+                                                         was_tried(self.story, state, addr, partner))))
         item = line.kind == "볼 것" and self.story.things[line.name].item
         for lock in self.locks if item else []:
             acts.append(self.add_act({"do": "present", "line": addr, "target": lock.addr},
-                                     label=ko.use_on(show_name(self.story, "볼 것", lock.name))))
+                                     label=ko.use_on(show_name(self.story, "볼 것", lock.name),
+                                                     was_tried(self.story, state, addr, lock.addr))))
         lock = self.story.blocks.get(f"잠김 {line.name}")
         if line.kind == "볼 것" and lock in self.locks:
             for other in state["notebook"]:
                 if self.story.lines[other].kind == "볼 것" and self.story.things[self.story.lines[other].name].item:
                     acts.append(self.add_act({"do": "present", "line": other, "target": lock.addr},
-                                             label=ko.use_item(show_name(self.story, "볼 것", self.story.lines[other].name))))
+                                             label=ko.use_item(show_name(self.story, "볼 것", self.story.lines[other].name),
+                                                               was_tried(self.story, state, other, lock.addr))))
             acts += self.list_bets(lock.addr, LOCK_METHODS)
         if line.kind == "말" and line.name in self.here and addr not in state["struck"] and addr not in state["judged"]:
             acts += self.list_bets(addr, TALK_METHODS, person=show_name(self.story, "사람", line.name))
@@ -178,17 +182,23 @@ class ViewMaker:
 
     def make_ending(self):
         ending = judge_ending(self.story, self.state)
-        missed = {"lies": [], "held": [], "locks": []}
-        for block in self.story.blocks.values():
+        missed, unmet = {"lies": [], "held": [], "locks": []}, {"lies": [], "held": [], "locks": []}
+        book = self.state["notebook"]
+        for block in self.story.blocks.values():   # what the player met first, then what they never came upon
             if block.addr in self.state["opened"]:
                 continue
             if block.kind == "거짓말":
-                missed["lies"].append(ko.said(show_name(self.story, "사람", block.name),
-                                              self.story.lines[f"말 {block.name}.{block.topic}.거짓말"].text))
+                line = f"말 {block.name}.{block.topic}.거짓말"
+                text = ko.said(show_name(self.story, "사람", block.name), self.story.lines[line].text)
+                kind, met = "lies", line in book
             elif block.kind == "꺼림":
-                missed["held"].append(ko.missed_topic(show_name(self.story, "사람", block.name), block.topic))
+                text = ko.missed_topic(show_name(self.story, "사람", block.name), block.topic)
+                kind, met = "held", block.addr in self.state["withheld"]
             else:
-                missed["locks"].append(self.story.lines[f"볼 것 {block.name}"].text)
+                line = f"볼 것 {block.name}"
+                text, kind, met = self.story.lines[line].text, "locks", line in book
+            (missed if met else unmet)[kind].append(text if met else f"{text} · {ko.UNMET[kind]}")
+        missed = {k: missed[k] + unmet[k] for k in missed}
         answers = {k: "blank" if v is None else "hit" if v else "miss" for k, v in ending["answers"].items()}
         return {"verdict": ending["verdict"], "answers": answers, "turn": self.state["turn"], "missed": missed}
 

@@ -184,7 +184,9 @@ def make_messages(job):
                  "플레이어는 지금 마주 보고 말을 건 사람이다. 플레이어에게 직접 말하고, '저 사람', '얘'처럼 남을 가리키듯 부르지 않는다.",
                  "할 말이 있으면 그 내용을 빠짐없이 말한다. 태도는 말투에만 드러내고, 모른다고 하거나 피하지 않는다.",
                  "할 말의 뜻을 바꾸지 않는다. 할 말에 없는 사람, 물건, 때, 곳을 더하지 않는다.",
-                 "할 말이 없으면 신상에 기대어 짧게 받아친다. 사건에 관한 것은 지어내지 않는다."]
+                 "할 말이 없으면 신상에 기대어 짧게 받아친다. 사건에 관한 것은 지어내지 않는다.",
+                 ("플레이어가 \"~했다면서요?\"처럼 할 말에 없는 일을 사실로 깔고 물으면, 했다고도 안 했다고도 하지 않는다. "
+                  "그 일을 이어 말하지 말고 누가 그러더냐고 되묻거나 말을 돌린다.")]
         if job["quiet"]:
             rules.append("화제의 내용은 한 마디도 말하지 않는다.")
         head = f"당신은 추리 게임 속 인물 {job['person']}의 목소리다."
@@ -193,7 +195,9 @@ def make_messages(job):
                  "받은 대목과 진실 풀이를 모두 담되 여덟 문장을 넘지 않는다." if job["kind"] == "ending"
                  else "두세 문장으로 쓴다.",
                  "지어내는 것은 날씨, 소리, 빛 같은 분위기뿐이다. 받은 것에 없는 사람, 물건, 흔적은 그리지 않는다.",
-                 "분위기는 곳의 모습과 어긋나지 않게 쓴다. '적막', '정적', '어둠' 같은 말을 버릇처럼 넣지 않는다."]
+                 "분위기는 곳의 모습과 어긋나지 않게 쓴다. '적막', '정적', '어둠' 같은 말을 버릇처럼 넣지 않는다.",
+                 ("이번에 적힌 것이 많으면 눈에 띄는 두세 가지만 그린다. 그린 것은 적힌 자리와 모양 그대로 쓰고, "
+                  "여럿을 한 자리에 묶거나 당신이 집어 들었다고 쓰지 않는다.")]
         if job.get("far"):
             rules.append("진행자가 \"그 사이\"로 시작해 다른 곳의 소식을 전하듯 쓴다. 당신은 그 자리에 없으므로 보고 듣는 것처럼 쓰지 않는다.")
         if job["kind"] == "ending":
@@ -230,10 +234,24 @@ def make_checks(job):
     return checks
 
 
+# Kanana's meaning check passes answers that drop the line (qa/findings.md); the share of each line's Hangul
+# syllables found in the answer catches them. On the AI testers' games (qa_test/runs/qa-1 to qa-6) answers that kept
+# their lines scored 0.69 and up, answers that dropped or bent one 0.44 and below.
+COVER = 0.5
+
+
+def cover(say, text):
+    letters = set(re.sub(r"[^가-힣]", "", say))
+    return len(letters & set(text)) / len(letters) if letters else 1
+
+
 def judge(job, answers, text):
     probs = {key: answers[key]["noul"] for key in make_checks(job)}
     failed = [key for key, p in probs.items() if (1 - p if key == "added" else p) < {
         "added": ADDED, "meaning": MEANING, "quiet": QUIET}[key]]
+    if job["kind"] == "answer" and not job["quiet"] and "meaning" not in failed and \
+            any(cover(say, text) < COVER for say in job["says"]):
+        failed.append("meaning")
     if count_sentences(text) > MAX_SENTENCES[job["kind"]] + 2 * max(0, len(job.get("says", [])) - 1):
         failed.append("length")
     if any(word in text for word in PROMPT_WORDS):

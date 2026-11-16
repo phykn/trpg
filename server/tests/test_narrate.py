@@ -55,12 +55,17 @@ def test_each_text_slot_gets_one_job_and_no_job_says_which_line_is_a_lie():
 def test_a_text_fails_on_low_checks_and_on_length():
     job = {"kind": "answer", "person": "브람", "bio": "", "attitude": "", "said": None, "says": ["말"], "quiet": False}
     assert set(make_checks(job)) == {"added", "meaning"}
-    assert judge(job, {"added": {"noul": 0.2}, "meaning": {"noul": 0.8}}, "한 문장.") == (
+    assert judge(job, {"added": {"noul": 0.2}, "meaning": {"noul": 0.8}}, "한 말.") == (
         [], {"added": 0.2, "meaning": 0.8})
     assert judge(job, {"added": {"noul": 0.9}, "meaning": {"noul": 0.4}}, "하나. 둘! 셋? 넷.")[0] == [
         "added", "meaning", "length"]
     assert count_sentences("……알았소, 그렇다면 말하리다. 해 지기 전에 떠났소") == 2
-    assert judge(job, {"added": {"noul": 0.2}, "meaning": {"noul": 0.8}}, "모르겠어요.")[0] == []   # a person keeps their own speech
+    assert judge(job, {"added": {"noul": 0.2}, "meaning": {"noul": 0.8}}, "말 모르겠어요.")[0] == []   # a person keeps their own speech
+    says = {**job, "says": ["징수관 나리가 집에 오셨었다.", "내가 잔 둘을 내갔다."]}
+    passing = {"added": {"noul": 0.1}, "meaning": {"noul": 0.9}}
+    assert judge(says, passing, "그건... 제가 잘 모르겠어요...")[0] == ["meaning"]   # qa-5 turn 46
+    assert judge(says, passing, "사실 징수관 나리가 집에 오셨었어요.")[0] == ["meaning"]   # the second line dropped
+    assert judge(says, passing, "사실 징수관 나리가 집에 오셨었어요... 제가 잔을 둘이나 내갔는걸요.")[0] == []
     dm, low = {"kind": "dm"}, {"added": {"noul": 0.1}}
     assert judge(dm, low, "그에게 물어보도록 하세요.")[0] == ["style"]
     assert judge(dm, low, "점잖은 얼굴이군요. 그에게 물어보십시오.")[0] == ["style"]

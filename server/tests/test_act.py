@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from src.rules.act import Refused, act, roll_dice
+from src.rules.act import Refused, act, roll_dice, was_tried
 from src.rules.state import start_state
 from src.story.load import load_story
 
@@ -80,7 +80,7 @@ def test_a_held_back_topic_is_withheld_then_opened_by_what_it_wants():
 def test_presenting_right_is_free_and_wrong_costs_a_cell_and_a_pass():
     state, rs = play(1, [STATS, ask("밤"), go("곡물 창고"), ask("그날 밤"), present("볼 것 쇠 지렛대", "한스"),
                          present(CREW, "한스"), present("볼 것 쇠 지렛대", LOCK)])
-    assert ops(rs[4]) == ["count", "spend"] and rs[4]["talk"] == [{"pass": "한스"}]
+    assert ops(rs[4]) == ["try", "count", "spend"] and rs[4]["talk"] == [{"pass": "한스"}]
     assert ops(rs[5]) == ["open", "strike", "write", "shift"]
     assert ops(rs[6]) == ["open", "write"] and rs[6]["changes"][1]["line"] == "볼 것 수레 자국"
     assert (state["spent"], state["struck"], state["attitudes"]["한스"]["fear"]) == (2, ["말 한스.그날 밤.거짓말"], 1)
@@ -146,3 +146,13 @@ def test_the_same_actions_make_the_same_game():
 def test_arriving_as_an_event_takes_a_thing_away_writes_only_what_is_left():
     state, _ = play(1, [STATS, ask("밤"), go("곡물 창고"), go("광장"), go("곡물 창고"), go("광장"), go("방앗간")])
     assert state["spent"] == 5 and "빚 문서" in state["lost"] and "볼 것 빚 문서" not in state["notebook"]
+
+
+def test_a_failed_present_is_known_until_the_person_holds_something_new():
+    lever = "볼 것 쇠 지렛대"
+    state, _ = play(1, [STATS, ask("밤"), go("곡물 창고"), present(lever, "한스")])
+    assert state["spent"] == 2 and was_tried(STORY, state, lever, "한스")
+    tried = {**start_state(STORY, 1), "place": "방앗간", "tried": [{"line": CREW, "target": "리사", "blocks": []}]}
+    assert was_tried(STORY, tried, CREW, "리사")
+    lamp = {**tried, "notebook": {"볼 것 꺼진 등잔": 1}}   # her held topic is out now; the line may yet answer it
+    assert not was_tried(STORY, lamp, CREW, "리사")

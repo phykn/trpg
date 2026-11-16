@@ -34,7 +34,7 @@ How to play. Every command goes through the shell player against the QA server, 
 - say {run} "말"            ask or say something in Korean to the person you face
 - do {run} <id> ["말"]      press a button; ids like a1 are printed under places (갈 곳), people (사람) and notebook lines
 - read {run} <group|line>   open the notebook: 곳, 사람, 물건, 본 것, 들은 말, or one line id with what you can do with it
-- conclude {run} --who <id> --how <id> --why <id>   the final answer, with notebook line ids
+- conclude {run} --who <id> --how <id> --why <id>   the final answer, with notebook line ids (all blank needs --blank)
 - look {run}  ·  retry {run}   show the screen again · resend what did not arrive
 Ids change every turn: take them from the latest output. The real game is a phone screen with the same content: a chat log (narration, the DM's remarks, answers, "수첩 · … 적음" notes), a top bar (place, time, turns left, the notebook with its unread count) and buttons.
 
