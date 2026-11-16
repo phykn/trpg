@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { ChatLog } from '@/components/game/ChatLog';
 import { ConcludeSheet, PickSheet, type Picks, type Question } from '@/components/game/ConcludeSheet';
 import { InputBar } from '@/components/game/InputBar';
+import { OffersRow } from '@/components/game/OffersRow';
 import { LineSheet } from '@/components/game/LineSheet';
 import { MovesSheet } from '@/components/game/MovesSheet';
 import { NotebookSheet } from '@/components/game/NotebookSheet';
@@ -72,6 +73,7 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText }
       <View className="border-t border-border-default">
         <PeopleRow people={view.people} met={met} look={playing ? view.place.look : null} locked={locked}
           onAct={(id) => send({ do: id })} />
+        <OffersRow offers={playing ? view.offers : []} locked={locked} onAct={act} />
         {phase === 'stuck' || phase === 'text_error' ? (
           <View className="px-3 py-2"><Resend onResend={phase === 'stuck' ? onResend : onRetryText} /></View>
         ) : (

@@ -29,6 +29,7 @@ export type GameView = {
   };
   time: { text: string; left: number; last: boolean };
   people: { name: string; partner: boolean; act: string | null }[];
+  offers: Act[];
   notebook: Record<Group, Line[]>;
   badge: number;
   conclude: { who: number[]; clues: number[] } | null;

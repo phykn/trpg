@@ -11,6 +11,7 @@ export const ko = {
   say: '말하기…',
   send: '보내기',
   people: '이곳',
+  offers: '걸기',
   look: '둘러본다',
   moves: '갈 곳',
   unvisited: '안 가 봄',
