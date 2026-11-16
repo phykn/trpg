@@ -1,21 +1,25 @@
 import os
-from dataclasses import dataclass
 from pathlib import Path
+from typing import Annotated
 
-from dotenv import dotenv_values
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 SERVER_DIR = Path(__file__).resolve().parents[1]
-KEYS = ("HOST", "PORT", "BASIC_AUTH_USER", "BASIC_AUTH_PASS", "CORS_ORIGINS", "SCENARIO_DIR", "SAVE_DIR",
-        "DECISION_MODEL", "DECISION_BASE_URL", "LLM_MODEL", "LLM_BASE_URL")
 
 
-@dataclass(frozen=True)
-class Settings:
+class Settings(BaseSettings):
+    """Every setting. pydantic-settings reads the process environment over .env.shared over .env.<APP_ENV>."""
+
+    model_config = SettingsConfigDict(
+        env_file=(SERVER_DIR / ".env.shared", SERVER_DIR / f".env.{os.environ.get('APP_ENV', 'dev')}"),
+        extra="ignore", frozen=True)
+
     host: str
     port: int
     basic_auth_user: str
     basic_auth_pass: str
-    cors_origins: list
+    cors_origins: Annotated[list[str], NoDecode]
     scenario_dir: Path
     save_dir: Path
     decision_model: str
@@ -23,11 +27,22 @@ class Settings:
     llm_model: str
     llm_base_url: str
 
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def split_origins(cls, value):
+        return [o.strip() for o in value.split(",") if o.strip()] if isinstance(value, str) else value
+
+    @field_validator("scenario_dir", "save_dir", mode="after")
+    @classmethod
+    def from_server_dir(cls, value):
+        return (SERVER_DIR / value).resolve()
+
 
 def local_settings():
     # Personal env files never reach `--local`; only the models and their addresses may come from the process.
     env = os.environ
     return Settings(
+        _env_file=None,
         host="127.0.0.1", port=8000, basic_auth_user="local", basic_auth_pass="local",
         cors_origins=["http://localhost:8090", "http://127.0.0.1:8090"],
         scenario_dir=SERVER_DIR.parent / "scenarios", save_dir=SERVER_DIR.parent / "saves" / "game",
@@ -39,19 +54,4 @@ def local_settings():
 
 
 def env_settings():
-    env = {}
-    for path in (SERVER_DIR / ".env.shared", SERVER_DIR / f".env.{os.environ.get('APP_ENV', 'dev')}"):
-        if path.is_file():
-            env.update({k: v for k, v in dotenv_values(path).items() if v is not None})
-    env.update(os.environ)
-    missing = [k for k in KEYS if k not in env]
-    if missing:
-        raise ValueError(f"missing {', '.join(missing)}")
-    return Settings(
-        host=env["HOST"], port=int(env["PORT"]),
-        basic_auth_user=env["BASIC_AUTH_USER"], basic_auth_pass=env["BASIC_AUTH_PASS"],
-        cors_origins=[o.strip() for o in env["CORS_ORIGINS"].split(",") if o.strip()],
-        scenario_dir=(SERVER_DIR / env["SCENARIO_DIR"]).resolve(), save_dir=(SERVER_DIR / env["SAVE_DIR"]).resolve(),
-        decision_model=env["DECISION_MODEL"], decision_base_url=env["DECISION_BASE_URL"],
-        llm_model=env["LLM_MODEL"], llm_base_url=env["LLM_BASE_URL"],
-    )
+    return Settings()

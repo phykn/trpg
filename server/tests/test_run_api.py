@@ -1,5 +1,3 @@
-from dataclasses import replace
-
 import pytest
 import run_api
 from src.config import local_settings
@@ -7,7 +5,7 @@ from src.config import local_settings
 
 def start(monkeypatch, **changes):
     monkeypatch.setattr("sys.argv", ["run_api.py", "--local"])
-    monkeypatch.setattr(run_api, "local_settings", lambda: replace(local_settings(), **changes))
+    monkeypatch.setattr(run_api, "local_settings", lambda: local_settings().model_copy(update=changes))
     monkeypatch.setattr(run_api.uvicorn, "run", lambda *_args, **_kw: pytest.fail("the server started"))
     run_api.main()
 

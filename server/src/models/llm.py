@@ -1,7 +1,8 @@
-import json
 from dataclasses import dataclass
 
 import httpx
+import openai
+from openai import AsyncOpenAI
 
 from . import ModelUnavailable
 
@@ -21,22 +22,29 @@ LLM_MODELS = {
 
 
 class LLMClient:
+    """gemma4 behind an OpenAI-compatible server, through the openai SDK."""
+
     def __init__(self, base_url, model, transport=None):
         if model not in LLM_MODELS:
             raise ValueError(f"unknown llm {model!r}; one of {sorted(LLM_MODELS)}")
-        self.base_url = base_url.rstrip("/")
+        self.base_url = base_url
         self.name = model
         self.spec = LLM_MODELS[model]
         self.model = None
         self.transport = transport
 
+    def connect(self):
+        # A client per call: startup checks run in their own event loop, and a pooled connection cannot cross loops.
+        # The local server needs no key; retries would hide a model that is down.
+        http = httpx.AsyncClient(transport=self.transport) if self.transport else None
+        return AsyncOpenAI(base_url=self.base_url, api_key="local", max_retries=0, http_client=http)
+
     async def check(self):
         try:
-            async with httpx.AsyncClient(timeout=30.0, transport=self.transport) as client:
-                response = await client.get(f"{self.base_url}/models")
-            response.raise_for_status()
-            ids = [m["id"] for m in response.json()["data"] if m.get("loaded")]
-        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+            async with self.connect() as client:
+                listed = await client.models.list(timeout=30.0)
+            ids = [m.id for m in listed.data if (m.model_extra or {}).get("loaded")]
+        except (openai.APIError, ValueError) as exc:
             raise ModelUnavailable(f"llm: {type(exc).__name__}: {exc}") from None
         mine = [i for i in ids if any(name.lower() in i.lower() for name in self.spec.ids)]
         if not mine:
@@ -47,18 +55,17 @@ class LLMClient:
 
     async def stream(self, messages, max_tokens, timeout=120.0):
         # mlx-lm reads chat_template_kwargs and mlx-vlm the top-level flag, so both go, always off.
-        body = {"model": self.model, "messages": messages, "stream": True, "max_tokens": max_tokens,
-                "enable_thinking": False, "chat_template_kwargs": {"enable_thinking": False}, **self.spec.sampling}
+        sampling = dict(self.spec.sampling)
+        extra = {"top_k": sampling.pop("top_k"), "enable_thinking": False,
+                 "chat_template_kwargs": {"enable_thinking": False}}
         try:
-            async with (httpx.AsyncClient(timeout=timeout, transport=self.transport) as client,
-                        client.stream("POST", f"{self.base_url}/chat/completions", json=body) as response):
-                response.raise_for_status()
-                async for line in response.aiter_lines():
-                    data = line[5:].strip() if line.startswith("data:") else None
-                    if data == "[DONE]":
-                        return
-                    delta = data and json.loads(data)["choices"][0].get("delta", {}).get("content")
+            async with self.connect() as client:
+                chunks = await client.chat.completions.create(
+                    model=self.model, messages=messages, stream=True, max_tokens=max_tokens, timeout=timeout,
+                    extra_body=extra, **sampling)
+                async for chunk in chunks:
+                    delta = chunk.choices[0].delta.content if chunk.choices else None
                     if delta:
                         yield delta
-        except (httpx.HTTPError, ValueError, KeyError, IndexError) as exc:
+        except (openai.APIError, ValueError) as exc:
             raise ModelUnavailable(f"llm: {type(exc).__name__}: {exc}") from None
