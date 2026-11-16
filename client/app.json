@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "말과 주사위",
+    "name": "2d6 탐정",
     "slug": "trpg_client",
     "version": "0.0.5",
     "icon": "./assets/images/icon.png",

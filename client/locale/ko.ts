@@ -1,5 +1,5 @@
 export const ko = {
-  brand: '말과 주사위',
+  brand: '2d6 탐정',
   resume: '이어 하기',
   plus2: '+2',
   plus1: '+1',
