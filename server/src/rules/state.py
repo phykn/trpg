@@ -1,4 +1,7 @@
 STATS = ("charm", "might", "wit", "skill")
+# The common impressions and the attitude each leans (game/04 4절); a person's own impressions lean nowhere.
+IMPRESSIONS = {"다정": ("trust", 1), "위로": ("trust", 1), "칭찬": ("trust", 1), "선물": ("trust", 1),
+               "무례": ("trust", -1), "의심": ("trust", -1), "위협": ("fear", 1), "들킴": ("trust", -1)}
 
 
 class RuleError(ValueError):

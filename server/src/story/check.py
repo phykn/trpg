@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 from ..rules.act import Turn, does_fit, list_blocks_here, list_topics
-from ..rules.state import is_shown, list_people_here, start_state
+from ..rules.state import IMPRESSIONS, is_shown, list_people_here, start_state
 from .load import Story, StoryError, find_missing, read_story
 
 
@@ -44,7 +44,7 @@ class Checker:
     def run(self):
         return [
             self.check_lies(), self.check_holds(), self.check_truth(), self.check_reach(), self.check_time(),
-            self.check_events(), self.check_first(), self.check_unreached(), self.check_intros(),
+            self.check_events(), self.check_first(), self.check_unreached(), self.check_intros(), self.check_impressions(),
             *self.alert_size(), *self.alert_long(), *self.alert_asks(), *self.alert_necks(),
         ]
 
@@ -127,6 +127,17 @@ class Checker:
         missing = [f"사람 {p}" for p, person in self.story.people.items() if not person.intro]
         missing += [f"볼 것 {t}" for t, thing in self.story.things.items() if thing.item and not thing.intro]
         return judge("소개", missing)
+
+    def check_impressions(self):
+        failed = []
+        for name, person in self.story.people.items():
+            if len(person.impressions) > 2 or set(person.impressions) & set(IMPRESSIONS):
+                failed.append(f"사람 {name}의 인상: {', '.join(person.impressions)}")
+        for block in self.story.blocks.values():
+            known = {*IMPRESSIONS, *self.story.people[block.name].impressions} if block.kind != "잠김" else set()
+            if block.unlock and block.unlock not in known:
+                failed.append(f"{block.addr}의 풀리는 인상: {block.unlock}")
+        return judge("인상의 이름", failed)
 
     def alert_size(self):
         counts = {"막힘": len(self.story.blocks), "사람": len(self.story.people), "곳": len(self.story.places)}

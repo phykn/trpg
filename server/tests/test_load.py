@@ -90,3 +90,22 @@ def test_a_story_without_소개_still_reads_for_old_saves_but_fails_the_check():
             entry.pop("소개", None)
     results, _ = check_story(StoryFile.model_validate(data))
     assert ("떨어짐", "소개", "사람 오토; 사람 한스; 사람 리사; 볼 것 쇠 지렛대") in results
+
+
+def test_close_people_go_both_ways_and_blocks_carry_their_unlocking_impression():
+    story = load_story(SKELETON)
+    assert story.close == {"오토": ["한스"], "한스": ["오토"], "리사": []}
+    assert (story.blocks["꺼림 리사.새벽"].unlock, story.blocks["꺼림 리사.새벽"].unlock_count) == ("위로", 1)
+    assert story.blocks["거짓말 한스.그날 밤"].unlock_count == 2
+
+
+def test_impression_names_are_checked():
+    from src.story.check import check_story
+    data = skeleton_data()
+    data["사람"]["리사"]["인상"] = {"다정": "겹친다"}
+    data["사람"]["리사"]["화제"]["새벽"]["풀리는 인상"] = "없는 인상"
+    failed = [d for v, n, d in check_story(StoryFile.model_validate(data))[0] if n == "인상의 이름"]
+    assert failed == ["사람 리사의 인상: 다정; 꺼림 리사.새벽의 풀리는 인상: 없는 인상"]
+    data["사람"]["오토"]["화제"]["밤"]["풀리는 인상"] = "위로"
+    with pytest.raises(ValueError, match="풀리는 인상 is for"):
+        StoryFile.model_validate(data)

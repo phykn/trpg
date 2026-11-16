@@ -70,6 +70,8 @@ class Topic(Shape):
     breaks: str | list[str] | None = Field(None, alias="깨는 사실")
     asks: list[str] = Field([], alias="묻는 말")
     cond: str | None = Field(None, alias="나오는 조건")
+    unlock: str | None = Field(None, alias="풀리는 인상")
+    unlock_count: int | None = Field(None, alias="풀리는 횟수", ge=1)
 
     @model_validator(mode="after")
     def fit_stance(self):
@@ -80,6 +82,10 @@ class Topic(Shape):
             raise ValueError(f"자세 {self.stance} takes exactly {', '.join(names)}")
         if self.lie and self.lie.shows:
             raise ValueError("거짓말 shows no fact")
+        if self.unlock and self.stance == "숨기지 않는다":
+            raise ValueError("풀리는 인상 is for 꺼린다 or 거짓말한다")
+        if self.unlock_count and not self.unlock:
+            raise ValueError("풀리는 횟수 needs 풀리는 인상")
         return self
 
     def list_branches(self):
@@ -102,6 +108,8 @@ class Person(Shape):
     attitude: Attitude = Field(Attitude(), alias="처음 태도")
     topics: dict[str, Topic] = Field({}, alias="화제")
     display: str | None = Field(None, alias="화면 이름")
+    impressions: dict[str, str] = Field({}, alias="인상")   # the person's own, beside the common ones
+    close: list[str] = Field([], alias="가까운 사람")
 
 
 class Lock(Shape):
@@ -371,6 +379,8 @@ class References:
 
     def check_person(self, name, person):
         self.need(f"사람 {name}의 있는 곳", person.place, "곳")
+        for other in person.close:
+            self.need(f"사람 {name}의 가까운 사람", other, "사람")
         for topic, t in person.topics.items():
             self.check_topic(name, topic, t)
 
@@ -427,6 +437,8 @@ class Block(Record):
     name: str
     topic: str | None = None
     wants: tuple[str, ...]   # any one of them opens it
+    unlock: str | None = None   # an impression that opens it once it has built up to unlock_count
+    unlock_count: int = 1
     hint: str | None = None
     hard: bool = False
     owner: str | None = None
@@ -446,6 +458,8 @@ class Story:
                 for a, b in ((name, link), (link, name)):
                     if b not in self.links[a]:
                         self.links[a].append(b)
+        self.close = {name: sorted({*p.close, *(o for o, q in raw.people.items() if name in q.close)} - {name})
+                      for name, p in raw.people.items()}
         self.locked_in = {inner: format_address("잠김", [name])
                           for name, thing in raw.things.items() if thing.lock for inner in thing.lock.contents}
         self.lines = {}
@@ -488,10 +502,12 @@ class Story:
             for topic, t in person.topics.items():
                 if t.stance == "거짓말한다":
                     self.add_block("거짓말", [name, topic], topic=topic, wants=tuple(t.list_breaks()),
-                                   opens=[format_address("말", [name, topic, "깨진 뒤"])], cond=t.cond)
+                                   opens=[format_address("말", [name, topic, "깨진 뒤"])], cond=t.cond,
+                                   unlock=t.unlock, unlock_count=t.unlock_count or 1)
                 elif t.stance == "꺼린다":
                     self.add_block("꺼림", [name, topic], topic=topic, wants=(t.wants,), hint=t.hint,
-                                   opens=[format_address("말", [name, topic, "풀린 뒤"])], cond=t.cond)
+                                   opens=[format_address("말", [name, topic, "풀린 뒤"])], cond=t.cond,
+                                   unlock=t.unlock, unlock_count=t.unlock_count or 1)
         for name, thing in self.things.items():
             if thing.lock:
                 kinds = ["볼 것" if inner in self.things else "곳" for inner in thing.lock.contents]
