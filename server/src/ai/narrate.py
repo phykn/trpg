@@ -56,10 +56,13 @@ class Narrator:
         self.llm = llm
         self.decision = decision
 
-    # The screen gets only the checked text, so what the player is reading never changes under them.
     async def write(self, job):
         messages = make_messages(job)
-        text = "".join([chunk async for chunk in self.llm.stream(messages, MAX_TOKENS[job["kind"]])])
+        chunks = []
+        async for chunk in self.llm.stream(messages, MAX_TOKENS[job["kind"]]):
+            chunks.append(chunk)
+            yield {"type": "delta", "text": chunk}
+        text = first = "".join(chunks)
         checks = []
         for attempt in range(REWRITES + 1):
             failed, probs = await self.check(job, text)
@@ -74,8 +77,7 @@ class Narrator:
             messages = [*messages, {"role": "assistant", "content": text}, {"role": "user", "content": note}]
             text = "".join([chunk async for chunk in self.llm.stream(messages, MAX_TOKENS[job["kind"]])])
         text = pick_best(checks)
-        yield {"type": "delta", "text": text}
-        yield {"type": "result", "text": text, "checks": checks}
+        yield {"type": "result", "text": text, "checks": checks, "revised": text != first}
 
     async def check(self, job, text):
         state = "받은 것:\n" + "\n".join(list_given(job)) + f"\n\n쓴 글:\n{text}"

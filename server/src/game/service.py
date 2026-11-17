@@ -191,6 +191,9 @@ class GameService:
                 async for event in self.narrator.write(spec):
                     if event["type"] == "result":
                         texts.append({"text": event["text"], "checks": event["checks"]})
+                        if event.get("revised"):
+                            await job.add({"type": "start", "slot": slot},
+                                          {"type": "delta", "slot": slot, "text": event["text"]})
                     else:
                         await job.add({**event, "slot": slot})
                 await job.add({"type": "end", "slot": slot})
@@ -248,9 +251,9 @@ class TextJob:
         self.events = []
         self.changed = asyncio.Condition()
 
-    async def add(self, event):
+    async def add(self, *events):
         async with self.changed:
-            self.events.append(event)
+            self.events.extend(events)
             self.changed.notify_all()
 
     async def wait(self, seen, timeout):

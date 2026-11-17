@@ -40,7 +40,7 @@ export const sendCommand = (id: string, requestId: string, revision: number, bod
 
 // It polls rather than reading one stream: the phone's quick tunnel holds a stream back until it ends.
 export async function streamText(id: string, turn: number, signal: AbortSignal,
-  onEvent: (event: Extract<TextEvent, { slot: number }>) => Promise<void>): Promise<boolean> {
+  onEvent: (event: Extract<TextEvent, { slot: number }>) => void): Promise<boolean> {
   let after = 0;
   try {
     while (!signal.aborted) {
@@ -50,7 +50,7 @@ export async function streamText(id: string, turn: number, signal: AbortSignal,
       for (const event of polled.events) {
         if (signal.aborted || event.type === 'error') return false;
         if (event.type === 'done') return true;
-        if ('slot' in event) await onEvent(event);
+        if ('slot' in event) onEvent(event);
       }
       after = polled.next;
     }

@@ -30,15 +30,6 @@ function makeEntries(turn: number, said: string | null, feed: FeedItem[]): Entry
   return said ? [{ key: `${turn}-said`, turn, kind: 'said', text: said }, ...lines] : lines;
 }
 
-async function revealText(text: string, append: (text: string) => void, signal: AbortSignal) {
-  const letters = Array.from(text);
-  const step = Math.max(2, Math.ceil(letters.length / 24));
-  for (let i = 0; i < letters.length && !signal.aborted; i += step) {
-    append(letters.slice(i, i + step).join(''));
-    if (i + step < letters.length) await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-}
-
 export function useGame() {
   const [phase, setPhase] = useState<Phase>('loading');
   const [stories, setStories] = useState<Story[]>([]);
@@ -61,7 +52,7 @@ export function useGame() {
   }
 
   // Turn by turn, so a failure leaves the turns not yet read for retryText.
-  async function readTexts(turns: number[], animate: boolean) {
+  async function readTexts(turns: number[]) {
     textLoad.current?.abort();
     const controller = new AbortController();
     const { signal } = controller;
@@ -70,14 +61,10 @@ export function useGame() {
     setPhase('streaming');
     while (unread.current.length) {
       const turn = unread.current[0];
-      const done = await streamText(game.current!, turn, signal, async (e) => {
+      const done = await streamText(game.current!, turn, signal, (e) => {
         if (e.type === 'start') updateSlot(turn, e.slot, (entry) => ({ ...entry, text: '', complete: false }));
         else if (e.type === 'end') updateSlot(turn, e.slot, (entry) => ({ ...entry, complete: true }));
-        else if (e.type === 'delta') {
-          const append = (text: string) => updateSlot(turn, e.slot, (entry) => ({ ...entry, text: entry.text + text }));
-          if (animate) await revealText(e.text, append, signal);
-          else append(e.text);
-        }
+        else if (e.type === 'delta') updateSlot(turn, e.slot, (entry) => ({ ...entry, text: entry.text + e.text }));
       });
       if (signal.aborted) return;
       if (!done) {
@@ -98,7 +85,7 @@ export function useGame() {
       game.current = id;
       setLog(turns.flatMap((t) => makeEntries(t.turn, t.said, t.feed)));
       setView(next);
-      await readTexts(turns.filter((t) => t.text).map((t) => t.turn), false);
+      await readTexts(turns.filter((t) => t.text).map((t) => t.turn));
     } catch {
       setPhase('title');   // the pointer stays: the game may open next time
     }
@@ -149,7 +136,7 @@ export function useGame() {
       return;
     }
     setLog((entries) => [...entries, ...makeEntries(result.turn, result.said, result.feed)]);
-    if (result.text) await readTexts([result.turn], true);
+    if (result.text) await readTexts([result.turn]);
     else setPhase('ready');
   }
 
@@ -170,7 +157,7 @@ export function useGame() {
   }
 
   function retryText() {
-    void readTexts(unread.current, false);
+    void readTexts(unread.current);
   }
 
   // A new game keeps the one in progress saved to pick up again; after the ending it is not offered again.

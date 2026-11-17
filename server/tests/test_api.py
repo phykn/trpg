@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 
@@ -143,7 +144,7 @@ def test_errors_keep_the_game_as_it_was(tmp_path):
     assert asked.status_code == 503 and client.get(f"/games/{game}").json() == first["view"]
 
 
-def test_text_shows_only_once_checked_and_is_retried_after_an_error(tmp_path):
+def test_text_is_retried_after_an_error_and_a_rewrite_replaces_the_live_draft(tmp_path):
     answer = "징수관이 숨졌소. 새벽 종이 울리기 전에 결백을 밝혀야 하오. 해 지기 전에 장부만 걷고 떠났소."
     llm = FakeLLM([ModelUnavailable("down"), "장부만 걷고 갔소. 새벽 종 얘기라면 내가 알지.", answer])
     player = Player(make_client(tmp_path, FakeInterpreter(HEARD), Narrator(llm, FakeChecks([False, True]))))
@@ -156,13 +157,43 @@ def test_text_shows_only_once_checked_and_is_retried_after_an_error(tmp_path):
     player.send(text=ASK)
     assert [e["type"] for e in player.read_text(2)] == ["start", "error"]
     events = player.read_text(2)
-    # Only the text that passed reaches the screen: the failed first draft is never shown.
-    assert events == player.read_text(2) == [{"type": "start", "slot": 0},
-                                   {"type": "delta", "slot": 0, "text": f"{answer} "},
-                                   {"type": "end", "slot": 0}, {"type": "done"}]
+    final = [{"type": "start", "slot": 0}, {"type": "delta", "slot": 0, "text": f"{answer} "},
+             {"type": "end", "slot": 0}, {"type": "done"}]
+    assert events[:2] == [{"type": "start", "slot": 0}, {"type": "delta", "slot": 0, "text": "장부만 "}]
+    assert events[-4:] == player.read_text(2) == final
     saved = json.loads((tmp_path / f"{player.game}.json").read_text(encoding="utf-8"))["turns"][1]["text"]
     assert [c["failed"] for c in saved[0]["checks"]] == [["added", "meaning", "case"], []]
     assert player.client.get(f"/games/{player.game}/turns/9/text").status_code == 404
+
+
+def test_a_live_poll_returns_model_text_before_generation_and_checks_finish(tmp_path):
+    async def play():
+        gate = asyncio.Event()
+
+        class PausedLLM:
+            async def stream(self, messages, max_tokens):
+                yield "징수관이 숨졌소."
+                await gate.wait()
+                yield " 새벽 종이 울리기 전에 결백을 밝혀야 하오. 해 지기 전에 장부만 걷고 떠났소."
+
+        checks = FakeChecks([True])
+        service = GameService({"dawn": DAWN}, tmp_path, FakeInterpreter(HEARD), Narrator(PausedLLM(), checks))
+        game, view = service.create("live", "dawn")
+        await service.command(game, {"request_id": "start", "revision": 0, "do": view["start"]["acts"][0]["id"]})
+        await service.command(game, {"request_id": "ask", "revision": 1, "text": ASK})
+        first = await asyncio.wait_for(service.poll_text(game, 2, 0), 1)
+        if first["next"] == 1:
+            first = await asyncio.wait_for(service.poll_text(game, 2, 1), 1)
+        assert first["events"][-1] == {"type": "delta", "slot": 0, "text": "징수관이 숨졌소."}
+        assert not gate.is_set() and checks.passes == [True]
+
+        gate.set()
+        await asyncio.wait_for(asyncio.gather(*service.tasks), 1)
+        replay = await service.poll_text(game, 2, first["next"])
+        assert replay["events"][-1] == {"type": "done"}
+        assert replay["events"][1]["text"].startswith("징수관이 숨졌소. 새벽 종")
+
+    asyncio.run(play())
 
 
 def test_text_can_be_polled_for_a_tunnel_that_holds_streams_back(tmp_path):
@@ -174,10 +205,16 @@ def test_text_can_be_polled_for_a_tunnel_that_holds_streams_back(tmp_path):
     while not events or events[-1]["type"] not in ("done", "error"):
         polled = player.client.get(f"/games/{player.game}/turns/2/text/poll", params={"after": after}).json()
         events, after = events + polled["events"], polled["next"]
-    assert [e["type"] for e in events] == ["start", "delta", "end", "done"]
+    text = ""
+    for event in events:
+        if event["type"] == "start":
+            text = ""
+        elif event["type"] == "delta":
+            text += event["text"]
     # Once saved, every poll gets the whole text again, so a screen that saw part of it still ends whole.
     again = player.client.get(f"/games/{player.game}/turns/2/text/poll", params={"after": 3}).json()
     assert again["events"] == player.read_text(2) and again["next"] == len(again["events"])
+    assert events[-1] == {"type": "done"} and text == again["events"][1]["text"]
     assert player.client.get(f"/games/{player.game}/turns/9/text/poll").status_code == 404
 
 
