@@ -49,17 +49,18 @@ class ViewMaker:
         head = self.story.head
         book = self.state["notebook"]
         concluding = self.stage in ("play", "closing")
+        place = self.make_place()
         return {
             "revision": self.state["turn"],
             "story": {"story": head.name, "title": head.title},
             "stage": self.stage,
             "start": self.make_start() if self.stage == "start" else None,
-            "place": self.make_place(),
+            "place": place,
             "time": self.make_time(),
             "people": self.make_people(),
             "notebook": self.make_notebook(),
             "offers": self.make_offers(),
-            "suggest": self.make_suggestions(),
+            "suggest": self.make_suggestions(place["moves"]),
             "badge": len([a for a in book if a not in self.state["read"]]),
             "conclude": {"who": [self.ids[a] for a in book if self.story.lines[a].kind == "사람"],
                          "clues": [self.ids[a] for a in book if self.story.lines[a].kind in ("볼 것", "말")]}
@@ -116,7 +117,7 @@ class ViewMaker:
         # A sure action opens the dice at once; a guessed one only offers them (game/07 2절)
         return [{**bet, "now": not tried[0].get("guess")} for bet in bets]
 
-    def make_suggestions(self):
+    def make_suggestions(self, moves):
         """Up to three next steps a stuck player can take with one press, naming no topic (game/07 2절)."""
         if self.stage != "play":
             return []
@@ -133,9 +134,9 @@ class ViewMaker:
                   for p in self.here if p != state["partner"] and p not in talked][:1]
         if state["partner"] and list_untold(story, state, state["partner"]):
             cards.append({"id": None, "label": ko.ASK_MORE, "text": ko.ASK_MORE})
-        places = [a[2:] for a in state["notebook"] if a.startswith("곳 ") and a[2:] not in state["visited"]
-                  and find_path(story, state, a[2:])]
-        cards += [self.add_act({"do": "move", "place": p}, label=ko.go_to(show_name(story, "곳", p))) for p in places][:1]
+        move = next((m for m in moves if m["unvisited"]), None)
+        if move:
+            cards.append({"id": move["id"], "label": move["name"], "cells": move["cells"]})
         return cards[:3]
 
     def find_aim(self, person, method):

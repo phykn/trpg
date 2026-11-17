@@ -37,8 +37,9 @@ DM = {
 }
 PERSON_KEYS = ("open", "meet", "held", "doubt", "ask", "warm", "cold", "shaken", "hint_topic")
 # The narrator's voice: the scene, the DM and the ending (game/07 2절).
-VOICE = ("시각, 소리, 냄새, 맛, 촉감 가운데 하나만 살려 감각적으로 그리고, 건조한 블랙 조크는 문장 끝에 짧게 얹는다. 농담도 "
-         "'-습니다', '-ㅂ니다'로 맺고 '-군요'는 쓰지 않는다. 크게 웃기지 않는다. 비유와 농담에도 받은 것에 없는 사람, 물건, 일은 넣지 않는다.")
+VOICE = ("시각, 소리, 냄새, 맛, 촉감 가운데 하나를 고른다. 농담은 지금 일어난 일에 어울릴 때만 짧게 덧붙인다. "
+         "사람이 죽었다는 사실만을 소재로 삼아 농담을 만들지 않는다. "
+         "비유와 농담에도 받은 것에 없는 사람, 물건, 일은 넣지 않는다.")
 CAUGHT = "남을 속이려다 들켰다"   # 들킴 comes from a deed, so it has no meaning for Kanana in ko.IMPRESSIONS
 RECENT = 3   # turns of talk with a person, and turns of the player's deeds they watched, an answer gets (game/04 3절)
 # The narrator's own last texts, so it stops reaching for the same smell every turn (game/07 2절)
@@ -143,11 +144,9 @@ def make_slot_job(story, before, after, turn, slot, past):
 def make_ending(story, after):
     ending = judge_ending(story, after)
     events = [getattr(story.events[i], result) for i, result in ending["events"]]
-    marks = {True: "맞혔다", False: "틀렸다", None: "비워 두었다"}
-    answers = ", ".join(f"{q} {marks[ending['answers'][k]]}" for k, q in (("who", "누가"), ("how", "어떻게"), ("why", "왜")))
-    if ending["answers"]["who"] and ending["proved"] is not None:   # right but unproven is a guess (data/01 4절)
-        answers += ". " + ("범인을 증명했다" if ending["proved"] else "범인은 맞혔지만 다른 의심받는 사람을 다 지우지 못한 짐작이다")
-    return {"kind": "ending", "time": show_clock(story, story.head.cells), "answers": answers,
+    who = after["conclusion"]["who"]
+    return {"kind": "ending", "time": show_clock(story, story.head.cells),
+            "accused": show_name(story, "사람", who) if who else None,
             "happening": [getattr(story.endings, ending["verdict"]), *events, story.endings.explain]}
 
 
@@ -200,7 +199,7 @@ def make_answer(story, before, after, turn, person, past):
     for item in turn["talk"]:
         if "case" in item:   # the first talk with the opener tells the case and ends naming topics (game/04 5절)
             case = story.head.intro
-            says.append("당신이 처음 말을 걸어왔으니 사건을 들려준다. 사건에 적힌 무엇이 어떻게 됐고 기한이 언제인지만 말한다")
+            says.append("먼저 사건에 적힌 피해와 조사 기한을 짧게 알린다. 그다음에 이번에 할 다른 말을 한다")
             named = item["leads"]
         elif say := tell_item(story, turn, item):
             says.append(say)
@@ -337,7 +336,7 @@ def tell_item(story, turn, item):
 
 def tell_lead(topic):
     # Told only to hint, gemma4 dropped the name, so the check asks for it word for word.
-    return f'"{topic}"라는 말을 그대로 넣어, 그 일이라면 아는 게 있다는 듯 운을 뗀다. 내용은 말하지 않는다'
+    return f'"{topic}"라는 말을 그대로 넣어, 그 일은 자기가 아는 게 있다고 운을 뗀다. 세부 내용은 말하지 않는다'
 
 
 def find_said(story, turn):
@@ -358,6 +357,8 @@ def make_scene(story, before, after, turn):
         looking and place not in before["looked"])   # the first look takes the place in properly
     writes = [c["line"] for c in turn["changes"] if c["op"] == "write"]
     happening = ["당신이 주위를 찬찬히 둘러본다"] if looking else []
+    if turn["action"]["do"] == "move" and not first:
+        happening.append("당신이 이곳으로 돌아왔다")
     for item in turn["talk"]:
         if item.get("thing"):
             happening += tell_thing(story, item["thing"])

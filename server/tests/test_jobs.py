@@ -96,6 +96,7 @@ def test_jobs_tell_what_is_new_and_the_ending_tells_the_time_the_cells_ran_out()
     assert first["doing"] == [f"토빈은 {DAWN.people['토빈'].doing[0]}"] and "(" not in make_messages(first)[0]["content"]
     assert "입술이 검푸르게" in " ".join(looked["written"]) and not looked["again"] and looked["happening"]
     assert back["again"] and again["again"] and not first["again"]
+    assert back["happening"] == ["당신이 이곳으로 돌아왔다"]
     assert len([j for t in turns for j in make_jobs(DAWN, *t) if j.get("happening")]) >= 2
     assert "목소리다" in make_messages(answer)[0]["content"] and "서술자다" in make_messages(first)[0]["content"]
     ending = make_jobs(DAWN, *turns[-1])[0]
@@ -232,4 +233,4 @@ def test_the_ending_tells_the_whole_truth_so_it_holds_no_name_back():
     jobs = make_jobs(SKELETON, before, after, turn)
     assert [job for job in jobs if job["kind"] == "ending"] and all(
         "unknown" not in job for job in jobs if job["kind"] == "ending")
-    assert "짐작" in next(job for job in jobs if job["kind"] == "ending")["answers"]
+    assert next(job for job in jobs if job["kind"] == "ending")["accused"] == after["conclusion"]["who"]

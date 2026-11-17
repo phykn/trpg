@@ -110,10 +110,6 @@ def talk_to(person):
     return f"{person}에게 말을 건다"
 
 
-def go_to(place):
-    return f"{ro(place)} 간다"
-
-
 def divider(place, cells):
     return f"── {place} · {cells}턴 ──"
 

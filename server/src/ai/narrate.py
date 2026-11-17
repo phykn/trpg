@@ -24,6 +24,7 @@ REPEAT = 0.8
 # Words of the prompt itself; a text that names them is talking about its instructions, not to the player.
 # "할 말" alone is everyday speech ("더 할 말 있나?"), so only the label with its colon counts.
 PROMPT_WORDS = ("할 말:", "받은 것", "앞서 들려준 글", "지침", "지킬 것", "질문자", "신상", "속사정", "그릴 기척", "지켜본 일", "앞서 나눈 말", "받은 인상")
+SCENE_REQUEST = re.compile(r"어떤 장면을 (보여\s*드릴|원하)|마주한 상황을 알려\s*주")
 # The narrator and the DM speak 합니다체 (CLAUDE.md); quoted speech inside a scene keeps its own.
 HAEYO = re.compile(r"(세요|어요|아요|해요|예요|에요|죠|군요|네요)[.?!…~]*(\s|$)")
 # The DM shows a sign instead of advising (game/07 2절); these endings tell the player what to do.
@@ -35,8 +36,10 @@ PLAIN = re.compile(r"(?<!니)다([.!?…]+(\s|$)|$)")   # 해라체, as a story'
 BRACKET = re.compile(r"[()（）]")   # gemma4 wrote stage directions and copied name(doing) in brackets
 QUOTED = re.compile(r"\"[^\"]*\"|“[^”]*”|'[^']*'|‘[^’]*’")
 REASONS = {"added": "받은 것에 없는 사람, 물건, 때, 곳을 더했다", "meaning": "할 말의 뜻이 빠졌거나 바뀌었다",
+           "case": "사건에 적힌 피해 또는 조사 기한이 빠졌거나 바뀌었다",
+           "ending": "결말이나 진실 풀이에서 지목된 사람, 실제 범인, 각자가 한 일 또는 그 결과가 바뀌었다",
            "quiet": "말하지 않아야 할 내용을 말했다", "outcome": "주사위의 결과가 대답에 드러나지 않는다", "length": "너무 길다",
-           "prompt": "지시문을 두고 말했다. 인물이나 진행자의 말만 쓴다",
+           "prompt": "이야기 밖의 지시나 안내를 말했다. 인물이나 진행자의 말만 쓴다",
            "style": "합니다체가 아닌 문장이 있다. 문장을 모두 '-습니다', '-ㅂ니까'로 맺는다",
            "push": "플레이어에게 할 일을 권했다. 권하지 말고 소리, 빛, 냄새, 몸짓 같은 기척만 그린다",
            "speech": "인물의 대사를 지어냈다. 따옴표 없이 몸짓만 그린다",
@@ -81,8 +84,9 @@ class Narrator:
 
 
 def pick_best(checks):
-    """The text to keep: the first that passed, else the least failed, and never one that says the same thing again."""
-    return min(checks, key=lambda c: ("repeat" in c["failed"], "lead" in c["failed"], len(c["failed"])))["text"]
+    factual = {"meaning", "case", "ending", "quiet", "unknown", "outcome", "prompt"}
+    return min(checks, key=lambda c: (len(factual.intersection(c["failed"])), "repeat" in c["failed"],
+                                      "lead" in c["failed"], len(c["failed"])))["text"]
 
 
 def make_messages(job):
@@ -122,11 +126,16 @@ def list_given(job):
     if job.get("place"):
         given.append(f"곳: {job['place']}" + (f". 모습: {job['desc']}" if job.get("desc") else ""))
     given += [f"이번에 눈에 띈 것: {', '.join(job['written'])}"] if job.get("written") else []
-    if job.get("happening"):
+    if job["kind"] == "ending":
+        verdict, *events, truth = job["happening"]
+        given.extend([f"플레이어가 지목한 사람: {job.get('accused') or '없다'}", f"지목의 결과: {verdict}"])
+        if events:
+            given.append(f"그사이 번진 일: {' '.join(events)}")
+        given.append(f"사건의 진실: {truth}")
+    elif job.get("happening"):
         given.append(f"{'당신이 없는 곳에서 그 사이 벌어진 일' if job.get('far') else '일어난 일'}: {' '.join(job['happening'])}")
     given += [f"이곳의 사람: {', '.join(job['people'])}"] if job.get("people") else []
     given += [f"사람이 하는 일: {' '.join(d + '.' for d in job['doing'])}"] if job.get("doing") else []
-    given += [f"플레이어의 결론: {job['answers']}"] if job.get("answers") else []
     return given
 
 
@@ -187,7 +196,8 @@ def make_answer_prompt(job):
              "대답 끝에 플레이어에게 되묻거나 재촉하는 짧은 한마디를 붙여도 된다. 받은 것 밖의 일은 묻지도 말하지도 않는다.",
              "플레이어는 지금 마주 보고 말을 건 사람이다. 플레이어에게 직접 말하고, '저 사람', '얘'처럼 남을 가리키듯 부르지 않는다.",
              "할 말이 있으면 그 내용을 빠짐없이 말한다. 태도는 말투에만 드러내고, 모른다고 하거나 피하지 않는다.",
-             "할 말의 뜻을 바꾸지 않는다. 할 말에 없는 사람, 물건, 때, 곳을 더하지 않는다.",
+             ("할 말의 뜻을 지킨다. 누가 누구에게 무엇을 했는지, 왜 했는지, 언제 어디서 했는지 그대로 전한다. "
+              "인물 이름이 있으면 같은 이름을 써서 서로의 행동이 뒤바뀌지 않게 한다."),
              ("할 말이 없거나 답할 것이 없으면 플레이어의 말 자체에 신상대로 반응한다. 부탁이면 들어주거나 거절하고, "
               "넋두리나 농담이면 맞장구치거나 핀잔하고, 다그치면 발끈하거나 움츠러든다. 사건에 관한 것은 지어내지 않는다."),
              "앞서 나눈 말이 있으면 그 흐름을 이어 받고, 앞서 한 대답을 같은 말로 되풀이하지 않는다. 앞서 한 대답과 같은 부름말이나 첫마디로 시작하지 않는다.",
@@ -219,6 +229,8 @@ def list_answer_rules(job):
         (f"운을 떼는 화제의 이름({leads})은 대사에 그대로 넣는다.", leads),
         ("지금 하는 일은 말투와 반응에만 묻어나게 한다.", job.get("doing")),
         ("사건은 당신도 함께 겪는 일처럼 당신의 말로 옮긴다. 사건 글의 '당신'은 플레이어다.", job.get("case")),
+        ("첫 대목에 사건의 피해와 조사 기한을 모두 말한다. 그 뒤에 인물이 이번에 할 말을 따로 잇는다.",
+         job.get("case") and not job.get("hook")),
         ("할 말은 처음 하는 말이다. 아까 말했다고 하지 않는다.",
          job["lines"] and not set(job["lines"]) & set(job.get("told", []))),
     ]
@@ -229,7 +241,7 @@ def make_scene_prompt(job):
              "받은 대목과 진실 풀이를 모두 담되 열두 문장을 넘지 않는다." if job["kind"] == "ending"
              else "짧은 문장 너덧 개로 쓴다.",
              "지어내는 것은 날씨, 소리, 빛, 냄새 같은 분위기뿐이다. 받은 것에 없는 사람, 물건, 흔적은 그리지 않는다.",
-             VOICE,
+             "사건의 사실과 결과만 전한다." if job["kind"] == "ending" else VOICE,
              SHORT,
              "분위기는 곳의 모습과 어긋나지 않게 쓴다. '적막', '정적', '어둠' 같은 말을 버릇처럼 넣지 않는다.",
              "한 문단으로 쓴다.",
@@ -238,10 +250,13 @@ def make_scene_prompt(job):
     if job.get("far"):
         rules.append("진행자가 \"그 사이\"로 시작해 다른 곳의 소식을 전하듯 쓴다. 당신은 그 자리에 없으므로 보고 듣는 것처럼 쓰지 않는다.")
     if job["kind"] == "ending":
-        rules.append("플레이어의 결론에서 맞힌 것과 틀리거나 비운 것, 증명인지 짐작인지를 바꿔 말하지 않는다. "
-                     "플레이어를 이름으로 부르지 않는다.")
+        rules.extend(["먼저 지목의 결과를 말한다. 그사이 번진 일을 전한 뒤 사건의 진실을 시간 순으로 들려준다.",
+                      "지목한 사람과 실제 범인은 주어진 이름으로 각각 부른다. 지목의 결과에서 누가 어떤 일을 겪는지 그대로 전한다.",
+                      "사건의 진실에 나온 행동과 원인, 결과를 주어진 그대로 전한다. 옮기는 데 필요한 문장만 쓰고 농담은 넣지 않는다.",
+                      "플레이어에게 풀이 점수를 매기거나 맞히고 비운 물음을 언급하지 않는다."])
     if job.get("again"):
-        rules.append("이미 와 본 곳이다. 모습은 그리지 않거나 한마디로 줄이되, 모습과 어긋나게 쓰지 않는다.")
+        rules.append("이미 와 본 곳이다. 이번에 일어난 일이나 이곳 사람의 지금 모습부터 바로 말한다. "
+                     "장소 설명은 한 문장으로 줄인다. 플레이어에게 장소나 상황을 다시 알려 달라고 하지 않는다.")
     if job.get("people"):
         rules.append("마지막 문장에서 이곳에 있는 사람을 이름으로 알린다."
                      + (" 사람이 하는 일은 그 일을 하고 있는 모습으로 그린다." if job.get("doing") else ""))
@@ -252,7 +267,13 @@ def make_scene_prompt(job):
 def make_checks(job):
     checks = {"added": noul("쓴 글에 받은 것에 없는 사람, 물건, 때, 곳이 나오는가", "나온다", "나오지 않는다")}
     if job["kind"] == "answer" and job["lines"]:
-        checks["meaning"] = noul("쓴 글이 할 말의 뜻을 바꾸지 않고 담고 있는가", "담고 있다", "빠졌거나 바뀌었다")
+        checks["meaning"] = noul("쓴 글이 할 말의 뜻을 모두 담고, 누가 누구에게 무엇을 했는지를 그대로 옮겼는가",
+                                 "모두 옮겼다", "빠졌거나 바뀌었다")
+    if job["kind"] == "answer" and job.get("case") and not job.get("hook"):
+        checks["case"] = noul("쓴 글이 사건에 적힌 피해와 조사 기한을 둘 다 정확히 알리는가", "둘 다 알린다", "빠졌거나 바뀌었다")
+    if job["kind"] == "ending":
+        checks["ending"] = noul("쓴 글에서 지목의 결과와 사건의 진실에 나온 사람이 각각 한 일 및 그 결과가 그대로인가",
+                                "그대로다", "사람, 한 일 또는 결과가 바뀌었다")
     if job["kind"] == "answer" and job["quiet"]:
         checks["quiet"] = noul("쓴 글이 사건에 관한 내용을 알려 주지 않는가", "알려 주지 않는다", "알려 준다")
     if job["kind"] == "answer" and job.get("outcome"):
@@ -266,7 +287,7 @@ def noul(instructions, yes, no):
 
 def judge(job, answers, text):
     probs = {key: answers[key]["noul"] for key in make_checks(job)}
-    least = {"added": ADDED, "meaning": MEANING, "quiet": QUIET, "outcome": OUTCOME}
+    least = {"added": ADDED, "meaning": MEANING, "case": MEANING, "ending": MEANING, "quiet": QUIET, "outcome": OUTCOME}
     failed = [key for key, p in probs.items() if (1 - p if key == "added" else p) < least[key]]
     if job["kind"] == "answer" and "meaning" not in failed and any(cover(line, text) < COVER for line in job["lines"]):
         failed.append("meaning")
@@ -284,7 +305,7 @@ def list_faults(job, text):
     faults = {
         "length": len(sentences) > MAX_SENTENCES[kind] + 2 * max(0, len(job.get("lines", [])) - 1),
         "long": any(len(s) > LONG for s in sentences),
-        "prompt": any(word in text for word in PROMPT_WORDS),
+        "prompt": any(word in text for word in PROMPT_WORDS) or (kind == "scene" and SCENE_REQUEST.search(text)),
         "bracket": BRACKET.search(text),
         "style": kind != "answer" and (HAEYO.search(unquoted) or PLAIN.search(unquoted)),
         "push": kind == "dm" and job.get("key") not in ("conclude", "ready") and PUSH.search(unquoted),

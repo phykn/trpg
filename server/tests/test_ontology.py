@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from src.ai.jobs import list_inner, make_ending
+from src.ai.jobs import list_inner
 from src.game.view import make_view
 from src.rules.act import act, find_bet_bonus
 from src.rules.state import judge_ending, list_cleared, start_state
@@ -76,10 +76,9 @@ def test_the_right_culprit_is_proven_only_when_pointed_at_and_every_other_suspec
     assert judge_ending(plain, concluded(plain, SEEN))["proved"] is None
 
 
-def test_the_ending_and_its_text_know_a_guess_from_a_proof():
+def test_the_ending_view_knows_a_guess_from_a_proof():
     state = concluded(STORY, SEEN + [LAMP, STEPS])
     assert make_view(STORY, state)[0]["ending"]["proved"] is False
-    assert "짐작" in make_ending(STORY, state)["answers"]
 
 
 def test_any_fact_of_a_listed_answer_answers():

@@ -1,23 +1,23 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { pressed } from '@/components/ui/Button';
 import { text } from '@/design/ui';
-import { useReveal } from '@/logic/reveal';
 import { splitTopics } from '@/logic/topics';
 import type { Entry } from '@/logic/useGame';
 import { RollLine } from '@/components/dice/RollParts';
+import { ko } from '@/locale/ko';
 import { findHue } from './speaker';
 import type { Topic } from './TopicCard';
 
-function Typing() {
+export function Typing() {
   const [lit, setLit] = useState(1);
   useEffect(() => {
     const id = setInterval(() => setLit((n) => (n % 3) + 1), 400);
     return () => clearInterval(id);
   }, []);
   return (
-    <View accessibilityLabel="…" className="h-6 flex-row items-center gap-1.5">
+    <View role="status" accessibilityLabel={ko.waiting} className="h-6 flex-row items-center gap-1.5">
       {[1, 2, 3].map((i) => <View key={i} className={`h-2 w-2 rounded-full bg-fg-subtle ${i === lit ? 'opacity-100' : 'opacity-30'}`} />)}
     </View>
   );
@@ -52,7 +52,6 @@ export function Spoken({ text: words, topics, className, onTopic }: {
 function Line({ entry, met, typing, onNote, onTopic }: {
   entry: Entry; met: string[]; typing: boolean; onNote: (lines: number[]) => void; onTopic: (topic: Topic) => void;
 }) {
-  const shown = useReveal('slot' in entry ? entry.text : '');
   if (entry.kind === 'said') {
     return (
       <View className="max-w-[85%] self-end rounded-2xl rounded-br-sm bg-gold-muted px-3 py-2">
@@ -69,19 +68,19 @@ function Line({ entry, met, typing, onNote, onTopic }: {
       </Pressable>
     );
   }
+  if (!entry.text && !typing) return null;
   if (entry.who) {
     return (
       <Speaker who={entry.who} met={met}>
-        {typing ? <Typing /> : <Spoken text={shown} topics={entry.topics} className={text()}
+        {typing ? <Typing /> : <Spoken text={entry.text} topics={entry.topics} className={text()}
           onTopic={(name) => onTopic({ name, who: entry.who })} />}
       </Speaker>
     );
   }
   if (typing) return <Typing />;
-  if (!entry.text) return null;
   const happening = entry.kind === 'omen' || entry.kind === 'event';
   return (
-    <Spoken text={shown} topics={entry.topics} className={text({ kind: 'scene' }, happening && 'border-l-2 border-danger-fg pl-3')}
+    <Spoken text={entry.text} topics={entry.topics} className={text({ kind: 'scene' }, happening && 'border-l-2 border-danger-fg pl-3')}
       onTopic={(name) => onTopic({ name, who: null })} />
   );
 }
@@ -93,16 +92,27 @@ export function ChatLog({ log, met, waiting, outgoing, onNote, onTopic }: {
   const ref = useRef<ScrollView>(null);
   // While the reader is at the newest line, it stays in view when the box shrinks (the keyboard comes up) or grows.
   const atBottom = useRef(true);
+  const scrollTop = useRef(0);
+  const outgoingKey = outgoing?.key;
+  useLayoutEffect(() => {
+    if (!outgoingKey) return;
+    atBottom.current = true;
+    ref.current?.scrollToEnd({ animated: false });
+  }, [outgoingKey]);
   // Texts stream turn by turn and slot by slot, so the first empty one is the one being written.
-  const writing = waiting === 'streaming' ? log.find((e) => 'slot' in e && !e.text) : undefined;
+  const writing = waiting === 'streaming' ? log.findIndex((e) => 'slot' in e && !e.text) : -1;
+  const lines = writing === -1 ? log : log.slice(0, writing + 1);
   return (
     <ScrollView ref={ref} className="min-h-0 flex-1" contentContainerClassName="gap-3 px-4 py-4"
-      onContentSizeChange={() => ref.current?.scrollToEnd({ animated: false })}
-      onLayout={() => atBottom.current && ref.current?.scrollToEnd({ animated: false })} scrollEventThrottle={100}
+      onContentSizeChange={() => atBottom.current && ref.current?.scrollToEnd({ animated: false })}
+      onLayout={() => atBottom.current && ref.current?.scrollToEnd({ animated: false })} scrollEventThrottle={16}
       onScroll={({ nativeEvent: { contentOffset, contentSize, layoutMeasurement } }) => {
-        atBottom.current = contentOffset.y + layoutMeasurement.height >= contentSize.height - 24;
+        const y = contentOffset.y;
+        if (y + layoutMeasurement.height >= contentSize.height - 24) atBottom.current = true;
+        else if (y < scrollTop.current) atBottom.current = false;
+        scrollTop.current = y;
       }}>
-      {log.map((e) => <Line key={e.key} entry={e} met={met} typing={e === writing} onNote={onNote} onTopic={onTopic} />)}
+      {lines.map((e, index) => <Line key={e.key} entry={e} met={met} typing={index === writing} onNote={onNote} onTopic={onTopic} />)}
       {outgoing ? <Line entry={outgoing} met={met} typing={false} onNote={onNote} onTopic={onTopic} /> : null}
       {waiting === 'sending' ? <Typing /> : null}
     </ScrollView>

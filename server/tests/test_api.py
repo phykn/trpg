@@ -144,8 +144,8 @@ def test_errors_keep_the_game_as_it_was(tmp_path):
 
 
 def test_text_shows_only_once_checked_and_is_retried_after_an_error(tmp_path):
-    llm = FakeLLM([ModelUnavailable("down"), "장부만 걷고 갔소. 새벽 종 얘기라면 내가 알지.",
-                   "해 지기 전에 장부만 걷고 떠났소. 새벽 종 얘기라면 내가 알지."])
+    answer = "징수관이 숨졌소. 새벽 종이 울리기 전에 결백을 밝혀야 하오. 해 지기 전에 장부만 걷고 떠났소."
+    llm = FakeLLM([ModelUnavailable("down"), "장부만 걷고 갔소. 새벽 종 얘기라면 내가 알지.", answer])
     player = Player(make_client(tmp_path, FakeInterpreter(HEARD), Narrator(llm, FakeChecks([False, True]))))
     player.send(do=player.view["start"]["acts"][0]["id"])
     # The first turn is the story's opening, there at once.
@@ -158,10 +158,10 @@ def test_text_shows_only_once_checked_and_is_retried_after_an_error(tmp_path):
     events = player.read_text(2)
     # Only the text that passed reaches the screen: the failed first draft is never shown.
     assert events == player.read_text(2) == [{"type": "start", "slot": 0},
-                                   {"type": "delta", "slot": 0, "text": "해 지기 전에 장부만 걷고 떠났소. 새벽 종 얘기라면 내가 알지. "},
+                                   {"type": "delta", "slot": 0, "text": f"{answer} "},
                                    {"type": "end", "slot": 0}, {"type": "done"}]
     saved = json.loads((tmp_path / f"{player.game}.json").read_text(encoding="utf-8"))["turns"][1]["text"]
-    assert [c["failed"] for c in saved[0]["checks"]] == [["added", "meaning"], []]
+    assert [c["failed"] for c in saved[0]["checks"]] == [["added", "meaning", "case"], []]
     assert player.client.get(f"/games/{player.game}/turns/9/text").status_code == 404
 
 

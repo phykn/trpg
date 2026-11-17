@@ -1,6 +1,6 @@
 import { ScrollView, Text, View } from 'react-native';
 
-import { Speaker, Spoken } from '@/components/play/ChatLog';
+import { Speaker, Spoken, Typing } from '@/components/play/ChatLog';
 import { QUESTIONS } from '@/components/sheets/ConcludeSheet';
 import { Button } from '@/components/ui/Button';
 import { Resend } from '@/components/ui/Resend';
@@ -27,6 +27,7 @@ export function Ending({ view, log, phase, onRetryText, onLeave }: {
         {texts.map((e) => (e.who ? (
           <Speaker key={e.key} who={e.who} met={met}><Spoken text={e.text} className={text()} /></Speaker>
         ) : <Text key={e.key} className={text({ kind: 'scene' })}>{e.text}</Text>))}
+        {busy ? <Typing /> : null}
         {busy || phase === 'text_error' ? null : (
           <>
             <View className="gap-1.5">

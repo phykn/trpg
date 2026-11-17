@@ -13,19 +13,21 @@ import { SettingsMenu } from '@/components/play/SettingsMenu';
 import { TopBar } from '@/components/play/TopBar';
 import { TopicCard, type Topic } from '@/components/play/TopicCard';
 import { Resend } from '@/components/ui/Resend';
-import { findAct, findLine } from '@/logic/notebook';
+import { findAct, findLine, GROUPS } from '@/logic/notebook';
 import type { Entry, Phase } from '@/logic/useGame';
 import type { CommandBody, GameView, Group, Roll, RollResult } from '@/services/types';
 
+type NotebookOpen = { kind: 'notebook'; group: Group; line?: number };
+
 type Open =
-  | { kind: 'notebook'; group: Group; line?: number }
+  | NotebookOpen
   | { kind: 'moves' }
   | { kind: 'conclude' }
   | { kind: 'pick'; question: Question }
   | { kind: 'topic'; topic: Topic }
   | { kind: 'settings' }
   // A roll: `from` is where the log stood when it was sent, so its result is the first roll after it.
-  | { kind: 'dice'; id: string; roll: Roll; from: number | null }
+  | { kind: 'dice'; id: string; roll: Roll; from: number | null; notebook?: NotebookOpen }
   | null;
 
 export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, onHome }: {
@@ -35,10 +37,13 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
   const [open, setOpen] = useState<Open>(null);
   const [draft, setDraft] = useState('');
   const [picks, setPicks] = useState<Picks>({ who: null, how: null, why: null });
+  const lastGroup = useRef<Group | null>(null);
   const playing = view.stage === 'play';
   const closing = view.stage === 'closing';
   const locked = phase !== 'ready' || !playing;
   const met = view.notebook.people.map((l) => l.text);
+  const dice = open?.kind === 'dice' ? open : null;
+  const notebook = open?.kind === 'notebook' ? open : dice?.notebook;
   const group = open?.kind === 'notebook' ? open.group : undefined;
   // With the turns spent the conclusion stays up whenever nothing else is open.
   const concluding = open?.kind === 'conclude' || open?.kind === 'pick' || (closing && !open && phase === 'ready');
@@ -59,7 +64,7 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
   function act(id: string) {
     const roll = findAct(view, id)?.roll;
     if (roll) {
-      setOpen({ kind: 'dice', id, roll, from: null });
+      setOpen({ kind: 'dice', id, roll, from: null, notebook });
       return;
     }
     sendAct(id);
@@ -69,10 +74,9 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
   function roll() {
     if (open?.kind !== 'dice') return;
     sendAct(open.id);
-    setOpen({ ...open, from: log.length });
+    setOpen({ ...open, from: log.length, notebook: undefined });
   }
 
-  const dice = open?.kind === 'dice' ? open : null;
   const rolled = dice && dice.from !== null
     ? (log.slice(dice.from).find((e) => e.kind === 'roll') as RollResult | undefined) ?? null : null;
   // A roll that was refused or got no answer leaves no result: the sheet goes and the screen shows why.
@@ -90,13 +94,35 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
     setOpen({ kind: 'dice', id: now.id, roll: now.roll, from: null });
   }, [now, open, view.revision]);
 
-  function openLine(id: number | undefined, lines = id === undefined ? [] : [id]) {
-    const first = lines.length ? findLine(view, lines[0]) : null;
-    if (first) setOpen({ kind: 'notebook', group: first.group, line: lines.length === 1 ? lines[0] : undefined });
-    else if (group) setOpen({ kind: 'notebook', group });
+  function showNotebook(group: Group, line?: number) {
+    lastGroup.current = group;
+    setOpen({ kind: 'notebook', group, line });
   }
 
-  const openNotebook = () => setOpen({ kind: 'notebook', group: 'places' });
+  function openLine(id: number | undefined, lines = id === undefined ? [] : [id]) {
+    const first = lines.length ? findLine(view, lines[0]) : null;
+    if (first) showNotebook(first.group, lines.length === 1 ? lines[0] : undefined);
+    else if (group) showNotebook(group);
+  }
+
+  function openNotebook() {
+    const group = lastGroup.current ?? GROUPS.find((g) => view.notebook[g].some((line) => line.new)) ?? 'places';
+    showNotebook(group);
+  }
+
+  function openClues() {
+    const groups: Group[] = ['seen', 'items', 'heard'];
+    const group = groups.find((g) => view.notebook[g].some((line) => line.new))
+      ?? groups.find((g) => view.notebook[g].length);
+    if (group) showNotebook(group);
+    else openNotebook();
+  }
+
+  function followSuggestion(suggestion: GameView['suggest'][number]) {
+    if (suggestion.id) send({ do: suggestion.id });
+    else if (suggestion.open) openClues();
+    else if (suggestion.text) send({ text: suggestion.text });
+  }
 
   return (
     <View className="min-h-0 flex-1">
@@ -112,7 +138,7 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
           onAct={(id) => send({ do: id })}
           onMoves={playing && view.place.moves.length ? () => setOpen({ kind: 'moves' }) : undefined} />
         <OffersRow offers={playing ? view.offers : []} suggest={playing ? view.suggest : []} locked={locked} onAct={act}
-          onSay={(text) => send({ text })} onNotebook={openNotebook} />
+          onSuggest={followSuggestion} />
         {phase === 'stuck' || phase === 'text_error' ? (
           <View className="px-3 py-2"><Resend onResend={phase === 'stuck' ? onResend : onRetryText} /></View>
         ) : (
@@ -120,13 +146,10 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
             onSend={(text) => { send({ text }); setDraft(''); }} />
         )}
       </View>
-      {dice ? (
-        <DiceSheet roll={dice.roll} result={rolled} locked={locked && dice.from === null}
-          onRoll={roll} onClose={() => setOpen(null)} />
-      ) : null}
       {open?.kind === 'settings' ? <SettingsMenu onNewGame={onHome} onClose={() => setOpen(null)} /> : null}
       {open?.kind === 'moves' ? (
-        <MovesSheet moves={view.place.moves} locked={locked} onMove={act} onClose={() => setOpen(null)} />
+        <MovesSheet moves={view.place.moves} locked={locked} onMove={(id) => { send({ do: id }); setOpen(null); }}
+          onClose={() => setOpen(null)} />
       ) : null}
       {concluding ? (
         <ConcludeSheet view={view} picks={picks} locked={phase !== 'ready'} onSubmit={() => { send({ conclude: picks }); setOpen(null); }}
@@ -138,10 +161,14 @@ export function Play({ view, log, outgoing, phase, send, onResend, onRetryText, 
           onPick={(id) => { setPicks({ ...picks, [open.question]: id }); setOpen({ kind: 'conclude' }); }}
           onClose={() => setOpen((o) => (o?.kind === 'pick' ? { kind: 'conclude' } : o))} />
       ) : null}
-      {group ? (
-        <NotebookSheet view={view} group={group} line={open?.kind === 'notebook' ? open.line : undefined} locked={locked}
-          onGroup={(g) => setOpen({ kind: 'notebook', group: g })} onLine={(id) => openLine(id)} onAct={act}
+      {notebook ? (
+        <NotebookSheet view={view} group={notebook.group} line={notebook.line} locked={locked}
+          onGroup={showNotebook} onLine={(id) => openLine(id)} onAct={act}
           onConclude={playing ? () => setOpen({ kind: 'conclude' }) : undefined} onClose={() => setOpen(null)} />
+      ) : null}
+      {dice ? (
+        <DiceSheet roll={dice.roll} result={rolled} locked={locked && dice.from === null}
+          onRoll={roll} onClose={() => setOpen(dice.notebook ?? null)} />
       ) : null}
     </View>
   );

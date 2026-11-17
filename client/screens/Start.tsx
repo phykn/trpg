@@ -46,13 +46,19 @@ export function Start({ view, locked, onStart }: { view: GameView; locked: boole
   const start = view.start!;
   const [bonus, setBonusState] = useState<Bonus>(() => Object.fromEntries(start.stats.map((s) => [s.key, 0])));
   const keyOf = (v: number) => Object.keys(bonus).find((k) => bonus[k] === v);
-  const act = start.acts.find((a) => a.plus2 === keyOf(2) && a.plus1 === keyOf(1));
+  const plus2 = keyOf(2);
+  const plus1 = keyOf(1);
+  const remaining = [plus2 ? 0 : 2, plus1 ? 0 : 1].filter(Boolean);
+  const act = start.acts.find((a) => a.plus2 === plus2 && a.plus1 === plus1);
   return (
     <View className={surface({ kind: 'screen' })}>
       <Text accessibilityRole="header" className={text({ kind: 'hero' })}>{view.story.title}</Text>
       {/* The case is told by the first person in the game, not here (docs/game/07-screen.md 1). */}
       <View className="min-h-0 flex-1" />
       <View className="gap-2">
+        <Text accessibilityLiveRegion="polite" className={text({ kind: 'sub' }, 'min-h-5')}>
+          {remaining.length ? ko.remainingBonuses(remaining) : ''}
+        </Text>
         {start.stats.map(({ key, name }) => (
           <StatRow key={key} name={name} statKey={key} value={bonus[key]} onSet={(v) => setBonusState(setBonus(bonus, key, v))} />
         ))}

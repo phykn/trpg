@@ -35,7 +35,7 @@ export type GameView = {
   people: { name: string; partner: boolean; act: string | null }[];
   offers: Act[];
   // A next step in one press: an act id, a sentence said to the partner, or the notebook to open.
-  suggest: { id: string | null; label: string; text?: string; open?: 'notebook' }[];
+  suggest: { id: string | null; label: string; text?: string; open?: 'notebook'; cells?: number }[];
   notebook: Record<Group, Line[]>;
   badge: number;
   conclude: { who: number[]; clues: number[] } | null;

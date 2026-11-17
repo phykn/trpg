@@ -58,6 +58,12 @@ def test_narration_in_해라체_is_written_again():
     assert judge({"kind": "answer", "says": [], "lines": [], "quiet": False}, low, "됐다. 가 보거라.")[0] == []
 
 
+def test_revisiting_a_place_does_not_ask_the_player_for_a_scene():
+    scene = {"kind": "scene", "again": True}
+    text = "어떤 장면을 보여드릴까요? 조사할 곳이나 마주한 상황을 알려주십시오."
+    assert judge(scene, {"added": {"noul": 0.1}}, text)[0] == ["prompt"]
+
+
 def test_brackets_are_written_again_in_every_kind():
     low = {"added": {"noul": 0.1}, "quiet": {"noul": 0.9}}
     scene = {"kind": "scene"}
@@ -97,6 +103,17 @@ def test_the_text_kept_is_never_a_repeat_when_another_draft_is_not():
               {"text": "같은 말", "failed": ["repeat"]}]
     assert pick_best(checks) == "다른 말"
     assert pick_best([{"text": "첫 글", "failed": []}]) == "첫 글"
+
+
+def test_case_and_ending_facts_take_precedence_over_style():
+    opening = {"kind": "answer", "case": "징수관이 숨졌다. 새벽까지 조사한다.", "quiet": False, "lines": []}
+    assert "case" in make_checks(opening) and "case" not in make_checks({**opening, "hook": True})
+    ending = {"kind": "ending", "accused": "브람", "happening": ["지목한 사람이 끌려갔다.", "고드릭이 징수관을 죽였다."]}
+    prompt = make_messages(ending)[0]["content"]
+    assert "플레이어가 지목한 사람: 브람" in prompt and "사건의 진실: 고드릭이 징수관을 죽였다." in prompt
+    wrong = "고드릭이 끌려갔습니다."
+    failures, _ = judge(ending, {"added": {"noul": 0.1}, "ending": {"noul": 0.1}}, wrong)
+    assert pick_best([{"text": wrong, "failed": failures}, {"text": "브람이 끌려갔다.", "failed": ["style"]}]) == "브람이 끌려갔다."
 
 
 def test_a_person_is_played_from_what_their_type_means_not_its_four_letters():

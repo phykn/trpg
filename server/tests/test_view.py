@@ -96,6 +96,13 @@ def test_suggestions_offer_next_steps_without_naming_a_topic():
     assert "주위를 둘러본다" not in [c["label"] for c in make_view(SKELETON, state)[0]["suggest"]]
 
 
+def test_suggested_move_shows_the_same_turn_cost_as_the_move_sheet():
+    state, _ = play_skeleton(0, [STATS])
+    view, _ = make_view(SKELETON, state)
+    [move] = [card for card in view["suggest"] if "cells" in card]
+    assert move["cells"] == next(option["cells"] for option in view["place"]["moves"] if option["id"] == move["id"])
+
+
 def test_a_card_says_a_clue_in_hand_opens_something_here_without_naming_it():
     from src.rules.act import does_fit
     state, _ = play_skeleton(0, [STATS])

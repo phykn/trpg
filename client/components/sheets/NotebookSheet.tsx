@@ -45,11 +45,16 @@ function NotebookLine({ line, view, open, locked, onToggle, onLine, onAct, onLay
   return (
     <View onLayout={(e) => onLayout(e.nativeEvent.layout.y)}
       className={surface({ kind: 'card' }, 'gap-2')}>
-      <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} disabled={!opens} onPress={onToggle}
+      <Pressable accessibilityRole="button" aria-expanded={opens ? open : undefined} disabled={!opens} onPress={onToggle}
         style={pressed} className="gap-1.5">
         <View className="flex-row items-center gap-2">
           <Text className={text({}, 'min-w-0 flex-1', struck(line))}>{line.text}</Text>
           {line.new ? <Unread /> : null}
+          {opens ? (
+            <View aria-hidden className={open ? '-rotate-90' : 'rotate-90'}>
+              <Icon name="next" size={icon.md} color={colors.fg.muted} />
+            </View>
+          ) : null}
         </View>
         {line.intro ? <Intro words={line.intro} open={open} onCut={setCut} /> : null}
         <Marks marks={line.marks} />
@@ -108,17 +113,21 @@ export function NotebookSheet({ view, group, line, locked, onGroup, onLine, onAc
     <DragSheet title={ko.notebook} full={line !== undefined} onClose={onClose}
       footer={onConclude ? <Button icon="conclude" label={ko.conclude} onPress={onConclude} /> : undefined}>
       <View accessibilityRole="tablist" className={surface({ kind: 'well' }, 'flex-row gap-1 p-1')}>
-        {GROUPS.map((g) => (
-          <Pressable key={g} accessibilityRole="tab" accessibilityLabel={`${ko.groups[g]} ${view.notebook[g].length}`}
-            accessibilityState={{ selected: g === group }} onPress={() => onGroup(g)} style={pressed}
-            className={control({ kind: 'segment', tone: g === group ? 'raised' : 'plain' })}>
-            <Icon name={GROUP_ICONS[g]} size={icon.md} color={g === group ? colors.gold.fg : colors.fg.muted} width={2} />
-            <Text numberOfLines={1} className={text({ kind: 'tab', quiet: g !== group })}>
-              {`${ko.groups[g]} ${view.notebook[g].length}`}
-            </Text>
-            {view.notebook[g].some((l) => l.new) ? <View className="absolute right-2 top-1.5"><Unread /></View> : null}
-          </Pressable>
-        ))}
+        {GROUPS.map((g) => {
+          const lines = view.notebook[g];
+          const empty = lines.length === 0;
+          return (
+            <Pressable key={g} accessibilityRole="tab" accessibilityLabel={`${ko.groups[g]} ${lines.length}`}
+              aria-selected={g === group} disabled={empty} onPress={() => onGroup(g)}
+              style={pressed} className={control({ kind: 'segment', tone: g === group ? 'raised' : 'plain', off: empty })}>
+              <Icon name={GROUP_ICONS[g]} size={icon.md} color={g === group ? colors.gold.fg : colors.fg.muted} width={2} />
+              <Text numberOfLines={1} className={text({ kind: 'tab', quiet: g !== group })}>
+                {`${ko.groups[g]} ${lines.length}`}
+              </Text>
+              {lines.some((l) => l.new) ? <View className="absolute right-2 top-1.5"><Unread /></View> : null}
+            </Pressable>
+          );
+        })}
       </View>
       <BottomSheetScrollView key={group} ref={scroll} style={{ flex: 1 }}
         contentContainerStyle={{ gap: spacing[2], paddingBottom: onConclude ? spacing[20] : spacing[4] }}>

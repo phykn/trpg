@@ -7,6 +7,8 @@ A Korean mystery TRPG for the web. The player questions people in Korean and pre
 
 The server plays a story through the routes of [docs/engine/02-api.md](docs/engine/02-api.md), reads typed questions with Kanana and streams gemma4's answers and scenes. The client plays a story from the title to the ending.
 
+Suggested actions sit above the input and show how many turns travel takes. Open the notebook from a chat notice to read the new evidence, or from the top bar to return to the last tab.
+
 ## Design docs
 
 | Folder | Defines |

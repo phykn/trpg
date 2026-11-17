@@ -29,7 +29,7 @@ export function PeopleRow({ people, met, look, locked, onAct, onMoves }: {
       {onMoves ? <Move label={ko.moves} name="place" locked={locked} onPress={onMoves} /> : null}
       {people.map(({ name, partner, act }) => (
         <Pressable key={name} accessibilityRole="button" accessibilityLabel={name}
-          accessibilityState={{ selected: partner, disabled: locked || !act }} disabled={locked || !act}
+          aria-pressed={partner} disabled={locked || !act}
           onPress={() => act && onAct(act)} style={pressed}
           className={control({ kind: 'pill', tone: partner ? 'active' : 'idle', off: locked })}>
           <View className={`h-2 w-2 rounded-full ${findHue(met, name).bg}`} />
