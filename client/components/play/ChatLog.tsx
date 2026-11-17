@@ -72,12 +72,12 @@ function Line({ entry, met, typing, onNote, onTopic }: {
   if (entry.who) {
     return (
       <Speaker who={entry.who} met={met}>
-        {typing ? <Typing /> : <Spoken text={entry.text} topics={entry.topics} className={text()}
+        {!entry.text ? <Typing /> : <Spoken text={entry.text} topics={entry.topics} className={text()}
           onTopic={(name) => onTopic({ name, who: entry.who })} />}
       </Speaker>
     );
   }
-  if (typing) return <Typing />;
+  if (!entry.text) return <Typing />;
   const happening = entry.kind === 'omen' || entry.kind === 'event';
   return (
     <Spoken text={entry.text} topics={entry.topics} className={text({ kind: 'scene' }, happening && 'border-l-2 border-danger-fg pl-3')}
@@ -99,8 +99,7 @@ export function ChatLog({ log, met, waiting, outgoing, onNote, onTopic }: {
     atBottom.current = true;
     ref.current?.scrollToEnd({ animated: false });
   }, [outgoingKey]);
-  // Texts stream turn by turn and slot by slot, so the first empty one is the one being written.
-  const writing = waiting === 'streaming' ? log.findIndex((e) => 'slot' in e && !e.text) : -1;
+  const writing = waiting === 'streaming' ? log.findIndex((e) => 'slot' in e && !e.complete) : -1;
   const lines = writing === -1 ? log : log.slice(0, writing + 1);
   return (
     <ScrollView ref={ref} className="min-h-0 flex-1" contentContainerClassName="gap-3 px-4 py-4"

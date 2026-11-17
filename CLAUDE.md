@@ -29,7 +29,7 @@ Both models are required and run outside this repo. Never start or stop them (no
 - Client UI: a fixed viewport-height mobile frame with no illustrations and no scrolling outside the chat log (the same narrow frame on desktop), using NativeWind classes. A look used in more than one place is a variant in `client/design/ui.ts`, never spelled out again in a component; extra classes go through its `cn`, so tailwind-merge settles any that fight. Reach for a maintained library (focus-trap, lucide icons, the openai SDK, pydantic-settings) before writing the same thing by hand. Commands stay locked while narration streams. A missing response freezes commands until the identical command is retried. Never clear the saved pointer on a failed restore. Dialogs close with Escape, trap focus and return it to the opener.
 - Preserve personal env files (`server/.env.*`, `client/.env.*`).
 
-Checked text appears in full when its slot arrives. Keep all suggested actions visible in the composer and show travel costs from `place.moves`. The notebook reopens its last tab. The case briefing and ending get their own factual checks.
+New checked text appears a few characters at a time. `useGame` finishes each slot before opening the next and keeps commands locked until the final text is visible. Keep all suggested actions visible in the composer and show travel costs from `place.moves`. The notebook reopens its last tab. The case briefing and ending get their own factual checks.
 
 ## Commands (Unix; use the root `.venv`, never `server/.venv`)
 

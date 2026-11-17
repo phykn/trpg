@@ -38,20 +38,24 @@ export const getTurns = (id: string, from: number) => request<PastTurn[]>(`${gam
 export const sendCommand = (id: string, requestId: string, revision: number, body: CommandBody) =>
   request<TurnResult>(`${gamePath(id)}/commands`, { request_id: requestId, revision, ...body });
 
-// Always ends with done or error; a failed poll counts as an error, so the caller can ask again.
 // It polls rather than reading one stream: the phone's quick tunnel holds a stream back until it ends.
-export async function streamText(id: string, turn: number, onEvent: (event: TextEvent) => void): Promise<void> {
+export async function streamText(id: string, turn: number, signal: AbortSignal,
+  onEvent: (event: Extract<TextEvent, { slot: number }>) => Promise<void>): Promise<boolean> {
   let after = 0;
   try {
-    for (;;) {
-      const response = await fetch(`${baseUrl}${gamePath(id)}/turns/${turn}/text/poll?after=${after}`, { headers });
-      if (!response.ok) throw new ApiError(response.status, null);
+    while (!signal.aborted) {
+      const response = await fetch(`${baseUrl}${gamePath(id)}/turns/${turn}/text/poll?after=${after}`, { headers, signal });
+      if (!response.ok) return false;
       const polled = (await response.json()) as { events: TextEvent[]; next: number };
-      polled.events.forEach(onEvent);
-      if (polled.events.some((e) => e.type === 'done' || e.type === 'error')) return;
+      for (const event of polled.events) {
+        if (signal.aborted || event.type === 'error') return false;
+        if (event.type === 'done') return true;
+        if ('slot' in event) await onEvent(event);
+      }
       after = polled.next;
     }
   } catch {
-    onEvent({ type: 'error' });
+    return false;
   }
+  return false;
 }
